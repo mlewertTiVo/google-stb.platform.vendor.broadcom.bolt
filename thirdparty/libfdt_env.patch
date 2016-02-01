@@ -1,0 +1,20 @@
+--- dtc/libfdt/libfdt_env.h	2014-01-28 13:21:04.000000000 -0800
++++ dtc/libfdt/libfdt_env.h	2014-01-28 13:24:58.891754132 -0800
+@@ -52,9 +52,17 @@
+  *     EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  */
+ 
++#ifdef _BOLT_
++#include "lib_types.h"
++#include "lib_string.h"
++#include "lib_queue.h"
++#include "lib_malloc.h"
++#include "lib_printf.h"
++#else
+ #include <stddef.h>
+ #include <stdint.h>
+ #include <string.h>
++#endif
+ 
+ #ifdef __CHECKER__
+ #define __force __attribute__((force))

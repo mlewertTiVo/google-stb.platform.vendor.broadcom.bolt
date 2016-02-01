@@ -1,0 +1,200 @@
+:toc2:
+:toclevels: 4
+:max-width: 100%
+[[TOP]]
+
+BOLT security options
+=====================
+Broadcom Corporation <support@broadcom.com>
+
+ Libraries and build options
+----------------------------
+
+The BOLT first stage bootloader (FSBL) security features are split into two
+libraries: Advanced Security Library (ASL) and Basic Security Library (BSL)
+with the inteface being managed by fsbl/fsbl-sec.c.
+
+These libraries are per chip family and exist as archives under the following
+names:
+
+ ASL - security/<chip family>/asl-lib.a 
+ BSL - security/<chip family>/bsl-lib.a 
+
+The generic BOLT release ships with an *EMPTY* ASL, and a BSL made with the
+following (default) build options:
+
+----
+ BFW_LOAD=y BFW_HASH_LOCK=n SECURE_BOOT=n S_UNITTEST=n S_UNITTEST_AUTOFLASH=n DUMMY_SECURITY=n
+----
+
+NOTE: The flags 'S_UNITTEST=n, S_UNITTEST_AUTOFLASH=n DUMMY_SECURITY=n'
+are in general only for Broadcom internal usage. 
+
+The default security build options can be seen by doing 'make opts' in the
+main bolt directory. These security options are NOT set in the configuration
+scripts and have to be used on the BOLT make commandline.
+
+If you require ASL or BSL for another configuration please contact
+your FAE. Once delivered, please replace the existing ASL or BSL
+with the new libraries.
+
+Note that the build options used to make the the ASL and BSL must match
+the build options used to make BOLT. E.g. if you have an ASL for secure
+boot (SECURE_BOOT=y) for a 7445d0 chip, you would create a new bolt
+using 'make 7445d0 SECURE_BOOT=y'
+
+NOTE: Be aware that if you delete ASL or BSL libraries then BOLT will
+recreate EMPTY versions of them at build time.
+
+If we make with SECURE_BOOT=y then we no longer load the SHMOO section
+of BOLT but go with fixed MCBs in the MEMSYS section of BOLT. This security
+configuration also includes a fixed board number, which defaults to
+CFG_BOARDDEFAULT. I.e. Using SECURE_BOOT=y means you should only build
+for ONE board - selected at build time, and also select only the '-fixed -'
+option to the 'ddr' configuration script command(s).
+
+ DDR3 / DDR4 selection
+----------------------
+
+The flash memory allocation for the MEMSYS section of BOLT is split into
+two areas to support both DDR3 (MEMC_REV) and DDR4 (MEMC_ALT) code
+libraries for SHMOO'ing in generic non-secure BOLT.
+
+_[red]#With secure boot only the MEMC_REV portion must be used#_.
+
+With security enabled you must choose either DDR3 or DDR4 and remove the
+MEMC_ALT subsection if the single board build option is not selected. See
+link:howto_update_ddr_mcb_files.html[] for more information.
+
+ Single board builds
+--------------------
+BOLT supports an option to select only *one* board from a
+configuration file to build for instead of all of them. The board _name_
+is passed as a parameter to 'SINGLE_BOARD' on the make commandline.
+
+.Example
+[source,shell]
+----
+ make 7445d0 SINGLE_BOARD=BCM97252C
+----
+
+Using this option eases porting, and transition from generic to secure
+BOLT as you don't have to remove all the other boards from a configuration
+file. It has the following effects on the build process:
+
+* SECURE_BOOT defaults to 'y' ([red]#secure boot enabled#.)
+* 'config BOARD_ID' is forced to 'OFF'.
+* The 'memsys' script command parameter is forced to 'std'
+(always use MEMC_REV rather than MEMC_ALT.)
+* The 'ddr' script command '-f' flag (fixed MCBs) is forced on.
+* If the MCBs are of type DDR4 ('ddr' command '-custom' flag is 'ddr4')
+then the SHMOO code in the MEMSYS section of BOLT is sourced
+from MEMC_ALT (MEMSYS_ALT.)
+* Only one board information data structure will be generated in gen/$(FAMILY)/board_params.c
+
+Its also possible to build for non secure boot as well:
+
+.Example
+[source,shell]
+----
+ make 7445d0 SINGLE_BOARD=BCM97252C SECURE_BOOT=n
+----
+
+As we are forcing 'fixed' MCBs, the MEMSYS section will be bigger than
+generic BOLT as it may have to incorporate up to an additional 3 MCBs.
+Often the DDR3 and DDR4 SHMOO code libraries (memsysinitlib.a)
+will also differ in size and adjustments will have to be made to
+the 'config/layout-zeus*.cfg' file used.
+
+.Example MEMSYS section a bit too small for a board (DDR4 memsysinitlib.a)
+[source,shell]
+----
+make 7445d0 SINGLE_BOARD=BCM97445LCC_DR4 SECURE_BOOT=n
+...
+...
+  LD      objs/7445d0/bolt.elf
+arm-linux-ld: objs/7445d0/bolt.elf section `.memsys' will not fit in region `memsys'
+arm-linux-ld: region `memsys' overflowed by 1432 bytes
+make[1]: *** [objs/7445d0/bolt.elf] Error 1
+----
+
+.Example patch increasing MEMSYS size for DDR4
+----
+--config/layout-zeus42.cfg
+++config/layout-zeus42.cfg
+
+-section -name MEMSYS     -off 0x00055000 -size 0x00006f80
+-section -name MEMSYS_ALT -off 0x0005D000 -size 0x00006f80
++section -name MEMSYS     -off 0x00055000 -size 0x00007500
++section -name MEMSYS_ALT -off 0x0005D000 -size 0x00007500
+----
+
+TIP: Only increase the MEMSYS size by the minimum required as this
+will eat into FSBL memory next to the stack and may cause a boot
+crash or other unexpected failure.
+
+ Patching BOLT after building
+-----------------------------
+
+All BOLT releases include a Perl script that enables the various sub-sections
+of a pre-existing BOLT image, such as AVS, MEMSYS, BBL, BFW etc. to be replaced
+with an external binary file.
+
+The script is called 'scripts/bpatch.pl'. Its a generic binary file patching
+utility. A more user friendy version of it, with information derived from
+'config/layout-*.cg' files is called 'scripts/patcher.pl'.
+
+NOTE: 'scripts/patcher.pl' is only created when you either make a BOLT binary
+or do 'make env'. This enables you to edit a 'config/layout-*.cg' file and
+then rebuild 'scripts/patcher.pl' to pick up the changes.
+
+To show the available sub-sections of BOLT for patching, use the '-c' flag.
+
+[source,shell]
+----
+[user@machine]$ ./scripts/patcher.pl -c
+----
+
+Example output from './scripts/patcher.pl -c'
+
+----
+configuration flags -t(ype) for -z(eus):
+bbl for zeus
+bfw for zeus
+fsbl for zeus
+memsys for zeus
+shmoo for zeus
+avs for zeus
+ssbl for zeus
+bbl for zeus41
+bfw for zeus41
+fsbl for zeus41
+memsys for zeus41
+shmoo for zeus41
+avs for zeus41
+ssbl for zeus41
+bbl for zeus42
+bfw for zeus42
+fsbl for zeus42
+memsys for zeus42
+memsys_alt for zeus42
+shmoo for zeus42
+avs for zeus42
+ssbl for zeus42
+----
+
+Example of patching a replacement BBL into a BOLT binary:
+
+[source,shell]
+----
+[user@machine]$ ./scripts/patcher.pl -p bbl-new.bin -i objs/7445d0/bolt-v0.98-7445d0-ba-bfw-2.1.0.bin -o new-bolt.bin -t bbl -z zeus42
+ ==> patching bbl-new.bin (92432) into objs/7445d0/bolt-v0.98-7445d0-ba-bfw-2.1.0.bin (773576) at offset 0x96f0
+----
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+

@@ -1,0 +1,66 @@
+/***************************************************************************
+ *     Copyright (c) 2012-2013, Broadcom Corporation
+ *     All Rights Reserved
+ *     Confidential Property of Broadcom Corporation
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ * 
+ ***************************************************************************/
+
+SECTIONS {
+	.memsys.text @MEMSYS_SRAM_ADDR@ :
+	{
+		_ftext = .;
+		* (.init.rodata)
+	 	* (.init*);
+	 	* (.text*);
+		. = ALIGN(8);
+		_etext = .;
+	}
+
+	.memsys.mcb :
+	{
+		_f_mcb_table = .;
+	 	* (.mcbtable);
+		* (.mcbsubtable);
+		_e_mcb_table = .;
+	}
+
+	.memsys.mcbdata :
+	{
+		* (.mcbdata);
+	}
+
+	.memsys.data :
+	{
+		_fdata = .;
+		* (.rodata*);
+		. = ALIGN(8);
+		* (.data*);
+		. = ALIGN(8);
+		_edata = .;
+	}
+
+	.bss :
+	{
+		_fbss = .;
+		* (.bss*);
+		* (.sbss*);
+		. = ALIGN(8);
+	} =0x00
+
+
+	.memsys.bss :
+	{
+		* (.bss*);
+		* (.sbss*);
+		. = ALIGN(8);
+		_ebss = .;
+	} =0x00
+
+	.ARM.exidx : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
+
+	_end = .;
+};

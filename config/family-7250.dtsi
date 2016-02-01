@@ -1,0 +1,9 @@
+/ {
+	model = "Broadcom STB (7250)";
+	compatible = "brcm,bcm7250", "brcm,brcmstb";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+
+	chosen {
+	};
+};

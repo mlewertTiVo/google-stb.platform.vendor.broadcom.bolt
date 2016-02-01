@@ -1,0 +1,254 @@
+/ {
+	model = "Broadcom STB (7145)";
+	compatible = "brcm,bcm7145", "brcm,brcmstb";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+
+	chosen {
+	};
+
+       brcm-mbox {
+		compatible = "brcm,brcm-mbox";
+		reg = <0x00 0xd38f0080 0x00 0x80>, //MBOX_CPUC
+		      <0x00 0xd38f0000 0x00 0x80>; //CPU_COMM_REGS_CPUC
+		interrupts = <0 128 0x4>;
+		read = < 0x0000001F >; /* 0,1,2,3,4 */
+		write = < 0x000000E8 >; /* 3, 5, 6, 7 */
+	};
+
+    //Boot Assist
+    boot-assist {
+        version = < 0x00010005 >;
+        brcm-resrv;
+        compatible = "brcm,brcm-ba";
+		reg = <0x00 0x04000000 0x00 0x02230000>, //Memory Region
+		      <0x00 0xd38f0000 0x00 0x80>, //CPU_COMM_REGS_CPUC
+		      <0x00 0xf1509800 0x00 0x1E4>, //MEMC_ATW_UBUS_0
+		      <0x00 0xd3881000 0x00 0x50>, //RG_TOP_CTRL
+		      <0x00 0xd3880000 0x00 0x374>, //CM_TOP_CTRL
+		      <0x00 0xf0410000 0x00 0x600>, //AON_CTRL
+		      <0x00 0xf1500c00 0x00 0x378>, //MEMC_ARC_0
+		      <0x00 0x0 0x00 0x0>, //NA for B0
+		      <0x00 0xd3890158 0x00 0x4>, //JTAG_OTP_UB:STATUS_17
+		      <0x00 0xd2100000 0x00 0x300>; //LEAP_CTRL: Control registers
+        allow-user-map;
+        mbox-cm-size = < 0x00010000 >;
+        mbox-cm-count = < 0x00000002 >;
+        device-size = < 0x6C00000 0x01400000 0x00010000 0x02000000 0x00100000 0x00200000 0x00010000 >;
+        device-dest = < 0xFFFF0000 0x00000000 0x40000000 0x07E00000 0x1FC00000 >;
+        arc-atw =  [ 00 00 00 00 02 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ FA FF 00 40 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ FA FF 00 40 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 02 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ],
+                    [ 00 00 00 00 00 00 00 00 ];
+    };
+
+        fpm@0xd3a00000 {
+                compatible = "brcm,fpm";
+                brcm-resrv;
+                reg = <0x00 0x1A230000 0x00 0x2000000 >, /* Memory region */
+                      <0x00 0xd3a00000 0x00 0x20000 >;
+                init = <1>;
+        };
+
+	dqm@d38f0000 {
+		compatible = "brcm,dqm";
+		reg = <0x00 0xd38f0000 0x00 0x8000>;
+		interrupts = <0 128 0>;
+
+		dev-name = "cpucomm";
+
+		l1-irq-mask-offset	= <0x0058>;
+		l1-irq-status-offset	= <0x005c>;
+		l1-irq-dqm-mask		= <0x00400000>;
+
+		cfg-offset		= <0x0380>;
+		lwm-irq-mask-offset	= <0x0390>;
+		lwm-irq-status-offset	= <0x03a0>;
+		ne-irq-mask-offset	= <0x03d0>;
+		ne-irq-status-offset	= <0x03e0>;
+		ne-status-offset	= <0x03e8>;
+		q-ctl-base-offset	= <0x0400>;
+		q-data-base-offset	= <0x0800>;
+		q-status-base-offset	= <0x0b00>;
+
+		q-word-count		= <4>;
+		q-count			= <32>;
+		cfg-qsm			= <1>;
+		qsm-size		= <0x1000>;
+		qsm-allocation		= < 4  8
+					    4  8
+					    4  8
+					    4  8
+					    2  16
+					    2  16
+					    4  8
+					    4  8
+					    4  8
+					    4  8
+					    2  16
+					    2  16
+					    2  16
+					    2  16
+					    2  16
+					    2  16
+					    2  16
+					    2  16
+					    2  16
+					    2  16
+					    4  8
+					    4  8
+					    4  8
+					    4  8
+					    4  8
+					    4  8 >;
+	};
+
+	dqm@d4200000 {
+		compatible = "brcm,dqm";
+		reg = <0x00 0xd4200000 0x00 0x200000>;
+		interrupts = <0 123 0>;
+
+		dev-name = "gfap";
+
+		l1-irq-mask-offset	= <0x1008>;
+		l1-irq-status-offset	= <0x100c>;
+		l1-irq-dqm-mask		= <0x00000008 0x02000000>;
+
+		cfg-offset		= <0x1800 0x2200>;
+		lwm-irq-mask-offset	= <0x1808 0x2208>;
+		lwm-irq-status-offset	= <0x180c 0x220c>;
+		ne-irq-mask-offset	= <0x1814 0x2214>;
+		ne-irq-status-offset	= <0x1818 0x2218>;
+		ne-status-offset	= <0x1820 0x2220>;
+
+		q-ctl-base-offset	= <0x1a00 0x2400>;
+		q-data-base-offset	= <0x1c00 0x2600>;
+		q-status-base-offset	= <0x1f00 0x2900>;
+
+		q-word-count		= <4>;
+		q-count			= <64>;
+		cfg-qsm			= <0>;
+		qsm-size		= <0x3000>;
+	};
+
+	rpcrgstb: itc-rpc0 {
+		compatible = "brcm,itc-rpc";
+		dev-name = "rg-stb";
+		dqm = "cpucomm";
+		tx-q = <1>;
+		rx-q = <0>;
+	};
+
+	rpcstbcm: itc-rpc1 {
+		compatible = "brcm,itc-rpc";
+		dev-name = "stb-cm";
+		dqm = "cpucomm";
+		tx-q = <20>;
+		rx-q = <21>;
+	};
+
+	qchan0: q-channel0 {
+		dev-name = "stb-lan-wan";
+		dqm = "gfap";
+
+		/* list of TX & RX priority Q's ordered from highest to lowest priority */
+		tx-q = <14 15>;
+		rx-q = <51 50>;
+
+		type = "accelerator-host";
+	};
+
+	qchan1: q-channel1 {
+		dev-name = "cm-private";
+		dqm = "cpucomm";
+
+		/* list of TX & RX priority Q's ordered from highest to lowest priority */
+		tx-q = <14>;
+		rx-q = <15>;
+
+		type = "point-to-point";
+	};
+
+	qchan2: q-channel2 {
+		dev-name = "rg-private";
+		dqm = "cpucomm";
+
+		/* list of TX & RX priority Q's ordered from highest to lowest priority */
+		tx-q = <16>;
+		rx-q = <17>;
+
+		type = "point-to-point";
+	};
+
+	stb0 { /* STB routed */
+		compatible = "brcm,dqnet";
+		channel = <&qchan0>;
+		dev-name = "stb0";
+		mac-id = <14>;
+		mac-sub-id = <0>;
+		demux = "subid";
+		link-type = "rpc";
+		rpc-channel = <&rpcrgstb>;
+	};
+
+	stb1 { /* STB bridged */
+		compatible = "brcm,dqnet";
+		channel = <&qchan0>;
+		dev-name = "stb1";
+		mac-id = <13>;
+		mac-sub-id = <0>;
+		demux = "subid";
+		link-type = "rpc";
+		rpc-channel = <&rpcrgstb>;
+	};
+
+	priv0 { /* STB <--> CM private */
+		compatible = "brcm,dqnet";
+		channel = <&qchan1>;
+		dev-name = "priv0";
+		mac-id = <0>;
+		mac-sub-id = <0>;
+		demux = "none";
+		link-type = "rpc";
+		rpc-channel = <&rpcstbcm>;
+	};
+
+	priv1 { /* STB <--> RG private */
+		compatible = "brcm,dqnet";
+		channel = <&qchan2>;
+		dev-name = "priv1";
+		mac-id = <0>;
+		mac-sub-id = <0>;
+		demux = "none";
+		link-type = "rpc";
+		rpc-channel = <&rpcrgstb>;
+	};
+};

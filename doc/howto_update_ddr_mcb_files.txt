@@ -1,0 +1,222 @@
+:toc2:
+:toclevels: 4
+:max-width: 100%
+Using an FAE supplied '.mcb' file for your DDR
+==============================================
+Broadcom Corporation <support@broadcom.com>
+
+This text applies to the standard BOLT release using
+the 'flexible' configuration where multiple MCB data
+(to support lots of DDRs) is stored in the SHMOO
+subsection of BOLT.
+
+For the 'fixed' configuration where only a small subset
+(equal to the number of DDR controllers on the chip) is
+stored in the MEMSYS subsection of BOLT please see the
+'ddr' command entry in doc/build_configuration_script.txt.
+
+ Example sequence
+-----------------
+
+* Find out which shmoo you are currently using. Look
+in your config file for the line 'gset MEMC_REV'
+The associated text is a subdirectory of shmoo,
+e.g. For 7364a0, it is 'B150_F002'. So, 'shmoo/B150_F002/mcb/'
+will show you associated mcb files. The memc IP block may
+be used in many different chips, so its shared this way.
+
+* Drop your mcb file in with all the others. Please note that
+the file name format is of the form:
+
+----
+  {family}_{SPEED}MHz_{PHY}b_dev{SIZE}{G|M}x{WIDTH}_{STD_NAME}_le.mcb
+----
+
+e.g.
+
+----
+  7364A0_1067MHz_16b_dev4Gx16_DDR3-2133N_le.mcb
+  7364A0_800MHz_16b_dev4Gx8_DDR3-1600K_le.mcb
+----
+
+The build system needs MCB files to be named like the above to be
+able to pick them up and parse the numbers in them. Rename your mcb
+file to this format, if required. 'common' at the \{family} position
+is a special name for MCB's that can be shared by multiple families.
+
+* The shmoo build process takes the contents of these files and
+creates mcb-\{family}.c which condenses all the available ones down
+into a single C file for BOLT to build in, e.g. for 7364a0 that is
+the file 'shmoo/B150_F002/mcb-7364a0.c'. Please note that the
+existence of a family specific mcb-\{family}.c prevents mcb-common.c
+from being included in the family BOLT build.
+
+* Make a new (or update an existing) mcb-\{family}.c
+
+e.g.
+
+[source,shell]
+----
+     [user@machine]make ddr_update FAMILY=7364a0 MEMC_REV=B150_F002
+     [user@machine]$ make clean
+     [user@machine]$ make 7364a0
+----
+
+* Now rebuild BOLT to pick up the changes.
+
+
+
+Another example (using 7445d0)
+------------------------------
+
+From config/family-7445d0.cfg:
+
+----
+...
+...
+ gset MEMC_REV B130_F001
+...
+...
+----
+
+This tells you you the specific shmoo is in the shmoo/B130_F001 directory. 
+B130 = memc revision, F001 = phy revision.
+
+Re-create the mcb-7445d0.c file so BOLT knows about it, then rebuild BOLT:
+
+[source,shell]
+----
+     [user@machine]$ make clean
+     [user@machine]$ make ddr_update FAMILY=7445d0 MEMC_REV=B130_F001
+     [user@machine]$ make 7445d0
+----
+
+
+Dual MEMSYS (alternate MEMSYS)
+------------------------------
+
+To support DDR4 at runtime as well as DDR3 on Broadcom reference boards
+we have split the section reserved in BOLT for the MEMSYS code (and
+optional MCB data) into two sub-sections. MEMC_REV is the lower,
+MEMC_ALT is the upper sub-section.
+
+We can now select a completely different SHMOO (memsysinitlib.a)
+code library, its path is set in MEMC_ALT instead of MEMC_REV in
+the chip family configuration file.
+
+For the default build it does not mean it selects MCB files in
+the shmoo/$\{MEMC_ALT}/mcb directory. Currently they are still a
+common resource and still located in the shmoo/$\{MEMC_REV}/mcb
+directory or a sub-directory of that.
+
+As there may be MCBs with identical selection parameters
+(clock, phy width, ddr data bus width) for both the DDR3 and DDR4 we 
+have to differentiate them to avoid parameter clashes, and the
+possibility of ending up using the wrong MCB. The way we do this
+is to use the script 'ddr' command flag '-custom' for DDR4.
+
+e.g.
+
+----
+[board MY_DDR4_BOARD chip.7445d0]
+ ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+ ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+ ddr -n 2 -size_mb 1024 -base_mb 2048 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+----
+
+Please refer to the 'ddr' command footnote:[link:build_configuration_script.html#_ddr[]]
+on how to specify (and the limitations) of using the '-custom' parameter. After adding a
+custom MCB do 'make ddr_update' before re-making BOLT.
+
+The selection of which MEMSYS is on a per board basis and controlled at build time via the 'memsys'
+script configuration command footnote:[link:build_configuration_script.html#_memsys[]]. It is
+strongly recommended that you review the documentation for that command.
+
+
+  For secure builds (SECURE_BOOT=y)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* The MCBs are placed in the MEMSYS section of BOLT (instead of the SHMOO section)
+via the '-fixed' flag to the 'ddr' script command.
+
+* The generated memsys.bin file is only the _lower_ portion,
+i.e. it includes MEMC_REV, but not the MEMC_ALT SHMOO code library.
+
+* A board configuration that requires MEMC_ALT must be re-arranged to use
+MEMC_REV (i.e. replace the memsysinitlib.a) and any custom MCBs for DDR4
+renamed to comply with the standard naming convention for MCBs.
+
+* References to MEMC_ALT in the chip family configuration file must be removed,
+i.e. remove the 'gset MEMC_ALT ...' line.
+
+
+ An example of moving MEMC_ALT into MEMC_REV
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,shell]
+----
+ mv shmoo/B130_F001_DDR4/lib/memsysinitlib.a shmoo/B130_F001/lib/memsysinitlib.a
+
+ # Get rid of DDR3 MCBs
+ rm shmoo/B130_F001/mcb/*.mcb
+
+ # Move and rename the DDR4 MCBs so we can get rid of the '-custom' flag
+ # Note that use of the '-custom' flag for secure boot is prohibited.
+ mv shmoo/B130_F001/mcb/7445d0/*.mcb shmoo/B130_F001/mcb
+ mv shmoo/B130_F001/mcb/ddr4_1067MHz_32b_dev4Gx16_DDR4-2133R_le.mcb shmoo/B130_F001/mcb/7445D0_1067MHz_32b_dev4Gx16_DDR4-2133R_le.mcb
+ mv shmoo/B130_F001/mcb/ddr4_1200MHz_32b_dev4Gx16_DDR4-2400R_le.mcb shmoo/B130_F001/mcb/7445D0_1200MHz_32b_dev4Gx16_DDR4-2400R_le.mcb 
+----
+
+
+Edit the chip family config file to use '-fixed' instead of '-custom':
+
+----
+--- a/config/family-7445d0.cfg
++++ b/config/family-7445d0.cfg
+- gset MEMC_ALT B130_F001_DDR4
+- memsys alt
+- ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+- ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+
++ ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -fixed -
++ ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -fixed -
+----
+
+NOTE: We also edit out all but one [board] section of interest and make sure
+we only have two 'ddr' commands in that file.
+
+
+If memsysinitlib.a plus the MCBs increases image size, make room:
+
+----
+--- a/config/layout-zeus42.cfg
++++ b/config/layout-zeus42.cfg
+@@ -29,7 +29,7 @@
+  # AVS firmware data 
+  section -name AVS    -off 0x00051000 -size 0x00004000
+  # MEMSYS (32KiB + 32KiB alternate)
+- section -name MEMSYS -off 0x00055000 -size 0x00006600
++ section -name MEMSYS -off 0x00055000 -size     0x00006f80
+  section -name MEMSYS_ALT -off 0x0005D000 -size 0x00006df0
+  # MCB data + board infos <= 0x6000
+  section -name SHMOO  -off 0x00065000 -size 0x00001000
+----
+
+Now rebuild:
+
+[source,shell]
+----
+ [user@machine]$ make ddr_update FAMILY=7445d0 MEMC_REV=B130_F001
+ [user@machine]$ make 7445d0
+----
+
+NOTE: An alternate to replacing shmoo/$\{MEMC_REV} files is to populate
+shmoo/$\{MEMC_ALT} with DDR4 MCBs, include file(s) and set
+MEMC_REV in your chip family config file to point to it.
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+

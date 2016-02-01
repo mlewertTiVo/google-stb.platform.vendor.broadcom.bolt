@@ -1,0 +1,1332 @@
+:toc2:
+:toclevels: 4
+:max-width: 100%
+Porting BOLT to customer platforms
+==================================
+Broadcom Corporation <support@broadcom.com>
+
+This is a guide to moving BOLT from a working reference board
+implementation to your own hardware. The major prerequisite is the ability to
+unpack the BOLT source code deliverable, build bolt-*.bin and successfully run
+it on a reference board.
+
+Signed images and some other security issues are not within the scope
+of this document. See your FAE for help on acquiring signing tools and
+security related code for BOLT.
+
+In the following text we will be mainly using chip family 7445d0 and
+BCM97252C as our base board for an example of porting.
+
+
+------------------------------------------------------------------------- {qwe}
+
+The basics
+----------
+
+Ok, the first step is to select the chip family and the reference board
+that most closely matches your platform. For the moment we will be
+running bolt (with the changes) on a reference board configured (via
+'strap' DIP switches) for NAND boot.
+
+Type 'make boardinfo' to see what is available:
+
+[source,shell]
+----
+[user@linuxbox] make boardinfo
+...
+...
+===[ 7445d0 ]===
+        BCM97445SVMB         -     7445d0
+        BCM97445VMS          -     7445d0
+        BCM97445VMS_PCI      - BCM97445VMS
+        BCM97445C            -     7445d0
+        BCM97445C_V30        -  BCM97445C
+        BCM97445DBS          -     7445d0
+        BCM97445LCC          -     7445d0
+        BCM97252SVMB         -     7252d0
+        BCM97252C            -     7252d0
+        BCM97444SVMB         -     7444d0
+        BCM97448SV           -     7448d0
+        BCM97449SV           -     7449d0
+...
+...
+----
+
+
+We want BCM97252C and that is a 7252d0 chip, of the 7445d0 family of chips. That
+means we work off config/family-7445d0.cfg and its associated files:
+ 
+[source,shell]
+----
+[user@linuxbox] ls -l config/family-7445d0*
+-rw-rw-r-- 1 user users 63949 Oct 29 15:57 config/family-7445d0-box1.rts
+-rw-rw-r-- 1 user users 64850 Oct 29 15:57 config/family-7445d0-box1000.rts
+-rw-rw-r-- 1 user users 43563 Oct 29 15:57 config/family-7445d0-box2.rts
+-rw-rw-r-- 1 user users 64053 Oct 29 15:57 config/family-7445d0-box3.rts
+-rw-rw-r-- 1 user users 42868 Oct 29 15:57 config/family-7445d0-box4.rts
+-rw-rw-r-- 1 user users 42805 Oct 29 15:57 config/family-7445d0-box5.rts
+-rw-rw-r-- 1 user users 42831 Oct 29 15:57 config/family-7445d0-box6.rts
+-rw-rw-r-- 1 user users 65603 Oct 29 15:57 config/family-7445d0-box7.rts
+-rw-rw-r-- 1 user users 52440 Oct 29 17:09 config/family-7445d0.cfg
+-rw-rw-r-- 1 user users   154 Oct 29 15:57 config/family-7445d0.dts
+----
+
+NOTE: On later BOLT versions you may only see box mode #0 '.rts' file shown.
+
+Now copy over the config file as we can then alter that while retaining the
+ability to make for the reference box:
+
+[source,shell]
+----
+[user@linuxbox] cp config/family-7445d0.cfg config/platform.cfg
+----
+
+[source,shell]
+----
+[user@linuxbox] make 7445d0 CFG=config/platform.cfg
+  ================================
+  CFG.PL  config/platform.cfg
+  FAMILY  7445d0
+  ================================
+  ...
+  ...
+  ...
+  LD      objs/7445d0/bolt.elf
+  OBJCOPY objs/7445d0/bolt.bin
+  INFO    objs/7445d0/bolt.txt
+  OBJDUMP objs/7445d0/bolt.asm
+  SPLIT   objs/7445d0/fsbl.bin
+  SPLIT   objs/7445d0/ssbl.bin
+  SPLIT   objs/7445d0/memsys.bin
+  EXEC    postpatch
+  PATCH   bolt-v0.93-7445d0-ba-bfw-2.1.0.bin... OK
+----
+
+The bolt-v0.93-7445d0-ba-bfw-2.1.0.bin produced should be the same (sans the
+build date) as the reference build. From now on when you build you will always
+do "make 7445d0 CFG=config/platform.cfg" to pick up your platform specific
+changes.
+
+
+------------------------------------------------------------------------- {qwe}
+
+One board
+---------
+
+In the config file (config/platform.cfg) you will see [chip xxxxnn] etc. and
+[board BCMxxxxxxxx : chip.xxxnn] etc. headings. Its time to delete all but the
+ones you want so we end up with one [chip] and one [board] heading.
+
+
+TIP: To not have to remove all the boards see the section 'Single board builds' in
+link:security.html[BOLT security options]
+
+For this example, the following chip headings and the commands under them are deleted:
+
+----
+[chip 7445d0]
+[chip 7444d0]
+[chip 7448d0]
+[chip 7449d0]
+----
+
+For this example, the following board headings and the commands under them are deleted:
+
+----
+[board BCM97445SVMB : chip.7445d0]
+[board BCM97445VMS : chip.7445d0]
+[board BCM97445VMS_PCI : board.BCM97445VMS]
+[board BCM97445C : chip.7445d0]
+[board BCM97445C_V30 : board.BCM97445C]
+[board BCM97445DBS :chip.7445d0]
+[board BCM97445LCC :chip.7445d0]
+[board BCM97252SVMB : chip.7252d0]
+[board BCM97444SVMB : chip.7444d0]
+[board BCM97448SV : chip.7448d0]
+[board BCM97449SV : chip.7449d0]
+----
+
+ Check config/platform.cfg and it should have only one [chip] and [board] heading:
+
+----
+[chip 7252d0]
+[board BCM97252C : chip.7252d0]
+----
+
+
+If you forget to delete a board that has a deleted chip heading then you might see,
+as we did upon trying to make bolt-*.bin again, the following error:
+
+[source,shell]
+----
+[user@linuxbox] make clean;make 7445d0 CFG=config/platform.cfg
+/projects/stbtc/stbgcc-4.5.4-2.6/bin/arm-linux-gcc is in your path.
+  ================================
+  CFG.PL  config/platform.cfg
+  FAMILY  7445d0
+  ================================
+Error: inherited chip '7449d0' has not been defined
+    in 'config/platform.cfg':175
+----
+
+
+Delete the errant board and continue on to remake bolt and
+reflash it on your reference board:
+
+[source,shell]
+----
+[user@linuxbox] make clean;make 7445d0 CFG=config/platform.cfg
+----
+
+As it boots you should see the line "single board" appear. BOLT
+knows that if you only have a single board that it should boot it,
+regardless of any other parameter such as product id and board id.
+
+With regard to board id, that is an I2C peripheral that Broadcom
+uses to automatically select a board at startup. Its not expected to
+exist on customer platforms. In such cases you might see the message:
+
+ "Board id of 0xXX not found! - upgrade your BOLT"
+
+Where '0xXX' is the board id. We will deal with this in the next section.
+
+
+NOTE: BOLT saves back into flash the board selection and misc
+configuration. This is for the multiplicity of reference boards
+BOLT has to sport, but is very bad if you have a read only and/or
+signed images of BOLT for your own platform. Having only one board
+prevents an immediate update, and any flash modification is disabled
+if you make BOLT with SECURE_BOOT=y on the make command line.
+
+The updateable parameters (defaults) live in shmoo/shmoo_board.c and
+the decision to save parameters back to flash is the function
+board_update_check() in the ssbl/arch/board_update.c file.
+
+
+------------------------------------------------------------------------- {qwe}
+
+Build configuration
+-------------------
+
+The BOLT build system uses config/stdbuild.cfg to get its build time
+defaults from. These can be overridden in your config/platform.cfg file,
+_after_ including the stdbuild.cfg file.
+
+A snippet from config/family-7445d0.cfg shows such an instance:
+
+----
+>include config/stdbuild.cfg
+>
+># FLASH_DMA is fixed (HW7445-858/859)
+>config FLASH_DMA on
+----
+
+
+To preserve building for reference boards e.g. for comparisons,
+we copy over stdbuild.cfg before we edit it:
+
+[source,shell]
+----
+ [user@linuxbox] cp config/stdbuild.cfg config/platbuild.cfg
+----
+
+Now edit config/platform.cfg to use config/platbuild.cfg
+instead of config/stdbuild.cfg; diff of config/platform.cfg
+before and after editing:
+
+----
+- include config/stdbuild.cfg
++ include config/platbuild.cfg
+----
+
+ Board ID
+~~~~~~~~~
+
+Now you can go edit config/platbuild.cfg and turn build time
+options on and off. The first thing you might want to do is
+to remove the board id:
+
+----
+- config BOARD_ID          on
++ config BOARD_ID          off
+----
+
+You should notice the message "Board id of 0xXX not found! - upgrade your BOLT"
+no longer appears as BOLT boots.
+
+Other options are left to your specific platform requirements. Note
+that your config/platform.cfg might override settings in config/platbuild.cfg
+so check there as well, and possibly move them to config/platbuild.cfg.
+
+ USB
+~~~~
+Some build options have other dependencies. The USB code has one
+for devicetree. Try turning USB off and rebuilding:
+
+----
+- config USB               on
+- config USB_HID           on
+- config USB_SERIAL        on
+- config USB_DISK          on
+- config USB_ETH           on
+
++ config USB               off
++ config USB_HID           off
++ config USB_SERIAL        off
++ config USB_DISK          off
++ config USB_ETH           off
+----
+
+[source,shell]
+----
+ [user@linuxbox] make clean;make 7445d0 CFG=config/platform.cfg
+/projects/stbtc/stbgcc-4.5.4-2.6/bin/arm-linux-gcc is in your path.
+  ================================
+  CFG.PL  config/platform.cfg
+  FAMILY  7445d0
+  ================================
+Error: Configure for USB is off, but 'dt autogen usb' specified!
+    in 'config/stddevices.cfg':17
+        included from 'config/platform.cfg':85
+make: *** [gen/7445d0/aon_history.h] Error 25
+----
+
+
+BOLT takes a template devicetree at build time and then
+modifies it based on which chip it is actually running on at
+that time.
+
+Commenting out 'dt autogen -node usb' in config/stddevices.cfg (or
+again, making a copy of config/stddevices.cfg and referencing the
+copied file instead in platform.cfg) will now allow us to complete
+the build, i.e.
+
+----
+-dt autogen usb
++#dt autogen usb
+----
+
+BOLT uses the devicetree generated by 'dt autogen usb' to
+configure its own USB stack. If you want USB enabled in BOLT
+then you have to have 'dt autogen usb'.
+
+NOTE: On BOLT version v0.95 onwards we have taken out the
+check for USB off and 'dt autogen usb' specified, to allow
+more flexibility. Please take care from now on when dealing
+with USB configurations and Devicetree.
+
+------------------------------------------------------------------------- {qwe}
+
+ Flash
+------
+
+ Layout
+~~~~~~~
+
+The default Broadcom dynamic flash partitioning copes with various
+sized flash devices (see other BOLT documentation about this), but your
+requirements may be for fixed partitions. If this is so, then you
+can create a fixed flashmap. An example is given in
+link:tips_n_tricks.html[]
+for the 'superbox' flash mapping, and in config/flashmaps.cfg where
+the 'example' config is commented out.
+
+Remember to modify the 'mapselect' line in your config/platform.cfg
+to use the same name as the flash map used.
+
+[source,shell]
+----
+[user@linuxbox] cp config/flashmaps.cfg  config/platmap.cfg
+----
+
+Edit config/platmap.cfg:
+
+----
+-# [map example]
+-# map example	bolt	1Mb	CS0
+-# map example	macadr	64Kb	CS0
+-# map example	nvram	64Kb	CS0
+-# map example	kernel	4Mb	CS0
+-# map example	devtree	64Kb	CS0
+-# map example	splash	512Kb	CS0
+-# map example	rootfs	1024Mb	CS1
++[map example]
++ map example   bolt    1Mb   CS0
++ map example   macadr  1Mb   CS0
++ map example   nvram   1Mb   CS0
++ map example   devtree 1Mb   CS0
++ map example   splash  1Mb   CS0
++ map example   kernel  10Mb  CS0
++ map example   other   100Mb CS0
+----
+
+Edit config/platform.cfg:
+
+----
+-include config/flashmaps.cfg
++include config/platmap.cfg
+
+-mapselect STB
++mapselect example
+----
+
+
+After rebuilding, the BOLT 'show devices' command gives us:
+
+----
+BOLT> show devices
+Device Name          Description
+-------------------  ---------------------------------------------------------
+              uart0  16550 DUART at 0xf0406b00 channel 0
+               mem0  Memory
+        flash0.bolt  NAND flash @ CS0: 0x00000000-0x00200000 (2048KB)
+      flash0.macadr  NAND flash @ CS0: 0x00200000-0x00400000 (2048KB)
+       flash0.nvram  NAND flash @ CS0: 0x00400000-0x00600000 (2048KB)
+     flash0.devtree  NAND flash @ CS0: 0x00600000-0x00800000 (2048KB)
+      flash0.splash  NAND flash @ CS0: 0x00800000-0x00A00000 (2048KB)
+      flash0.kernel  NAND flash @ CS0: 0x00A00000-0x01400000 (10MB)
+       flash0.other  NAND flash @ CS0: 0x01400000-0x07800000 (100MB)
+             flash0  NAND flash @ CS0: 0x00000000-0x100000000 (4096MB)
+               eth0  GENET Internal Ethernet at 0xf0b60000
+              mdio0  GENET MDIO at 0xf0b60800
+              sata0  SATA3 AHCI Device
+              sata1  SATA3 AHCI Device
+*** command status = 0
+BOLT>
+----
+
+IMPORTANT: As you can see, the BOLT flash partition code still gets its way for
+small allocations in that it has to align to the [red]#NAND block size# (boundary.)
+
+The above example is for a NAND with the following reported parameters
+during BOLT startup:
+
+ "CS0: ONFI NAND, 4096MB, 2048kB blocks, 8192B page, 45B OOB, BCH-40 (1KB sector)"
+
+ Enabling SPI Quad mode
+~~~~~~~~~~~~~~~~~~~~~~~
+BOLT already takes care of four byte addressing in SSBL (note: not FSBL) and can
+also be configured to use all four SPI IO lines (if available on the SPI device)
+or "quad mode" as it is called - instead of just one ('IO0') or two ('IO0', 'IO1').
+
+The SPI_QUAD_MODE build config option enables it in SSBL, but there are strict
+limitations that apply due to what happens at any reset or reboot.
+
+ Incorrect application of quad mode support
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+As an example, let us imagine a system that has an SPI device with quad mode support
+wired to a system that at startup does _not_ support quad mode.
+
+. At cold boot the SPI device defaults to single or dual mode.
+. The system starts up and loads code and data from the SPI device.
+. The system later on sets quad mode in a register on the SPI device.
+. The system reboots.
+. If the SPI device is not guaranteed to revert to single or dual mode
+at reset then will be stuck in quad mode and the system cannot advance
+as it expected single or dual mode.
+. The system is stuck until all power from the SPI device
+dissipates and the configuration register reverts to non-quad mode,
+unless of course that configuration register is *non-volatile*, in which
+case the system really would be bricked.
+
+NOTE: You could enable quad mode only when accessing the SPI device, but
+that still runs the risk of an unexpected reset during an SPI operation
+stalling the STB reboot.
+
+ Quad mode support checklist
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* The Broadcom STB chip must support it.
+* The SPI chip is guaranteed to revert to single or dual mode at reset.
+** Implies the  Broadcom chip boot strap pins are wired for singe or dual mode.
+** The SPI device reset line is connected to a valid reset source, usually
+a reset output from the Broadcom STB chip.
+
+WARNING: Some SPI devices mux an 'IO' and 'reset' line together,
+these devices 'CANNOT' use BOLT quad mode.
+
+ Enabling quad mode
+^^^^^^^^^^^^^^^^^^^
+
+This is a build time option that will enable it only for the SSBL sub-component of BOLT.
+
+----
+--- a/config/stdbuild.cfg
++++ b/config/stdbuild.cfg
+
+-config SPI_QUAD_MODE	  off
++config SPI_QUAD_MODE	  on
+----
+
+ Verify quad mode is working
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+A quad mode enabled SPI flash device should always successfully allow BOLT
+to boot for each of the reset tests listed below.
+
+* Two cold boot cycles.
+* A hardware reset, e.g. via a button or strobing the reset line.
+* A software reset via the BOLT "reboot" command.
+* A hardware reset whilst the SPI flash is reading data.
+
+
+
+ Adding SPI Devices
+~~~~~~~~~~~~~~~~~~~
+
+BOLT can automatically identify SPI NOR flash using the JEDEC Serial Flash
+Discovery Protocol (SFDP)
+footnote:[https://www.jedec.org/standards-documents/docs/jesd216b]
+or pseudo-CFI parameter tables. If your SPI flash device does not support these
+and is not recognized in BOLT you can add it to the device ID lookup table in
+'ssbl/dev/dev_spiflash.c', below is an example for a Winbond W25Q16CV device:
+
+[source,c] 
+----
+static spi_flash_device_lookup_t spi_id_table[] = {
+	/* ID, ID len, total_size, sector_size, page_size */
+	...
+	{ {0xef, 0x40, 0x15},             3, _MB(2),    _KB(64), 256 },
+	...
+	{ {},                             0, 0,         0,       0 },
+};
+----
+
+ Adding NAND Devices
+~~~~~~~~~~~~~~~~~~~~
+
+BOLT supports ONFI NAND footnote:[http://www.onfi.org] without any
+modification, and also non-ONFI devices via the 'nandchip' build configuration
+script command.
+
+For non-ONFI devices you have to supply the 'nandchip' command with a set of
+parameters for your NAND device. To do this, please reference your NAND
+chip datasheet, and consult the BOLT documentation entry on the 'nandchip'
+command. footnote:[Build configuration script:
+link:build_configuration_script.html#_nandchip[nandchip]]
+
+
+ Adding eMMC Devices
+~~~~~~~~~~~~~~~~~~~~
+
+In the BOLT documentation are notes footnote:[link:eMMC_readme.html[]] on configuring
+for eMMC. We would strongly suggest you read it now if your platform requires
+eMMC boot.
+
+Historically, CFE/BOLT software is written to eMMC boot from
+SDIO_1 hardware rather than SDIO_0, with the selection being
+NAND or eMMC, but not both.
+
+BOLT can now support NAND and eMMC together with the eMMC
+function (eMMC or SDIO) being set in the config script for
+each board. Look for the 'sdio' command
+footnote:[Build configuration script:
+link:build_configuration_script.html#_sdio[sdio]]
+in the config file for the chip, e.g.
+
+----
+ sdio -controller 0 -type sd -uhs 0
+ sdio -controller 1 -type nodevice
+ dt autogen -node sdio
+ # now setup sdio pinmuxing....
+ pmux -pin gpio_076:gpio_085 -sel sd_card0_ -pull up -n 10
+ ...
+ ...
+----
+
+If the Broadcom reference board is not configured for eMMC boot
+and your platform is, and the configuration file changes reflect that
+then you will have to consider the other changes that may also be
+required on your board for it to function. The typical one is
+ddr configuration. For now, you may see the FSBL up and running
+but SHMOO failing if the ddr is wrong. 
+
+ SD Card Devices
+~~~~~~~~~~~~~~~~
+BOLT does not support SD Card devices.
+
+------------------------------------------------------------------------- {qwe}
+
+Other settings
+--------------
+
+ RTS and DTS/DTB
+~~~~~~~~~~~~~~~~
+
+For rts files, the default dts file, pinmuxing and ethernet see
+link:build_configuration_script.html[] for changing these.
+
+They are non-critical for early porting of BOLT, unless your boot
+flash depends on some pinmuxing that differs from the Broadcom
+reference platform, such as (possibly) eMMC.
+
+You may use one of the default rts files that comes with BOLT or
+contact your FAE for a 'memory spreadsheet' or request for a
+specific 'box mode' to get a custom rts file to use.
+
+During product development you'll be using the default devicetree
+in BOLT, but for production a fixed one with all the settings required
+built in is heavily recommended. Later on here, we'll go create one.
+
+See also: "Changes for box mode #0" in the
+link:bolt_commands.html#_rts[BOLT commands] documentation.
+
+ Power Profiles
+~~~~~~~~~~~~~~~
+
+Two different power profiles are available for 7250b0 and 72501b0,
+standard and boost. One of the notable differences between the two
+profiles is the CPU speed, 1503MHz of standard profile versus
+1719MHz of boost profile. Selecting a power profile is a build time
+option. By default, the standard power profile is selected. If the
+boost power profile is to be selected, please add the following to
+the 7250b0 build configuration file. For the reference BOLT, it is
+'config/family-7250b0.cfg'.
+
+----
+cset POWER_PROFILE_BOOST 1
+----
+
+Please note that the boost power profile is defined only for 7250b0
+family. Adding the above option to a non-7250b0 family will result
+in build failure.
+
+------------------------------------------------------------------------- {qwe}
+
+DDR
+---
+
+This is the critical one when deciding to move the development
+over to your platform from a reference board. The ddr may be
+quite incompatible with respect to a Broadcom reference board.
+
+In BOLT, the SHMOO program code (used by FSBL) resides in the MEMSYS
+section of BOLT. See the config/layout*.cfg file (referenced in our
+config/platform.cfg) for where it is and what size it is in the
+memory map.
+
+Since we have to support multiple reference boards the default is
+to source the code for SHMOO from the MEMSYS section of BOLT and the
+actual DDR configuration (MCB data) from the SHMOO section. This
+requires the FSBL to load from flash twice.
+
+Why a separate SHMOO section in BOLT? - The MCB data in the SHMOO
+section has some very simple compression to allow a lot of MCBs
+to exist in there, all for supporting multiple boards.
+
+For a product you don't need all those ddr settings, and also
+some security vendors mandate that the MEMSYS section holds both
+the SHMOO code and the MCB data. Note that the MEMSYS section
+is limited in the number of MCBs that it can hold since it does
+not compress it. Typically, it can hold three full MCBs.
+
+To change the ddr over to using MEMSYS for both code and MCB, simply
+add a '-fixed - ' property to the ddr command in config/platform.cfg:
+
+----
+- ddr -n 0 -size_mb 1024 -base_mb    0 -clk 933MHz -size_bits 4G -width 16 -phy 32
+- ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 933MHz -size_bits 4G -width 16 -phy 32
+- ddr -n 2 -size_mb    - -base_mb    - -clk      - -size_bits  - -width  - -phy  -
+
++ ddr -n 0 -size_mb 1024 -base_mb    0 -clk 933MHz -size_bits 4G -width 16 -phy 32 -fixed -
++ ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 933MHz -size_bits 4G -width 16 -phy 32 -fixed -
++ ddr -n 2 -size_mb    - -base_mb    - -clk      - -size_bits  - -width  - -phy  - -fixed -
+----
+
+You can check this by looking at the before and after BOLT startup messages:
+
+----
+...
+...
+SHMOO v0.4 (ffffffff) 0p4
+MCB: FLEX
+...
+...
+----
+
+After:
+
+----
+...
+...
+ SHMOO v0.4 (ffffffff) 0p4
+ MCB: FIX
+...
+...
+----
+
+
+The above change was run on a reference board, now to change to your
+required ddr MCB(s.) If none of the BOLT ddr settings match then go
+talk to your FAE about getting the correct MCB file(s) for your product.
+
+Tell your FAE the exact ddr used and its always handy to provide them
+with the ddr datasheet so our engineers can figure it out.
+
+See 
+link:howto_update_ddr_mcb_files.html[]
+on how to integrate MCB files into BOLT.
+
+
+------------------------------------------------------------------------- {qwe}
+
+Devicetree
+----------
+
+In the config directory you will see two devicetree source files:
+
+----
+config/family-7445.dtsi
+config/family-7445d0.dts
+----
+
+These are simple boilerplate devicetree source files. The *.dtsi is
+an include file, rather like a c header file. The *.dts is referenced
+by our config/platform.cfg file by the line:
+
+----
+ dts config/family-7445d0.dts
+----
+
+NOTE: During BOLT build the 'dt' commands in the [family] section of BOLT
+generate more devicetree source for peripherals. The resulting devicetree
+source file is in the 'gen/$FAMILY directory. Still working our example,
+it is:
+
+----
+gen/7445d0/family-7445d0.dtx
+----
+
+In the above file you can see the peripheral configurations used
+for Linux (+USB for BOLT as well) Since we have to support multiple
+boards that is not the end of it - the devicetree is compiled into
+a binary blob by the dtc tool (dtc/dtc in the BOLT source tree)
+and built into BOLT. Then BOLT manipulates that binary version of
+gen/7445d0/family-7445d0.dtx with regard to the current board.
+ That manipulation occurs via the 'dt bolt' command, also a
+silent 'dt bolt' is done by BOLT when using the 'boot' command, i.e.
+just before Linux is started.
+
+Versions of BOLT and Linux, due to the devicetree dependency, may
+be quite closely tied together. For a product this is not acceptable
+as updating a BOLT image (i.e. principal boot code) due to a Linux
+update is a no-go.
+
+Applications or updates generally consist of an OS, the app
+itself and maybe a separate root filesystem, all packaged in
+a signed (encrypted) image bundle. We now have to add a
+devicetree to that as well.
+
+You therefore need to generate a fixed devicetree that BOLT
+won't go off and modify. The most direct way is to develop
+using BOLT and a matched Linux to get the system
+as you want it, then save the devicetree outside the system
+and integrated later to run via a possibly older version of
+BOLT.
+
+The first step is to do 'dt bolt; dt show' on the BOLT/Linux
+setup that you want, then screen scrape the text and save as
+a *.dts file, or simply look up DT_ADDRESS and save that
+binary blob (tftp via the 'save' command) for manipulation
+on a development PC later on.
+
+Here is an example using the screen scrape method, which has
+the advantage of being both human and machine readable:
+
+----
+BOLT> dt bolt ;  dt show
+----
+
+The text from "/dts-v1/;" to the last "};" (leaving out BOLT
+error reporting and extra fluff) is put into a file named
+plat.dts, then it is converted into the binary format BOLT
+can read:
+
+[source,shell]
+----
+ [user@linuxbox] dtc/dtc -I dts -O dtb plat.dts > plat.dtb
+----
+
+From there its flashed back (e.g. for testing) to flash0.devtree.
+Note that the flash0.devtree flash partition is for development
+purposes. Its not used by Broadcom and should not be used in
+products.
+
+[source,shell]
+----
+[user@linuxbox] cp plat.dtb /tftpboot/
+----
+
+----
+BOLT> ifconfig eth0 -auto
+
+BOLT> flash  192.168.0.42:plat.dtb flash0.devtree
+Reading 192.168.0.42:plat.dtb: .
+Done. 8934 bytes read
+Programming...done. 8934 bytes written
+*** command status = 0
+
+BOLT> load -raw -addr=0x1000 -max=0x3000 flash0.devtree:
+
+BOLT> setenv DT_ADDRESS 0x1000
+
+BOLT> dt off
+
+BOLT> boot 192.168.0.42:vmlinuz-initrd-7445d0
+Loader:zimg Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7445d0 Options:(null)
+Reading 6882048 bytes from zImage...........
+Closing network 'eth0'
+Starting program at 0x8000 (DTB @ 0x1000)
+
+DT_OFF: bypass device tree modification
+Booting Linux on physical CPU 0x0
+Linux version 3.8.13-2.4pre....
+----
+
+
+The line 'setenv DT_ADDRESS' is to tell BOLT where to find
+the devicetree in ram. Its up to you to decide where; so it
+does not stomp other important information. By convention a 4Kb
+offset is often used, though if the devicetree grows too big
+(~12KiB) it might interfere with Linux. To be safe BOLT allocates
+the DTB from its own heap, well above where Linux is
+generally loaded.
+
+The line 'dt off' is to prevent BOLT from
+doing any modification of the devicetree at all. This is
+important for products. Since we have divorced the
+existing BOLT devicetree from the one used to boot Linux
+the devicetree used by the existing BOLT is only of
+consequence to itself.
+
+In a product it is expected that an application bundle will
+extract a devicetree, then Linux and pass the address of the
+devicetree to Linux, either through the environment variable
+method or directly. See the BOLT source code for details
+on how it does this. TIP: check the bolt_go() function in
+ssbl/main/boot.c for the low level details.
+
+TIP: If your product has extra peripherals its recommended
+that you use devicetree to put the configuration info
+in, instead of hard wiring it. Using the devicetree
+sources its easy to add, remove or modify such things
+and test them without a Linux kernel rebuild.
+
+
+Building Linux with an appended DTB
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Another possibility is to boot Linux with a DTB appended
+to it. In the Broadcom Linux deliverable use the makesystem
+to set it up:
+
+[source,shell]
+----
+[user@linuxbox] make menuconfig-linux
+ boot options -> CONFIG_ARM_APPENDED_DTB=[*]
+----
+
+In the same boot options menu unset any 'ATAGS' support
+option, then save and exit. Next set as a default if
+required, then rebuild Linux:
+
+[source,shell]
+----
+[user@linuxbox] make save_defaults
+[user@linuxbox] make vmlinuz-initrd-7445d0
+----
+
+The Linux (initrd) image will then be made and can
+be joined with a BOLT dtb file:
+
+[source,shell]
+----
+[user@linuxbox] cat ~/uclinux-rootfs/images/vmlinuz-initrd-7445d0 ~/bolt/bolt.dtb > /tftpboot/zimage_dtb
+----
+
+The file bolt/bolt.dtb was made by doing a 'dt bolt;dt show'
+and screen scraping the results to bolt.dts so it can
+be processed by the dtc tool in the BOLT build directory:
+
+[source,shell]
+----
+[user@linuxbox] dtc/dtc -I dts -O dtb bolt.dts >  bolt.dtb
+----
+
+IMPORTANT: We specify the final image as a 'raw' binary, 'load -raw'
+as a zImage load would not consider the appended dtb:
+
+----
+BOLT> ifconfig eth0 -auto
+BOLT> load -raw 192.168.0.42:zimage_dtb
+BOLT> setenv DT_ADDRESS 0x0
+BOLT> go 0x8000
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+AVS
+---
+
+Adaptive Voltage Scaling (AVS) is a low power technique that enables
+lowering power while maintaining performance. AVS is required for
+ALL 28nm BCG chips in production.
+
+AVS is not required for initial board bring up process but MUST be
+in the final Bolt binary in order to ensure that the long term integrity
+of the chip is maintained. It is highly suggested that the customer-
+board-bring-up process run WITHOUT AVS enabled and then be enabled later
+after BOLT is successfully booting. This ensures that random issues,
+that could be the effect of incorrectly configuring the AVS circuit,
+do not interfere with the bring-up process. Then, after all the other
+issues have been addressed, the AVS should be enabled and the boot process
+monitored for unexpected side-effects. This would most often be identified
+as random system resets. If the board unexpectedly resets, the "reset reason"
+in BOLT prints should be examined for AVS related reasons.
+
+Any issues seen with initial software releases should be reported back to
+Broadcom for review of proper implementation. For hardware implementation
+to support AVS, please reference the AVS APP Note on DocSafe (title:
+7XXX_4XXX-AN100-R).
+
+
+------------------------------------------------------------------------- {qwe}
+
+ Splash screen and audio
+------------------------
+
+ Configuring the build
+~~~~~~~~~~~~~~~~~~~~~~
+The splash is normally disabled by default in BOLT. To enable
+it, edit the following lines in config/stdbuild.cfg:
+
+----
+ config SPLASH       off
+ config SPLASH_PAL   default
+ config SPLASH_FILE  "\"flash0.splash\""
+----
+
+Enable splash:
+
+----
+  config SPLASH            ON
+----
+
+By default, splash audio is played continuously in a loop. To play the splash
+audio only once, edit the following lines in config/bsp_config.cfg:
+
+----
+gset SPLASH_AUDIO_REPEAT_COUNT 0
+----
+
+Disable splash audio looping (loop once):
+
+----
+gset SPLASH_AUDIO_REPEAT_COUNT 1
+----
+
+Full feature to enable splash audio to play N number of times will be
+implemented soon.
+
+Build, or rebuild BOLT to pick up the new configuration.
+
+NOTE: BOLT can now support audio as well as bitmap images, but only
+for _some_ chips.
+
+ Creating splash media files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now create 'splashFile', with both image and audio files incorporated within it.
+To do this run *splash_create_flash_file* in the BOLT source directory with the
+options as shown below:
+
+[source,shell]
+----
+[user@linuxbox] make env
+
+[user@linuxbox] ./scripts/splash_create_flash_file \
+	-b splash/BSEAV/app/splash/splashgen/splash.bmp  \
+	-p splash/BSEAV/app/splash/splashgen/audio-testtones.bin \
+	-o splashFile
+
+[user@linuxbox] ls -l splashFile 
+-rw-rw-r-- 1 user user 442576 Jan 1 12:00 splashFile
+----
+
+Alternately, compression (via the '-z' flag) of the meda file is now supported:
+
+[source,shell]
+----
+[user@linuxbox] make env
+
+[user@linuxbox] ./scripts/splash_create_flash_file \
+	-b splash/BSEAV/app/splash/splashgen/splash.bmp  \
+	-p splash/BSEAV/app/splash/splashgen/audio-testtones.bin \
+	-t splash/BSEAV/app/splash/splashgen/fire.bmp  \
+	-z -o splashFile.zb
+
+[user@linuxbox] ls -l splashFile.zb
+-rw-rw-r-- 1 user user 184877 Jan 1 12:00 splashFile
+----
+
+As you can see in the above example the compressed media file is approximately 41% smaller
+than the uncompressed. This even with another bitmap added ('-t' flag for the image to be
+shown when the box goes over a preset temperature.)
+
+IMPORTANT: Only little endian, 32 bit signed pcm audio data, sampled at 48Khz is supported.
+
+
+ Flashing the splash media file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Flash 'splashFile' or 'splashFile.zb' to 'flash0.splash' in BOLT, both
+are supported without any other BOLT build or runtime configuration.
+
+Example:
+
+----
+BOLT> ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-85-63-0B, ipaddr 192.168.0.40, mask 255.255.255.0
+        gateway 192.168.0.42, nameserver not set
+*** command status = 0
+
+BOLT> flash 192.168.0.42:splashFile flash0.splash
+Reading 192.168.0.42:splashFile: .
+Done. 442576 bytes read
+Programming...done. 442576 bytes written
+*** command status = 0
+
+BOLT> reboot
+----
+
+The video will be seen on component & composite outputs after you reboot with both
+the new BOLT and the splashFile file in flash.
+
+Splash audio is supported on HDMI, I2S, SPDIF and Composite outputs
+for now. Other outputs will be added after verification.
+
+ Interactions with Devicetree
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Splash has devicetree integration to carve out the memory used
+so NEXUS won't trash it. You can see from the example below where
+after a 'dt bolt' command (to modify the devicetree ready for Linux) the
+physical memory from 0xbfc00000 to 0xC0000000 is reserved for splash
+and Linux won't touch it. The memory region it came from is lowered
+by 0x400000 so Linux won't try to reserve it.
+
+----
+BOLT> dt show memory
+DTB @ 0x7722000
+/dts-v1/;
+
+/memreserve/ 0xbfc00000 0x400000;
+
+/       memory {
+                #address-cells = <0x1>;
+                #size-cells = <0x1>;
+                device_type = "memory";
+                reg = <0x0 0x0        0x0 0x40000000 
+                       0x0 0x40000000 0x0 0x40000000
+                       0x0 0x80000000 0x0 0x40000000
+                       0x1 0x0        0x0 0x40000000 
+                       0x3 0x0        0x0 0x40000000
+                       0xc 0x0        0x0 0x40000000>;
+        };
+        ...
+        ...
+----
+
+IMPORTANT: For Linux using LPAE, the splash may appear in the *middle*
+(and growing down) of a DDR. This is because the cpu sees a DDR split into
+1Gb or 2Gb lower
+footnote:[Some parts may be able to see 2Gb in the 32 bit view, this is chip dependent.]
+(32 bit address), and an nGb upper (40 bit) portion which BOLT
+cannot access due to it using a SECTION sized (1MiB) 1 level page table for
+its 1:1 virtual to physical 32 bit address mapping: BOLT cannot program the
+splash into memory it cannot see
+footnote:[See the 'mmap' configuration script command for how your DDR/MEMC
+banks are configured for the chip. Note these values are read only/hard wired
+for your chip.].
+
+
+
+
+IMPORTANT: As BOLT ships with default splash configurations for fully populated DDRs
+it would not be suitable for other chips using less memory or unpopulated
+DDRs. E.g. the 7252d0 has 2 MEMCs and the 7445d0 has 3. In this case we
+ship with a default splash that runs in DDR #2 (MEMC 2), so 7252d0 will
+not work out of the box, in fact it will crash BOLT due to invalid
+memory accesses (as expected.)
+
+
+ Special instructions for the 7252d0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For the 7252d0 we do ship the configuration files, but some additional
+changes are required for them to be incorporated into the build:
+
+----
+diff --git a/splash/splash.inc b/splash/splash.inc
+index 5fd7b66..297ca13 100644
+--- a/splash/splash.inc
++++ b/splash/splash.inc
+@@ -25,7 +25,7 @@ ifeq ($(CFG_SPLASH),1)
+     -I$(ROOT)/splash/BSEAV/app/splash/common \
+     -I$(ROOT)/splash/BSEAV/app/splash/os/cfe \
+     -I$(ROOT)/splash/BSEAV/app/splash/splashrun \
+-    -I$(ROOT)/splash/BSEAV/app/splash/splashrun/9$(BCHP_CHIP) \
++    -I$(ROOT)/splash/BSEAV/app/splash/splashrun/97252D0 \
+----
+
+
+ Notes
+~~~~~~
+
+The splash code used in BOLT was derived and modified
+from the Broadcom reference software 'splashrun' app.
+
+To generate or modify splash screen parameters you will
+have to boot Linux and run the reference software version
+of the 'splashgen' app, *do not* use the BOLT version.
+
+. Use the 'splashgen' app
+footnote:['splashgen' is shipped with Broadcom reference software releases.
+ You must configure and then run the splashgen app. Afterward, feed the
+generated header files back into BOLT and rebuild. The BOLT header files
+you replace are in bolt/splash/BSEAV/app/splash/splashrun/<CHIP>.]
+if:
+
+** Your bitmap is of a different size or colorspace than the
+default supplied with BOLT.
+
+** Your DDR configuration is different than that supplied by BOLT for
+Broadcom reference boards.
+
+** Your board may have differently wired video DAC configurations
+or require a different mix of composite, component or HDMI than
+the default. Check the 'bsplash_board.h' and 'platformconfig.c' files
+in the Broadcom reference software 'BSEAV/app/splash/splashgen/<CHIP>' 
+directory to make sure they match your setup.
+
+. You can also not do the '/memreserve/' and hence avoid the lowering of
+available memory in the Devicetree. To accomplish this edit out
+'bolt_populate_splash()' from 'bolt/ssbl/main/dtbolt.c'.
+
+** Your splash screen may not survive long after Linux is up as
+the register update list (RUL) for SPLASH must not be tampered
+with until NEXUS resets and inits the graphics and display hardware. The
+memory for SPLASH should not be touched in case the RULs get corrupted
+and therefore may possibly read or write to any memory location. Check by
+enabling BMEM debug that NEXUS allocations are not done in the RUL area until
+the graphics and display hardware are configured by NEXUS. This is not in
+general a big problem, but it pays to check it out anyway.
+
+. How to create a BOLT PCM audio compatible file: Install *ffmpeg* and
+use that to convert audio files from other formats or sampling rates
+to the PCM audio format BOLT requires, example:
+
+ ffmpeg -i original.wav -f s32le -ar 48000 -acodec pcm_s32le splash_audio.pcm
+
+. If you increase the size of the 'flash0.splash' partition for e.g. a HD bitmap
+image (rather than the Broadcom default SD image), then you will have to edit
+'MAX_SPLASH_SIZE' in 'splash/splash-glue.h' to reflect the new maximum
+size to load the bitmap(s) and/or audio from.
+
+------------------------------------------------------------------------- {qwe}
+
+BOLT UART disabling and alternate selection
+-------------------------------------------
+
+Broadcom reference platforms standardize on UART #0 (UART A) for
+providing boot time information and the BOLT interactive console.
+
+Such output can be disabled for either the first or the second
+stage bootloaders. In the patch below we disable both, e.g. for
+production builds:
+
+----
+--- a/config/stdbuild.cfg
++++ b/config/stdbuild.cfg
+- config FSBL_CONSOLE      on
+- config SSBL_CONSOLE      on
++ config FSBL_CONSOLE      off
++ config SSBL_CONSOLE      off
+----
+
+It is really not recommended that you use another UART, it adds
+problems when running your binaries on our reference platforms
+for comparison purposes during debug, and interfering with other
+UARTs debug output (e.g. from a video decoder) that will now be
+completely unavailable.
+
+WARNING: Changing the default Broadcom console uart is a bad idea.
+
+If you do need to change UART assignments you need to select
+another uart in FSBL (this propagates to SSBL) and setup the
+pinmuxing for it in the chip family configuration file.
+
+Here is an example using UART #2 ('C') instead of
+UART #0 ('A') on a 7364a0 part:
+
+----
+diff --git a/fsbl/fsbl-main.c b/fsbl/fsbl-main.c
+index bac807c..549509b 100644
+--- a/fsbl/fsbl-main.c
++++ b/fsbl/fsbl-main.c
+@@ -151,7 +151,7 @@ void fsbl_main(void)
+
+        late_cpu_init();
+        late_release_resets();
+-       uart_init(BCHP_UARTA_REG_START);
++       uart_init(BCHP_UARTC_REG_START);
+        hack_power_down_cpus();
+ #if !CFG_UNCACHED
+        i_cache_config(1);
+----
+
+Adding the new uart pinmuxing:
+
+----
+diff --git a/config/family-7364a0.cfg b/config/family-7364a0.cfg
+index 067721a..6a7501a 100644
+--- a/config/family-7364a0.cfg
++++ b/config/family-7364a0.cfg
+@@ -40,6 +40,8 @@ include config/layout-zeus42.cfg
+  rtsdefault -id 1
+  rtsbase 0 MEMC_ARB_0_CLIENT_INFO_0
+
++ pmux -pin onoff_gpio_112 -sel uart_txd_2
++ pmux -pin onoff_gpio_114 -sel uart_rxd_2
+  pmux -pin onoff_gpio_117,onoff_gpio_118 -sel uart_ -n 2 # UART_RXD_0 and TXD_0
+  pmux -pin aon_sgpio_02,aon_sgpio_03 -sel aon_bsc_m1_ -n 2 # Board ID
+----
+
+
+You can also need to select a different default UART for Linux to use
+as its boot console. This can be easily built into the device tree by
+changing the '-stdout' selection on your 'dt autogen serial ...' line.
+For example, the following will select UART C for your Linux boot
+console, instead of UART A:
+
+----
+diff --git a/config/stddevices.cfg b/config/stddevices.cfg
+index 9cf8dcf3d27e..7493a0869c14 100644
+--- a/config/stddevices.cfg
++++ b/config/stddevices.cfg
+@@ -28 +28 @@ dt autogen -node rf4ce
+-dt autogen -node serial -compatible ns16550a -stdout A
++dt autogen -node serial -compatible ns16550a -stdout C
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+Networking
+----------
+
+The default Ethernet configurations in BOLT are with respect to
+Broadcom reference boards. For your board they might very well
+differ, especially if you are connecting up the MII/RGMII ports
+or using an external PHY chip.
+
+ Checklist
+~~~~~~~~~~
+* Pinmuxing is right, if applicable.
+
+* The 'enet' script command for your board is correct.
+
+* For an external PHY you will have to write the BOLT driver for it.
+
+* For RGMII back-to-back, e.g. STB to an external cable modem (eCM) you
+may have to specify a phy id of 257 (PHY_ID_NONE, 0x101).
+Example:
+----
+ enet -genet 2 -phy_type RGMII -mdio_mode 0 -phy_speed 1000 -phy_id 257
+----
+
+----
+ enet -switch_port 1 -phy_type RGMII -mdio_mode 0 -phy_speed 1000 -phy_id 257
+----
+** Check that the RTS for your GENET client has enough bandwidth/is active.
+** Select GENET MAC to RGMII output, if your chip has such a facility
+and it is required by your design to use non-defaults.
+*** E.g. For 7366c0 you can route a specific GMAC to RGMII via the
+'mii_genet_mac_select' bit in 'SUN_TOP_CTRL_GENERAL_CTRL_0'.
+----
+ Selects the GENET MAC.
+  0 = GMAC0 is routed to RGMII_1.
+  1 = GMAC1 is routed to RGMII_1.
+  Reset value is 0 decimal.
+----
+
+** Check RGMII voltages, levels etc. are correct. Check your register
+database (RDB) documentation for 'rgmii' values to be configured if
+BOLT has not already done so in 'ssbl/arch/bcm_init_enet.c'.
+Example register and fields:
+----
+SUN_TOP_CTRL_GENERAL_CTRL_NO_SCAN_0
+ rgmii_1_pad_sel_gmii
+ rgmii_1_pad_amp_en
+ rgmii_1_pad_modehv
+ rgmii_1_pad_sel
+----
+
+ TCP/IP
+~~~~~~~
+The BOLT TCP stack is a very simple implementation meant for local links
+e.g. Android fastboot, and is *not for use* in more complex environments,
+or for more complex tasks.
+
+ Limitations of the TCP stack
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Do not cross subnets.
+* Does not support out of order packets.
+* No firewall.
+* No security or integrity hardening.
+* Not DDoS, intrusion or other attack tested.
+* Not for use in a public network environment e.g. The Internet.
+
+TIP: If you use a large number of 'TCB' buffers e.g. the "ttcp -n=3000000 ..."
+command fails, then increase the value of TCP_MAX_TCBS (a define in
+ssbl/net/net_tcp_internal.h) to add more buffers.
+
+ What TCP stack?
+^^^^^^^^^^^^^^^^
+
+If a TCP/IP network is required for downloading content or software
+updates etc. then a hardened Linux and download application would
+be far better. There are companies that specialize in securing and
+hardening Linux, and a lot more information about Linux than there
+is about the minimal BOLT TCP stack.
+
+If TCP is required in the bootloader for more demanding tasks then
+you should source it from a 3rd party to replace the one in BOLT.
+
+Whatever stack you use, it should be fully hardened and tested. Attacks
+may come from local as well as public network attempts at subverting it.
+
+------------------------------------------------------------------------- {qwe}
+
+Food for thought
+----------------
+
+Since BOLT can cope with multiple boards and often once a bootloader
+is done and certified it should never get changed, it brings up the
+possibility that you could support other configurations without
+re-certification or upgrading the bootloader. Perhaps supporting
+differing (e.g. cheaper) ddr for lower cost boxes: Not using the
+Broadcom I2C board ID method which would add an extra chip, but
+using an OTP bit (done on the production line) or a GPIO pinstrap.
+
+Maybe selecting full functionality or partial as well, all with
+the same or similar (not placed) components on the same board.
+
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+

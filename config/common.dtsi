@@ -1,0 +1,11 @@
+/ {
+	reserved-memory {                                                       
+		#address-cells = <0x2>;                                         
+		#size-cells = <0x2>;                                            
+		ranges;                                                         
+                                                                                
+		reserved-nodma@00000000 {                                       
+			reg = <0x0 0x0 0x0 0x1000>;                             
+		};                                                              
+	};
+};

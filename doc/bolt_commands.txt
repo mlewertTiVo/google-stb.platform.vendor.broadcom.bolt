@@ -1,0 +1,3730 @@
+:toc2:
+:toclevels: 1
+:max-width: 100%
+Bolt commands
+=============
+Broadcom Corporation <support@broadcom.com>
+
+A list of available BOLT user interface commands, with examples.
+
+------------------------------------------------------------------------- {qwe}
+
+ batch
+------
+batch ............. Load a batch file into memory and execute it
+
+SUMMARY
+~~~~~~~
+Load a batch file into memory and execute it.
+
+
+USAGE
+~~~~~
+batch [-options] host:filename|dev:filename
+
+
+NOTES
+~~~~~
+Uses a plain ascii text file containing standard BOLT commands. 
+The '-loader=' option defaults to 'raw' for batch files,
+other options such as 'elf' or 'zimg' could also be
+specified, though pointless to do so.
+
+The 'batch' command has two additional BOLT commands unique
+to it. The 'tag' and 'tagsave' commands.
+
+* tag <string>: Assign <string> to the SYSINIT_TAG environment variable.
+If the tag assigns the same string again then the batch command will exit.
+
+* tagsave: Save SYSINIT_TAG. This is equivalent to 'setenv -p SYSINIT_TAG <string>'
+where <string> was previously assigned via the 'tag' command.
+
+OPTIONS
+~~~~~~~
+*     -z ............... Load compressed file
+*     -nz .............. Load uncompressed file (default)
+*     -tftp ............ Load the file using the TFTP protocol
+*     -fatfs ........... Load the file from a FAT file system
+*     -rawfs ........... Load the file from an unformatted file system
+*     -rawfs ........... Load the file from an unformatted file system
+*     -loader=* ........ Specify another loader
+*     -fs=* ............ Specify BOLT file system name
+
+
+EXAMPLE
+~~~~~~~
+----
+[user@machine]$echo "d 0x100 0x10" > /media/PENDRIVE/test.bat
+----
+
+
+----
+BOLT> batch -loader=raw usbdisk0:test.bat
+Loader:raw Filesys:fat Dev:usbdisk0 File:test.bat Options:(null)
+Loading: .
+ 13 bytes read
+00000100  FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  ................
+*** command status = 0
+----
+
+[source,shell]
+----
+[user@machine]$echo "d 0x100 0x10" > /tftpboot/test.bat
+----
+
+----
+BOLT> batch -loader=raw -tftp 192.168.0.42:test.bat
+Loader:raw Filesys:tftp Dev:eth0 File:192.168.0.42:test.bat Options:(null)
+Loading: .
+ 13 bytes read
+00000100  FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  ................
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ boards
+-------
+boards ............ Show supported boards
+
+
+SUMMARY
+~~~~~~~
+Show supported boards
+
+
+USAGE
+~~~~~
+boards
+
+
+NOTES
+~~~~~
+List which boards this current build of BOLT can select from. 
+
+The current board selection is indicated by "*" and "S"
+for the current board index and the (flash) saved one.
+
+In general the board indexes should match, they may not
+if the board index "S" cannot be saved to flash.
+
+OPTIONS
+~~~~~~~
+n/a
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> boards
+a)      BCM97445SVMB   
+b)      BCM97445VMSMB_SFF *S
+c)      BCM97445C   
+d)      BCM97445DBS   
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ boot
+-----
+boot .............. Load an executable file into memory and execute it
+
+
+SUMMARY
+~~~~~~~
+Load an executable file into memory and execute it
+
+
+USAGE
+~~~~~
+boot [-options] host:filename|dev:filename [arg]
+
+     
+NOTES
+~~~~~
+This command loads and executes a program from a boot device
+By default, 'boot' will load a raw binary at virtual 
+address 0x8000 and then jump to that address
+
+If we have a valid devicetree then it is modified (see the
+'dt bolt' command) just before the program is run. If the
+devicetree is not required to be auto-modified by BOLT
+use the 'dt off' command.
+
+See also the 'dt bolt' command.
+
+An optional argument [arg] may be specified. This will be
+put into the Devicetree "chosen" node as the "bootargs"
+property. To specify multiple arguments, enclose them
+in quotes. Use single quotes ('') when your argument has
+double quotes ("") in it, and double quotes when using
+single quotes. Note: You cannot mix quoting styles, or
+if a uniform quoting style is used then all quotes will
+be stripped.
+
+Remember you may also need to quote a BOLT variable that
+you use as an argument, as setenv will remove any
+containing quotes when the variable was defined (see
+'setenv' command.)
+
+Sidecar apps such as the BSU (Boot Software Updater) require
+the '-bsu' flag to be specified. 
+
+
+OPTIONS
+~~~~~~~
+* -elf ............. Load the file as an ELF executable
+* -srec ............ Load the file as ASCII S-records
+* -raw ............. Load the file as a raw binary
+* -zimg ............ Load the file as a zImage binary (default)
+* -bsu ............. Load a sidecar app
+* -z ............... Load gzip-compressed file
+* -nz .............. Load uncompressed file
+* -loader=* ........ Specify BOLT loader name
+* -tftp ............ Load the file using the TFTP protocol
+* -fatfs ........... Load the file from a FAT file system
+* -rawfs ........... Load the file from an unformatted file system
+* -fs=* ............ Specify BOLT file system name
+* -max=* ........... Specify the maximum number of bytes to load (raw and zImage)
+* -addr=* .......... Specify the load address (hex) (raw and zImage)
+* -noclose ......... Don't close network link before executing program
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> boot 10.12.153.131:vmlinuz-initrd-7445a0
+Loader:zimg Filesys:tftp Dev:eth0 File:10.12.153.131:vmlinuz-initrd-7445a0 Options:(null)
+Reading 5857736 bytes from zImage...........
+Starting program at 0x00008000 (DTB @ 0x00001000)
+
+Booting Linux on physical CPU 0x0
+----
+
+
+----
+BOLT> boot flash0.rootfs:vmlinuz-initrd-7445a0
+Loader:zimg Filesys:raw Dev:flash0.rootfs File:vmlinuz-initrd-7445a0 Options:(null)
+Reading 5857736 bytes from zImage...........
+Starting program at 0x00008000 (DTB @ 0x00001000)
+----
+
+Booting an SREC image
+^^^^^^^^^^^^^^^^^^^^^
+
+[source,shell]
+----
+[user]$arm-linux-objcopy -I binary -O srec --adjust-vma=0x8000 vmlinuz-initrd-7366b0 /tftpboot/vmlinuz-initrd-7366b0.srec
+
+[user]$ srec_info /tftpboot/vmlinuz-initrd-7366b0.srec
+Format: Motorola S-Record
+Header: "vmlinuz-initrd-7366b0.srec"
+Execution Start Address: 00008000
+Data:   008000 - 65F9BF
+----
+
+----
+BOLT> ifconfig eth0 -auto; boot -srec 192.168.0.42:vmlinuz-initrd-7366b0.srec
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-00-D3-05, ipaddr 192.168.0.40, mask 255.255.255.0
+        gateway 192.168.0.42, nameserver not set
+Loader:srec Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7366b0.srec Options:(null)
+...
+...
+415645 lines
+Starting program at 0x8000 (DTB @ 0x751a000)
+
+Booting Linux on physical CPU 0x0
+...
+...
+----
+
+The 'srec_info' program may be obtained at http://srecord.sourceforge.net
+or do (sudo) 'yum install srecord' if you are running Fedora.
+
+Passing Linux command line args
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+----
+BOLT> boot 192.168.0.42:vmlinuz-initrd-7366b0 'parts="blah" nosmp donkey="kong"'
+...
+# cat /proc/cmdline
+parts="blah" nosmp donkey="kong"
+----
+
+----
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "parts='blah' nosmp donkey='kong'"
+...
+# cat /proc/cmdline
+parts='blah' nosmp donkey='kong'
+----
+
+----
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 'parts='blah' nosmp donkey='kong''
+# cat /proc/cmdline
+parts=blah nosmp donkey=kong
+----
+
+----
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "parts="blah" nosmp donkey="kong""
+# cat /proc/cmdline
+parts=blah nosmp donkey=kong
+----
+
+----
+BOLT> setenv ARG "parts='blah' nosmp donkey='kong'"
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "$ARG"
+# cat /proc/cmdline
+parts='blah' nosmp donkey='kong'
+----
+
+----
+BOLT> setenv ARG 'parts="blah" nosmp donkey="kong"'
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "$ARG"
+# cat /proc/cmdline
+parts=blah nosmp donkey=kong
+----
+
+----
+BOLT> setenv ARG 'parts=\"blah\" nosmp donkey=\"kong\"'
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "$ARG"
+# cat /proc/cmdline
+parts="blah" nosmp donkey="kong"
+----
+
+Booting a demo BSU image
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+----
+BOLT> boot -z -elf -noclose -bsu 192.168.0.42:mini.elf.gz
+Loader:elf Filesys:tftp Dev:eth0 File:192.168.0.42:mini.elf.gz Options:(null)
+Starting program at 0x8000 (DTB @ 0x1000)
+
+_main(r0:0x00008000 r1:0xffffffff r2:0x00001000 r3:0x0704e59c)
+BSU @ 0x0704e59c
+Signature is ok
+0       memc #0 0x00a00000 -> 0x07000000 102Mb
+1       memc #0 0x10000000 -> 0x40000000 768Mb
+2       memc #1 0x40000000 -> 0x80000000 1024Mb
+3       memc #2 0x80000000 -> 0xc0000000 1024Mb
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ crc
+----
+crc ............... Report the CRC32 for a memory range
+
+SUMMARY
+~~~~~~~
+Report the CRC32 for a memory range
+
+USAGE
+~~~~~
+crc [options]
+
+NOTES
+~~~~~
+This command computes the crc32 for a contiguous memory range.
+For an equivalent Linux tool please install 'libarchive-zip-perl'
+e.g. sudo apt-get install libarchive-zip-perl
+
+OPTIONS
+~~~~~~~
+* -offset=* ........ Start address
+* -size=* .......... Size, in bytes
+
+EXAMPLE
+~~~~~~~
+
+[source,shell]
+----
+[user@localhost]$ ls -l /tftpboot/vmlinuz-initrd-7445d0
+-rwxrwxr-x 1 user user 6882136 Jan 1 00:00 /tftpboot/vmlinuz-initrd-7445d0
+
+[user@localhost]$ /usr/bin/crc32 /tftpboot/vmlinuz-initrd-7445d0
+7685f4dc
+----
+
+----
+BOLT> load 192.168.0.42:vmlinuz-initrd-7445d0
+Loader:zimg Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7445d0 Options:(null)
+Loading: Reading 6882136 bytes from zImage...........
+ 6882072 bytes read
+Entry address is 0x8000
+*** command status = 0
+
+BOLT> crc -offset=0x8000 -size=6882136
+crc: 0x8000 to 0x698358 =  0x7685f4dc
+*** command status = 0
+----
+
+Note the value '7685f4dc' matches for both the Linux PC development side
+and the BOLT command for the actual size of 6882136 bytes.
+
+------------------------------------------------------------------------- {qwe}
+
+ d
+--
+d ................. Dump memory.
+
+
+SUMMARY
+~~~~~~~
+Dump memory.
+
+
+USAGE
+~~~~~
+d [-b|-h|-w|-q] [addr [length]]
+
+
+NOTES
+~~~~~
+This command displays data from memory as bytes, halfwords, words,
+or quadwords.  ASCII text, if present, will appear to the right of
+the hex data.  The dump command remembers the previous word size,
+dump length and last displayed address, so you can enter 'd' again
+to continue a previous dump request.
+
+For the ARM architecture, if caching is enabled then a data cache
+flush & invalidate is performed if the -p' option is used.
+
+
+OPTIONS
+~~~~~~~
+* -b ............... Dump memory as bytes
+* -h ............... Dump memory as halfwords (16-bits)
+* -w ............... Dump memory as words (32-bits)
+* -q ............... Dump memory as quadwords (64-bits)
+* -p ............... Address is an uncached physical address
+* -v ............... Address is a kernel virtual address
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> d -b 0x800 8
+00000800  00 3C AE 51 00 D6 DC 23                          .<.Q...#        
+*** command status = 0
+----
+
+----
+BOLT> d -w 0x800 8
+00000800  51AE3C00 23DCD600                    .<.Q...#        
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ dir
+---
+dir ............... List the directory of a FAT file system
+
+
+SUMMARY
+~~~~~~~
+List the directory of a FAT file system
+
+
+NOTES
+~~~~~
+
+
+USAGE
+~~~~~
+dir device-name[:path][filename]
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dir usbdisk0
+***          Patriot Memory    (7744 MB, lbs=512) ***
+      <DIR>     BOOTDISK
+      <DIR>     BOOTPROG
+      <DIR>     SYSLINUX
+      117044    bolt.bin.zip
+     3458120    VMLINUZ.BIN
+      350804    BOLT.BIN
+     5188904    ETH.TGZ
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ dt phandle
+-----------
+dt phandle ........ Get or set the phandle associated with an existing node
+
+
+SUMMARY
+~~~~~~~
+Print the phandle number associated with a node, or create
+and then print a new phandle for the node if it did not
+previously exist.
+
+
+NOTES
+~~~~~
+If this command has to create a new phandle it first finds
+the maximum existing phandle number and increments it by
+one to always create a unique phandle value.
+
+
+USAGE
+~~~~~
+dt phandle [full path]
+
+
+EXAMPLE
+~~~~~~~
+
+Automatic creation of a phandle and returning its value:
+----
+BOLT> dt show serial@f040ab00
+DTB @ 0x7822000
+/dts-v1/;
+
+/               serial@f040ab00 {
+                        clock-frequency = <0x4d3f640>;
+                        compatible = "ns16550a";
+                        reg-io-width = <0x4>;
+                        reg-shift = <0x2>;
+                        reg = <0xf040ab00 0x20>;
+                        interrupts = <0x0 0x4b 0x4>;
+                        interrupt-names = "upg_uart0";
+                        current-speed = <0x1c200>;
+                };
+*** command status = 0
+
+BOLT> dt phandle /rdb/serial@f040ab00
+DTB @ 0x7822000
+/rdb/serial@f040ab00 phandle = 0x80 (128)
+*** command status = 0
+
+BOLT> dt show serial@f040ab00
+DTB @ 0x7822000
+/dts-v1/;
+
+/               serial@f040ab00 {
+                        linux,phandle = <0x80>;
+                        phandle = <0x80>;
+                        clock-frequency = <0x4d3f640>;
+                        compatible = "ns16550a";
+                        reg-io-width = <0x4>;
+                        reg-shift = <0x2>;
+                        reg = <0xf040ab00 0x20>;
+                        interrupts = <0x0 0x4b 0x4>;
+                        interrupt-names = "upg_uart0";
+                        current-speed = <0x1c200>;
+                };
+*** command status = 0
+----
+
+Getting an existing phandle:
+----
+BOLT> dt show interrupt-controller@ffd00000
+DTB @ 0x7822000
+/dts-v1/;
+
+/       interrupt-controller@ffd00000 {
+                compatible = "arm,cortex-a15-gic";
+                interrupt-controller;
+                #interrupt-cells = <0x3>;
+                reg = <0x0 0xffd01000 0x0 0x1000 0x0 0xffd02000 0x0 0x2000>;
+                reg-names = "dist", "cpu";
+                linux,phandle = <0x1>;
+                phandle = <0x1>;
+        };
+*** command status = 0
+
+BOLT> dt phandle /interrupt-controller@ffd00000
+DTB @ 0x7822000
+/interrupt-controller@ffd00000 phandle = 0x1 (1)
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ dt off
+-------
+dt off ............ Disable the silent 'dt bolt' command that happens 
+                    just before the 'boot' command executes. 
+ 
+
+SUMMARY
+~~~~~~~
+Gate the operating of the 'dt bolt' command. Once this command
+has completed then all further 'dt bolt' commands are aborted,
+including the silent 'dt bolt' that happens in the 'boot' command.
+
+
+NOTES
+~~~~~
+The environment variable DT_OFF will be set to 1.
+
+
+USAGE
+~~~~~
+dt off
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt off
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ dt on
+------
+dt on ............. (Re-)enable the silent 'dt bolt' command that 
+                    happens just before the 'boot' command executes. 
+ 
+
+SUMMARY
+~~~~~~~
+Allow the operating of the 'dt bolt' command. If a previous 'dt bolt'
+or 'dt off' command has been done then a further 'dt bolt' command
+(or the silent 'dt bolt' that happens in the 'boot' command) will be
+aborted unless you do a prior 'dt on' command.
+
+
+NOTES
+~~~~~
+The environment variable DT_OFF will be removed if it exists. At startup
+the default is to allow the 'dt bolt' command to operate once, until
+another 'dt on' command is done.
+
+
+USAGE
+~~~~~
+dt on
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt on
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ dt bolt
+--------
+dt bolt ........... Modify an existing DTB (devicetree) in memory.
+ 
+
+SUMMARY
+~~~~~~~
+Modify an existing DTB with an autogenerated BOLT config. 
+The DT_ADDRESS envar is used as the base address of the dtb.
+
+
+NOTES
+~~~~~
+The environment variable DT_SIZE will be changed to reflect the new size
+of the devicetree specified by the address in DT_ADDRESS. All values
+are hexadecimal. Note that further modification cannot be done
+unless you issue a 'dt on' command prior to the next 'dt bolt'
+command.
+
+
+USAGE
+~~~~~
+dt bolt
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt bolt
+DTB @ 0x7720000
+Note: dt modification is now off, use 'dt on' to re-enable
+*** command status = 0
+BOLT> dt bolt
+DTB @ 0x7720000
+Command not done: dt modification is off, use 'dt on' to re-enable
+*** command status = -1
+BOLT> dt on
+*** command status = 0
+BOLT> dt bolt
+DTB @ 0x7720000
+Note: dt modification is now off, use 'dt on' to re-enable
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ dt memreserve
+--------------
+dt memreserve ..... Add an entry to the DTB memory reservation table.
+
+SUMMARY
+~~~~~~~
+Add an entry to the DTB memory reservation table. The address and length
+shall be specified in hex. The DT_ADDRESS envar is used as the base
+address of the dtb.
+
+NOTES
+~~~~~
+Each call will add a /memreserve/ line in the devicetree. Its up to you
+to check for overlaps.
+
+The values are volatile and are lost across reboots. You can hard wire
+them into the devicetree boilerplate files at build time or add them to
+a startup script.
+
+The splash screen also uses /memreserve/ so be sure your other
+allocations are in a different DDR or out of the way of the splash
+screen reserved memory.
+
+USAGE
+~~~~~
+dt memreserve <address> <length>
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt memreserve 0x100000000 0x40000000
+DTB @ 0x7722000
+*** command status = 0
+BOLT> dt show memreserve
+DTB @ 0x7722000
+/dts-v1/;
+
+/memreserve/ 0x100000000 0x40000000;
+
+/*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ dt del prop
+------------
+dt del prop ....... Delete a property from the DTB.
+
+
+SUMMARY
+~~~~~~~
+Delete a property from the DTB. The DT_ADDRESS envar is
+used as the base address of the dtb.
+      
+
+USAGE
+~~~~~
+dt del prop [path] [property name]
+
+
+NOTES
+~~~~~
+Deletes a property name and value from the DTB. See the environment 
+variable DT_SIZE for any changes. The node path to the property 
+must exist.
+
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt del prop /usb@f0480200/ehci@f0480300 interrupts
+DTB @ 0x1000
+*** command status = 0
+
+BOLT> dt del prop / interrupt-parent
+DTB @ 0x1000
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ dt del node
+------------
+dt del node ....... Delete a node from the DTB. 
+
+
+SUMMARY
+~~~~~~~
+Delete a node from the DTB. The DT_ADDRESS envar is 
+used as the base address of the dtb.
+
+
+USAGE
+~~~~~
+dt del node [path] [node name]
+
+
+NOTES
+~~~~~
+Deletes any node from the devicetree. See the environment
+variable DT_SIZE for any changes.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt del node / pcie@f0460000
+DTB @ 0x1000
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ dt add prop
+------------
+dt add prop ....... Add a new property to the DTB.  
+
+
+SUMMARY
+~~~~~~~
+Add a new property to the DTB. The DT_ADDRESS 
+envar is used as the base address of the dtb.
+
+
+NOTES
+~~~~~
+If the property already exists then it is updated, else it is set to the
+values specified with the command. See the environment variable DT_SIZE
+for any changes. The node path to the property must exist.
+
+
+USAGE
+~~~~~
+dt add prop [path] [property name][s "string"|i <0xN... 0xN... >]
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt add node / fred
+DTB @ 0x1000
+*** command status = 0
+BOLT> dt add prop /fred items s "red,green,blue"
+DTB @ 0x1000
+*** command status = 0
+BOLT> dt add prop /fred count i 0x00000001 0x00000002 0x00000003
+DTB @ 0x1000
+*** command status = 0
+BOLT> dt add prop /fred count integer 0x00 0x11 0x00
+DTB @ 0x1000
+*** command status = 0
+BOLT> dt add prop /fred buddy string "Albert"
+DTB @ 0x1000
+*** command status = 0
+BOLT> dt add prop /fred happy bool
+
+BOLT> dt show 
+DTB @ 0x1000
+/dts-v1/;
+
+/ {
+        model = "Broadcom STB (7445a0)";
+        compatible = "brcm,brcmstb";
+        #address-cells = <0x1>;
+        #size-cells = <0x1>;
+        interrupt-parent = <0x1>;
+
+        fred {
+                buddy = "Albert";
+                count = <0x0 0x11 0x0>;
+                items = "red,green,blue";
+                happy;
+        };
+...
+...
+...
+};
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ dt add node
+------------
+dt add node ....... Add a new node to the DTB.
+
+
+SUMMARY
+~~~~~~~
+Add a new node to the DTB. The DT_ADDRESS envar is used as the base address of the dtb.
+
+
+USAGE
+~~~~~
+dt add node [path] [name]
+
+
+NOTES
+~~~~~
+This adds a level 1 (top) node to the device tree binary, which may change its size.
+See the environment variable DT_SIZE for any changes. If the node already exists then
+an error is returned.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt add node / fred
+DTB @ 0x1000
+*** command status = 0
+BOLT> dt add node /fred ginger
+DTB @ 0x1000
+*** command status = 0
+
+BOLT> dt show 
+DTB @ 0x1000
+/dts-v1/;
+
+/ {
+        model = "Broadcom STB (7445a0)";
+        compatible = "brcm,brcmstb";
+        #address-cells = <0x1>;
+        #size-cells = <0x1>;
+        interrupt-parent = <0x1>;
+
+        fred {
+                ginger {
+                };
+        };
+...
+...
+...
+};
+*** command status = 0
+
+BOLT>  dt add node / fred
+DTB @ 0x1000
+*** command status = -1
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ dt sane
+--------
+dt sane ........... Check DTB header. The DT_ADDRESS envar is used as 
+                    the base address of the dtb.  
+
+
+SUMMARY
+~~~~~~~
+Check DTB header. The DT_ADDRESS envar is used as the base address of the dtb.
+
+
+USAGE
+~~~~~
+dt sane
+
+
+NOTES
+~~~~~
+This is a basic check of the parameters of the devicetree binary in memory.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> dt sane
+DTB @ 0x1000
+DTB reported size 0xabe @ 0x1000
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ dt show
+--------
+dt show ........... Decode contents of a memory resident DTB.
+
+
+SUMMARY
+~~~~~~~
+Decode contents of a memory resident DTB file as a DTS. The DT_ADDRESS environment
+variable is used as the base address of the dtb.
+
+
+USAGE
+~~~~~
+dt show [-nodes|-paths] [partial or full node name]
+
+
+OPTIONS
+~~~~~~~
+* -nodes ........... Show only the nodes
+* -paths ........... Show full paths if node name is specified
+
+
+NOTES
+~~~~~
+The DTB must exist in directly readable memory such as flash or ram. 
+It could even have been previously loaded via e.g. tftp but the
+environment variable DT_ADDRESS must be set to the load location prior to 
+executing this command.
+
+The resulting devicetree source (DTS) output can be screen scraped into
+a file that is directly compilable by the standard Linux 'dtc' utility.
+
+A partial or full node name may also be used to filter only portions
+of the devicetree you are interested in.
+
+There is a limitation with regard to the '-paths' flag: For more than one
+subnode (partial or full name filter) matches from _different_ parent
+nodes, only the first parent node encountered is printed.
+
+The '-nodes' flag results in the printing of only the node names
+and not any properties, it may be used in conjunction with the
+above name filter.
+
+The '-nodes' and '-paths' flags are mutually exclusive.
+
+
+ EXAMPLE
+~~~~~~~~
+----
+BOLT> dt show serial
+DTB @ 0x7822000
+/dts-v1/;
+
+/               serial@f040a900 {
+                        clock-frequency = <0x4d3f640>;
+                        compatible = "ns16550a";
+                        reg-io-width = <0x4>;
+                        reg-shift = <0x2>;
+                        reg = <0xf040a900 0x20>;
+                        interrupts = <0x0 0x4b 0x4>;
+                        interrupt-names = "upg_uart0";
+                        current-speed = <0x1c200>;
+                };
+
+                serial@f040a940 {
+                        clock-frequency = <0x4d3f640>;
+                        compatible = "ns16550a";
+                        reg-io-width = <0x4>;
+                        reg-shift = <0x2>;
+                        reg = <0xf040a940 0x20>;
+                        interrupts = <0x0 0x4c 0x4>;
+                        interrupt-names = "upg_uart1";
+                };
+
+                serial@f040a980 {
+                        clock-frequency = <0x4d3f640>;
+                        compatible = "ns16550a";
+                        reg-io-width = <0x4>;
+                        reg-shift = <0x2>;
+                        reg = <0xf040a980 0x20>;
+                        interrupts = <0x0 0x4d 0x4>;
+                        interrupt-names = "upg_uart2";
+                };
+*** command status = 0
+----
+
+----
+BOLT> dt show serial -nodes
+DTB @ 0x7822000
+/dts-v1/;
+
+/               serial@f040a900
+                serial@f040a940
+                serial@f040a980
+*** command status = 0
+----
+
+----
+BOLT> dt show serial -paths
+DTB @ 0x7822000
+/dts-v1/;
+
+/{
+        model = "Broadcom STB (7439b0)";
+        compatible = "brcm,bcm7439b0", "brcm,brcmstb";
+        #address-cells = <0x2>;
+        #size-cells = <0x2>;
+        interrupt-parent = <0x1>;
+        rdb {
+                #address-cells = <0x1>;
+                #size-cells = <0x1>;
+                compatible = "simple-bus";
+                ranges = <0x0 0x0 0x0 0xffffffff>;
+
+                serial@f040a900 {
+                        clock-frequency = <0x4d3f640>;
+                        compatible = "ns16550a";
+                        reg-io-width = <0x4>;
+                        reg-shift = <0x2>;
+                        reg = <0xf040a900 0x20>;
+                        interrupts = <0x0 0x4b 0x4>;
+                        interrupt-names = "upg_uart0";
+                        current-speed = <0x1c200>;
+                };
+
+                serial@f040a940 {
+                        clock-frequency = <0x4d3f640>;
+                        compatible = "ns16550a";
+                        reg-io-width = <0x4>;
+                        reg-shift = <0x2>;
+                        reg = <0xf040a940 0x20>;
+                        interrupts = <0x0 0x4c 0x4>;
+                        interrupt-names = "upg_uart1";
+                };
+
+                serial@f040a980 {
+                        clock-frequency = <0x4d3f640>;
+                        compatible = "ns16550a";
+                        reg-io-width = <0x4>;
+                        reg-shift = <0x2>;
+                        reg = <0xf040a980 0x20>;
+                        interrupts = <0x0 0x4d 0x4>;
+                        interrupt-names = "upg_uart2";
+                };
+        };
+};
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ e
+--
+e ................. Modify contents of memory.
+
+
+SUMMARY
+~~~~~~~
+Modify contents of memory.
+
+
+USAGE
+~~~~~
+e [-b|-h|-w|-q] [addr [data...]]
+
+
+NOTES
+~~~~~
+This command modifies the contents of memory.  If you do not specify
+data on the command line, BOLT will prompt for it.  When prompting for
+data you may enter '-' to back up, '=' to dump memory at the current
+location, or '.' to exit edit mode.
+
+For the ARM architecture, if caching is enabled then a data cache
+flush & invalidate is performed if the -p' option is used.
+
+
+OPTIONS
+~~~~~~~
+* -b ............... Edit memory as bytes
+* -h ............... Edit memory as halfwords (16-bits)
+* -w ............... Edit memory as words (32-bits)
+* -q ............... Edit memory as quadwords (64-bits)
+* -p ............... Address is an uncached physical address
+* -v ............... Address is a kernel virtual address
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> d 0100 8
+00000100  22 22 22 22 11 11 11 11                          """"....        
+*** command status = 0
+
+BOLT> e -b 0100 00 99 
+*** command status = 0
+
+BOLT> d 0100 8
+00000100  00 99 22 22 11 11 11 11                          ..""....        
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ erase
+------
+erase ............. Erase entire flash device or partition
+
+
+SUMMARY
+~~~~~~~
+Perform an erase operation on non-volatile memory
+
+
+USAGE
+~~~~~
+erase [device], erase [device.partiton]
+
+
+NOTES
+~~~~~
+NAND bad block skipping is in effect: Erasure will not
+revert bad blocks. If you see the message ".NAND: read failure:
+cannot find good blocks in partition" while loading a file e.g. 
+after erasure, check you use did specify the "-max=" and "-zo" 
+options for non-zImage files. Note also in the examples
+below the block checking is per device, not partition
+specific.
+
+Erasure of SPI flash may be quite slow for large devices.
+
+
+OPTIONS
+~~~~~~~
+none
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> erase flash1.macadr
+Erasing...NAND: block 90 is bad at address 0x5a00000
+NAND: block 91 is bad at address 0x5b00000
+done
+*** command status = 0
+----
+
+----
+BOLT> erase flash1
+Erasing...Erase address 0x5a00000 failed, bad block?
+Erase address 0x5b00000 failed, bad block?
+done
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ ephycfg
+--------
+ephycfg ........... Configure Ethernet PHY interface
+
+
+SUMMARY
+~~~~~~~
+Configure Ethernet PHY interface
+
+
+OPTIONS
+~~~~~~~
+* -i=* ............. Specify the GENET interface instance (0, 1...) to operate
+		   on. If omitted, all available interfaces are used.
+* -e ............... Enables expert mode, showing possibly broken configuration
+		   options.
+* -r ............... Reset the GENET interface(s) to the board defaults and unsets
+		   relevant environment variables
+
+USAGE
+~~~~~
+ephycfg [-i=*|-e|-r]
+
+
+NOTES
+~~~~~
+This command setup following environment variable for an Ethernet PHY interface.
+For GENET-4 based chips e.g. BCM7445, use option #7 when selecting the phy if
+you wish to use it as an ordinary network port.
+
+* ETH<N>_PHY		=	[INT|MII|RGMII|RGMII_NO_ID]
+* ETH<N>_MDIO_MODE	=	[0|1|boot]
+* ETH<N>_SPEED		=	[10|100|1000]
+
+Where <N> corresponds to the current Ethernet interface instance.
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> ephycfg
+
+1) Internal GPHY (built-in PHY) on GENET_0 (defaults)
+
+2) RGMII ID mode disabled for external Gigabit Switch on GENET_2 (defaults)
+
+Selection: 1
+*** command status = 0
+
+BOLT> printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+            ETH0_PHY RGMII
+      ETH0_MDIO_MODE 0
+          ETH0_SPEED 1000
+        ETH0_PHYADDR 1
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ f
+--
+f ................. Fill contents of memory.
+
+
+SUMMARY
+~~~~~~~
+Fill contents of memory.
+
+
+USAGE
+~~~~~
+f [-b|-h|-w|-q] addr length pattern
+
+
+NOTES
+~~~~~
+This command modifies the contents of memory.  You can specify the
+starting address, length, and pattern of data to fill (in hex)
+
+For the ARM architecture, if caching is enabled then a data cache
+flush & invalidate is performed before, if the -p' option is used.
+
+
+OPTIONS
+~~~~~~~
+* -b ............... Edit memory as bytes
+* -h ............... Edit memory as halfwords (16-bits)
+* -w ............... Edit memory as words (32-bits)
+* -q ............... Edit memory as quadwords (64-bits)
+* -p ............... Address is an uncached physical address
+* -v ............... Address is a kernel virtual address
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> d 0100 8
+00000100  11 11 11 11 11 11 11 11                          ........        
+*** command status = 0
+
+BOLT> f -b 0100 4 22
+*** command status = 0
+
+BOLT> d 0100 8
+00000100  22 22 22 22 11 11 11 11                          """"....        
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ flash
+------
+flash ............. Update a flash memory device
+
+
+SUMMARY
+~~~~~~~
+Update a flash memory device
+
+
+USAGE
+~~~~~
+flash [options] filename [flashdevice]
+
+
+NOTES
+~~~~~
+Copies data from a source file name or device to a flash memory device.
+The source device can be a disk file (FAT filesystem), a remote file
+(TFTP) or a flash device.  The destination device may be a flash or eeprom.
+If the destination device is your boot flash (usually flash0), the flash
+command will restart the firmware after the flash update is complete
+
+[red]#The -header and -noheader options are deprecated.#
+
+The flash operation works by first fully downloading an image into DDR
+and then passing that data to the flash driver. This means we have to
+have an area of free memory set aside for this. We don't use the heap
+but specify the address and size of the memory in config/bsp_config.cfg 
+as FLASH_STAGING_BUFFER and FLASH_STAGING_BUFFER_SIZE.
+
+You can define a bigger flash buffer or change its base address
+but this is not recommended for flashing such things as Linux
+initrd images into NAND or other error prone media as BOLT only
+has basic bad block skipping with no other error recovery, coping
+with bit flips, blocks suddenly going bad or longevity features
+such as wear leveling and block data relocation.
+
+It is *STRONGLY RECOMMENDED* that if you use NAND flash, you place
+filesystem data atop a NAND-aware layer like UBI (e.g. UBI/UBIFS,
+UBI/gluebi/SquashFS). As well as being more reliable you won't
+have an initrd eating your main memory and thus introducing low
+memory problems when running apps.
+
+
+OPTIONS
+~~~~~~~
+* -noerase ......... Don't erase flash before writing
+* -forceerase ...... Force erase flash before writing
+* -blockerase ...... Erase a sector in the flash
+* -forcewrite ...... If file larger than flash device or default maximum, truncate and force write
+* -offset=* ........ Begin programming at this offset in the flash device
+* -mem=* ........... If mem device then specify from where to read
+* -memsize=* ....... If mem device then specify amount to read
+* -size=* .......... Size of source device when programming from flash to flash. 
+                    Otherwise, for disk and network files, this is the maximimum
+                   size of file, which when less than 1024 is interpreted in MB.
+* -header .......... Deprecated option; do not use
+* -noheader ........ Deprecated option; do not use
+* -revend .......... Binary file being downloaded is halfword swapped prior to being flashed
+* -revend1 ......... Binary file being downloaded is full byte swapped prior to being flashed
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> flash 192.168.0.42:vmlinuz-initrd-7445a0 flash0.kernel
+Reading 192.168.0.42:vmlinuz-initrd-7445a0:
+Done. 3454624 bytes read
+Programming...done. 3454624 bytes written
+*** command status = 0
+----
+
+----
+BOLT> flash 192.168.0.42:bolt.bin flash0.bolt
+Reading 192.168.0.42:bolt.bin: .
+Done. 368836 bytes read
+Programming...done. 368836 bytes written
+*** command status = 0
+----
+
+----
+BOLT> flash -forceerase -mem=0x1000 -memsize=0x10000 mem0 flash0.devtree
+Reading mem0: Done. 65536 bytes read
+offset: 00000000   size: 00010000
+Force erasing... 
+Erasing flash...Programming...done. 65536 bytes written
+*** command status = 0
+----
+
+----
+This is the old way where only bmp image was flashed and displayed.
+
+BOLT> flash  -noheader 192.168.0.42:splash.bmp flash0.splash
+Warning: deprecated option '-noheader' will be removed soon
+Reading 192.168.0.42:splash.bmp: .
+Done. 440466 bytes read
+Programming...done. 440466 bytes written
+*** command status = 0
+----
+
+----
+This is the new way where, along with a bmp image, a pcm audio file can be 
+played. This is achieved by flashing a combined(pcm audio + bmp) file named
+splashFile. Below is the command to do it. But, splashFile is created using
+the splash_create_flash_file utility in /scritps.
+
+BOLT> flash -noheader 192.168.0.42:splashFile flash0.splash
+Reading 192.168.0.42:splashFile: .
+Done. 442576 bytes read
+Programming...done. 442576 bytes written
+*** command status = 0
+----
+
+----
+BOLT> flash -header 192.168.0.42:vmlinuz-initrd-7145a0 flash0.kernel  
+Invalid option; '-header' is deprecated
+*** command status = -8
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ gisb
+-----
+gisb .............. Show or set GISB bus timeout
+
+
+SUMMARY
+~~~~~~~
+Show or set GISB bus timeout
+
+
+USAGE
+~~~~~
+gisb [-set=X] where X is a hex number
+
+NOTES
+~~~~~
+Sets the timeout for the top level multi-master register
+bus (GISB) connecting devices within the chip. See also the
+entry for the SUN_GISB_ARB_TIMER register in your chip
+(family) register database documentation.
+
+To disable the timeout function, use zero for the new value,
+else you must use a value not lower than various peripherals
+can cope with in BOLT. Operating systems like Linux may have
+differing requirements.
+
+
+OPTIONS
+~~~~~~~
+* -set=* ........... Program new gisb timeout
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> gisb
+GISB timeout: a4cb80
+*** command status = 0
+----
+
+----
+BOLT> gisb -set=0xbbbbbb
+GISB timeout: bbbbbb
+*** command status = 0
+----
+
+----
+BOLT> gisb -set=2     
+gisb: timeout of 0x2 is too low! (!0 and < 0x50
+GISB timeout: bbbbbb
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ go
+---
+go ................ Start a previously loaded program.
+
+
+SUMMARY
+~~~~~~~
+Start a previously loaded program.
+
+
+USAGE
+~~~~~
+go [address]
+
+
+NOTES
+~~~~~
+The 'go' command will start a program previously loaded with 
+the 'load' command.  You can override the start address by
+specifying it as a parameter to the 'go' command.
+
+
+OPTIONS
+~~~~~~~
+* -noclose ......... Don't close network link before executing program
+* -bsu ............. Run as a sidecar app
+
+EXAMPLE
+~~~~~~~
+
+.Load and then boot Linux
+----
+BOLT> load flash0.kernel:vmlinuz-7445a0
+Loader:zimg Filesys:raw Dev:flash0.kernel File:vmlinuz-7445a0 Options:(null)
+Loading: Reading 3446648 bytes from zImage...........
+ 3446584 bytes read
+Entry address is 0x00008000
+*** command status = 0
+----
+----
+BOLT> go
+Starting program at 0x00008000 (DTB @ 0x00001000)
+
+Booting Linux on physical CPU 0x0
+----
+
+.Load and then boot a BSU app
+----
+BOLT> load -elf -nz 192.168.0.42:intmath.elf
+Device eth0:  hwaddr 00-10-18-B5-C3-78, ipaddr 192.168.0.23, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+Loader:elf Filesys:tftp Dev:(null) File:192.168.0.42:intmath.elf Options:(null)
+Loading: 0xa010000/6048 Entry address is 0xa010000
+*** command status = 0
+----
+----
+BOLT> go -noclose -bsu
+Starting program at 0xa010000 (DTB @ 0x7822000)
+
+BSU UP @ 0x07052e14
+r0: 0x0a010000 r1: 0xffffffff r2: 0x07822000 r3: 0x07052e14
+Saved sp:91ff954 lr7014018
+HEADER is non-BSU
+Signature is OK
+Main version: 8
+Diag version: 117474465
+0       memc #0 0x00a00000 -> 0x06ffc000 101Mb
+1       memc #0 0x10000000 -> 0x80000000 1792Mb
+2       memc #1 0x40000000 -> 0xc0000000 2048Mb
+3       memc #2 0x80000000 -> 0x00000000 2048Mb
+Boxmode: 1
+Start app...
+Bye-Bye!
+*** command status = 0
+BOLT>
+----
+
+.Load ELF as a flat binary, then copy as ELF and run
+----
+BOLT> load -raw -addr=0x10000000 192.168.0.42:intmath.elf
+Device eth0:  hwaddr 00-10-18-B5-C3-78, ipaddr 192.168.0.23, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+Loader:raw Filesys:tftp Dev:(null) File:192.168.0.42:intmath.elf Options:(null)
+Loading: .
+ 71976 bytes read
+Entry address is 0x10000000
+*** command status = 71976
+----
+----
+BOLT> load -elf  mem0:0x10000000
+Loader:elf Filesys:raw Dev:mem0 File:0x10000000 Options:(null)
+Loading: 0xa010000/6048 Entry address is 0xa010000
+*** command status = 0
+----
+----
+BOLT> go -noclose -bsu
+Starting program at 0xa010000 (DTB @ 0x7822000)
+
+BSU UP @ 0x07052e34
+r0: 0x0a010000 r1: 0xffffffff r2: 0x07822000 r3: 0x07052e34
+Saved sp:91ff954 lr7014018
+HEADER is non-BSU
+Signature is OK
+Main version: 8
+Diag version: 117474465
+0       memc #0 0x00a00000 -> 0x06ffc000 101Mb
+1       memc #0 0x10000000 -> 0x80000000 1792Mb
+2       memc #1 0x40000000 -> 0xc0000000 2048Mb
+3       memc #2 0x80000000 -> 0x00000000 2048Mb
+Boxmode: 1
+Start app...
+Bye-Bye!
+*** command status = 0
+BOLT>
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ help
+-----
+help .............. Obtain help for BOLT commands
+
+
+SUMMARY
+~~~~~~~
+Obtain help for BOLT commands
+
+
+USAGE
+~~~~~
+help [command]
+
+
+NOTES
+~~~~~
+Without any parameters, the 'help' command will display a summary
+of available commands.  For more details on a command, type 'help'
+and the command name.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> help     
+Available commands:
+
+batch ............. Load a batch file into memory and execute it
+boards ............ Show supported boards
+...
+...
+...
+...
+waitusb ........... Wait for USB device to be installed.
+
+For more information about a command, enter 'help command-name'
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ ifconfig
+---------
+ifconfig .......... Configure the Ethernet interface
+
+
+SUMMARY
+~~~~~~~
+Configure the Ethernet interface
+
+
+USAGE
+~~~~~
+ifconfig device [options..]
+
+
+NOTES
+~~~~~
+Activates and configures the specified Ethernet interface and sets its
+IP address, netmask, and other parameters.  The -auto switch can be used
+to set this information via DHCP.
+
+OPTIONS
+~~~~~~~
+* -auto ............ Configure interface automatically via DHCP
+* -off ............. Deactivate the specified interface
+* -addr=* .......... Specifies the IP address of the interface
+* -mask=* .......... Specifies the subnet mask for the interface
+* -gw=* ............ Specifies the gateway address for the interface
+* -dns=* ........... Specifies the name server address for the interface
+* -domain=* ........ Specifies the default domain for name service queries
+* -speed=* ......... Sets the interface speed (auto,10fdx,10hdx, 100fdx, 100hdx,1000fdx,1000hdx)
+* -loopback=* ...... Sets the loopback mode (off, mac_internal, mac_external, phy_internal,phy_external).  
+**  'mac_internal' sets all data transmitted by the MAC be internally received by the MAC receiver.  
+**  'mac_external' sets all data received by the MAC be loopback to the MAC transmitter.  
+**  'phy_internal' sets all data transmitted by the PHY be internally received by the PHY receiver.  
+**  'phy_external' sets all data received by thePHY be loopback to PHY transmitter.
+* -hwaddr=* ........ Sets the hardware address (overrides environment)
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+Device eth0:  hwaddr 00-10-18-00-93-00, ipaddr 192.168.0.40, mask 255.255.255.0
+        gateway 192.168.0.42, nameserver not set
+*** command status = 0
+----
+
+----
+BOLT> ifconfig eth0 -auto
+1000 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-10-C3-E1, ipaddr 99.88.77.66, mask 255.255.254.0
+        gateway 99.88.77.1, nameserver 99.99.99.99, domain acme.com
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ incenv
+-------
+incenv ............ Increment an integer environment variable.
+
+
+SUMMARY
+~~~~~~~
+Increment an integer environment variable.
+
+
+USAGE
+~~~~~
+incenv varname
+
+
+NOTES
+~~~~~
+This command increments the integer value of an environment variable.
+If it doesn't exist, then it creates one (in NVRAM device) with a
+value of 1.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> setenv COUNT 0
+*** command status = 0
+BOLT> incenv COUNT
+    COUNT = 1
+*** command status = 0
+BOLT> incenv COUNT
+    COUNT = 2
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ info
+-----
+info .............. Show BOLT configuration information
+
+
+SUMMARY
+~~~~~~~
+Show BOLT configuration information
+
+
+USAGE
+~~~~~
+info
+
+
+NOTES
+~~~~~
+This command displays information about the DDR, CPU speed, memory and
+build configuration. It also sets up environment variables of the
+format "DRAM<N>_SIZE", where N is the DDR number, e.g. "printenv" might
+show:
+
+ DRAM0_SIZE 1024
+ DRAM1_SIZE 1024
+ DRAM2_SIZE 1024
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> info
+========================================================================
+     CPU speed: 1500MHz
+DDR0 Frequency: 1067MHz, 4x16 phy:32    40000000 @ 00000000
+DDR1 Frequency: 1067MHz, 4x16 phy:32    40000000 @ 80000000
+  Total memory: 2048MB
+   Boot Device: SPI
+
+Total memory used by BOLT: 0x07008000 - 0x070300A0 (164000)
+Initialized Data:          0x07025870 - 0x0702F990 (10312)
+BSS Area:                  0x0702F990 - 0x070300A0 (452)
+Local Heap:                0x07030400 - 0x09030400 (33554432)
+Stack Area:                0x09030400 - 0x09038400 (32768)
+Text (code) segment:       0x07008000 - 0x0700F61C (30236)
+FSBL info area:            0xFFE0FFC0 - 0xFFE0FFE0 (32)
+Page table base:           0x07000000
+
+BOLT driver build information:
+LDR:     ELF   0; RAW   0; SREC  0; ZIMG  0
+UI:      LEVEL 3; MIN   0
+FS:      FAT   0; FAT32 0
+NET:     STACK 0; ENET  0
+USB:     STACK 0; ETH   0; DISK  0; SERIAL   0; HID 0
+FLASH:   P30   0; P33   0; 128J3 0; Spansion 0
+========================================================================
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ load
+-----
+load .............. Load an executable file into memory.
+
+
+SUMMARY
+~~~~~~~
+Load an executable file into memory without executing it
+
+
+USAGE
+~~~~~
+load [-options] host:filename|dev:filename
+
+
+NOTES
+~~~~~
+This command loads an executable file into memory, but does not
+execute it.  It can be used for loading data files, overlays or
+other programs needed before the 'boot' command is used.  By
+default, 'load' will load a zImage binary.
+
+The filename for the 'rawfs' filesystem may be expressed
+in the format <device>:<offset>,<size> e.g. 'mem0:0x8000,0x10000'.
+
+OPTIONS
+~~~~~~~
+* -elf ............. Load the file as an ELF executable
+* -srec ............ Load the file as ASCII S-records
+* -raw ............. Load the file as a raw binary
+* -zimg ............ Load the file as a zImage binary (default)
+* -bsu ............. Load a sidecar app
+* -z ............... Load gzip-compressed file (default)
+* -nz .............. Load uncompressed file
+* -splash .......... Load a BMP file and display it
+* -loader=* ........ Specify BOLT loader name
+* -tftp ............ Load the file using the TFTP protocol
+* -fatfs ........... Load the file from a FAT file system
+* -rawfs ........... Load the file from an unformatted file system
+* -fs=* ............ Specify BOLT file system name
+* -max=* ........... Specify the maximum number of bytes to load (raw and zImage)
+* -addr=* .......... Specify the load address (hex) (raw and zImage)
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> ifconfig eth0 -auto
+1000 Mbps Full-Duplex
+Device eth0:  hwaddr 00-00-00-00-00-00, ipaddr 10.12.153.152, mask 255.255.254.0
+        gateway 10.12.152.1, nameserver 10.10.10.10, domain broadcom.com
+*** command status = 0
+BOLT> load -raw 10.12.153.131:ntsc_matrix.yuv
+Loader:raw Filesys:tftp Dev:eth0 File:10.12.153.131:ntsc_matrix.yuv Options:(null)
+Loading: .
+ 691200 bytes read
+Entry address is 0x00008000
+*** command status = 0
+----
+
+----
+BOLT> load flash0.rootfs:vmlinuz-initrd-7445a0
+Loader:zimg Filesys:raw Dev:flash0.rootfs File:vmlinuz-initrd-7445a0 Options:(null)
+Loading: Reading 5857736 bytes from zImage...........
+ 5857672 bytes read
+Entry address is 0x00008000
+*** command status = 0
+----
+
+----
+BOLT> load -raw -splash 192.168.0.42:splash.bmp
+Loader:raw Filesys:tftp Dev:eth0 File:192.168.0.42:splash.bmp Options:(null)
+Loading: .
+ 440466 bytes read
+Entry address is 0x8000
+*** command status = 440466
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ loop
+-----
+loop .............. Loop a command
+
+
+SUMMARY
+~~~~~~~
+Loop a command
+
+
+USAGE
+~~~~~
+loop "command" [-count=*]
+
+
+NOTES
+~~~~~
+The 'loop' command causes the specified command or list of commands
+to be repeated 'count' times or forever, or until a character is typed
+
+
+OPTIONS
+~~~~~~~
+* -count=* ......... Specifies number of iterations
+* -forever ......... Loops forever
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> loop "d 100 4;sleep 1000" -count=2
+00000100  f3007800                             .x..            
+00000100  f3007800                             .x..            
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ macprog
+--------
+macprog ........... Program the MAC address.
+
+
+SUMMARY
+~~~~~~~
+Program the MAC address.
+
+
+USAGE
+~~~~~
+macprog XX-XX-XX-XX-XX-XX
+
+macprog <board-type> <serial-num> <board-rev>
+
+
+NOTES
+~~~~~
+This command has two modes: the first mode sets the specific value of
+the MAC to the address you specify.  The second mode sets the MAC based
+to a pseudo random setting based on the board-type, serial number, and
+board-rev.  Here are two example usages:
+
+macprog 00-60-6E-70-0D-A2
+
+macprog 97110 1549734 3
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> macprog BCM97445VMSVMB_SFFV00 1234 5
+Programming flash...done
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ memtest
+--------
+memtest ........... Test memory.
+
+
+SUMMARY
+~~~~~~~
+Test memory.
+
+
+USAGE
+~~~~~
+memtest [options] addr length
+
+NOTES
+~~~~~
+This command tests memory.  It is a very crude test, so don't
+rely on it for anything really important.  Addr and length are in hex
+
+
+OPTIONS
+~~~~~~~
+* -p ............... Address is an uncached physical address
+* -v ............... Address is a kernel virtual address
+* -loop ............ Loop till keypress
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> memtest  0x800 0x10
+Pattern: 0000000200000017
+Pattern: 0000000800000808
+Pattern: FFFFFFFFFFFFFFFF
+Pattern: 5555555555555555
+Pattern: AAAAAAAAAAAAAAAA
+Pattern: FF00FF00FF00FF00
+Pattern: 00FF00FF00FF00FF
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ memwrap
+--------
+memwrap ........... Test for end of (ddr) memory
+
+SUMMARY
+~~~~~~~
+Test for end of (ddr) memory. The -ddr option pre-fills -base & -top values,
+which may be overridden by your own (optional) -base & -top
+
+USAGE
+~~~~~
+memwrap [options]
+
+NOTES
+~~~~~
+This command performs a write-readback test to the base reference address and each
+presumed ddr test location before the wrap test is performed. You can see this in
+the examples as "cannot modify". On failure, the next lowest word is tested (-4 bytes)
+to see if it can be writtten to. For ARM, If the address is above MMU_MEMTOP but lower
+than the flash and register spaces then BOLT may hang if the mmu is enabled,
+is is expected. The 'uncache' command should be used prior to 'memwrap' to
+avoid mmu complications - if this is desired, though it may not be and
+effects with the mmu on may be part of your tests.
+
+Next, the wrap test prints "cmp[X Y]" where X is the test base and Y the
+incrementing (32 bit) test point values that have been read back after
+the test writes to them. For a non-wrap condition they should be different, though
+read only locations e.g. registers in the RDB may show a non-test value (not 
+0xaa55aa55 or 0x55aa55aa) that we do the test with.
+
+The wrap test increments by 'step' Mb with the test point being checked that it is
+not equal to the base reference. The test must be performed so that the step value
+will fall on the exact address location of the base reference if there is the
+possibility of a memory wrap condition.
+ 
+The wrap test may not actually find a wrap due to the vagaries of a specific chip
+architecture, but this command is written in such a way as find the end of a ddr;
+which is the overall point of this.
+
+NOTE: the use of the 'uncache' command to disable the mmu allowing the memwrap test
+to complete without a hang. An alternative is to build BOLT in uncached mode.
+
+NOTE: The wrap test is ONLY valid within the confines of a specific ddr bus.
+
+OPTIONS
+~~~~~~~
+* -ddr=* ........... Which ddr to test on (optional)
+* -base=* .......... Start address
+* -top=* ........... End address
+* -cont ............ Continue testing after a test fail
+* -step=* .......... Step size, in Mb
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> memwrap -ddr=0
+ddr #0, scan 0x0 to 0x40000000 step 0x10000000 (256Mb)
+256Mb   0x0 - 0x10000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+512Mb   0x0 - 0x20000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+768Mb   0x0 - 0x30000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+1024Mb  0x0 - 0x40000000
+*** REBOOTING TARGET
+----
+
+
+----
+BOLT> uncache -override -nommu
+uncache: 0x00000000 => 0xc0000000...ok
+disable mmu...ok
+*** command status = 0
+----
+
+----
+BOLT> memwrap -ddr=0
+ddr #0, scan 0x0 to 0x40000000 step 0x10000000 (256Mb)
+256Mb   0x0 - 0x10000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+512Mb   0x0 - 0x20000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+768Mb   0x0 - 0x30000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+1024Mb  0x0 - 0x40000000        cannot modify 0x40000000, can modify 0x3ffffffc
+*** command status = -1
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ mhl power
+----------
+mhl power ......... Show the MHL bootup power
+
+
+SUMMARY
+~~~~~~~
+Display the MHL power negotiated from a connected \'sink' device, if any.
+
+
+USAGE
+~~~~~
+mhl power
+
+
+NOTES
+~~~~~
+MHL must be enabled in the build (\'config MHL on') to enable this feature,
+and not all chips support this feature either.
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> mhl power
+MHL power: 900mA.
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ mii
+----
+mii ............... Reads or writes an Ethernet phy
+
+SUMMARY
+~~~~~~~
+Reads or writes register contents from/to specified 
+PHY address on a given MDIO bus (use show devices to
+discover the bus.) 
+
+USAGE
+~~~~~
+mii [read|write] [device] [phy address] [reg] [value]
+
+
+NOTES
+~~~~~
+Requires BOLT to be built with Ethernet support.
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT>  mii read mdio0 1 2
+MII read, phy=1, reg=2, value=0xae02
+*** command status = 0
+----
+
+----
+BOLT>  mii read mdio0 1 3
+MII read, phy=1, reg=3, value=0x5080
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+
+ ping
+-----
+ping .............. Ping a remote IP host.
+
+
+SUMMARY
+~~~~~~~
+Ping a remote IP host.
+
+
+USAGE
+~~~~~
+ping [-t] remote-host
+
+
+NOTES
+~~~~~
+This command sends an ICMP ECHO message to a remote host and waits for 
+a reply.  The network interface must be configured and operational for
+this command to work.  If the interface is configured for loopback mode
+the packet will be sent through the network interface, so this command
+can be used for a simple network test.
+
+
+OPTIONS
+~~~~~~~
+* -t ............... Ping forever, or until the ENTER key is struck
+* -x ............... Exit immediately on first error (use with -f or -t)
+* -f ............... Flood ping (use carefully!) - ping as fast as possible
+* -s=* ............. Specify the number of ICMP data bytes
+* -c=* ............. Specify number of packets to echo
+* -A ............... Don't abort even if key is pressed
+* -E ............... Require all packets sent to be returned, for successful return status
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> ping -E -x -c=4 192.168.0.42 
+192.168.0.42 (192.168.0.42) is alive (seq=0)
+192.168.0.42 (192.168.0.42) is alive (seq=1)
+192.168.0.42 (192.168.0.42) is alive (seq=2)
+192.168.0.42 (192.168.0.42) is alive (seq=3)
+192.168.0.42 (192.168.0.42): 4 packets sent, 4 received
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ printenv
+---------
+printenv .......... Display the environment variables
+
+
+SUMMARY
+~~~~~~~
+Display the environment variables
+
+
+USAGE
+~~~~~
+printenv [varname]
+
+
+NOTES
+~~~~~
+This command prints the value(s) of all or a specified environment
+variable(s) 
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOOT_CONSOLE uart0
+              SPLASH DISABLE
+             STARTUP printenv; show devices
+                  F1 ifconfig eth1 -addr=192.168.0.41 -mask=255.255.255.0 -gw=192.168.0.42
+                  F2 ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+            ETH0_PHY INT
+      ETH0_MDIO_MODE 1
+          ETH0_SPEED 1000
+        ETH0_PHYADDR 10
+         ETH0_HWADDR 00:10:18:00:93:00
+             VERSION 0.50
+      CHIP_FAMILY_ID 74450000
+           BOARDNAME BCM97445VMSVMB_SFFV00
+          MEMORYSIZE 3072
+          DT_ADDRESS 1000
+             DT_SIZE abe
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ reboot
+-------
+reboot ............ Reboot the system
+
+
+SUMMARY
+~~~~~~~
+Reboot the system
+
+
+USAGE
+~~~~~
+reboot
+
+
+NOTES
+~~~~~
+This performs a software initiated warm boot
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> reboot
+CPU 0
+BCM73640010
+PRID73640010
+v1.2
+RR:00000200
+BFW
+...
+...
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ rlogin
+-------
+rlogin ............ Mini rlogin client.
+
+
+SUMMARY
+~~~~~~~
+Connects to a remote system using the RLOGIN protocol.
+
+
+USAGE
+~~~~~
+rlogin hostname [username]
+
+NOTES
+~~~~~
+The remote system must have appropriate permissions in place (usually via the file
+'.rhosts') for BOLT to connect. To terminate the session, type a tilde (~) character
+followed by a period (.)
+
+Requires BOLT 'TCP' support.
+
+
+//////////////////////////////////////////
+EXAMPLE
+~~~~~~~
+----
+----
+//////////////////////////////////////////
+
+------------------------------------------------------------------------- {qwe}
+
+ rpmb counter
+-------------
+rpmb counter ...... Read the RPMB Write Counter.
+
+
+SUMMARY
+~~~~~~~
+Print the RPMB Write Counter.
+
+
+USAGE
+~~~~~
+rpmb counter [RPMBdevice]
+
+
+NOTES
+~~~~~
+Applies to eMMC devices.
+
+
+//////////////////////////////////////////
+EXAMPLE
+~~~~~~~
+----
+----
+//////////////////////////////////////////
+
+------------------------------------------------------------------------- {qwe}
+
+ rpmb program-key
+-----------------
+rpmb program-key .. Program the authentication key.
+
+
+SUMMARY
+~~~~~~~
+Program the authentication key using the key specified by the 'rpmb use-key'
+command.
+
+
+USAGE
+~~~~~
+rpmb program-key [RPMBdevice]
+
+
+NOTES
+~~~~~
+Applies to eMMC devices.
+
+IMPORTANT: [red]#This is a one time programable operation!!!#
+
+
+//////////////////////////////////////////
+EXAMPLE
+~~~~~~~
+----
+----
+//////////////////////////////////////////
+
+------------------------------------------------------------------------- {qwe}
+
+ rpmb use-key
+-------------
+rpmb use-key ...... Specify the key to be used for all RPMB operations.
+
+
+SUMMARY
+~~~~~~~
+Specify the RPMB authentication key to be used for subsquent RPMB operations.
+
+
+USAGE
+~~~~~
+rpmb use-key [RPMBdevice] [byte1] [byte2]...[byte32]
+
+
+NOTES
+~~~~~
+Applies to eMMC devices.
+
+The key must be 32 bytes long.
+
+
+//////////////////////////////////////////
+EXAMPLE
+~~~~~~~
+----
+----
+//////////////////////////////////////////
+
+------------------------------------------------------------------------- {qwe}
+
+ rts
+----
+rts ............ list all, or select an rts
+
+SUMMARY
+~~~~~~~
+Show RTS sets (box modes) available, or select another.
+
+USAGE
+~~~~~
+rts [-set=<N> | -clear | ]
+
+For no option, this lists all the box modes available and its associated
+RTS version name.
+
+For -set=<N> option, <N> is the box mode.
+
+For -clear option, this reverts the box mode to the one defined for
+the current board.
+
+NOTES
+~~~~~
+At build time, sets of RTS values can be specified for various
+operating modes, e.g. Video SD, PIP & HD etc. You can choose which
+set you want at runtime by using this command. The RTS is then
+programmed immediately and the choice is also preserved 
+by saving to flash, unless SECURE_BOOT is defined - in which case
+no permanent change is made.
+ 
+With regard to showing the rts sets, if "*used" is show then
+that set is used and has priority over the board specific set
+that is marked as "*default" (board default.) To revert to
+using the board default rts set use the "rts -clear" form
+of the command. 
+
+If 'rts -set=<N>' has been used then that rts set is saved to flash
+(excepting secure boot builds) and will override any board default rts
+sets, i.e. if you change the board via the 'setboard' command then
+the rts set will stay the same.
+
+Note, in the example "missing client list(s)" refers to a partial
+rts which, as shown, did not cover memory client #2, i.e. we
+didn't consider the third ddr "RTS2:" as being present. This is an
+informational message.
+
+If the "rtsdefault" id for a board matches no id for an rts set then
+you will see the message "RTS: not programed!" at startup.
+
+The "*used" and "*default" markers will also not be seen. If you
+change the rts set via "rts -set=<N>" then only the "*used"
+marker will be seen.
+
+ Changes for box mode #0
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+* These changes activate only if box mode #0 is included in the build
+configuration and it is the _only_ box mode (RTS set) present.
+
+* BOLT is no longer limited to matching RTS sets to ID (box mode)
+numbers. The rts command is now free to use any box mode <N> from 1 to 1022
+i.e. RTS sets and associated ID (box modes) are now decoupled from each other
+within BOLT.
+
+* BOLT only programs box mode #0 for its own use. Selecting box mode #0
+with this command is not allowed.
+
+* You must check that NEXUS supports the box mode you select in BOLT.
+
+* The default box mode for a board is still set by the 'rtsdefault'
+build configuration script command.
+
+EXAMPLE
+~~~~~~~
+
+At first bootup after flashing bolt.bin:
+
+ RTS0: 0x901004, 256 clients, ok
+ rts 00 [20130824232717_7366_1u]         *default
+
+----
+BOLT> rts
+rts 00 [20130824232717_7366_1u]         *default
+rts 01 [20131213060042_7366_1u]
+*** command status = 0
+----
+
+----
+BOLT>  rts -set=1
+RTS0: 0x901004, 256 clients, ok
+rts 00 [20130824232717_7366_1u]         *default
+rts 01 [20131213060042_7366_1u] *used
+board selection update!
+board was ?, now b (flags:0x10000000)
+*** command status = 0
+----
+
+----
+BOLT> rts -clear
+RTS0: 0x901004, 256 clients, ok
+rts 00 [20130824232717_7366_1u]         *default
+rts 01 [20131213060042_7366_1u]
+board selection update!
+board was ?, now b (flags:0xf0000000)
+*** command status = 0
+----
+
+
+----
+BOLT> rts -set=2
+RTS0: 0x1101004, 256 clients, ok
+RTS1: 0x1181004, 256 clients, ok
+RTS2: 0x1201004, missing client list(s) in rts file id:#2? (2 >= 2)
+rts 01 [20140613215801_7445D0_box1]
+rts 02 [20141022172927_7252_4Kstb_box2] *used   *default
+rts 03 [20140613223802_7445D0_box3]
+rts 04 [20140711023505_7252_4Kstb1t_50Hz_box4]
+rts 05 [20140711023446_7252_4K1t_box5]
+rts 06 [20140711023526_7252_1u2t_box6]
+rts 07 [20141003234421_7445_6T_box7]
+rts 08 [20141030233328_7445_3T_box8]
+rts 1000 [20140729212047_7445_TEMP_box1000]
+board selection update!
+board was z, now z (flags:0x10000000)
+*** command status = 0
+----
+
+For box mode #0:
+
+----
+BOLT> rts
+rts 00 [20150504220439_7445_all_box0]
+BOX MODE: 1
+*** command status = 0
+----
+
+----
+BOLT> rts -set=10
+RTS0: 0x1101004, 256 clients, ok
+RTS1: 0x1181004, 256 clients, ok
+RTS2: 0x1201004, 256 clients, ok
+rts 00 [20150504220439_7445_all_box0]
+BOX MODE: 10
+board selection update!
+board was ?, now k (flags:0x02a00000)
+*** command status = 0
+----
+
+After reboot:
+
+----
+...
+RTS0: 0x1101004, 256 clients, ok
+RTS1: 0x1181004, 256 clients, ok
+RTS2: 0x1201004, 256 clients, ok
+BOX MODE: 10
+...
+----
+
+----
+BOLT> rts -clear
+RTS0: 0x1101004, 256 clients, ok
+RTS1: 0x1181004, 256 clients, ok
+RTS2: 0x1201004, 256 clients, ok
+rts 00 [20150504220439_7445_all_box0]
+BOX MODE: 1
+board selection update!
+board was k, now k (flags:0xffe00000)
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ save
+-----
+save .............. Save a region of memory to a remote file via TFTP
+
+
+SUMMARY
+~~~~~~~
+Save a region of memory to a remote file via TFTP
+
+
+USAGE
+~~~~~
+save host:filename startaddr length
+
+
+NOTES
+~~~~~
+The destination must exist and be writeable.
+
+
+EXAMPLE
+~~~~~~~
+
+[source,shell]
+----
+[user@machine]$touch /tftpboot/chunk
+[user@machine]$sudo chmod a+wrx /tftpboot/chunk 
+----
+
+----
+BOLT> save 192.168.0.42:chunk E0000000 40000
+262144 bytes written to 192.168.0.42:chunk
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ set console
+------------
+set console ....... Change the active console device
+
+
+SUMMARY
+~~~~~~~
+Change the active console device
+
+
+USAGE
+~~~~~
+set console device-name
+
+
+NOTES
+~~~~~
+Changes the console device to the specified device name.  The console
+must be a serial-style device.  Be careful not to change the console
+to a device that is not connected!
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> set console uart0
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ setboard
+---------
+setboard .......... Set board to use
+
+
+SUMMARY
+~~~~~~~
+set board number
+
+
+USAGE
+~~~~~
+setboard [boardnum] [options]
+
+
+NOTES
+~~~~~
+After changing the board it is *STRONGLY RECOMMENDED* that
+you reset the board to pick up the new configuration.
+
+The '-forget' option resets the automatic ('config BOARD_ID on')
+board detection or manual selection to the original build time
+default value ('CFG_BOARDDEFAULT'). This option cannot be used
+at the same time as the '[boardnum]' parameter.
+
+IMPORTANT: If you set the build time CFG_BOARDDEFAULT parameter
+to any valid board (index) then the automatic board selection
+(config BOARD_ID on) will not of course function as you have _already_
+overridden the default, but at build time rather than at runtime.
+
+See also: 'boards' command.
+
+OPTIONS
+~~~~~~~
+
+* -park ............ Enable overtemp checking
+* -nopark .......... Disable overtemp checking
+* -avs ............. Enable AVS
+* -noavs ........... Disable AVS
+* -bavs ............ Board defaults for AVS
+* -force ........... Always update flash
+* -forget .......... forget saved board selection
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> setboard b
+board selection update!
+board was a, now b (flags:0x00000000)
+*** command status = 0
+----
+----
+BOLT> setboard -forget
+Not using default board #k, but board #&
+board selection update!
+board was a, now ? (flags:0xf0000000)
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ setenv
+-------
+setenv ............ Set an environment variable.
+
+
+SUMMARY
+~~~~~~~
+Set an environment variable.
+
+
+USAGE
+~~~~~
+setenv [-ro] [-p] varname value
+
+
+NOTES
+~~~~~
+This command sets an environment variable.  By default, an environment variable
+is stored only in memory and will not be retained across system restart.
+
+
+OPTIONS
+~~~~~~~
+* -p ............... Store environment variable permanently in the NVRAM device, if present
+* -ro .............. Causes variable to be read-only (cannot be changed in the future, implies -p)
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> setenv MESSAGE "Hello!"
+*** command status = 0
+BOLT> printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+                 VAR 10
+             MESSAGE Hello!
+*** command status = 0
+
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ sha
+----
+
+SUMMARY
+~~~~~~~
+Calculate SHA256 of a memory region
+
+USAGE
+~~~~~
+sha -addr=<addr> -size=<size> -channel=<n>
+
+NOTES
+~~~~~
+If the build configuration option 'HARDWARE_SHA' is not
+set to 'on' then the -channel flag will not be available.
+
+If -channel is available but not specified then a software
+SHA method is used instead of the hardware XPT DMA.
+
+OPTIONS
+~~~~~~~
+* -addr=* .......... Start address of the memory to SHA
+* -size=* .......... The size of the memory to SHA
+* -channel=* ....... XPT_SHA20:channel 0, XPT_SHA21:channel 1
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> sha -addr=0x6008000 -size=256 -channel=0
+Hardware SHA channel 0:
+        659672137d842296e2639749402f0a15724c0ef35b4bcec6854fe4de460a9af8
+*** command status = 0
+----
+
+----
+BOLT> sha -addr=0x6008000 -size=256 -channel=1
+Hardware SHA channel 1:
+        659672137d842296e2639749402f0a15724c0ef35b4bcec6854fe4de460a9af8
+*** command status = 0
+----
+
+----
+BOLT> sha -addr=0x6008000 -size=256
+Software SHA:
+        659672137d842296e2639749402f0a15724c0ef35b4bcec6854fe4de460a9af8
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ show usb
+---------
+show usb .......... Display devices connected to USB bus.
+
+
+SUMMARY
+~~~~~~~
+
+Display devices connected to USB bus.
+
+
+USAGE
+~~~~~
+usb show [bus [device]]
+
+
+NOTES
+~~~~~
+Displays the configuration descriptors for devices connected to the USB
+If you specify a bus, the entire bus is displayed.  If you specify the
+device number as well, only the specified device is displayed
+
+OPTIONS
+~~~~~~~
+
+* -v ............... Display descriptors from the devices
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> show usb
+Bus 0 Device 1   Class 9 Vendor 0000 Product 0000  [HUB]
+Bus 0 Device 2   Class 0 Vendor 13FE Product 4100  [DEVICE]
+Bus 1 Device 1   Class 9 Vendor 0000 Product 0000  [HUB]
+Bus 1 Device 2   Class 255 Vendor 0B95 Product 7720  [DEVICE]
+*** command status = 0
+BOLT> show usb 1  
+Bus 1 Device 1   Class 9 Vendor 0000 Product 0000  [HUB]
+Bus 1 Device 2   Class 255 Vendor 0B95 Product 7720  [DEVICE]
+*** command status = 0
+BOLT> show usb 1 2
+Bus 1 Device 2   Class 255 Vendor 0B95 Product 7720  [DEVICE]
+*** command status = 0
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ show heap
+----------
+show heap ......... Display information about BOLT's heap
+
+
+SUMMARY
+~~~~~~~
+Display information about BOLT's heap
+
+
+USAGE
+~~~~~
+show heap
+
+
+NOTES
+~~~~~
+This is a debugging command that can be used to determine the health
+of BOLT's internal memory manager.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> show heap
+
+Total bytes:       33554432
+Free bytes:        29494768
+Free nodes:        4
+Allocated bytes:   4054768
+Allocated nodes:   200
+Largest free node: 29494408
+Heap status:       CONSISTENT
+
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ show devices
+-------------
+show devices ...... Display information about the installed devices.
+
+
+SUMMARY
+~~~~~~~
+Display information about the installed devices.
+
+
+USAGE
+~~~~~
+show devices
+
+
+NOTES
+~~~~~
+This command displays the names and descriptions of the devices BOLT is
+configured to support.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> show devices
+Device Name          Description
+-------------------  ---------------------------------------------------------
+              uart0  16550 DUART at 0xF0406B00 channel 0
+        flash0.bolt  SPI flash at E0000000 offset 00000000 size 512KB
+      flash0.macadr  SPI flash at E0000000 offset 00080000 size 64KB
+       flash0.nvram  SPI flash at E0000000 offset 00090000 size 64KB
+      flash0.kernel  SPI flash at E0000000 offset 000A0000 size 4096KB
+     flash0.devtree  SPI flash at E0000000 offset 004A0000 size 64KB
+      flash0.avail0  SPI flash at E0000000 offset 004B0000 size 11584KB
+      flash1.avail0  NAND flash (CS1) offset 00000000 size 4175872KB spare 16384KB
+    flash1.drmregn0  NAND flash (CS1) offset FEE00000 size 2048KB spare 1024KB
+    flash1.drmregn1  NAND flash (CS1) offset FF000000 size 2048KB spare 1024KB
+      flash1.kernel  NAND flash (CS1) offset FF200000 size 7168KB spare 1024KB
+        flash1.temp  NAND flash (CS1) offset FF900000 size 2048KB spare 1024KB
+     flash1.virtual  NAND flash (CS1) offset FFB00000 size 2048KB spare 1024KB
+     flash1.kreserv  NAND flash (CS1) offset FFD00000 size 2048KB spare 1024KB
+     flash1.devtree  NAND flash (CS1) offset FFF00000 size 1024KB spare 1024KB
+               eth0  GENET Internal Ethernet at 0xF0B60800
+               eth1  USB-Ethernet Device
+           usbdisk0  USB Disk unit 0
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ sleep
+------
+sleep ............. Sleep for specified milliseconds.
+
+
+SUMMARY
+~~~~~~~
+Sleep for specified milliseconds.
+
+
+USAGE
+~~~~~
+sleep [timeout]
+
+
+NOTES
+~~~~~
+This command sleeps for a specified time in mS (default is 1000 mS).
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> sleep 500
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ switchcfg
+----------
+switchcfg ......... Configure integrated Ethernet switch settings.
+
+SUMMARY
+~~~~~~~
+Configure integrated Ethernet switch settings.
+
+USAGE
+~~~~~
+switchcfg -port=<port> -isolate_mask=0x1ff
+
+NOTES
+~~~~~
+This command controls the integrate switch per-port isolation mask, useful to
+allow e.g: Port 0 and Port 1 to share the same LAN segment.
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> switchcfg -port=0 -isolate_mask=0x1fff
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ t
+--
+t ................. Test contents of memory.
+
+
+SUMMARY
+~~~~~~~
+Test contents of memory.
+
+
+USAGE
+~~~~~
+t [-b|-h|-w] [-lt|-eq|-gt] addr pattern
+
+
+NOTES
+~~~~~
+This command tests the contents of memory against the specified pattern.
+
+
+OPTIONS
+~~~~~~~
+* -b ............... Edit memory as bytes
+* -h ............... Edit memory as halfwords (16-bits)
+* -w ............... Edit memory as words (32-bits)
+* -eq .............. Test if variable is equal to specified value.
+* -gt .............. Test if variable is greater than specified value.
+* -lt .............. Test if variable is less than specified value.
+* -and ............. Bit test variable against mask pattern.
+* -p ............... Address is an uncached physical address
+* -v ............... Address is a kernel virtual address
+* -pr .............. Print operation
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> d 0x100 1
+00000100  87                                               .               
+
+BOLT> t -b -eq  -pr 0x100 0xEC
+*** Testing 0x87 = 0xEC
+*** command status = 1
+
+BOLT> t -b -eq  -pr 0x100 0x87
+*** Testing 0x87 = 0x87
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ tcp constest
+-------------
+tcp constest ...... TCP console test.
+
+
+SUMMARY
+~~~~~~~
+TCP console test.
+
+
+USAGE
+~~~~~
+tcp constest device.
+
+ 
+NOTES
+~~~~~
+Requires BOLT TCP support.
+
+
+EXAMPLE
+~~~~~~~
+Two machines running BOLT and connected via an Ethernet switch:
+
+.A
+----
+BOLT> ifconfig                                                                                            
+Device eth0:  hwaddr 00-10-18-5B-03-8B, ipaddr 192.168.0.15, mask 255.255.255.0                           
+        gateway not set, nameserver not set, domain localdomain                                           
+*** command status = 0
+----
+
+.B
+----
+BOLT> ifconfig
+Device eth0:  hwaddr 00-10-18-C6-63-EC, ipaddr 192.168.0.19, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+*** command status = 0
+----
+
+.A
+----
+BOLT> show devices                                                                                         
+Device Name          Description                                                                           
+-------------------  ---------------------------------------------------------                             
+              uart0  16550 DUART at 0xf040ab00 channel 0                                                   
+              ...                                                                                
+       tcpfastboot0  TCP Fastboot (port 1234)                                                              
+        tcpconsole0  TCP Console (port 23)                                                                 
+       tcpfastboot1  TCP Fastboot (port 1234)                                                              
+        tcpconsole1  TCP Console (port 23)                                                                 
+*** command status = 0                                                                                     
+
+BOLT> tcp constest tcpconsole0
+----
+
+.B
+----
+BOLT> tcp connect 192.168.0.15
+Connected to remote host.                                                                                 
+----
+
+Text typed on the UART console for 'B' appears on the UART
+console for 'A'.
+
+------------------------------------------------------------------------- {qwe}
+
+ tcp listen
+-----------
+tcp listen ........ Port listener.
+
+
+SUMMARY
+~~~~~~~
+
+USAGE
+~~~~~
+tcp listen portnum
+
+
+NOTES
+~~~~~
+Requires BOLT 'TCP' support.
+
+OPTIONS
+~~~~~~~
+* -q ............... Sink output, don't display on terminal
+* -d ............... Send junk data to discard
+* -nodelay ......... Set nodelay option on socket
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> ifconfig eth0 -auto
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-E0-03-B5, ipaddr 192.168.0.3, mask 255.255.255.0
+        gateway not set, nameserver not set, domain dhcpd.local
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+*** command status = 0
+----
+
+----
+BOLT> tcp listen 80
+Listening...
+----
+
+[source,shell]
+----
+[user@machine]$ ifconfig eth0 | fgrep "inet addr"
+          inet addr:192.168.0.42  Bcast:192.168.0.255  Mask:255.255.255.0
+[user@machine]$ firefox 192.168.0.3
+----
+
+----
+Listening...Connection from port 36030 on 192.168.0.42
+GET / HTTP/1.1
+Host: 192.168.0.3
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:37.0) Gecko/20100101 Firefox/37.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+Remote host is no longer connected.
+Disconnecting...done.
+*** command status = 0
+BOLT> 
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ tcp connect
+------------
+tcp connect ....... TCP connection test.
+
+
+SUMMARY
+~~~~~~~
+TCP connection test.
+
+USAGE
+~~~~~
+tcp connect hostname [portnum]
+
+
+NOTES
+~~~~~
+Requires BOLT 'TCP' support.
+
+
+OPTIONS
+~~~~~~~
+* -q ............... Sink output, don't display on terminal
+* -d ............... Send junk data to discard
+* -nodelay ......... Set nodelay option on socket
+* -srcport=* ....... Specify the source port
+
+
+EXAMPLE
+~~~~~~~
+
+Two machines running BOLT and connected via an Ethernet switch:
+
+.A
+----
+BOLT> ifconfig
+Device eth0:  hwaddr 00-10-18-C6-63-EC, ipaddr 192.168.0.19, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+*** command status = 0
+----
+
+.B
+----
+BOLT> ifconfig                                                                                            
+Device eth0:  hwaddr 00-10-18-5B-03-8B, ipaddr 192.168.0.15, mask 255.255.255.0                           
+        gateway not set, nameserver not set, domain localdomain                                           
+*** command status = 0
+----
+
+.A
+----
+BOLT> tcp listen 80
+Listening...
+----
+
+.B
+----
+BOLT> tcp connect 192.168.0.19 80                                                                         
+Connected to remote host.                                                                                 
+----
+
+.A
+----
+Listening...Connection from port 62732 on 192.168.0.15
+----
+
+Text typed on the UART console for 'A' appears on the UART
+console for 'B' and vice versa. A ctrl-C on any console
+will end the session for both.
+
+If the listener is not running then 'tcp connect' will
+immediately fail:
+
+.B
+----
+BOLT> tcp connect 192.168.0.19 80                                                                         
+Could not connect to remote host                                                                          
+*** command status = -1                                                                                   
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ testenv
+--------
+testenv ........... Tests environment variable.
+
+
+SUMMARY
+~~~~~~~
+Tests environment variable for various conditions. The default is to
+test the existence of the variable.
+
+
+USAGE
+~~~~~
+testenv [-n] [-lt][-eq][-gt] varname [value]
+
+
+NOTES
+~~~~~
+Tests environment variable for various conditions. The default is to
+test the existence of the variable.
+
+
+OPTIONS
+~~~~~~~
+* -n ............... Check for non-existence of variable
+* -eq .............. Test if variable is equal to specified value.
+* -gt .............. Test if variable is greater than specified value.
+* -lt .............. Test if variable is less than specified value.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> setenv VAR 10
+*** command status = 0
+
+BOLT> testenv VAR
+*** command status = 0
+BOLT> testenv -n VAR
+*** command status = 1
+BOLT> testenv -n NOEXIST
+*** command status = 0
+BOLT> testenv VAR -eq 10
+*** command status = 0
+BOLT> testenv VAR -lt 10
+*** command status = 1
+BOLT> testenv VAR -gt 10
+*** command status = 1
+----
+
+
+------------------------------------------------------------------------- {qwe}
+
+ time
+-----
+time .............. Timing utility.
+
+
+SUMMARY
+~~~~~~~
+Measures and prints time taken for executing a bolt command in ms and us.
+
+
+USAGE
+~~~~~
+time COMMAND
+
+
+OPTIONS
+~~~~~~~
+none
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> time "load 192.168.0.42:vmlinuz-initrd-7439b0"
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-C6-63-EC, ipaddr 192.168.0.19, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+Loader:zimg Filesys:tftp Dev:(null) File:192.168.0.42:vmlinuz-initrd-7439b0 Options:(null)
+Loading: Reading 7952208 bytes from zImage...........
+ 7952144 bytes read
+Entry address is 0x8000
+
+Command executed in : 5741 ms (5741738 us)
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ ttcp
+-----
+TCP test command.
+
+
+SUMMARY
+~~~~~~~
+TCP test command.
+
+
+USAGE
+~~~~~
+ttcp -t [-options] host
+
+ttcp -r [-options]
+
+
+NOTES
+~~~~~
+Requires BOLT 'TCP' support.
+
+
+OPTIONS
+~~~~~~~
+* -t ............... Source a pattern to the network
+* -r ............... Sink (discard) data from the network
+* -D ............... Don't buffer TCP writes (TCP_NODELAY)
+* -n=* ............. Number of buffers to send (-t only) (default 2048)
+* -l=* ............. Size of buffer to send/receive (default 2048)
+* -p=* ............. Port number to use (default 5001)
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> ifconfig eth0 -auto
+Device eth0:  hwaddr 00-10-18-BE-A3-1F, ipaddr 192.168.0.8, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+
+BOLT> ttcp -r  192.168.0.42
+Waiting for connection on port 5001: done.
+118358016 bytes transferred via 57792 calls in 100 ticks
+*** command status = 0
+----
+
+[source,shell]
+----
+ [user@machine]$iperf -c 192.168.0.8
+ ------------------------------------------------------------
+ Client connecting to 192.168.0.8, TCP port 5001
+ TCP window size: 16.0 KByte (default)
+ ------------------------------------------------------------
+ [  3] local 192.168.0.42 port 59043 connected with 192.168.0.8 port 5001
+ [ ID] Interval       Transfer     Bandwidth
+ [  3]  0.0-10.0 sec   113 MBytes  94.6 Mbits/sec
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ u
+--
+u ................. Disassemble instructions.
+
+
+SUMMARY
+~~~~~~~
+Disassemble instructions.
+
+
+USAGE
+~~~~~
+u [addr [length]]
+
+
+NOTES
+~~~~~
+This command disassembles instructions at the specified address.
+BOLT will display standard register names and symbolic names for
+certain CP0 registers.  The 'u' command remembers the last address
+that was disassembled so you can enter 'u' again with no parameters
+to continue a previous request.
+ For the ARM architecture, if caching is enabled then a data cache
+flush & invalidate is performed if the -p' option is used.
+
+
+OPTIONS
+~~~~~~~
+* -p ............... Address is an uncached physical address
+* -v ............... Address is a kernel virtual address
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> u 0x800 4
+00000800: 51ae3c00    MOVPL     r3, r0, LSL #24  ; [unexpected bits]
+00000804: 23dcd600    BICCSS    sp, ip, #&00,12
+00000808: 000017e8    ANDEQ     r1, r0, r8, ROR #15
+0000080C: 05003dc2    STREQ     r3, [r0, #-&DC2]
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ uncache
+--------
+uncache ........... Make all ddr memory access via the mmu as uncached
+
+
+SUMMARY
+~~~~~~~
+ Mark (all ddr) memory access via the mmu as uncached. Various effects depending
+upon the architecture.
+
+
+USAGE
+~~~~~
+uncache [options]
+
+NOTES
+~~~~~
+This command is targeted at debugging memory issues. For ARM, going between
+the ddr range (MMU_MEMTOP) to the start of EBI & RDB (flash & register spaces)
+may result in BOLT hanging (a crash) if the mmu is on, as the pages for this
+memory range are deliberately not setup.
+
+This command is intended to be used in conjunction with the
+'memwrap' command. It is strongly suggested that to debug ddr
+'uncache -override -nommu' is used before the memwrap tests to avoid
+any cache effects or complications with mmu page tables.
+ 
+If the override option is not specified then only the ddr(s) for the current
+board configuration are marked as uncached in the mmu (if the mmu is on.)
+
+This command has no effect if BOLT is built CFG_UNCACHED.
+
+OPTIONS
+~~~~~~~
+* -override ........ Ignore ddr settings and config all memory upto  MMU_MEMTOP as unacached
+
+* -nommu ........... Turn off the mmu. On some architectures this also turns off all caches e.g. ARM
+
+
+EXAMPLE
+~~~~~~~
+
+ In these examples the board has two 1Gb ddrs starting at
+memory address 0x00000000 and 0x80000000. MMU_MEMTOP
+is 0xc0000000.
+
+----
+BOLT> uncache
+uncache: 0x00000000 => 0x40000000...ok
+uncache: 0x80000000 => 0xc0000000...ok
+*** command status = 0
+----
+
+----
+BOLT> uncache -override 
+uncache: 0x00000000 => 0xc0000000...ok
+*** command status = 0
+----
+
+----
+BOLT> uncache -override -nommu
+uncache: 0x00000000 => 0xc0000000...ok
+disable mmu...ok
+*** command status = 0
+----
+
+----
+BOLT> uncache  -nommu         
+uncache: 0x00000000 => 0x40000000...ok
+uncache: 0x80000000 => 0xc0000000...ok
+disable mmu...ok
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ unsetenv
+---------
+unsetenv .......... Delete an environment variable.
+
+
+SUMMARY
+~~~~~~~
+Delete an environment variable.
+
+
+USAGE
+~~~~~
+unsetenv varname
+
+
+NOTES
+~~~~~
+This command deletes an environment variable from memory and also 
+removes it from the NVRAM device (if present).
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> unsetenv ETH_DBG  
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ usb init
+---------
+usb init .......... Initialize the USB controller.
+
+
+SUMMARY
+~~~~~~~
+Initialize the USB controller.
+
+USAGE
+~~~~~
+usb init
+
+NOTES
+~~~~~
+The environment variable USBMODE may be used to set the USB startup mode
+prior to the USB driver starting:
+
+*  0 - No USB. 'usb init', 'usb exit' and 'show usb' commands will be unavailable.
+*  1 or is unset - normal mode. USB is operational.
+*  2 - USB only available after 'usb init' command.
+
+The environment variables EHCIOFF and OHCIOFF if set (to any value) will
+not start their respective USB drivers. This must be done prior to starting
+the USB driver.
+
+The USB driver defaults to starting up. If its not required at boot
+time then 'setenv -p USBMODE <mode>;reboot' will ensure that USBMODE
+is respected from inital bootup.
+
+OPTIONS
+~~~~~~~
+* -o ............... OHCI debug messages
+* -oo .............. More OHCI debug messages
+* -u ............... USBD debug messages
+* -uu .............. More USBD debug messages
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> usb init
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+*** command status = 0
+usb: resetting device on bus 1 hub 1 port 1
+USB: New high speed device connected to bus 1 hub 1 port 1
+usb: resetting device on bus 1 hub 2 port 3
+USB: New high speed device connected to bus 1 hub 2 port 3
+usb: found Ethernet Device 0b95:7720
+usb: identified ASIX-Based USB-Ethernet Adapter (00:50:b6:4e:0a:df)
+
+BOLT> usb init
+USB has already been initialized.
+*** command status = -1
+BOLT> 
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ usb exit
+---------
+usb exit .......... Stop & reset the USB controller.
+
+
+SUMMARY
+~~~~~~~
+Stop & reset the USB controller.
+
+USAGE
+~~~~~
+usb exit
+
+NOTES
+~~~~~
+This is paired with 'usb init' so the USB driver can be started and
+stopped within BOLT.
+
+OPTIONS
+~~~~~~~
+None.
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> usb exit
+*** command status = 0
+
+BOLT> usb exit
+USB has not been initialized.
+*** command status = -1
+BOLT> 
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ waitusb
+--------
+waitusb ........... Wait for USB device to be installed.
+
+
+SUMMARY
+~~~~~~~
+Wait for USB device to be installed.
+
+
+USAGE
+~~~~~
+waitusb [-t=timeout] [-d=device_name]
+
+
+NOTES
+~~~~~
+This command waits for a USB device to be recognized and installed.
+The wait will time out after the specified time in seconds 
+(the default is 10 seconds).
+
+
+OPTIONS
+~~~~~~~
+* -t=* ............. Specify new timeout period (0 = 0.5 seconds)
+* -d=* ............. Specify device name to look for...partial names ok but case-sensitive (default=USB)
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> waitusb -t=20 -d='USB Disk'
+usb: new device connected to bus 0 hub 1 port 1
+usb: resetting device on bus 0 hub 1 port 1
+usb: found Mass-Storage Device 13fe:4100
+USBMASS: Unit 0 connected
+*** command status = 0
+BOLT> 
+----
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+

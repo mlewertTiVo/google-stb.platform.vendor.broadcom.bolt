@@ -1,0 +1,1918 @@
+:toc2:
+:toclevels: 3
+:max-width: 100%
+Build configuration script
+==========================
+Broadcom Corporation <support@broadcom.com>
+v1.32, January 15th 2016:
+Updated for 1.10 release.
+
+Introduction
+------------
+
+The BOLT makesystem now auto-generates a range of files for building BOLT 
+depending upon a configuration script. The purpose of such scripting is
+to put in one place all the information required for a build in an easier
+to comprehend format. Once a script has been run, BOLT is ready to be built.
+
+The configuration and build is a one-step process for the user.
+
+The default script is in the file config/family-<FAMILY>.cfg where <FAMILY>
+is the chip family specified by the user, e.g. 'make 7445a0' will use
+the file config/family-7445a0.cfg
+
+Code and makefiles are built from the configuration and
+placed in the 'gen/<FAMILY>' directory. Build objects will be in the
+'objs/<FAMILY>' directory. Linker scripts are generated as a
+separate part of the build (by makefiles) but note that the values in
+them are specified by the script - via search & replace operations
+from generated makefile variables.
+
+Linker scripts in 'objs/<FAMILY>' and items in 'gen/<FAMILY>'
+should never be modified by hand.
+
+
+Building
+--------
+
+To show which chip families are available: 'make show'
+
+To make a specific family: 'make <FAMILY>' Where <FAMILY> is
+one of the items listed by 'make show'
+
+To erase the current build configuration: 'make clean'
+
+To build using another configuration file for a family, the family and file
+have to be specified using FAMILY and CFG to the makesystem, e.g.
+
+----
+ make FAMILY=7445d0 CFG=config/testing/ddrtests-7445.cfg
+----
+
+Once specified, the FAMILY and/or CFG no longer have to be
+used between building BOLT. Only when a different configuration and/or
+family is required do you need to re-specify them, i.e. 'make clean all'
+may be done with abandon without destroying the current configuration.
+
+RTS settings (.rts) and devicetree source (.dts) files are specified
+withing a configuration file.
+
+
+Scripting
+---------
+
+A script consists of headings with a range of commands under them. The file
+extension is 'cfg'
+
+A heading is bounded by square brackets and may contain a value. If a value is
+specified for a heading, it must be included. 
+
+----
+ [<heading> <VALUE>]
+   <command>
+   <command>
+    ...
+----
+
+----
+ [<heading>]
+   <command>
+   <command>
+    ...
+----
+
+Commands may specify either a hard wired option for a build or a
+runtime selection for a specific board. The command reference
+section (below) will specify one or the other.
+
+If a command parameter starts with a minus sign '-' then
+those parameters may appear in any order on that line. If not,
+then the ordering of values is important and must be followed.
+
+Command continuation '\' is allowed, but use with care.
+
+'family', 'chip' and 'board' headings that relate to runtime
+board selection commands have inheritance in that anything referencing
+a previous heading inherits its commands properties. These properties
+may be overridden in the current heading.
+
+Comments may consist of c style '/* */' and perl '#' 
+delimiters but may not span over one line.
+
+If an invalid command is encountered then the script
+stops with an error.
+
+
+Headings
+--------
+
+Valid headings: 
+
+----
+ [version VALUE]
+
+ [config]
+
+ [map VALUE]
+
+ [family VALUE]
+
+ [chip VALUE]
+
+ [board VALUE]
+
+ [end]
+----
+
+The ordering of the headings is important, and the above list shows the
+order expected. The script checks this.
+
+
+ [version]
+~~~~~~~~~~
+Usage: [version VALUE]
+
+Note: The version of the config file.
+
+See also: n/a
+
+Example:
+----
+ [version 1.1]
+----
+
+The script will check VALUE against its own version information and will
+abort processing if they do not match. The purpose is to prevent mis-matches
+between new BOLT deliverables and a customers previous custom BOLT build
+script files.
+
+
+ [config]
+~~~~~~~~~
+Usage: [config]
+
+Note: Hard wired build configuration features
+
+See also: config (command)
+
+Example:
+----
+[config]
+----
+
+This contains the build feature commands for BOLT e.g. USB, networking etc.
+
+
+ [map]
+~~~~~~
+Usage: [map VALUE]
+
+Note: define a FLASH partition profile entry
+
+See also: map (command)
+
+Example:
+----
+[map STB_RG_fixed]
+----
+
+We can specify how all the flash devices will be split into partitions (MTD
+devices in Linux). These partitions will be passed via device tree for use in
+Linux. Note that a single map heading should include the partition map for all
+the flash devices in the system.
+
+
+ [family]
+~~~~~~~~~
+Usage:  [family VALUE]
+
+Note: Chip family configuration
+
+See also: avs cset mset gset cmdlevel dts rtsconfig rtsdefault
+rtsbase pmux section nandshape nandchip enet moca
+comment (commands)
+
+Example:
+----
+[family 7445a0]
+----
+
+This contains the hard wired build features and default 
+runtime configuration for each chip family. There must be
+no more than one family heading per configuration.
+
+The name must match the value used for the makesystem
+FAMILY variable, e.g. make FAMILY=7445a0
+
+
+ [chip]
+~~~~~~~
+Usage: [chip VALUE [: chip.DERIVED_CHIP] ]
+
+Note: Chip configuration
+
+See also: avs pmux enet moca ddr comment (commands)
+
+Example:
+----
+[chip 7445a0]
+[chip 72525b0 : chip.72521b0]
+----
+
+This contains only the default runtime configuration for each chip.
+There may be multiple chips with different names.
+
+A chip configuration derives from the family configuration, or other
+previously defined chip configuration if ': chip.DERIVED_CHIP' exists.
+
+
+ [board]
+~~~~~~~~
+Usage: [board VALUE : DERIVED_OBJ [BOGUS] ]
+
+Note: Board configuration
+
+See also: avs chip pmux enet moca ddr comment (commands)
+
+Example:
+----
+[board BCM97445VMSVMB_SFFV00 : chip.7445a0]
+[board BCM97445C : board.BCM97445VMSVMB_SFFV00 ]
+[board common : chip.7445a0 : BOGUS ]
+----
+
+This contains only the default runtime configuration
+for each board. There may be multiple boards with different names,
+each one of them derives from DERIVED_OBJ, which describes either
+a previously defined chip or a previously defined board.  The
+DERIVED_OBJ is in the form 'chip.name' or 'board.name', depending
+whether it is derived from a chip or a board.
+
+When defining a phony or pseudo board, you must add ': BOGUS'
+to the derivation object.  This tells the Bolt scripts that
+this board is only used for reference and should not be offered
+to the Bolt user as a bonafide board choice.
+
+All boards listed in a configuration are shown on the FSBL menu
+unless there is only one board, in which case it is automatically
+selected and no menu appears.
+
+
+ [end]
+~~~~~~
+Usage: [end] 
+
+Note: denotes the end of a configuration.
+
+See also: n/a
+
+Example:
+----
+[end] 
+----
+
+This heading must be at the end of a configuration file.
+No other text apart from comments must appear after it.
+
+
+
+Commands
+--------
+
+
+Valid commands
+~~~~~~~~~~~~~~
+Build configuration
+^^^^^^^^^^^^^^^^^^^
+Commands that are enacted at build time.
+----
+    cmdlevel
+    config
+    cset
+    dt autogen
+    dts
+    gset
+    i2cbus
+    ldfile
+    map
+    mmap
+    mset
+    nandchip
+    nandshape
+    rtsbase
+    rtsconfig
+    section
+----
+
+Scripting only
+^^^^^^^^^^^^^^
+Build time commands that select certain environment features.
+----
+    chip
+    include
+----
+
+Board configuration
+^^^^^^^^^^^^^^^^^^^
+Commands that enact a configuration at runtime.
+
+----
+    avs
+    bid
+    ddr
+    dt
+    enet
+    mapselect
+    memsys
+    moca
+    pmux
+    rtsdefault
+    pcie
+    sdio
+    usb
+----
+
+
+ config
+~~~~~~~
+Usage: config <VALUE>
+
+Note: set a BOLT feature build flag
+
+See also: n/a
+
+Example:
+----
+config USB on
+----
+
+This sets one of a range of common build features for BOLT.
+Each build feature is prefixed in the code by 'CFG_', for
+example the above 'config USB' would set CFG_USB in CFLAGS,
+and the test would be:
+
+----
+#if CFG_USB
+/* feature*/
+#endif
+----
+
+If a feature is not recognised by the script then
+it will fail.
+
+A feature may hold either 'on', 'off' (case insensitive), 'default'
+or a value. 'on' & 'off' translate to a CFLAG value of '1' or '0'
+respectively, while 'default' does not set any value and removes
+it from CFLAGS. If it holds any other value then it is passed
+in CFLAGS. An example of this is 'config SYSINIT' which is
+used to pass a string, as well as indicating that it has been
+defined.
+
+Config values are overridable (specify different values more than once)
+up until the [family] heading is encountered, e.g.
+
+----
+ config USB on
+ config USB off
+----
+
+USB is 'off' (CFLAGS -DCFG_USB=0) if 'config USB'
+is not changed from this point onward, up until the
+config has been fully processed.
+
+
+ map
+~~~~
+Usage: map <HEADING> <NAME> <SIZE> <DEVICE>
+
+Note: Specify an entry in a flash partition profile
+
+See also: [map] (heading)
+
+Example:
+----
+map example	bolt	1Mb	CS0
+----
+
+This command adds an entry to a flash partition profile map to
+build up a set of partitions which should be registered for all flash devices.
+
+* <HEADING> should match  [map <HEADING>]
+* <NAME> is the name of the partition entry
+* <SIZE> is the size of the entry. 'Kb', 'Mb' or 'Gb' may be
+appended and will be expanded to the right
+amount. Any other symbol will be taken as a presumed legal c language
+constant or pre-processor define.
+* <DEVICE> is the type of flash device on which this partition should
+be placed. Can be any one of:
+CS0 CS1 CS2 CS3 EMMC_BOOT EMMC_DATA
+
+The script snippet below will produce the following c code
+for a flash partition:
+
+----
+[map example]
+map example     bolt    1Mb     CS0
+map example     macadr  64Kb    CS0
+map example     nvram   64Kb    CS0
+map example     kernel  4Mb     CS0
+map example     devtree 64Kb    CS0
+map example     splash  512Kb   CS0
+map example     rootfs  1024Mb  CS1
+----
+
+----
+static struct partition_profile __maybe_unused partition_profile_example[] = {
+	FIXED_PARTITION("bolt", 1*(1024*1024), CS0),
+	FIXED_PARTITION("macadr", 64*(1024), CS0),
+	FIXED_PARTITION("nvram", 64*(1024), CS0),
+	FIXED_PARTITION("kernel", 4*(1024*1024), CS0),
+	FIXED_PARTITION("devtree", 64*(1024), CS0),
+	FIXED_PARTITION("splash", 512*(1024), CS0),
+	FIXED_PARTITION("rootfs", 1024*(1024*1024), CS1),
+	{}
+};
+----
+
+NOTE: All names must be compilable by gcc and that they must be
+unique. Spaces are not allowed within a value.
+
+
+ mapselect
+~~~~~~~~~~
+Usage: mapselect <VALUE>
+
+Note: Select a partition map to use for this chip
+
+See also: map
+
+Example:
+----
+mapselect STB
+----
+
+<VALUE> may be any one of the fixed partition mappings defined under a [map]
+heading or it may be one of a pre-configured, flexible partitioning profiles. A
+flexible profile allows BOLT to configure a given set of partitions to match
+the flash available on the board. The partition placement and sizing will vary
+depending on, for instance, whether the board has a single small SPI flash, a
+SPI flash plus a larger NAND flash, or just a large NAND flash.
+
+You should select a default flash map to use in the [family] section and
+that can be overridden in [chip] through to each [board]. This means
+each board could have a different flash map, if so desired.
+
+Currently supported flexible map(s):
+
+* STB_OLD (do not use for new configurations)
+* STB
+* GATEWAY
+* STB_NO_MIRROR
+
+
+ memsys
+~~~~~~~
+Usage: memsys [std|alt]
+
+Note: Select a preset area of flash to load SHMOO code from.
+
+See also: ddr
+
+Example:
+----
+memsys std
+memsys alt
+----
+
+The 'memsys' command instructs the FSBL to load either the standard or an
+alternate SHMOO (ddr bringup) code library from the MEMSYS or MEMSYS_ALT
+section of BOLT. It allows either multiple versions or types e.g. DDR3
+and DDR4, to be runtime selectable on a per board basis.
+
+The configuration script MEMC_REV variable specifies where to find (base
+directory of) the standard SHMOO code library and MEMC_ALT where to find
+the alternate.
+
+If MEMC_ALT is not defined in a configuration script then any board selected
+in the FSBL that has the command 'memsys alt' will error out at runtime.
+
+Defining MEMC_ALT is NOT SUPPORTED FOR SECURE BOOT BUILDS. Any occurrence
+of it in a configuration script must be removed.
+
+If a 'memsys' command is not specified then the standard MEMSYS
+section of BOLT is used.
+
+It is up to the developer to correctly match MCBs (ddr configuration
+data files) to standard or alternate SHMOO libraries. At the moment
+MCB selection for a board does not select by which 'memsys' it
+belongs to.
+
+
+[[mmap]]
+ mmap
+~~~~~
+Usage: mmap <MEMC> <OFFSET-FROM> <OFFSET-TO> <SIZE>
+
+Note: Describes the memory map information between MEMC and
+CPU address spaces.
+
+See also: ddr
+
+Example:
+----
+mmap 1 0x00000000 0x0040000000 0x40000000 # [0gb..1gb)@MEMC1 -> [ 1gb.. 2gb)
+mmap 1 0x40000000 0x0300000000 0xC0000000 # [1gb..4gb)@MEMC1 -> [12gb..15gb)
+----
+
+NOTE: In the above example, [1GB..4GB) portion of DRAM installed on MEMC#1
+is mapped to [12GB..15GB) of the CPU address space.
+
+To support large amounts of memory (more than 4GB) while allowing
+software to remain in the comfy 32-bit address space as much as possible,
+DRAM installed on a memory controller requires mapping to CPU address
+space. The mapping depends on the memory controller and the offset within
+the DRAM address space, from 0 (zero) to the size of the installed DRAM.
+
+The installed DRAM of a board is mapped to the CPU address space via the
+memory map information specified in the 'map' command(s), and the mapped
+result becomes the memory configuration of the board and is passed to
+Linux.
+
+IMPORTANT: It is MANDATORY to provide memory map information for a chip
+family.
+
+The 'mmap' commands should be only in the [family] section. All the chips
+in a family share the same memory map information regardless of how many
+memory controllers are actually accessible.
+
+
+ mset, gset, cset
+~~~~~~~~~~~~~~~~~
+Usage: mset|cset|gset <VALUE>
+
+Note: Set a makefile variable, CFLAG or both
+
+See also: config
+
+Example:
+----
+gset MY_FLAG 99
+----
+
+* mset sets a makefile variable
+* cset sets a CFLAG
+* gset sets both
+
+NOTE: <VALUE> is optional and may be omitted.
+
+
+ section
+~~~~~~~~
+Usage: section -name <NAME> -off <HEX-OFFSET> -size <HEX-SIZE>
+
+Note: Define a memory layout within the BOLT binary.
+
+See also: memsys
+
+Example:
+----
+section -name FSBL -off 0 -size 0x00001000
+----
+
+The section command defines a memory layout section.  If you specify a 
+section (eg -name XYZ) it will declare Make variables XYZ_TEXT_OFFS,
+XYZ_TEXT_ADDR, and XYZ_SIZE.  The same names will also be added to
+the CFLAGS define list.
+
+You can specify '-size auto' if the current and next sections' 
+offset values are defined.  Similarly, you may specify '-off auto'
+if the previous section's offset and size are defined.
+
+
+ nandshape
+~~~~~~~~~~
+Usage: nandshape <MASK> <VALUE>
+
+Note: nand boot shapes
+
+See also: n/a
+
+Example:
+----
+ nandshape 0b11000 0b00000
+----
+
+The bitmask and value to check if NAND was the
+FLASH device used to boot the chip, tested against
+pin strap inputs that the chip has.
+
+NOTE: You should not normally need to change these values.
+
+
+ nandchip
+~~~~~~~~~
+Usage: nandchip <string> -mask_lo <value> -mask_hi <value> -val_lo <value> -val_hi <value> -page_size <value> -block_size <value> -size <value> -oob <value> -ecc <value> -sector_size <value> -flags <value>
+
+Note: Specify parameters for a (non-ONFI) NAND chip.
+
+See also: n/a
+
+Example:
+----
+ nandchip -name "MT29F32G08CBACA" \
+		-mask_lo 0xffffffff -mask_hi 0xff000000 \
+		-val_lo 0x2c68044a -val_hi 0xa9000000 \
+		-page_size 4096  \
+		-block_size 1048576  \
+		-size 4ULL*1024*1024*1024  \
+		-oob 27 \
+		-ecc 12 \
+		-sector_size 512 \
+		-flags 0
+----
+
+Manually set the configuration for NAND chips
+to be identified in the first stage of the BOLT
+bootloader (FSBL.) Handy if your platform does
+not have ONFI standard NAND chips. You can add
+multiple nandchip lines, though they take up
+valuable space in the FSBL.
+
+You should obtain these values from the NAND
+device manufacturers datasheet.
+
+Flags
+^^^^^
+ -mask_lo, -mask_hi, -val_lo, -val_hi
++++++++++++++++++++++++++++++++++++++++
+Set the value of masks and chip ID when reading
+the chip ID via the Broadcom NAND controller. You can use the
+mask to request matching against parts of the ID (e.g.,
+-mask_lo=0xffffff -mask_hi=0xff000000 will only match the first 5
+bytes of the ID against -val_lo and -val_hi).
+
+ -page_size, -block_size, -size
++++++++++++++++++++++++++++++++
+Basic NAND device size, see the NAND datasheet for these.
+Note that these sizes do not include the out-of-band/spare area
+count. So if a datasheet claims, for instance, a page size of
+2048+64 or 2112 bytes, the page size will be 2048.
+
+ -sector_size
++++++++++++++
+The error correction region size, e.g. when the datasheet
+says "8 bit correction per 528Bytes" this means a sector 
+size of 512 bytes (or e.g. 512+16, due to the spare; see -oob).
+Must be either 512 or 1024.
+
+ -oob
++++++
+The NAND chip spare area size, per 512 bytes. Can 
+be calculated as "spare * 512 / pagesize". e.g., for a 2048+64
+page device, this should be:
+----
+    64 * 512 / 2048 = 16
+----
+
+ -ecc
++++++
+Minimum number of bits correction per sector. For example,
+if the datasheet says '24-bit correction per 1024 bytes', then
+'-ecc' should be 24.
+
+ -flags
++++++++
+Currently unused and flagged for possible deprecation.
+
+NOTE: when booting from NAND, -ecc, -oob, and -sector_size are
+used as a minimum specification -- BOLT will simply validate that
+the board strapping is at least as strong. For non-boot NAND
+(e.g., NAND on CS1), -ecc, -oob, and -sector_size are used as the
+selected configuration.
+
+For non-boot NAND (e.g., on chip select 1), -ecc, -oob, and
+-sector_size are used _directly_ to configure the NAND, rather than
+just used as a minimum suggestion.
+
+IMPORTANT: Don't put spaces between the numeric values in the
+flag values (see above example.)
+
+
+ cmdlevel
+~~~~~~~~~
+Usage: cmdlevel <LEVEL>
+
+Note: set BOLT debug level
+
+See also: n/a
+
+Example:
+----
+cmdlevel 3
+----
+
+Use this command to set how much debug BOLT produces. level 3
+is normal, higher values produce more debug, e.g. 5.
+
+
+
+ rtsconfig
+~~~~~~~~~~
+Usage: rtsconfig -id <BOX MODE> -file <FILE>
+
+Note: Which RTS file to use. The 'scb_clk' parameter and
+ the '-default' flag have been deprecated.
+
+See also: rtsbase rtsdefault
+
+Example:
+----
+ rtsconfig -id 1 -file config/family-7445d0-box1.rts 
+ rtsconfig -id 2 -file config/family-7445d0-box2.rts
+ rtsconfig -id 4 -file config/family-7445d0-box4.rts
+----
+
+Choose RTS files to incorporate into the BOLT build.
+
+* <BOX MODE> is a user specified identification number
+which must match the 'box mode' that the rts data
+was created for. Failure to correctly match this
+may result in incorrect NEXUS operaton. A zero (0)
+value is illegal.
+
+* <FILE> is the file and path of the rts file to
+incorporate into the BOLT build. It is a relative
+path from the BOLT build root.
+
+To change the RTS at runtime see the 'rts' command in
+the doc/bolt_commands.txt file.
+
+
+
+ rtsbase
+~~~~~~~~
+Usage: rtsbase <MEMC> <ADDRESS>
+
+Note: Select an RTS to be programed into a memory controller (memc.)
+
+See also: rtsconfig rtsdefault
+
+Example:
+----
+rtsbase 0 MEMC_ARB_0_CLIENT_INFO_0
+rtsbase 0 -
+----
+
+You can selectively choose to program, or not, an RTS
+for a MEMC. The <ADDRESS> may be a raw address (number)
+or a recognised RTS base address, such as that shown in
+the first example. The second example show an rts
+prevented from being programmed ('-').
+
+
+ dts
+~~~~
+Usage: dts <FILE> <LOAD ADDRESS>
+
+Note: Select a devicetree file to be used by BOLT.
+
+See also: n/a
+
+Example:
+----
+dts config/family-7445a0.dts @ 0x00001000
+dts config/family-7445d0.dts
+----
+
+Choose a devicetree source file (*.dts) that BOLT
+will incorporate into its build.
+
+The 'dt bolt' user interface command, or
+launching a program will modify this file
+based on runtime values.
+
+
+
+ dt autogen
+~~~~~~~~~~~
+Usage: dt autogen -node <NODE> [<OPTS>]
+
+Note: Request the bolt build system to autogenerate a device tree node.
+
+See also: n/a
+
+Example:
+----
+dt autogen -node genet
+----
+----
+dt autogen -node usb -ipp 0
+----
+----
+dt autogen -node sdio -choose 1
+----
+----
+dt autogen -node serial -compatible brcm,buggy-dw-apb-uart ns16550a
+----
+----
+dt autogen -node bsc -choose 0,3,4
+----
+----
+dt autogen -node memory -reg 0x0 0x0 0x0 0x10000000
+----
+----
+dt autogen -node clocks -cpu-div-table 0x00 1
+----
+----
+dt autogen -node sdio -undo 1
+----
+
+NOTE: If you use this command (dt autogen), it must be in the "[family]" 
+ section.  In addition, you must use the 'dts' command first.  The dts
+ command specifies the device tree textfile to start with, and
+ this command will add node(s) to it.  The result can be found
+ in ./gen/$(FAMILY)/*.dtx.
+
+For all nodes, you can supply the optional option '-compatible' 
+to specify a compatibility string other than the default.
+
+For all nodes, you can supply the optional option '-choose'.  It takes 
+a single argument, and that argument may be a single number or a
+comma separated list of numbers (no spaces).  This option allows 
+you to select only specific devices in the order that they appear
+in GISB space.
+
+In addition, if a "dt autogen -node foo" is already in the config
+file and you would like to remove its effect, just use
+dt autogen -node foo -undo 1
+
+bsc(i2c)
+^^^^^^^^
+If you choose to generate bsc i2c master node supply the option '-choose'
+to choose the master channel to create the node for. Also an optional
+'-clock-frequency' can be provided to set the clock frequency for individual
+i2c master controller. If the '-clock-frequency' option is not used then the 
+default clock-frequency would be 390000Hz. clock-frequency is a decimal value
+of i2c master clock frequency in Hz valid values are 375000, 390000, 187500 
+and 200000, e.g. Below examples create iica, iicd, iice dt nodes:
+
+----
+dt autogen -node bsc -choose 0,3,4
+----
+
+or 
+
+----
+dt autogen -node bsc -choose 0,3,4 -clock-frequency 375000, 390000, 187500
+----
+
+BSC i2c master channel 0,1,2,3,4,5 correspond to iica, iicb, iicc, iicd, iice.
+Based on the platform some of the channels are assinged to UPG block and some
+in UPG_AON block, the autogen automatically figures the block the master 
+belongs to and creates appropriate node.
+
+If you choose to generate a usb memory node, you can also use the
+options '-ipp' and '-ioc'.  If they are not used, the default
+value will be 1.
+
+memory
+^^^^^^
+If you choose to generate a memory node, you must use the additional
+option '-reg'. [gray line-through]_and '-cma'._ '-reg' specifies the list of register
+bands, each pair of 32 bit values (to make a 64 bit value) having
+a start and length hex value.  [gray line-through]_'-cma' 
+specifies the continuous memory regions, with each region having
+a name, a start (hex), and a size (hex). If a name is of the
+form 'region_N', where N is a decimal number, then a cma-dev
+node will be created._ 
+
+NOTE: [red]#The '-cma' option has been removed.#
+
+Example:
+
+----
+	dt autogen -node memory  -reg 0x0 0x00000000 0x0 0x40000000
+----
+
+memcs
+^^^^^
+Usage: dt autogen -node memcs -compatible <COMPAT> -compat_with <WITH>
+
+Note: Create all memory (DDR) controller device nodes available
+
+See also: dt autogen
+
+ Options:
++++++++++
+
+* *COMPAT* - For all DDR controllers (0..N) this sets the 'memc@'<N> device node
+_and all of its sub-nodes_ (ddr-phy, shimphy, memc-ddr) compatibility property
+string for possible use by a Linux driver. The default is to source the
+compatibility values from the register database (RDB) so as to extract the right
+hardware block revision numbers. Unless you have a special requirement it is
+*not recommended* to use this option.
+
+* *WITH* - This allows the selective *addition* of user specified strings to
+a specific nodes compatibility property. The format of the data is one or more
+space separated [key]=[value] pairs with no spaces within the pair. Currently,
+only the _ddr-phy_ key is defined.
+
+Example:
+
+----
+	dt autogen -node memcs
+----
+
+----
+	dt autogen -node memcs -compat_with ddr-phy=brcm,brcmstb-ddr-phy-v240.2
+----
+
+The root nodes for each controller resides at '/rdb/memory_controllers/memc@<N>', e.g.
+
+----
+BOLT> dt show mem -nodes
+DTB @ 0x7822000
+/dts-v1/;
+
+/	memc-cma-mapping
+	memory_controllers
+		memc@0
+			ddr-phy@f0506000
+			shimphy@f0508000
+			memc-ddr@f0502000
+		memc@1
+			ddr-phy@f0906000
+			shimphy@f0908000
+			memc-ddr@f0902000
+*** command status = 0
+----
+
+The example below shows the results of using '-compat_with *ddr-phy*=brcm,brcmstb-ddr-phy-v240.2'
+in which the default 'compatible' property is "brcm,brcmstb-ddr-phy-v240.4"
+
+----
+BOLT> dt show ddr-phy@f0506000
+DTB @ 0x7822000
+/dts-v1/;
+
+/	ddr-phy@f0506000 {
+		compatible = "brcm,brcmstb-ddr-phy-v240.4", "brcm,brcmstb-ddr-phy-v240.2";
+		reg = <0xf0506000 0x21c>;
+	};
+*** command status = 0
+----
+
+clocks
+^^^^^^
+If you choose to generate a 'clocks' node, you must add the '-cpu-div-table'
+option. '-cpu-div-table' specifies the allowed CPU clock divider settings
+for the platform. The parameters for the '-cpu-div-table' option are integers,
+arranged as a list of ordered-pairs, <div_setting div>, where:
+
+<div_setting> = raw value to write into HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG,
+<div> = the logical clock divider setting.
+
+It is not recommended to change the Broadcom-provided defaults of "0x00 1" (no
+quotes).
+
+This property is no longer used for configuring Linux's cpufreq driver, but it
+is important that Linux can restore any divider setting configured by the
+SSBL.
+
+sata
+^^^^
+If you choose to generate a 'sata' node, you may optionally
+define the following options: '-phy-enable-ssc-mask'.
+
+The '-phy-enable-ssc-mask' option takes in a hexadecimal value,
+where the least-significant bit corresponds to port 0. A bit value
+of '1' means that spread-spectrum clocking will be enabled on the
+associated SATA port once the Linux SATA driver is loaded.
+
+For example, to enable SSC on SATA ports 0, and 1, the autogen
+entry will be:
+
+----
+	dt autogen -node sata -phy-enable-ssc-mask 0x3
+----
+
+More information about the SATA DT binding can be found at in the
+kernel sources, under
+'Documentation/devicetree/bindings/ata/brcm-sata.txt'.
+
+If you use this command (dt autogen), it must be in the "[family]" 
+section.  In addition, you must use the 'dts' command first.  The dts
+command specifies the device tree textfile to start with, and
+this command will add node(s) to it.  The result can be found
+in ./gen/$(FAMILY)/*.dtx.
+
+syscon
+^^^^^^
+The following 'syscon' nodes: pinmux, padmux, aon_pinmux,
+aon_padmux memc_client_info, sdio_syscon and
+sun_top_ctrl_general_ctrl and sun_top_ctrl_general_ctrl_no_scan
+can accept a reference parameter that will list them by phandle
+in a separate node.
+
+E.g. the default is to list these in the 's3' node
+by adding the extra dt autogen parameter "-ref s3".
+
+In addition, the sun_top_ctrl_general_ctrl node 
+will have all members of it, or a single one by
+specifying a numerical "-sel" value, e.g. "-sel 0"
+to select the BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0
+register (or equivalent.). The same rules apply to the
+sun_top_ctrl_general_ctrl_no_scan node(s).
+
+nexus
+^^^^^
+The nexus-wakeups node is regarded if the '-parent' property
+is specified, otherwise no "nexus-wakeups" dt node will be
+created. This property must match (it is converted to
+uppercase beforehand) an RDB L2 interrupt register that is
+to be inspected for bit values. The bit values are specified
+by the '-uses' argument, space separated case sensitive values
+that must match the bits in the RDB register of the '-parent'
+value. Bits that are not present in the actual RDB are ignored.
+
+serial
+^^^^^^
+
+Usage: dt autogen -node serial -compatible <COMPAT> -name <NAME> -l1intr <L1> -alias <ALIAS> -stdout <CON>
+
+Note: Create uart (serial port) device nodes.
+
+See also: dt autogen
+
+ Options:
++++++++++
+
+* *COMPAT* - This sets the uart device compatibility configuration
+within the Linux driver. See the 'of-serial.txt' and 'brcm-broken-dw-apb-uart.txt'
+files in the 'linux/Documentation/devicetree/bindings/serial' directory of your
+Broadcom Linux distribution for a full list. The most common setting are:
+
+** 'ns16550a' - Standard for Broadcom chips.
+
+** 'brcm,buggy-dw-apb-uart' - For older chips.
+
+* *NAME* - The RDB name of the device, e.g. 'UART' from BCHP_UART_REG_START.
+
+* *L1* - The RDB interrupt name, e.g. 'UART_RG' from BCHP_HIF_CPU_INTR1_INTR_W2_MASK_STATUS_UART_RG_CPU_INTR_SHIFT
+
+* *ALIAS* - A unique name to refer the uart by in the 'alias' Devicetree node. It should have the prefix
+"serial_" e.g. 'serial_rg'
+
+* *CON* - Set the default Linux boot console uart. The '-stdout' flag takes a single
+letter (A, B, C etc.) It may be specified only  *once*. [red]#This option has no
+effect whatsoever with respect which uart the BOLT console uses#.
+
+NOTE: if '-stdout' is specified then the default baud rate is acquired from the
+SERIAL_BAUD_RATE configuration in 'config/stdbuild.cfg' and applied to the uart node
+designated as the Linux console, otherwise the default uart and baud rate within the
+Linux kernel are used.
+
+There are two forms of this command, *Standard* and *System specific*:
+
+ Standard
++++++++++
+
+ dt autogen -node serial -compatible  <COMPAT> -stdout <CON>
+
+Broadcom provides a standard set of "UPG_UART"s intended for general system use.
+UART 'A' is required by our reference software to be the default for Linux (and BOLT)
+console i/o. Only the optional '-compatible' and '-stdout' flags may be specified with
+this form of the command, '-name', '-l1intr' and '-alias' are ignored. This command only
+needs to be done _once_ for all the standard "UPG_UART" uart nodes to be populated.
+
+Example:
+
+----
+  dt autogen -node serial -compatible ns16550a -stdout B
+----
+
+----
+  dt autogen -node serial
+----
+
+ System specific
+++++++++++++++++
+
+ dt autogen -node serial -compatible <COMPAT> -name <NAME> -l1intr <L1> -alias <ALIAS>
+
+There may be other uarts in the system that you may wish to add. These are often chip
+specific and not uniformly named/specified and hence have to be added one by one. This
+form of the command may be repeated for each additional uart of interest, as well as of
+course having  _one_ of the _standard_ form of this command for all the "UPG_UART"s.
+
+The '-stdout' flag is ignored and '-compatible' is optional. '-name', '-l1intr'
+and '-alias' are [underline]#mandatory#.
+
+Example:
+
+----
+  dt autogen -node serial -compatible ns16550a -name UART -l1intr UART_RG -alias serial_rg
+----
+
+
+bsp
+^^^
+
+Usage: dt autogen -node bsp
+
+Note: Provide the security version to Linux for e.g. decisions with regard to power management.
+
+See also: dt autogen
+
+Options: BSP does not take any arguments.
+
+Example:
+
+----
+  dt autogen -node bsp
+----
+
+
+thermal_zones
+^^^^^^^^^^^^^
+
+Usage: dt autogen -node thermal_zones -thermal-sensors <phandle> [-trips TEMP0 HYST0 [TEMP1 HYST1 [...]]]
+
+Sets up the top-level `thermal-zones` node to describe the relationship between
+sensor(s) and trip point(s). Requires at least a phandle to a thermal sensor
+(e.g., `avs_tmon`). Trip points can be optionally configured via the `-trips`
+option. Trip points must come in pairs, consisting of a temperature value and a
+hysteresis. Hysteresis may be zero, if desired. It is highly recommended you
+consult Broadcom before changing the trip points away from their defaults.
+
+Device tree binding reference: https://www.kernel.org/doc/Documentation/devicetree/bindings/thermal/thermal.txt
+
+Example:
+
+----
+  dt autogen -node thermal_zones -thermal-sensors avs_tmon -trips 110000 10000 125000 10000
+----
+
+
+cpuclock
+^^^^^^^^
+
+Usage: dt autogen -node cpuclock -clocks <phandle> [-clock-latency NS]
+
+Adds a `clocks` phandle to the CPU node, for dynamic frequency scaling. May
+also provide a clock latency, in nanoseconds.
+
+Example:
+
+----
+  dt autogen -node cpuclock -clocks cpu_mdiv_ch0 -clock-latency 4800
+----
+
+
+gpio
+^^^^
+
+Usage: dt autogen -node gpio
+
+Creates device nodes for available GPIO controllers; currently only generates
+nodes for UPG GIO and GIO_AON.
+
+Example:
+
+----
+  dt autogen -node gpio
+----
+
+
+watchdog
+^^^^^^^^
+
+Usage: dt autogen -node watchdog -type <NAME>
+
+Creates device node for the watchdog timers. The watchdog type is required.
+You may specify multiple watchdogs.
+
+Current watchdogs:
+upg		0
+webhif		1
+hyper		2
+
+Example:
+
+----
+  dt autogen -node watchdog -type upg webhif
+----
+
+
+ Points to regard with respect to USB
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Instead of using the register database (RDB) to source
+the base register addresses to setup USB, BOLT now
+sources them via Devicetree, just like Linux does. 
+
+* If you do not have USB device nodes in your Devicetree
+then the BOLT USB driver WILL NOT be initialized.
+
+* The Broadcom specific Devicetree properties
+'ioc' (Invert Over-Current) and 'ipp' (Invert Port Power)
+are read from the Devicetree as well, note that these
+options are settable at build time by the autogen command
+(see above) and can be overridden at runtime by the
+USBIPP and USBIOC environment variables. Note that the
+environment variables also affect the Devicetree so that
+BOLT and Linux USB setting match.
+
+
+ i2cbus
+~~~~~~~
+Usage: i2cbus [BUS]
+
+Note: Select I2C bus for finding a board ID
+
+See also: bid 
+
+Example:
+----
+ i2cbus BSCF
+----
+
+Some reference platforms have an I2C device that holds an 8-bit
+number matched to that specific board type. If BOLT has been
+build to detect that number and the device exists on the
+board then the number is read in and a match is attempted
+between that number and one assigned in the config script for
+it (see bid command.) This command sets which I2C bus to
+go looking for the board ID. 
+
+It is represented by UPPERCASE text matching a register
+database (RDB) file. In the above example that would
+be the file bolt/include/<FAMILY>/bchp_bscf.h
+
+Note that this is a new feature to support Broadcom
+reference boards and may change in future releases.
+
+
+ include
+~~~~~~~~
+Usage: include <FILE>
+
+Note: include an external config file
+
+See also: n/a
+
+Example:
+----
+include stdbuild.cfg
+----
+
+Include (inline) from another file.
+
+
+ ldfile
+~~~~~~~
+Usage: ldfile -in file.in [-rename outfile]
+
+Note: Copy and perform substitutions on a named file.
+
+See also: cset gset
+
+Example:
+----
+ldfile -in config/fsbl.lds.in
+ldfile -in config/mysection.lds.in -rename mysection.lds
+----
+
+This command will copy a file from a source file + path to
+the BOLT build directory (stripping the original path in the
+process) and perform substitutions on that copy.
+
+* The substitutions will replace any text delimited (bracketed)
+by '@' e.g. @FILLB@, with those defined by the gset or cset
+commands.
+
+* If the optional -rename flag is not specified then any
+appended '.in' file name postfix is stripped, e.g. 'fsbl.lds.in'
+will become 'fsbl.lds'.
+
+* For the optional -rename flag being specified the target
+file name is sans path or '.in' postfix,
+e.g. '-rename mysection.lds'.
+
+* There is a special case if 'MEMC_ALT' is defined by get or cset.
+If an input file is named 'memsys.lds' then an output file called
+'memsys_alt.lds' will also be created by BOLT in the object directory.
+This auto-created file will have any text 'memsys' in it replaced by
+'memsys_alt'.
+
+* [red]'This command configures part of the BOLT build system (mostly
+linker scripts) and it is not recommended to change anything without
+due consideration.' 
+
+NOTE: The output directory is 'objs/$(FAMILY)' and not 'gen/$(FAMILY)'.
+
+
+ comment
+~~~~~~~~
+Usage: comment <string>
+
+Note: Add a comment to the FSBL board selection menu
+
+See also:  [board] [chip], the file 'include/fsbl-common.h'
+
+Example:
+----
+comment Placeholder board with spi boot
+----
+
+The comment is the text you see in the brackets
+at the FSBL board selection menu. Its limited to
+NAMELEN characters.
+
+WARNING: *** USE IS NOW DEPRECATED ***
+
+No comments will be shown in the FSBL board selection menu.
+
+
+
+ enet
+~~~~~
+Usage: enet -genet <NUMBER> -phy_type <PHY> -mdio_mode <MODE> -phy_speed <SPEED> -phy_id <ID> -ethsw <HEXSTR>
+
+Note: Set ethenet parameters.
+
+See also: [board] [chip], BOLT 'ephycfg' command.
+
+Example:
+----
+enet -genet 0 -phy_type INT -mdio_mode 1 -phy_speed 1000 -phy_id 10
+enet -genet 0 -phy_type -   -mdio_mode - -phy_speed -    -phy_id -
+enet -switch_port 0 -phy_type INT -mdio_mode 1 -phy_speed 1000 -phy_id 5
+enet -switch_port 7 -phy_type MOCA -mdio_mode - -phy_speed 1000 -phy_id 257
+----
+
+This sets the internal ethernet (not USB ethernet)
+configuration for a board. Note that running the
+BOLT 'ephycfg' command sets environment variables
+which will override the board defaults you set with
+this build script command.
+
+A '''-''' value unsets the parameter the board will use
+and will REMOVE its devicetree entry (property) from
+its corresponding ethernet@xxxxxxxx node.
+
+A special case is for phy_type, where if <PHY> is '''-''' then
+the complete ethernet@xxxxxxxx node will be REMOVED from
+devicetree.
+
+Only '-genet' and '-switch_port' are required parameters,
+but for the physical eth/genet/switch port device (if enabled in the build)
+that BOLT can use all values.
+
+Parameters
+^^^^^^^^^^
+genet
++++++
+genet <NUMBER> - The physical GENET number as it
+appears in the register database (RDB) for each
+chip. e.g. 0, 1 or 2 for 7445.
+
+switch_port
++++++++++++
+switch_port <NUMBER> - The physical integrated switch port number
+as it appears in the register database (RDB) for each
+chip. e.g: 0 to 7 for 7445 (8 is reserved).
+
+phy_type
+++++++++
+phy_type <PHY> - The phy configuration value. 
+The following types have meaning to the single
+physical device BOLT can use as well as for
+devicetree:
+
+*         INT - (1) internal PHY
+*         MII - (2) 10/100 MII (18-wire interface)
+*       RGMII - (4) 14-wire RGMII interface.
+* RGMII_NO_ID - (6) same as above, but disable phase shift on TXC clock
+
+The following types only have meaning for devicetree
+and are not valid for physical devices:
+
+*      RVMII - (3) 14-wire RGMII interface.
+*  RGMII_IBS - (5) 14-wire RGMII interface.
+*       MOCA - (7) MoCA
+
+Note that the value of <PHY> is case sensitive.
+
+mdio_mode
++++++++++
+mdio_mode <MODE> -  The mdio configuration value.
+
+*    0 - standard MDIO is not available e.g. connected to a BCM3383.
+*    1 - (default) standard MDIO is available (ethernet PHY)
+* boot - BOLT configure it only e.g. linked to an ethernet switch.
+
+NOTE: This applies only to the physical device BOLT can use,
+not the devicetree entries as that will result in undefined values.
+
+More info:  http://en.wikipedia.org/wiki/Management_Data_Input/Output
+
+phy_speed
++++++++++
+phy_speed <SPEED> - Ethernet speed value. Typical values are:
+
+*   100
+*  1000
+
+phy_id
+++++++
+phy_id <ID> - The id or address of a connected PHY.
+
+*   probe - probe for an EXTERNAL phy address.
+* noprobe - set to 32
+* <value> - set to <value>
+
+
+WARNING: Do NOT use these values for any other device apart from the
+physical 'eth' device BOLT (may) use. Any [non]probed value will
+be set in ETH0_PHYPROBE_ID after 'dt bolt' command or
+when booting Linux. A value of -1 indicates a failure in probing.
+
+NOTE: If the  phy id/address for ID_AUTO is 256 (0x100) and
+ID_NONE is 257 (0x101). Do not use hexadecimal values for these in
+the config script."probe" and "noprobe" applies only to the physical
+device BOLT can use, not the devicetree entries as that will result
+in undefined values.
+
+For the physical device BOLT uses, then for the case of "probe"
+failing the devicetree value will be set to ID_NONE.
+
+ethsw
++++++
+ethsw <HEXVAL>
+ A HEX number for specifying the switch type the GENET or
+integrated switch port  is connected to. It has no meaning
+for the BOLT physical ethernet device, only for Linux (devicetree.)
+
+
+ moca
+~~~~~
+Usage: moca -enet_node <DT_NODE> -moca_band <BAND>
+
+Note: Set MoCA parameters.
+
+See also: [board] [chip].
+
+Example:
+----
+ moca -enet_node eth1 -moca_band highrf
+----
+
+This sets the internal MoCA configuration for a board.
+
+* '-enet_node' is an alias to the Ethernet device tree node
+which provides the data-path for the MoCA hardware block.
+
+* '-moca_band' applies to MoCA devices
+in devicetree, its ignored otherwise. It is a
+string representing a band as follows:
+
+----
+	band
+	----
+	highrf (deprecated, use 'ext_d' instead)
+	midrf  (deprecated, use 'e' instead)
+	wanrf  (deprecated)
+	ext_d  (1125 ~ 1625 MHz)
+	d_low  (1125 ~ 1225 MHz)
+	d_high (1350 ~ 1625 MHz)
+	e      ( 500 ~  600 MHz)
+	f      ( 675 ~  850 MHz)
+	g      (   0 ~ 1600 MHz)
+	h      ( 975 ~ 1025 MHz)
+----
+
+This is only used as a devicetree configuration entry for Linux.
+
+
+Command: pinmux
+
+Note: DEPRECATED from configuration file version 1.6, use pmux instead.
+
+See also: pmux
+
+
+
+ pmux
+~~~~~
+Usage: pmux -pin <pin> -sel <field> [-pull <none|up|down>] [-n <int>]
+
+See also: [family] [chip] [board] 
+
+Note: sets pinmuxing and pad control.  Also: supplants the pinmux command.
+
+Example:
+
+----
+pmux -pin aon_gpio_07 -sel led_ls_3
+pmux -pin aon_gpio_06,aon_gpio_07 -sel led_ls -n 2
+pmux -pin aon_gpio_04:aon_gpio_07 -sel led_ls -n 4
+pmux -pin gpio -sel sd_card0 -n 12 -pull up
+pmux -pin bnm_gpio -sel bnm_led -n 8
+pmux -pin pcie1_clkreqb -sel __NONE__ -pull up -n 0 /* see NOTE below */
+----
+
+Set up pinmuxing. If this is specified under [family]
+	then it will be hard wired into the FSBL. This is for
+	such things as UART.
+If specified under [chip] (to be inherited by boards)
+	or [board] then it is board specific and actioned in
+	the SSBL.
+
+* <pin> matches the gpio pin.  You can specify the full name of the 
+	pin (e.g. gpio_007), a list of pins (gpio_005,gpio_006_gpio_007),
+	or a range of pins (gpio_005:gpio_007).  You can also just use
+	'gpio', 'aon_gpio', or 'bnm_gpio', and just let Bolt's pattern
+	matching abilities do the matching.  
+
+* <val> matches the field value you want to match to connect to the 
+	specified pin.  This value will be converted to upper case
+	during the match.  You only have to give enough of the match
+	for it to uniquely identify the matching field, although you
+	can only omit characters from the end.  For example, if you
+	want to match 'SD_CARD0_DATA0', 'SD_CARD0_CLK', ..., you can
+	specify 'sd_card0', but specifying 'card0' will not work.
+
+* <n> is used to specify how many pin matches this statement will
+	make.  By default it is 1.  If you match more than 1, you
+	will need to use this parameter or you will get an error.
+
+* <pull> is the pad control of the pin.  Specify 'up', 'down', or
+	none.  This parameter is optional.
+
+NOTE: there are some "dedicated" gpio pins that do not have an RDB
+	field for the GPIO but do have a field for its pad cntl.
+	In this special case, one must specify '-n 0' and also
+	'-sel __NONE__'.  The value for '-pin' should not include
+	the 'pad_ctrl' suffix.
+
+
+ ddr
+~~~~
+Usage: ddr -n <WHICH> -size_mb <SIZE> [-base_mb <BASE>] -clk <SHMOO SPEED> -size_bits <SHMOO SIZE> -width <SHMOO WIDTH> -phy <PHY WIDTH> -fixed - -custom <TAG>
+
+Note: Set ddr parameters
+
+See also: [board] [chip] [mmap]
+
+Example:
+----
+ddr -n 0 -size_mb 1024 -clk 933MHz -size_bits 4G -width 16 -phy 32
+ddr -n 1 -size_mb  -   -clk -      -size_bits -  -width -  -phy -
+----
+
+NOTE: The `-base_mb` option is deprecated.  Please see <<mmap>>.
+
+The value are inheritable from [chip] and can be overridden. The second
+example shows a ddr excluded from being shmoo'd & will not appear in
+the cpu memory map.
+
+These parameters select which 'shmoo' table in FSBL to program
+the (optimal) settings for a physical ddr device. The values must match
+one of those seen in shmoo/$\{MEMC_REV}/mcb/*.mcb for your chip family.
+MEMC_REV is specified in your chip family configuration file.
+
+The values <SHMOO SPEED>, <PHY WIDTH>, <SHMOO SIZE> and <SHMOO WIDTH>
+appear in order, in the name of the source data files used in bolt, e.g.
+
+----
+ bolt/shmoo/B120_E101/mcb/memsys_config_1067MHz_16b_dev4Gx16_le.mcb
+----
+
+* <WHICH> is an index to select which 'memc' (ddr controller) to apply the
+ 'shmooing' to.
+
+* <SIZE> and <BASE> refer to the physical ddr size and base address in
+Mbytes that the cpu will see.
+
+* <SHMOO SPEED> is the ddr speed required.
+
+* <SHMOO SIZE> is the size of the ddr device, e.g. use 4 for a 4Gbit device.
+
+* <SHMOO WIDTH> is each individual ddr chips data bus width, e.g. 8, 16 or 32.
+
+* <PHY WIDTH> is the memc (ddr controller) interface width, e.g. 16 or 32.
+
+If you cannot find a ddr type (aka 'mcb' file) in the BOLT release
+package that matches your products actual ddr device, then please
+contact your Broadcom FAE.
+
+NOTE: A further build step may or may not be required to integrate new
+ mcb data files, depending upon BOLT version. Please see the BOLT
+documentation doc/howto_update_ddr_mcb_files.txt.
+
+
+The optional flag '-fixed' (note its required parameter is '-',
+unused/empty at the moment) automatically enables a BOLT build where
+the MCB for shmooing is sourced from within the MEMSYS section of BOLT. 
+
+If this flag is set then the compressed MCB table in the shmoo
+section is still built but it is disabled (memsys MCB tables have
+priority.) Even if MCB tables for each DDR are exactly the same
+they will occupy their own space in the MEMSYS section of BOLT.
+
+IMPORTANT: For a fixed MCB table the ordering of MCB tables,
+and hence which MEMC controller/ddr it is intended for, is by
+the order of the occurence of each 'ddr' command encountered
+in the script.
+
+The memsys MCB tables are NOT compressed i.e. full MCB data,
+and must fit within the section size as dictated by 
+config/layout.cfg - or whatever layout is chosen if you decide to
+change it.
+
+The number of these full sized MCB tables must be no more than the
+number of DDR client hardware ('MEMC') the chip supports.
+
+The optional flag '-custom' selects a customized MCB based on <TAG>
+on top of <SHMOO SPEED>, <SHMOO SIZE>, <SHMOO WIDTH> and <PHY WIDTH>.
+The "-custom" flag is specific to each chip family, and corresponding MCB
+can be found from shmoo/$\{MEMC_REV}/mcb/$\{FAMILY}/<TAG>*.mcb, e.g.
+
+----
+ bolt/shmoo/B120_E101/mcb/74371a0/nocs1_800MHz_16b_dev4Gx16_le.mcb
+----
+
+Customized MCBs should be considered as supplements to MCBs in
+shmoo/$\{MEMC_REV}/mcb/. If only customized MCBs are integrated when
+porting BOLT to a customer platform, the customized MCBs should be
+placed under shmoo/$\{MEMC_REV}/mcb/, not shmoo/$\{MEMC_REV}/mcb/$\{FAMILY}/
+
+IMPORTANT: Customized MCBs are not supported for secure boot builds.
+
+WARNING: The length of <TAG> should be less than or equal to (DDR_TAGLEN-1)
+(see include/fsbl-common.h), e.g. if DDR_TAGLEN was 9, then its maximum
+length would be 8 characters. Also, <TAG> cannot contain '_' (underscore)
+since it is used as the token separator.
+
+Good:
+
+----
+ nocs5678_800MHz_16b_dev4Gx16_le.mcb
+----
+
+Bad:
+
+----
+nocs56789_800MHz_16b_dev4Gx16_le.mcb
+----
+
+NOTE: If you WANT to be able to select and change MCBs (ddr parameters)
+via the FSBL menu then DO NOT specify '-fixed' or '-custom' for this
+command (ddr) anywhere in your config.
+
+
+ bid
+~~~~
+Usage: bid <hex value>
+
+Note: Set the board ID
+
+See also: i2cbus
+
+Example:
+----
+ bid 0x45
+----
+
+This sets the 8-bit board ID number that BOLT uses to
+automatically select the board, without stopping at the
+first stage bootloader (FSBL) menu. If no boards match
+an ID then the menu is presented.
+
+
+
+ dt
+~~~
+Usage:
+
+* dt cull -power <minimal|std> -root <ROOT> -node <NODE>
+* dt mac  -power <minimal|std> -root /      -node <NODE>
+* dt prop -power <minimal|std> -root <ROOT> -node <NODE> -prop <PROP> -string "<STRING>"
+* dt prop -power <minimal|std> -root <ROOT> -node <NODE> -prop <PROP> -int <int>
+
+Note: Apply board specific Devictree actions at runtime.
+
+See also: dt autogen
+
+Example:
+----
+ dt cull -power minimal -root / -node nexus
+ dt prop                -root / -node sata  -prop status -string "disabled"
+ dt mac                 -root / -node stb0
+----
+
+This allows board specific selective modification of devicetree nodes
+via the 'dt bolt' command, or before Linux starts.
+
+* <ROOT> and <NODE> are the textual names in the devicetree.
+
+** 'cull' removes devicetree nodes.
+
+** 'prop' adds or modifies a devicetree property. Currently, only the string
+type is supported.
+
+**  'mac' sets the "local-mac-address" property _after_ all physical ENET
+(GENET) devices have been allocated a MAC address. The MAC base address
+is generally set by the BOLT 'macprog' command and for each device it is
+incremented to provide a value unique to the platform it is running on.
+
+* '-power' is optional. It may have no effect if the platform
+(BOLT) FSBL does not report its power state.
+
+Note that if the 'dt bolt' command is run again, a partial path
+or node description will result in the deletion/modification of 
+the next node that matches a partial path with that matching
+(partial) node.
+
+
+ rtsdefault
+~~~~~~~~~~~
+Usage: rtsdefault -id <BOX MODE>
+
+Note: Sets the default rts 'box mode' for a chip or board
+
+See also: rtsbase rtsconfig
+
+Example:
+----
+rtsdefault -id 2
+----
+
+* <BOX MODE> should be one of the values of '-id' specified by a
+previous 'rtsconfig' line. If no number matches then the rts
+is not set.
+
+
+ avs
+~~~~
+Usage: avs [enable | disable]
+
+Note: Sets the default AVS state
+
+See also: n/a
+
+Example:
+----
+avs enable
+----
+
+AVS will be enabled (started) by default if a corresponding board is
+configured as "avs enable". By default, AVS is disabled. To explicitly
+disable AVS by default, "avs disable" should be specified. Whether AVS
+is enabled or disabled can be overridden anytime by the "setboard"
+command on the BOLT command line prompt. The "avs" command can exist
+in [family], [chip] and [board].
+
+
+ sdio
+~~~~~
+Usage: sdio -controller <N> -type <T> [-uhs] [-host_driver_strength <S>] [-host_hs_driver_strength <S>] [-card_driver_strength <S>]
+
+Note: Sets the default SIO hardware operating mode
+
+See also: dt autogen -node sdio
+
+Example:
+
+----
+ sdio -controller 0 -type sd -uhs 0
+ sdio -controller 1 -type nodevice
+----
+
+----
+ sdio -controller 0 -type emmc
+ sdio -controller 1 -type sd -uhs 1 -host_driver_strength D
+----
+
+Sets the sdio hardware operating mode. eMMC is enabled by default
+for most chips. It is configured depending upon the board and we
+recommend that sdio #0 is used as the boot device (for historical
+reasons.)
+
+* <N> Which sdio controller to configure for.
+
+* <T> The operating mode (type) which is 'sd', 'nodevice', 'emmc' or 'emmc_on_sdpins'
+
+* -uhs (optional) Sets the property "no-1-8-v" in the Devicetree for Linux
+Ultra High Speed SDIO. Use 1 or 0 to enable or disable.
+
+* -host_driver_strength (optional) Set the host controller driver strength property to <S> for Ultra High Speed modes
+
+* -host_hs_driver_strength (optional) Set the host controller driver strength property to <S> for High Speed mode
+
+* -card_driver_strength (optional) Set the SD Card's driver strength property to <S>
+
+* <S> Must be "A" (x1.5), "B" (x1.0), "C" (x0.75) or "D" (x0.5)
+
+ vreg
+~~~~~
+Usage: vreg -name <string> -gpio <gpio> -pin <int> -active hi|lo \
+		-udelay <int>  -uvolts <int>
+
+This per-board command was created to support the pcie turning
+off/on power supplies to its devices during boot, suspend, and
+resume.  If you use this command, you will reference the name
+of the voltage regulator with -vreg when using the per-board
+pcie command.
+
+Examples:
+
+vreg -name wifi -gpio upg_gio -pin 14 -active lo
+
+
+ pcie
+~~~~~
+Usage: pcie -controller <N> -type <T> [-ssc 1] [-gen <G>] [-pwr <V>]
+
+Note: Sets the default PCIe hardware operating mode on a per board basis. 
+
+See also: dt autogen -node pcie
+
+Examples:
+
+----
+/* remove pcie #1 */
+ pcie -controller 1 -type nodevice		
+----
+----
+/* turn on ssc */
+ pcie -controller 0 -type nominal -ssc 1
+----
+----
+/* turn on ssc, set gen=1 */
+ pcie -controller 0 -type nominal -ssc 1 -gen 1
+----
+----
+/* generate local-mac-address on node pci@0,1 */ 
+ pcie -controller 0 -type nominal -bus 0 -slot 1 -mac 1
+----
+
+/* turn off/on/on a power supply on suspend/resume/boot */ 
+ pcie -controller 0 -type nominal -pwr wifi
+
+/* turn off/on/on two power supplies on suspend/resume/boot */ 
+ pcie -controller 0 -type nominal -pwr wifi,e1000e
+
+* <N> is the pcie controller number, typically 0 or 1.
+* <T> is thee type; either 'nodevice' for deletion or 'nominal'.
+* <G> is the PCIe generation; either 1, 2, or 3.
+* <V> is the name of a voltage regulator, previously declared with
+      the 'vreg' command.  If it is desired to toggle more than
+      one regulator, <V> can be a comma-separated list of 
+      voltage regulator names.
+
+Note that the command 'dt autogen -node pcie' generates the
+PCIe device information based on the chip family, and the 'pcie'
+command described here modifies or deletes individual PCIe devices on
+a per board basis.
+
+ usb
+~~~~
+Usage: usb -controller <N> -type <T> [-ipp 0|1] [-ioc 0|1] [-bdc on|off|dual]
+
+Note: Sets the default USB hardware operating mode on a per board basis.
+
+See also: dt autogen -node usb
+
+Examples:
+
+----
+/* remove usb #1 */
+ usb -controller 1 -type nodevice		
+----
+----
+/* set ipp to 0 */
+ usb -controller 0 -type nominal -ipp 0
+----
+----
+/* enable BDC driver for device mode only */
+ usb -controller 0 -type nominal -bdc on
+----
+
+* <N> is the USB controller number, typically 0 or 1.
+* <T> is thee type; either 'nodevice' for deletion or 'nominal'.
+
+This sets the default USB hardware operating mode on a per board
+basis. The command 'dt autogen -node usb' generates the
+USB device information based on the chip family, and the 'usb'
+command described here modifies or deletes individual USB devices on
+a per board basis.
+
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+

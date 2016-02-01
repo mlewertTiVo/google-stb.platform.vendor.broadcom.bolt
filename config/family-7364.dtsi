@@ -1,0 +1,10 @@
+/ {
+	model = "Broadcom STB (7364)";
+	compatible = "brcm,bcm7364", "brcm,brcmstb";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+
+	chosen {
+		// bootargs = "console=ttyS0,115200 earlyprintk";
+	};
+};

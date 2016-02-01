@@ -1,0 +1,11 @@
+/dts-v1/;
+
+/include/ "family-3390.dtsi"
+/include/ "common.dtsi"
+/include/ "A15.dtsi"
+
+
+/ {
+	model = "Broadcom STB (3390b0)";
+	compatible = "brcm,bcm3390b0", "brcm,brcmstb";
+};

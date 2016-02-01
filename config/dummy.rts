@@ -1,0 +1,10 @@
+/*******************************************************************
+*               Do Not Edit Directly
+*******************************************************************/
+
+#define RTS_VER "FAKE_NO_RTS"
+
+#define   BCHP_MEMC_ARB_0_CLIENT_INFO_0_VAL  0x00000000
+#define   BCHP_MEMC_ARB_1_CLIENT_INFO_0_VAL  0x00000000
+#define   BCHP_MEMC_ARB_2_CLIENT_INFO_0_VAL  0x00000000
+#define   BCHP_MEMC_ARB_3_CLIENT_INFO_0_VAL  0x00000000

@@ -1,0 +1,9 @@
+/ {
+	model = "Broadcom STB (3390)";
+	compatible = "brcm,bcm3390", "brcm,brcmstb";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+
+	chosen {
+	};
+};

@@ -1,0 +1,318 @@
+################################################################################
+#     Copyright (c) 2012-2015, Broadcom Corporation
+#     All Rights Reserved
+#     Confidential Property of Broadcom Corporation
+#
+#  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+#  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+#  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
+################################################################################
+
+all: famcheck $(FAMILY)
+unknown: famcheck
+
+-include toolpath
+include gen/$(FAMILY)/include.mk
+include fsbl/fsbl.inc
+include avs/avs.inc
+
+include shmoo/shmoo.inc
+include shmoo/boards.inc
+include shmoo/memsys.inc
+
+include ssbl/ssbl.inc
+include custom/custom.inc
+include splash/splash.inc
+include security/security.inc
+include common/common.inc
+
+include build/utils.mk
+include build/ver.mk
+include build/brcm.mk
+include build/tools.mk
+
+# Default not to run any postpatch process for DROID_BSU build
+DROID_BSU_POSTPATCH :=
+-include build/droid.mk
+
+$(FAMILY): $(ODIR)/ssbl.bin $(ODIR)/memsys.bin $(ODIR)/fsbl.elf postpatch $(DROID_BSU_POSTPATCH)
+
+################################################################################
+#
+################################################################################
+COMMON_DEPS	:= Makefile fsbl/fsbl.inc avs/avs.inc shmoo/shmoo.inc shmoo/memsys.inc
+COMMON_DEPS	+= ssbl/ssbl.inc custom/custom.inc splash/splash.inc common/common.inc
+COMMON_O	:= $(call src2obj,$(COMMON_S))
+FSBL_S		+= $(AVS_FSBL_S) $(COMMON_S)
+SSBL_S		+= $(AVS_SSBL_S) $(SPLASH_S) $(COMMON_S)
+ALL_S		:= $(FSBL_S) $(SSBL_S) $(SHMOO_S) $(BOARDS_S)
+FSBL_O		:= $(call src2obj,$(FSBL_S))
+BSL_O		:= $(call src2obj,$(BSL_S))
+ASL_O		:= $(call src2obj,$(ASL_S))
+SHMOO_O		:= $(call src2obj,$(SHMOO_S))
+BOARDS_O	:= $(call src2obj,$(BOARDS_S))
+MEMSYS_O	:= $(call src2obj,$(MEMSYS_S))
+MEMSYS_ALT_O	:= $(call src2obj,$(MEMSYS_ALT_S))
+SSBL_O		:= $(call src2obj,$(SSBL_S))
+O_DTB		:= $(ODIR)/config.dtb
+ALL_O		:= $(FSBL_O) $(SSBL_O) $(MEMSYS_O) $(MEMSYS_ALT_O) $(SHMOO_O) $(BOARDS_O) $(COMMON_O)
+LIBGCC		:= thirdparty/libgcc/libgcc.a
+ALL_DEPFILES	:= $(patsubst %.o,%.d,$(ALL_O)) $(patsubst %.dtb,%.dtb.d,$(O_DTB))
+VPATH		+= $(sort $(dir $(ALL_S))) config/
+CSTRICT		:= -Wall -Wmissing-field-initializers -Wundef -Wextra -Wno-unused-parameter -Wshadow -Werror
+USTRICT		?= $(CSTRICT)
+ZEUS_VER	:=zeus
+SSBL_EXTLIBS	?=
+
+ifneq ($(ALL_DEPFILES),)
+-include $(ALL_DEPFILES)
+endif
+
+CFG_BOARDDEFAULT ?= 0
+
+ifneq ($(SINGLE_BOARD),)
+ifneq ($(CFG_BOARDDEFAULT),0)
+$(error Don't override CFG_BOARDDEFAULT for a single board build!)
+endif
+endif
+
+# Quality assurance builds
+QA_LOUD_SHMOO ?= 0
+
+EXTRA_DEFINES += \
+	-DBOARD_NVM_MAGIC=0x5a3ed18d \
+	-DBOARD_MSYS_MAGIC=0x3179736d \
+	-DBOARD_LIST_MAGIC=0x62726431 \
+	\
+	-DBOLT_VER_MAJOR=$(BOLT_VER_MAJOR:0%=%) \
+	-DBOLT_VER_MINOR=$(BOLT_VER_MINOR:0%=%) \
+	-DBOLT_VER_DT_COMPAT=$(BOLT_VER_DT_COMPAT) \
+	\
+	-DCFG_BOARDDEFAULT=$(CFG_BOARDDEFAULT)  \
+	\
+	-DQA_LOUD_SHMOO=$(QA_LOUD_SHMOO)
+
+EXTRA_DEFINES += -DLIBSTRING_ASM_MEMCPY
+EXTRA_DEFINES += -DSSBL_SOFTLOAD=$(SOFTLOAD)
+EXTRA_DEFINES += -include gen/$(FAMILY)/config.h
+ifeq ($(CFG_ZLIB),1)
+EXTRA_DEFINES += -DMY_ZCALLOC -DZ_SOLO -Izlib-$(ZLIB_VER)
+endif
+
+ifeq ($(CFG_EMULATION),1)
+CFG_EMULATION_JUMP_TARGET?=0x8000
+EXTRA_DEFINES += -DCFG_EMULATION=1 -DCFG_EMULATION_JUMP_TARGET=$(CFG_EMULATION_JUMP_TARGET)
+endif
+
+ifeq ($(CFG_NOSHMOO),1)
+EXTRA_DEFINES += -DCFG_NOSHMOO=1
+endif
+
+# -------- security version --------
+ifeq ($(CFG_ZEUS4_1),1)
+ZEUS_VER:=zeus41
+endif
+ifeq ($(CFG_ZEUS4_2),1)
+ZEUS_VER:=zeus42
+endif
+
+ifeq ($(ZEUS_REVOCATION),1)
+ZEUS_VER:=$(ZEUS_VER)revoc
+endif
+# ----------------------------------
+
+ifneq ($(CSTRICT),$(USTRICT))
+$(warning **************************************************)
+$(warning **  NOT USING THE BRCM DEFAULT C WARNING CHECKS **)
+$(warning **************************************************)
+$(warning * -------->    YOU ARE ON YOUR OWN!     <-------- )
+$(warning **************************************************)
+endif
+
+_INC := custom include ssbl/net ssbl/usb dtc/libfdt include/$(ARCH) include/$(FAMILY) gen/$(FAMILY)
+
+INCFLAGS := $(call rootincs,$(_INC))
+
+# Substitute chars in file path to c name conversion. For use by BOLT code
+# that references objcopy created .o files from binary blobs, e.g. the DTB.
+# Chars: ( ) . \ / # + <space> - ] [
+TMP := $(shell echo $(ODIR) | sed "s/[().\\\/\#\+ --]/_/g;s/\]/_/g;s/\[/_/g;")
+
+COMMON_FLAGS:= $(INCFLAGS) $(ARCHFLAGS) $(EXTRA_DEFINES) -D_BOLT_ -DODIR="$(TMP)"
+NOSTDINC_FLAGS := -nostdinc -isystem $(shell $(CC) -print-file-name=include)
+
+CFLAGS := $(COMMON_FLAGS) $(ARCH_CFLAGS) -nostdlib $(NOSTDINC_FLAGS) \
+	  -ffreestanding -Os \
+	  $(USTRICT) -g -ffunction-sections -fdata-sections
+AFLAGS := $(COMMON_FLAGS) -D__ASSEMBLER__ -D_ASMLANGUAGE
+LDFLAGS := $(ARCH_LDFLAGS)
+ifeq ($(V),1)
+LDFLAGS += --print-gc-sections
+endif
+
+BOLT_CORE:= fsbl shmoo boards memsys ssbl avs_fw
+ifneq ($(MEMC_ALT),)
+ BOLT_CORE += memsys_alt
+endif
+
+################################################################################
+# Runtime stack validity checking
+################################################################################
+ifeq ($(CFG_STACK_PROTECT_FSBL),1)
+    FSBL_CFLAGS += -fstack-protector
+    CFLAGS += -DFSBL_STACK_CHECK_VAL=0xfe5d8321
+endif
+
+ifeq ($(CFG_STACK_PROTECT_SSBL),1)
+    SSBL_CFLAGS += -fstack-protector
+    CFLAGS += -DSSBL_STACK_CHECK_VAL=0x12388def
+endif
+
+#  Exclude so stack switching combined with mmu on/off won't cause a stack check
+# fail if -fstack-protector-all is used. NB: These are space separated lists of
+# source files.
+SSBL_CFLAGS_EXCLUDE=common/arch-mmu.c common/arm-cache.c
+FSBL_CFLAGS_EXCLUDE=common/arch-mmu.c common/arm-cache.c
+
+################################################################################
+# Add SSBL/FSBL exclusive CFLAGS
+################################################################################
+ifneq (,$(FSBL_CFLAGS))
+    define add_fsbl
+        CFLAGS_$(1) += $(FSBL_CFLAGS)
+    endef
+    $(foreach fsrc,$(filter-out $(FSBL_CFLAGS_EXCLUDE),$(FSBL_S)),$(eval $(call add_fsbl,$(fsrc))))
+endif
+
+ifneq (,$(SSBL_CFLAGS))
+    define add_ssbl
+        CFLAGS_$(1) += $(SSBL_CFLAGS)
+    endef
+    $(foreach ssrc,$(filter-out $(SSBL_CFLAGS_EXCLUDE),$(SSBL_S)),$(eval $(call add_ssbl,$(ssrc))))
+endif
+################################################################################
+
+$(BSL): $(BSL_O)
+	$(call pretty_print,AR,$@)
+	$(Q)$(AR) -src $@ $^
+
+$(ASL): $(ASL_O)
+	$(call pretty_print,AR,$@)
+	$(Q)$(AR) -src $@ $^
+
+$(ODIR)/fsbl.o: $(FSBL_O) $(ODIR)/fsbl.lds $(LIBGCC) $(BSL) $(ASL)
+	$(call pretty_print,LD,$@)
+	$(Q)$(LD) $(LDFLAGS) --gc-sections -T $(ODIR)/fsbl.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/shmoo.o: $(SHMOO_O) $(ODIR)/shmoo.lds
+	$(call pretty_print,LD,$@)
+	$(Q)$(LD) $(LDFLAGS) -T $(ODIR)/shmoo.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/boards.o: $(BOARDS_O) $(ODIR)/boards.lds
+	$(call pretty_print,LD,$@)
+	$(Q)$(LD) $(LDFLAGS) -T $(ODIR)/boards.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/memsys.o: $(MEMSYS_O) $(ODIR)/memsys.lds $(LIB_MEMSYS) $(LIBGCC)
+	$(call pretty_print,LD,$@)
+	$(Q)$(LD) $(LDFLAGS) -T $(ODIR)/memsys.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/memsys_alt.o: $(MEMSYS_ALT_O) $(ODIR)/memsys_alt.lds $(MEMSYS_ALT_LIB) $(LIBGCC)
+	$(call pretty_print,LD,$@)
+	$(Q)$(LD) $(LDFLAGS) -T $(ODIR)/memsys_alt.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/avs_fw.o: $(AVS_FW_S)
+	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $^ $@
+
+$(ODIR)/ssbl.o: $(SSBL_O) $(ODIR)/ssbl.lds $(CA_LIB) $(CA_LIB_EXT) $(LIBGCC) $(ODIR)/config_dtb.o $(ODIR)/build_date.o
+	$(call pretty_print,LD,$@)
+	$(Q)$(LD) $(LDFLAGS) --gc-sections -T $(ODIR)/ssbl.lds -o $@ $(filter-out %.lds, $^) $(SSBL_EXTLIBS)
+
+$(ODIR)/bolt.elf: $(patsubst %,$(ODIR)/%-stripped.o,$(BOLT_CORE)) $(ODIR)/bolt.lds
+	$(call pretty_print,LD,$@)
+	$(Q)$(STRIP) --remove-section=.bss $(ODIR)/ssbl-stripped.o
+	$(Q)$(LD) $(LDFLAGS) -Map $(ODIR)/bolt.map -T $(ODIR)/bolt.lds -o $@ $(filter-out %.lds, $^)
+	$(Q)$(STRIP) --remove-section=$(ARCH_RM) $@
+
+$(ODIR)/fsbl.elf: $(ODIR)/fsbl-stripped.o $(ODIR)/bolt.lds
+	$(call pretty_print,LD,$@)
+	$(Q)$(LD) $(LDFLAGS) -Map $(ODIR)/fsbl.map -T $(ODIR)/bolt.lds -o $@ $(filter-out %.lds, $^)
+	$(Q)$(STRIP) --remove-section=$(ARCH_RM) $@
+
+$(ODIR)/config.dtb: $(ROOT)/$(DTS)
+	$(Q)$(call pretty_print,DTB,$@)
+	$(Q)$(ROOT)/dtc/dtc -Idts -Odtb -o $@ -i . -d $@.d $<
+
+$(ODIR)/config_dtb.o: $(ODIR)/config.dtb
+	$(Q)$(call pretty_print,OBJCOPY,$@)
+	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $< $@
+
+# final (split) products from bolt.bin
+
+$(ODIR)/fsbl.bin: $(ODIR)/bolt.bin $(ODIR)/bolt.asm
+	$(call pretty_print,SPLIT,$@)
+	$(Q)$(ROOT)/scripts/split.pl $(FSBL_TEXT_OFFS) $(FSBL_SIZE) $< $@
+
+$(ODIR)/ssbl.bin: $(ODIR)/bolt.bin $(ODIR)/bolt.asm $(ODIR)/fsbl.bin
+	$(call pretty_print,SPLIT,$@)
+	$(Q)$(ROOT)/scripts/split.pl $(SSBL_TEXT_OFFS) $(SSBL_SIZE) $< $@
+
+$(ODIR)/memsys.bin: $(ODIR)/bolt.bin $(ODIR)/bolt.asm $(ODIR)/fsbl.bin
+	$(call pretty_print,SPLIT,$@)
+	$(Q)$(ROOT)/scripts/split.pl $(MEMSYS_TEXT_OFFS) $(MEMSYS_SIZE) $< $@
+
+baseline: $(ODIR)/fsbl.o $(ODIR)/ssbl.o
+	$(call pretty_print,OLD,$(ODIR)/fsbl-old.o)
+	$(Q)cp $(ODIR)/fsbl.o $(ODIR)/fsbl-old.o
+	$(call pretty_print,OLD,$(ODIR)/ssbl-old.o)
+	$(Q)cp $(ODIR)/ssbl.o $(ODIR)/ssbl-old.o
+
+bloatcheck: $(ODIR)/fsbl.o $(ODIR)/ssbl.o $(ODIR)/bolt.elf $(ODIR)/fsbl-old.o $(ODIR)/ssbl-old.o
+	$(Q)echo
+	$(Q)echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+	$(Q)echo 'BLOAT-O-METER RESULTS'
+	$(Q)echo
+	$(Q)echo 'FSBL'
+	$(Q)scripts/bloat-o-meter $(ODIR)/fsbl-old.o $(ODIR)/fsbl.o
+	$(Q)echo
+	$(Q)echo 'SSBL'
+	$(Q)scripts/bloat-o-meter $(ODIR)/ssbl-old.o $(ODIR)/ssbl.o
+	$(Q)echo '>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>'
+	$(Q)echo
+	$(Q)$(CROSS)size $(ODIR)/fsbl.o $(ODIR)/ssbl.o $(ODIR)/bolt.elf
+
+
+################################################################################
+# Patch BBL & BFW images into a copy of the final BOLT binary image.
+#
+#  We make sure all the final build products have been made as the original
+# bolt.bin will be deleted if BBL & BFW sets exist for the chip. This is to
+# prevent blindly flashing a blank bolt.bin as it does not contain a BBL or BFW
+# until this final step.
+#
+#  Except for bolt.bin, the other final (split) images do not contain areas to
+# place BBL and BFW.
+#
+# Security is allowed to override the final patching. Not applicable to generic
+# BOLT though.
+
+FINAL_PRODUCTS := $(ODIR)/bolt.bin $(ODIR)/fsbl.bin $(ODIR)/ssbl.bin $(ODIR)/memsys.bin
+
+include security/postmake.mk
+-include security/secpatch.mk
+
+ifeq ($(SECPATCH),1)
+postpatch: secpatch
+else
+postpatch: $(ROOT)/scripts/patcher.pl $(FINAL_PRODUCTS)
+	$(call pretty_print,EXEC,$@)
+	$(Q)$(ROOT)/scripts/postpatch.pl -D $(ODIR) -o -z $(ZEUS_VER) \
+           -p $(SEC_PFX) -l $(SEC_BBL) -w $(SEC_BFW) -f $(FAMILY) -v $(BUILDTAG) -s
+endif
+
+################################################################################
+
+.PHONY: help famcheck family toolcheck config config emu family_dirs
+.PHONY: fullemu split clean $(FAMILIES) build_date show
+.PHONY: release version toolfind bolts postpatch
+.PHONY: baseline bloatcheck

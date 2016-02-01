@@ -1,0 +1,64 @@
+Clients	DDR0	DDR1	Internal Client	Comments
+XPT_WR_RS	0	0	N	
+XPT_WR_XC	1	1	N	
+XPT_WR_CDB	2	2	N	
+XPT_WR_ITB_MSG	3	3	N	
+XPT_RD_RS	4	4	N	
+XPT_RD_XC_RMX_MSG	5	5	N	
+XPT_RD_XC_RAVE	6	6	N	
+XPT_RD_PB	7	7	N	
+XPT_WR_MEMDMA	8	8	N	
+XPT_RD_MEMDMA	9	9	N	
+FLASH_DMA	10	10	N	
+SDIO_EMMC	11	11	N	
+SDIO_CARD	12	12	N	
+MCIF2_RD	13		N	M-Card, 2nd port (read), (cablecard)
+MCIF2_WR	14		N	M-Card, 2nd port (write), (cablecard)
+TPCAP	15		N	
+MCIF_RD	16		N	M-Card, 1st port (read), (cablecard)
+MCIF_WR	17		N	M-Card, 1st port (write), (cablecard)
+UART_DMA_RD	18		N	
+UART_DMA_WR	19		N	
+PCIE_0	20	20	N	
+PCIE_1	21	21	N	
+BSP	22	22	N	dedicated port
+SCPU	23	23	N	dedicated port
+USB_HI_0	24	24	N	Port 0 (STB owned) of dual port USB interface
+USB_LO_0	25	25	N	Port 0 (STB owned) of dual port USB interface
+USB_X_WRITE_0	26	26	N	Port 0 (STB owned) of dual port USB interface
+USB_X_READ_0	27	27	N	Port 0 (STB owned) of dual port USB interface
+USB_X_CTRL_0	28	28	N	Port 0 (STB owned) of dual port USB interface
+USB1_HI_0	29	29	N	Port 1 of dual port USB interface  (may relocate this)
+USB1_LO_0	30	30	N	Port 1 of dual port USB interface  (may relocate this)
+USB1_X_WRITE_0	31	31	N	Port 1 of dual port USB interface  (may relocate this)
+USB1_X_READ_0	32	32	N	Port 1 of dual port USB interface  (may relocate this)
+USB1_X_CTRL_0	33	33	N	Port 1 of dual port USB interface  (may relocate this)
+MOCA_MIPS	34	34	N	
+GMAC_WAN_WR	35		N	
+GMAC_WAN_RD	36		N	
+				
+MSA	63	63	Y	MSA (Memory Soft Access)
+				
+	199			Ports 200 and up have special purposes
+MCP_R_HI	200	200	N	Host CPU MCP read client - high priority
+MCP_R_LO	201	201	N	Host CPU MCP read client - low priority
+MCP_W_HI	202	202	N	Host CPU MCP write client - high priority
+MCP_W_LO	203	203	N	Host CPU MCP write client - low priority
+				
+UBUS0_R, UBUS1_R	208	208	N	
+UBUS0_W, UBUS1_W	209	209	N	
+	210	210	N	reserved for additional UBUS ports
+	211	211	N	reserved for additional UBUS ports
+	212	212	N	reserved for additional UBUS ports
+	213	213	N	reserved for additional UBUS ports
+	214	214	N	reserved for additional UBUS ports
+	215	215	N	reserved for additional UBUS ports
+				216:231 PFRI clients
+				
+CPU_LMB_HI	232		N	DOCSIS MIPS
+CPU_LMB_LO	233		N	DOCSIS MIPS
+				
+				234:247 LBM clients
+				
+DIS0	252	252	Y	DIS (DRAM Interface Stress) #0
+DIS1	253	253	Y	DIS (DRAM Interface Stress) #1

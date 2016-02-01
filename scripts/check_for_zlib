@@ -1,0 +1,35 @@
+#!/bin/bash
+# ***************************************************************************
+# *     Copyright (c) 2015, Broadcom Corporation
+# *     All Rights Reserved
+# *     Confidential Property of Broadcom Corporation
+# *
+# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+# * 
+# ***************************************************************************
+set -eu
+
+if [ $# -ne 2 ]; then
+	exit -1
+fi
+
+PGM="#include <stdio.h>
+#include <stdlib.h>
+#include <zlib.h>
+int main(int argc, char *argv[]) {
+	Bytef		dest[80];
+	uLongf		destLen = 1;
+	const Bytef	source[80];
+	uLong		sourceLen = 1;
+
+	(void)argc;
+	(void)argv;
+
+	(void)uncompress(dest, &destLen, source, sourceLen);
+	return 0; 
+}"
+
+echo "$PGM" | $1 -Wall -Werror -x c - $2 -o /dev/null
+

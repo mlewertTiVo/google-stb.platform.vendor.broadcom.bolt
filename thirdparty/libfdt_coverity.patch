@@ -1,0 +1,11 @@
+--- dtc/libfdt/fdt_rw.c	2015-12-10 15:36:35.327268375 -0500
++++ dtc/libfdt/fdt_rw.c	2015-12-10 15:36:57.314267204 -0500
+@@ -350,7 +350,7 @@
+ 		return offset;
+ 
+ 	/* Try to place the new node after the parent's properties */
+-	fdt_next_tag(fdt, parentoffset, &nextoffset); /* skip the BEGIN_NODE */
++	(void)fdt_next_tag(fdt, parentoffset, &nextoffset); /* skip the BEGIN_NODE */
+ 	do {
+ 		offset = nextoffset;
+ 		tag = fdt_next_tag(fdt, offset, &nextoffset);

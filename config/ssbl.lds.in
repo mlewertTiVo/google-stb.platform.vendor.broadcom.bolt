@@ -1,0 +1,59 @@
+/***************************************************************************
+ *     Copyright (c) 2012-2013, Broadcom Corporation
+ *     All Rights Reserved
+ *     Confidential Property of Broadcom Corporation
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ * 
+ ***************************************************************************/
+
+ENTRY(ssbl_init)
+
+SECTIONS {
+	.ssbl.vectors @SSBL_RAM_ADDR@ :
+	{
+		@ODIR@/ssbl/arch/arm-vectors.o
+	}
+
+	.ssbl.text :
+	{
+		_ftext = .;
+	 	* (.init);
+	 	* (.text*);
+		. = ALIGN(8);
+		_etext = .;
+	}
+
+	.ssbl.data BLOCK(4096) :
+	{
+		_fdata = .;
+		* (.rodata*);
+		. = ALIGN(8);
+		* (.data*);
+		. = ALIGN(8);
+		_edata = .;
+	}
+
+	.bss :
+	{
+		_fbss = .;
+		* (.bss*);
+		* (.sbss*);
+		. = ALIGN(8);
+	} =0x00
+
+
+	.ssbl.bss :
+	{
+		* (.bss*);
+		* (.sbss*);
+		. = ALIGN(8);
+		_ebss = .;
+	} =0x00
+
+	.ARM.exidx : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
+
+	_end = .;
+};

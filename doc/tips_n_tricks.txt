@@ -1,0 +1,463 @@
+[[TOP]]
+
+Tips n' tricks
+==============
+Broadcom Corporation <support@broadcom.com>
+
+A grab-bag of assorted things that may be of assistance. No assurance
+of completeness or validity is made for things here: 'YMMV'.
+
+
+IMPORTANT: BOLT provides a devicetree to Linux. That means the versions
+of each are tied more closely together. You can't just upgrade
+one without considering the other. Note the actual devicetree
+passed into Linux and track it. Diffing with an upgraded BOLT
+will be handy if you have problems. The release notes are your
+friend here as we specify which kernel to use.
+
+* If after updating BOLT: Linux does not boot but you get a silent
+hang, that generally means a Devicetree problem. Run "dt bolt;dt show"
+for the previous (working) BOLT and the current one. The text
+output should be diff'd to see what in Devicetree has changed.
+
+* Some Linux failures can be debugged by adding command line flags,
+an example is show below, but please see the Linux documentation
+for the precise commands for your kernel.
+
+----
+ boot 192.168.0.42:vmlinuz-initrd-7445d0 "earlyprintk debug initcall_debug"
+----
+
+* If after updating BOLT: Linux crashes near or at the userland
+"init" process, or trying to mount an initrd, then the first suspect
+is the DDR allocation setup in Devicetree. Either the DDR address
+or size is wrong, or your 'cma' nodes are wrong (for non-dynamic CMA
+kernels.) Note that bogus cma nodes might fail early in the kernel
+boot process, but with dynamic CMA you should not have that problem.
+
+* Changing DDR parameters at runtime: Instead of a single shmoo
+configuration we try to pack as many of them into the files in
+shmoo/<MEMC:PHY revision>/mcb-\{family}.c as possible, that means
+you can override the default values for each BOLT build configuration.
+To do so, choose option #2 in the FSBL menu to arrive at the shmoo
+menu (after you've selected  a board.) If you have previously selected
+a board and the FSBL menu is therefore bypassed, do this to return
+to the FSBL menu:
+
+ a. Hold down the '1' (one) numeric key so it autorepeats.
+ b. Press the reset button on the board (while keeping
+ the '1' key held down')
+
+You might notice this option is in the FSBL menu:
+
+ RESET + 1 = this menu
+
+NOTE: This return to FSBL menu option is not available if the
+SECURE_BOOT build option is set. Note that in the future
+we might choose another method of board detection so the
+board selection menu may disappear. We intend to keep
+the alternate shmoo selection (if possible) as its useful.
+
+The shmoo menu allows you to enable debug or select another
+DDR ('.mcb' file) configuration. If you select another
+configuration  then it will apply to _all_ DDRs for the
+current board. Below is an example of arriving at the
+shmoo menu:
+
+----
+RESET + 1 = this menu
+RESET + 8 = bypass AVS
+2)  shmoo menu after board menu
+
+
+Select board type: [shmoo menu]
+
+Select board type: 
+using board #j
+MEMSYS-STD
+SHMOO 01010000 BLD:8661 HW:hpf0_b1p3 V:1.1.0.0
+MCB: FLEX
+
+a)      1067MHz 4Gx16 32b
+b)      1067MHz 4Gx8 32b
+c)      800MHz  4Gx16 32b
+d)      800MHz  4Gx8 32b
+e)      933MHz  4Gx16 32b
+
+0)      undo override
+1)      exit
+2)      debug on
+shmoo: 
+----
+
+''''
+<<TOP,Top>>
+
+* AVS can be disabled on a one-shot basis to bypass a
+crash situation that is preventing the code from reaching
+the Bolt prompt where it can be disabled permanently:
+
+WARNING: AVS should never be disabled in final production
+builds of BOLT.
+
+- To do so, hold down the '8' (eight) numeric key so that
+it autorepeats and then reset the board.  AVS will not be
+reloaded on this boot.  Use the Bolt "setboard" command
+(-noavs option) to disable it on all subsequent boots
+until the issue is resolved.
+
+* Check your board! Pinmuxing differences and shmoo
+can be different. If you have a DDR not listed in the
+shmoo menu (above) then contact your FAE. Remember to
+check your DDR sizes and change your config (*.cfg)
+file to match it; i.e. the memory, region & cma
+devicetree nodes for the 'dt autogen' and 'ddr' build
+commands.
+
+* The newer BOLTs are bigger than the older ones (v0.5x) so
+if you find upgrading BOLT via BOLT e.g. using TFTP fails, use
+'flash0' as a parameter to the 'flash' command instead of
+'flash0.bolt'.
+
+* 'make cfgclean' has been deprecated. The makefile now checks
+ changes to config files. Use 'make clean' instead.
+
+* The build products will be in the objs/<FAMILY> directory and below.
+'make family' will tell you what <FAMILY> is. As well as bolt-*.bin
+there will be a bolt.map and bolt.asm, these are your friends
+when things go wrong when you need to follow the memory allocations and
+code generated.
+
+
+* Buy a good book on ARM assembly if haven't already. Join
+ at http://www.arm.com for online documentation.
+
+
+* dtc woes/fails to build:
+ The GPL-BSD-dtc-577b874961.tgz package is unzipped from the thirdparty/
+directory to dtc/ and GPL-dtc-577b874961-cruftyflexpatch.tgz is
+added on top for older CentOS systems that have an earlier version of Flex.
+Then the libfdt_env.patch is next applied so that BOLT can build libfdt.
+ If any of these steps fails and dtc/dtc is not built, or the patch fails,
+BOLT cannot be built. Check your host x86 gcc version as well, that
+could also fail to build dtc.
+
+
+* If you have just installed 'patch' then 'rm -rf dtc' for BOLT to re-do
+its unpacking and patching - if dtc/ exists then it will presume that
+you don't need to do it again and libfdt will remain unpatched.
+
+
+* 'make clean' in dtc/ on an older (CentOS) system is a no-go. It will
+wipe out the files we added in GPL-dtc-577b874961-cruftyflexpatch.tgz, so
+don't do it. We've updated to GPL-BSD-dtc-g448faa43.tgz, to obviate
+the need for the crufty patch, so just let BOLT unpack and build it
+for you on BOLT v0.79 or later.
+
+
+* If you have overlaid an earlier version of BOLT from the pre SWBOLT-12
+days e.g. v0.53, then BOLT may not build. The older version put object files
+alongside source files and the build finds them but then looks for the
+build files in build/<FAMILY> (where they don't exist) and then make
+fails. 'find . -name \*.o | grep -v dtc | rm -f' &
+'find . -name .dep* | grep -v dtc | rm -f' will sort you out.
+
+
+* Don't rely on anything in build/brcm.mk from version to version,
+don't expect it to work for you either.
+
+
+* Autogenerated stuff will always go in gen/<FAMILY> for code files,
+and objs/<FAMILY> for linker scripts.
+
+
+* Its bad news to hand hack anything in gen/ as it will disappear
+if the configuration changes. It also messes up us supporting you
+if you go do that.
+
+
+* We don't ship any BOLT file beginning with a dot (UNIX hidden file.) If
+you see a dot file then its generated, or in thirdparty/.
+
+
+* make will also create memsys.bin, fsbl.bin & ssbl.bin from bolt-*.bin.
+ Note that these files contain ONLY what is in the associated BOLT
+section (layout) i.e. excludes such things as avs, shmoo, bbl or bfw
+sections.
+
+* If you want to wave makeflags (mset), cflags (cset) or both (gset), put
+them in the config/*.cfg file for the chip, that way they are all in one place.
+ We prefer to unify those flags, so use 'gset' if at all possible.
+
+* For your production board copy over the cfg, dts & rts files and start from
+there. That way you can still build for a reference board for comparison.
+Example:
+
+[source,shell]
+ make FAMILY=7445d0 CFG=config/testing/ddrtests-7445.cfg
+
+NB: The cfg file specifies which dts & rts file to use.
+
+
+* For production boards you don't want the FSBL board selection menu,
+so specify CFG_BOARDDEFAULT=N or only have ONE board in your config file.
+
+NOTE: Then again, you might have one product but variations such as DDR or
+othe parameter. For multiple boards select them e.g. based on a pin
+strap. That would of course mean having some code in FSBL instead
+of the menu.
+
+''''
+<<TOP,Top>>
+
+* The DTS source file for the chip family *.cfg file is modified by
+BOLT with runtime parameters. This is done either by the user
+interface command 'dt bolt' or just before Linux starts.
+ Try 'dt show', 'dt bolt' & then another 'dt show' to see the
+differences.
+
+* The 'dt show' command outputs in DTS file format so you can
+screen-scrape it to create a new DTS source file.
+
+* If you wish to use the DT as-is without BOLT doing its
+silent 'dt bolt' before launching Linux, use the 'dt off'
+command.
+
+On booting Linux (or any othe app) you should see the
+following line being output on the console:
+
+ DT_OFF: bypass device tree modification
+
+
+* If you want Linux to have only 256Kb to play with for
+example, do:
+
+----
+ dt bolt
+ dt add prop memory reg i 0x0 0x00 0x0 0x10000000
+ dt off
+----
+ <now you can boot Linux>
+
+The above modifies the devicetree for all things,
+then adjusts the 'reg' property of the 'memory'
+node to 256Kb. The last prevents BOLT from
+putting the old value back as it prevents the
+silent 'dt bolt' before booting Linux. Note the
+use of 64 bit values to specify the memory
+base address and size.
+
+All on one line to autostart Linux:
+
+----
+ setenv -p STARTUP "dt bolt; dt add prop memory reg i 0x0 0x00 0x0 0x10000000; dt off; boot flash0.kernel:"
+----
+
+* Remember to fixup the memory 'region@' and 'cma-dev@' nodes
+ for NEXUS if you  change the memory around. The cma is an
+ allocation within the memory node you specify by
+ the 'region@' sub-node(s). This fixed CMA is marked
+ to be removed once all configurations support dynamic CMA.
+  If you have a newer kernel, ignore this.
+
+* If your Linux kernel uses dynamic CMA then the
+'dt autogen -node memory' line can be removed.
+
+* Make sure you put '[end]' at the end of your config file
+and don't put any more text after it.
+
+* Note that the devicetree memory setting are either identical
+to the ddr, or a subset of them. The 'ddr' entries in the
+config file have a physical effect (SHMOO), those in
+devicetree are only to setup Linux.
+
+''''
+<<TOP,Top>>
+
+* Try to make sure any modifications you make to BOLT
+also work on our reference boards. Its the key to
+getting any issue you may have sorted out quickly:
+
+IMPORTANT: MANY MORE PEOPLE IN BROADCOM IN VARIOUS TEAMS WITH
+VARIED SPECIALITIES *YOU MAY NEED* HAVE REF BOARDS
+THAN HAVE YOUR PRODUCTION OR DEVELOPMENT BOARD(S).
+
+
+* If you remove $(LIBGCC) from FSBL, or SSBL for that matter:
+
+- DON'T do modulo ('%') operations in FSBL. Just => DON'T! <=
+
+- DON'T do divide operations in FSBL without applying some thought:
+
+Yes, you can see a divide in uart_init(), but that is
+resolved at BUILD time, not runtime. copy_from_nand()
+'dst += page_size/4' ends up as a simple shift etc.
+
+The toolchain chickens out of generating code and
+relies on 'arm eabi' calls in libgcc.a, which SSBL &
+and FSBL link in. Look at itoa() in FSBL which
+has to approximate and work around calls to the (previously)
+missing div & mod - which was when we did not include
+FSBL libgcc.a in earlier versions of BOLT.
+
+If you do ignore this advice then BOLT may even build
+and boot but it won't work as you expect.
+
+[big]#You have been warned!#
+
+''''
+<<TOP,Top>>
+
+* With ARM, we have a internal static ram memory to run FSBL in.
+ For 7445a0 its 64k. FSBL is limited to about 32K as the other
+32K is taken by the stack growing down and things loaded
+in there e.g. MCB (shmoo) & AVS data. The board data there persists
+so be careful how you use the SRAM in BOLT as you might wipe
+important information. Once Linux boots, feel free to nuke it.
+ UPDATE: We've moved the FSBL info into DDR (SSBL_BOARDINFO),
+you are now free to use the sram, but be warned that on FSBL exit
+(to SSBL) we wipe the sram.
+
+* The pagetables have a 1:1 virtual to physical mapping - which
+we do need for cached memory as the MMU must be on for that
+in ARM. Without MMU its uncached and still a flat memory model.
+ Note that for "config UNCACHED on" BOLT does not disable the
+MMU, but only marks all DDR page mappings as uncached.
+
+* The pagetables normally use 1Mb 'SECTION' sized entries, except
+for the first entry which now has a 2nd level page table with 4k
+entries. This is done so we can unmap the very first 4k of ddr
+to use as a NULL pointer trap. So DON'T peek or poke the
+first 4k as you will get an exception. Its handy for debugging
+and you can wire in the mechanism to reboot on such failures.
+
+* Note that when the MMU is on (normal cached or uncached builds)
+unaligned memory accesses are allowed. If the MMU is turned off
+then unaligned access will cause an exception. You may experience
+problems using SPI flash, USB or and possibly areas of BOLT
+in this case, or when using uncached (KUMALLOC) memory
+directly.
+
+* When you boot up you will see something like this:
+
+ PTE RANGE 00000000 - C0000000
+
+This is the page table range. If running with MMU then a read
+or write outside this range is bad news. The page table lives
+in DDR at a 32K region just before the SSBL code.
+
+The pagetable default is for 1Mb or 'section' per entry,
+not 4Kb. See ARM MMU documentation for more info. See
+the file config/layout.cfg for how the BOLT binary is
+partitioned (nothing to do with the 'show devices'
+command which shows total flash partitions) and
+where the page table (SSBL_PAGE_TABLE) is located
+in memory.
+
+''''
+<<TOP,Top>>
+
+* To use a traditional fixed flash map, create your flash map/partition
+ layout and then specify it to the 'mapselect' command in your config file,
+ example config file snippet:
+
+* This is a family-$(FAMILY).cfg file, e.g. config/family-7445a0.cfg
+
+----
+ [version 1.7]
+ # Flash map exists just after the [version] but before
+ # the [config] heading.
+ [map superbox]
+ map superbox bolt    1Mb     CS0
+ map superbox macadr  64Kb    CS0
+ map superbox nvram   64Kb    CS0
+ map superbox kernel  4Mb     CS0
+ map superbox devtree 64Kb    CS0
+ map superbox splash  512Kb   CS0
+ #
+ map superbox kernel  1024Mb  CS1
+ map superbox rootfs  1024Mb  CS1
+ map superbox app     2048Mb  CS1
+ ...
+ ...
+ ...
+ # flash map selection
+ # mapselect STB // unselected default layout
+  mapselect superbox
+ ...
+ ...
+ ...
+ [end]
+----
+
+
+''''
+<<TOP,Top>>
+
+* For debugging reasons you may not want the gen directory to be rebuilt.
+To do this use: SCRIPT_ENG=`which true` when re-making.
+e.g.
+
+ make 7145a0 -j8  SCRIPT_ENG=`which true`
+
+WARNING: You are on your own if you do this! Hand hacking the code in the
+'gen/' directory is not supported by us.
+
+
+* We now can support alternate ARM toolchains. Note that you are responsible
+ for the limitations of such toolchains, e.g. missing headers BOLT needs,
+ or weird configurations. Here is an example of setting up and building with
+ such a toolchain:
+
+[source,shell]
+----
+ make toolfind CROSS=arm-eabi- ALT_TOOL=~/arm-eabi-4.7/bin
+
+ # cat config/toolpath:
+ PATH:=/home/user/arm-eabi-4.7/bin:$(PATH)
+ CROSS:=arm-eabi-
+
+ # make with minimal (-W) error checking:
+ make 7445d0 USTRICT=
+----
+
+* User has an option to enable TFTP blksize option negotiation by setting
+the following environment variables:
+
+   - NET_TFTP_AUTO_BLKSIZE: set to 1 to enable blksize option negotiation
+   - NET_TFTP_BLKSIZE: set the BLKSIZE value to be used in negotiation
+
+By default, NET_TFTP_AUTO_BLKSIZE is not set and 512 bytes is used as the
+TFTP block size.  In order to improve the performance for TFTP, user
+can enable the blksize negotiation option with larger block size.
+You will also have to check that your TFTP server supports RFC 2348 option
+negotiation feature.
+
+The expected range for NET_TFTP_BLKSIZE is 512 - 16384 bytes.  The max
+value of 16384 is determined by the constant TFTP_MAX_BLOCKSIZE defined in
+BOLT code.
+
+If NET_TFTP_AUTO_BLKSIZE is set, but NET_TFTP_BLKSIZE is not defined
+by user, then TFTP_MAX_BLOCKSIZE constant will be used in automatic block
+size negotiation.  Otherwise, the value set in NET_TFTP_BLKSIZE shall be
+used.
+
+Based on experience testing with 7445d0 and with tftpd-hpa TFTP server on
+Ubuntu 12.04, there is a limitation on the blksize one can select. The
+exact reason for this limitation is TBD.  But one value that works (other
+than 512 bytes) is 1468 bytes.  This value works because it is the
+smallest MTU on the network (Ethernet MTU size is 1500) minus 32 bytes
+(20 bytes for IP, 8 for UDP, and 4 for TFTP).
+
+To find out whether your TFTP server support RFC 2348, check the manpage
+and look for --blocksize option.
+
+<<TOP,Top>>
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+

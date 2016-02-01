@@ -1,0 +1,431 @@
+:toc2:
+:toclevels: 4
+:max-width: 100%
+Getting started with BOLT
+=========================
+Broadcom Corporation <support@broadcom.com>
+
+BOLT is a bootloader for Broadcom ARM based products. If you are
+familiar with the CFE bootloader from our previous generation of
+chips then you will be familiar with BOLT as its based on CFE.
+
+BOLT has an first stage bootloader and a second stage one,
+referred to as FSBL & SSBL respectively. This is identical
+to the way CFE did things. 
+
+The user interface (UI) is in most cases identical to CFE, 
+except where new functionality has been added. 
+
+See 'bolt_commands.txt'for a rundown on the currently
+supported UI commands. 
+
+Mostly, these changes are new flags to commands and added
+commands for new areas such as devicetree <<1>>.
+ See 'cfe_differences.txt' for the major changes
+in user interface between CFE and BOLT.
+
+Looking into the code, the functional split
+is very similar but we have taken the opportunity to
+refactor and update for new technology where needed.
+
+
+For those familiar with CFE, here is a rundown of the changes:
+
+* Devicetree support has been added. This is for the
+standard way Linux ARM gets its configuration info.
+
+* The build system has been unified. FSBL & SSBL are
+built as one image (which can be split apart 
+afterwards.)
+
+* Multiple board support from one binary.
+Instead of multiple builds per board you can
+now support them from one image. Its handy if you
+have a lot of slightly different boards for 
+the same chip - but you can still choose to
+specify only one board type for e.g. secure
+production (FSBL) images.
+
+* The directory structure has been flattened so 
+you don't have to go hunting around for files.
+ 
+* Some large files have been split into smaller,
+more manageable ones. The goal is to split
+into functional areas and not have you wade
+through giant files. It also means its easier
+to add or remove functional areas, depending
+upon the target product.
+
+* Linux ARM generates a 'zImage' files that
+is zipped up with a small bit of decompression
+code prepended. They are not ELF format files
+as we had in CFE. Loading and running Linux 
+is very similar though: 'zimg' rather than
+'elf' is the default for loading.
+
+* There is a lot less assembly (source) code.
+We've tried to do more 'c' code for legibility
+and maintainability.
+
+* Due to the change in architecture, FSBL code
+is the most changed, but still small and 
+manageable to comprehend. SSBL will be very
+familiar to CFE developers.
+
+* We use a human readable build 
+configuration file to concentrate all the
+differences in a simple way. No more
+waving lots of build flags or hacking
+flash partition maps - its done for you,
+in one place. All the configuration is
+(naturally) stored in the config/
+subdirectory of BOLT as '.cfg' files.
+
+Quickstart
+----------
+
+What you need:
+~~~~~~~~~~~~~~
+
+* An x86 based PC running a modern Linux, or CentOS (2.6.18)
+* Broadcom supplied BOLT release package
+* Broadcom supplied GCC ARM cross-compile toolchain
+* Command line tools: md5sum and truncate 
+* Other common Linux tools such as sed, awk etc.
+* Perl 5.8.5
+* Patch 2.5.4
+* GNU Make 3.80
+* GNU GCC 3.4.6 or 4.4.4
+* zlib v1.2.1 or later (http://www.zlib.net)
+* BroadBandStudio to flash the BOLT image
+
+
+Setting up the toolchain
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+BOLT requires that the toolchain be in the 
+environments PATH variable. There is no special
+TOOLCHAIN variable or anything else to set up.
+
+In this example the Broadcom supplied GCC toolchain 
+package is called 'stbgcc-4.8-1.1.tar.bz2'
+and the BOLT source code package is called
+'bolt-v1.10.tgz' The exact names depend upon
+the release you get from us.
+
+First unpack and install the toolchain in
+a convenient place. We use '/media/cdrom/'
+as an example location only.
+
+----
+ [user@machine]$mkdir -p /projects/stbtc/
+----
+
+
+Now copy over the toolchain from the install media:
+
+----
+ [user@machine]$cp /media/cdrom/broadcom/stbgcc-4.8-1.1.tar.bz2 /projects/stbtc/
+----
+
+Unpack it:
+
+----
+ [user@machine]$cd /projects/stbtc/
+ [user@machine]$bunzip2  stbgcc-4.8-1.1.tar.bz2
+ [user@machine]$tar -xf stbgcc-4.8-1.1.tar
+----
+
+
+Set PATH:
+
+----
+ [user@machine]$export PATH=/projects/stbtc/stbgcc-4.8-1.1/bin:$PATH
+----
+
+That's all there is to it!
+
+You can test if everything went well by trying to run the
+toolchain's gcc compiler:
+
+----
+[user@machine]$ arm-linux-gcc --version
+arm-linux-gcc (Broadcom stbgcc-4.8-1.1) 4.8.4 20141110 (prerelease)
+Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+----
+
+  
+Setting up BOLT
+~~~~~~~~~~~~~~
+
+As before you copy over and unpack the Broadcom product to
+your development location. In this case we use the
+'bolt' subdirectory on your PC's home directory.
+
+----
+ [user@machine]$mkdir ~/bolt
+ [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.10.tgz
+ [user@machine]$tar -xzf bolt-v1.10.tgz
+----
+
+
+You should now have a subdirectory named after the bolt release package name:
+
+----
+ [user@machine]$cd ~/bolt/bolt-v1.10
+----
+
+
+Making BOLT
+~~~~~~~~~~~
+
+The BOLT make process is quite simple. The very first time you 
+build BOLT you have to configure the build by specifying the
+family (chip) types available, as shown here by this command:
+
+----
+ [user@machine]$make show
+7145b0 7250b0 7364a0 7366b0 7366c0 74371a0 7439b0 7445d0
+----
+
+Now select a family (in this example - 7445d0) and build BOLT:
+
+----
+ [user@machine]$make 7445d0
+----
+
+
+To remake do:
+
+----
+ [user@machine]$make clean ; make 7445d0
+----
+
+
+At the end of the build process you should have new binary
+file(s) to flash in the objs/$(FAMILY) directory with the
+following format:
+
+----
+bolt-$(VERSION)-$(FAMILY)-[ba|bb|xx]-bfw-$(BFW_VER).bin
+----
+
+[source,shell]
+----
+ls -l objs/7445d0/bolt-*.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.10-7445d0-ba-bfw-2.0.0.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.10-7445d0-bb-bfw-2.1.0.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.10-7445d0-ba-bfw-2.0.0.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.10-7445d0-bb-bfw-2.1.0.bin
+----
+
+For brevity we also symlink the longer BOLT binary names
+as you can see above. This may change if we have to support
+more than one BFW per 'ba' or 'bb' type in the future.
+
+IMPORTANT: Please note the BBL types (ba, bb or xx) as your
+chip will only run if you have the right one. All available
+ones for generic chips are supplied with BOLT and you have
+to choose which one to use. If you don't know which one you
+have, record the exect part number on the chip package and
+contact your Broadcom FAE for help.
+
+You are now ready to flash this binary image via Broadcom
+BroadBandStudio (BBS) and run BOLT. The process is the same
+as for CFE - please refer to the BBS documentation.
+
+TIP: To make the build faster:
+----
+ [user@machine]$make 7445d0 -j8
+----
+
+TIP: To check your toolchain is ok:
+----
+ [user@machine]$make toolfind
+----
+
+TIP: To build without pausing at the board selection menu:
+----
+ [user@machine]$make 7445d0 CFG_BOARDDEFAULT=N
+----
+Where N is the board number [1-52] required that maps to [a-zA-Z]
+in the FSBL board selection menu.
+
+NOTE: Some of our reference boards have an ID stored in an I2C
+device, so you will not encounter the board selection menu
+if the ID matches ones (per board type) that are built into
+BOLT.
+
+
+Flashing Linux
+--------------
+
+To flash Linux you can use either TFTP via eth0, a USB ethernet 
+dongle (at e.g. eth1) or a USB memory stick. Below is an example
+using a static IP address and TFTP. You can use DHCP instead of
+a static IP by using 'ifconfig eth0 -auto'
+
+----
+BOLT> ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+
+BOLT> flash 192.168.0.42:vmlinuz-initrd-7445d0 flash0.kernel
+----
+
+To run Linux:
+
+----
+BOLT> boot flash0.kernel:
+----
+
+NOTE: zImage detection is on by default. Use '-loader=raw' if
+     you want to force loading of a raw binary or text file to memory, the
+     same goes for elf format files: '-loader=elf' Note that the
+	 'batch' command defaults to 'raw', not 'zImage'.
+
+TIP: If BOLT is too big to fit in flash0.kernel, you can
+use another partition if its big enough, e.g.
+----
+BOLT> flash 192.168.0.42:vmlinuz-initrd-7445d0 flash1.rootfs0
+
+BOLT> boot flash1.rootfs0:
+----
+
+
+////
+Creating a Veloce-bootable emulation image
+------------------------------------------
+
+ The BOLT makefiles include additional support for generating Veloce-bootable
+SREC images. There is also support for creating properly-formed payloads
+comprised of multiple SREC images.
+
+ At the time of this writing (11/5/2013), the desired payload for the Veloce
+emulator is as follows:
+
++---------------------+
+|         FSBL        | => 0xe000_0000 (flash)
++---------------------+
+|   image (swapped)   | => 0x0000_8000 (DRAM)
++---------------------+
+|    DTB (swapped)    | => 0x0000_1000 (DRAM)
++---------------------+
+
+ The build system can create an image, 'fsbl-img-dtb.swp.srec', which is composed
+of the following:
+
+    - An optimized FSBL
+    - A binary to execute after running the FSBL (typically the Linux kernel)
+    - A DTB (device-tree blob).
+
+ The above contents are placed at the following locations:
+
+    - FSBL: 0xe000_0000 (in the emulated memory-mapped flash device)
+    - image: 0x0000_8000 (in the emulated big-endian DRAM)
+    - DTB: 0x0000_1000 (in the emulated big-endian DRAM)
+
+ The FSBL is written to perform very-minimal initialization, followed by
+a jump to address 0x0000_8000. Please see 'fsbl/fsbl-start.S' for more details.
+
+ Issue the following commands to create a Veloce-bootable FSBL+kernel+DT image
+
+----
+    make -j32 <chip_id_and_rev> CFG_EMULATION=1
+    make emu VMLINUZ=<full_path_to_kernel>
+----
+
+The resultant image will appear in 'objs/<chip_id_and_rev>/fsbl-img-dtb.swp.srec
+
+ Here is an example:
+
+----
+    make -j32 7445d0 CFG_EMULATION=1
+    make emu VMLINUZ=/tmp/vmlinuz-initrd-7445d0
+----
+
+Notes:
+    - This is a minimal build for emulation. Do not use CFG_EMULATION
+     if you are testing avs, sec, shmoo or other *full* BOLT boot cycle
+     components.
+
+    - If you must modify the DTS, or wish to provide your own minimal DTS,
+    you must do something like the following:
+
+        make -j32 7445d0 CFG_EMULATION=1
+        # The following will replace the generated DTB w/ your own version
+        dtc -I dts -O dtb my-custom-dts.txt -o objs/7445d0/config.dtb
+        make emu VMLINUZ=/tmp/vmlinuz-initrd-7445d0
+
+    - Current, the Veloce environment UARTs are configured to operate with a
+    divider of 1. As such, you must set the 'clock-frequency' property in
+    the uart0 DT node to 1843200, for the desired baud-rate of 115200.
+    This is derived from the following formula:
+
+        div = clk_freq / 16 / baud
+        1 = clk_freq / 16 / 115200
+        clk_freq = 1 * 16 * 115200
+        clk_freq = 1843200
+////
+
+
+Other items
+-----------
+
+Some reference board configurations for SPI & NAND boot selection
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ BCM97745C board (V00, rev #03)
+ Set J2101 jumpering: 1 & 2, 3 & 4
+ To boot from SPI flash set SW2702 as follows:
+
+----
+    off | on
+    --------
+    o	| 		ENDIAN
+    	| 	o	STRAP_BOOT_SHAPE_4
+    	| 	o	STRAP_BOOT_SHAPE_3
+    o	| 		STRAP_BOOT_SHAPE_2
+    o	| 		STRAP_BOOT_SHAPE_1
+    o	| 		STRAP_BOOT_SHAPE_0
+----
+
+
+ BCM97745VMSMB_SFF board
+ Set J2101 jumpering: 1 & 2, 3 & 4
+ To boot from SPI flash set SW2701 & SW2711 as follows:
+
+----
+ on  oo  o   o  o
+     ||  |   |  |
+    123456  123456
+    |  ||   | || |
+off o  oo   o oo o
+----
+
+
+ To boot from NAND flash (4Kb page, 1 bit ECC) set SW2701 & SW2711 as follows:
+ Set J2101 jumpering: 1 & 3, 2 & 4
+
+----
+ on   oo o   o  o
+      || |   |  |
+    123456  123456
+    ||  |   | || |
+off oo  o   o oo o
+----
+
+
+References
+----------
+
+[[1]] http://elinux.org/Device_Trees
+
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+

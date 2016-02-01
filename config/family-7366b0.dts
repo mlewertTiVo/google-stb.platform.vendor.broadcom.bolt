@@ -1,0 +1,11 @@
+/dts-v1/;
+
+/include/ "family-7366.dtsi"
+/include/ "common.dtsi"
+/include/ "A15.dtsi"
+
+
+/ {
+	model = "Broadcom STB (7366b0)";
+	compatible = "brcm,bcm7366b0", "brcm,brcmstb";
+};

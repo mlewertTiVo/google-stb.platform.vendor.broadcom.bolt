@@ -1,0 +1,11 @@
+/ {
+	model = "Broadcom STB (7439)";
+	compatible = "brcm,bcm7439", "brcm,brcmstb";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+	interrupt-parent = <&intc>;
+
+	chosen {
+		// Example: bootargs = "console=ttyS0,115200 earlyprintk";
+	};
+};

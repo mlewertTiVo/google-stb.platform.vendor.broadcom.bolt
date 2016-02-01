@@ -1,0 +1,237 @@
+:toc2:
+:toclevels: 4
+:max-width: 100%
+:numbered!:
+
+Release notes
+=============
+Broadcom Corporation <support@broadcom.com>
+
+ Bolt SQA Release v1.10, 15th January 2016
+------------------------------------------
+
+....
+	o Supported chip families: 7145b0 7250b0 7364a0 7364b0 7366b0 7366c0 74371a0 7439b0 7445d0 7445e0
+	o Toolchain: stbgcc-4.8-1.1
+	o AVS version: v0.1.8.x
+		o 7145b0
+	o AVS version: v0.3.2.x
+		o 7250b0 7364a0 7364b0 7366b0 7445d0 7439b0 7366c0 7445e0
+	o AVS version: v0.3.3.x
+		o 74371a0
+	o AVS Pending PVT testing:
+		n/a
+	o SHMOO versions:
+		o DDR3
+			o 7145b0:  1.2.1.0
+			o 7364a0:  1.2.1.0
+			o 7364b0:  1.2.1.0
+			o 7366b0:  1.2.1.0
+			o 7445d0:  1.2.1.0
+			o 7250b0:  1.2.1.0
+			o 74371a0: 1.0.0.6
+			o 7439b0:  1.2.1.0
+			o 7366c0:  1.2.1.0
+			o 7445e0:  1.2.1.0
+		o DDR4
+			o 7445d0:  1.2.0.8
+			o 7445e0:  1.2.0.8
+			o 7366b0:  1.2.0.8
+			o 7366c0:  1.2.0.8
+			o 7250b0:  1.2.0.8
+			o 7439b0:  1.2.0.8
+....
+
+
+ Compatibility
+~~~~~~~~~~~~~~
+
+* URSR 15.4 or newer should be used, or the Magnum XPT PI should be updated with link:http://jira.broadcom.com/browse/SW7439-510[SW7439-510]. Otherwise, XPT PI will not work correctly against S3 Standby/Resume operation.
+
+* 7439b0 build supports 7439b1
+
+* 7366c0 build supports 7366b0
+
+* 7445d0 build supports 7445d1
+
+
+Notes
+~~~~~
+
+IMPORTANT: The build product 'bolt.bin' no longer exists as a final
+binary for flashing. It is now patched and renamed to reflect the
+BBL and BFW components added in	post-compile. There now may be one or
+more patched binaries after building, depending upon which BBL
+version your chip requires.
+
+The build product(s) are now of the form:
+
+....
+bolt/objs/<FAMILY>/bolt-<VERSION>-<FAMILY>-<BBL>-bfw-<X.Y.Z>.bin
+....
+
+* <VERSION> is the release or build version.
+* <FAMILY> is the chip family e.g. 7445d0
+* <BBL> is either 'xx' or b[a-z]
+ *<X.Y.Z> is the BFW version, of the form [0-9]?[0-9].[0-9].[0-9]
+
+IMPORTANT: YOU MUST ALWAYS USE THE CORRECT BBL VERSION FOR YOUR CHIP OR IT
+*WILL* FAIL TO BOOT.
+
+* Customers must verify with Broadcom which BBL version(s) of the
+chip(s) they have. Please add a sticker to your development
+platforms with the BBL version (ba, bb etc.) clearly marked on it.
+That sticker will save a lot of misdirected debugging.
+
+* Recent Broadcom reference boards already have a sticker which will
+tell you which bolt binary to use. The text you are looking for
+starts BCM<FAMILY> e.g. the boards below have 'A' so use the BOLT
+binary with 'ba' in the BBL position:
+
+....
+BCM7445ZBKFSBA1G/P41
+             ^
+BCM7366ZBKFSBA99G-P20
+             ^
+bolt-<VERSION>-<FAMILY>-ba-bfw-<X.Y.Z>.bin
+                       ^^
+....
+
+* For 7445/7252
+
+ - Use bolt-<VERSION>-<FAMILY>-ba-bfw-<X.Y.Z>.bin if your SoC is one of following:
+....
+   BCM7445ZBKFSBAxx
+                ^
+....
+
+Else use bolt-<VERSION>-<FAMILY>-bb-bfw-<X.Y.Z>.bin,
+if your SoC is one of following:
+
+....
+     BCM7445ZBKFSBBxx
+     BCM7448ZBKFSBBxx
+     BCM7449ZBKFSBBxx
+     BCM7444ZBKFSBBxx
+     BCM7252ZBKFSBBxx
+    BCM74480ZBKFSBBxx
+    BCM74490ZBKFSBBxx
+    BCM72520ZBKFSBBxx
+                  ^
+....
+
+* Runtime detection
+
+The register at 0xf032d060 may be read (via
+BroadBandStudio) to find out which BBL is required
+for ZB parts. Below is a list of values read out from
+the register under which BBL type to select:
+
+=> 'ba' for ZB parts, e.g.
+....
+  BCM7445ZBKFSBAxx      0x7cf57343
+....
+
+=> 'bb' for ZB parts. Other values identify the chip as a 'bb' part.
+
+
+* For 7366b0
+
+ - ALWAYS use the 'bb' version on standard reference platforms.
+
+
+IMPORTANT: AVS UPDATE: BOLT now supports an alternate AVS binary image
+and will try to load it if the first one fails to load or run.
+ This means if you update to this version of BOLT have a board that
+fails to start AVS (due to unvalidated or incorrect hardware i.e. very
+old or new boards) the default action of BOLT is to try the other image,
+but that image won't exist on the reference build of BOLT and bootup
+will 'ping-pong' back to the other image and not continue booting.
+ To boot in such a scenario press the '8' key while resetting the
+STB to bypass AVS. Then at the BOLT commandline use the 'setboard'
+command to set yout board but add the '-noavs' parameter. Then 
+COLD BOOT your board to pick up the changes. This workaround
+will not work if BOLT has been rebuilt with SECURE_BOOT=y, you
+must use the configuration script to turn AVS off and rebuild BOLT.
+
+
+WARNING: Running with AVS is *[red]#MANDATORY#* for production platforms.
+
+* To compile bolt for e.g. 7445d0 AD parts: make 7445d0 BFW_HASH_LOCK=y
+
+* Static CMA is deprecated. If you change the static CMA
+values in BOLT (via the dt autogen command) but Linux does not
+seem to pick them up - you are using a newer dynamic CMA kernel.
+
+* If you encounter the following error please update your toolchain
+to the version your BOLT release wants (in bolt/config/toolchain):
+
+[source,shell]
+----
+arm-linux-ld: error: no memory region specified for loadable section `.bss'
+----
+
+''''
+
+ Upgrade to v1.10 criteria
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+link:http://jira.broadcom.com/browse/SWBOLT-1785[SWBOLT-1785] fsbl does not read NAND flash bad block indicator correctly ^[red silver-background]#blocker#^
+
+* FSBL booting from a NAND device did not correctly read Spare Area Byte 0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1765[SWBOLT-1765] Update Shmoo to v1.2.1.0 ^[yellow silver-background]#major#^
+
+* DDR3: Minor workaround for Read-Enable logic, recommended, but not mandatory.
+* DDR4: Reliability improvements to Read Enable shmoo. Strongly encouraged to take this if you are using Micron parts.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1776[SWBOLT-1776] build error on 7439b0 using dtgen for iicc ^[yellow silver-background]#major#^
+
+* Please take this release if you require Devicetree I2C nodes. A regression caused the 'dt autogen bsc' script command to fail.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1715[SWBOLT-1715] Update write-pairing whitelist ^[yellow silver-background]#major#^
+
+* May improve BOLT and Linux memory copy speed on 3390b0, 7250b0, 7364a0, 7364b0 and 74371a0 chips.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1766[SWBOLT-1766] eMMC driver in FSBL to load BFW from DATA rather than BOOT partition ^[yellow silver-background]#major#^
+
+* Not used in Generic BOLT. May be used in secure BOLT, depending upon security vendor requirements.
+
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.10%22%20ORDER%20BY%20Severity[Here]
+
+
+ Documentation
+--------------
+
+link:quickstart-guide.html[Getting started with BOLT] 
+
+link:bolt_commands.html[BOLT commands] 
+
+link:build_configuration_script.html[Build configuration script] 
+
+link:envars.html[BOLT environment variables] 
+
+link:cfe_differences.html[CFE differences] 
+
+link:eMMC_readme.html[eMMC support in BOLT] 
+
+link:howto_update_ddr_mcb_files.html[Using an FAE supplied .mcb file for your DDR] 
+
+link:make-huge-linux-initrd.html[Making unfeasibly large initrds] 
+
+link:porting_bolt_to_customer_platforms.html[Porting BOLT to customer platforms] 
+
+link:security.html[BOLT security options] 
+
+link:tips_n_tricks.html[Tips n' tricks] 
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+

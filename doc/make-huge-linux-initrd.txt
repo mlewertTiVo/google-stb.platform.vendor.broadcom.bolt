@@ -1,0 +1,501 @@
+:toc2:
+:toclevels: 4
+:max-width: 100%
+Making unfeasibly large initrds
+===============================
+Broadcom Corporation <support@broadcom.com>
+v2.1, August 2015:
+Information added on avoiding initrd overlap with BMEM / CMA.
+
+This document describes the various limitations and caveats involved in using
+initramfs and initrd filesystems with Linux running on ARM processors.
+
+IMPORTANT: Whilst we do provide the information on how to do very large
+ram based filesystems (either as a single image initramfs or a separate
+Linux kernel and an initrd loaded into ram) we DO NOT RECOMMEND that
+this path is taken either for development or for production purposes.The
+compromises imposed by the extra RAM consumed by these methods (an
+engineering trade off) must be evaluated by individual customers on a
+case by case basis.
+
+
+First, we introduce some description of the memory layout on ARM-based Broadcom
+Set Top Box chips, second, how the bootloader is using that memory, and finally
+how Linux is using that memory and which limitations apply.
+
+Memory layout on ARM-based Broadcom Set Top Box chips
+-----------------------------------------------------
+
+Most ARM-based chips have one to three memory controllers (MEMC) which map
+physical memory into the CPU memory address space. In a 32-bits mode (without
+LPAE), which is the default after reset, these MEMC controllers can provide up
+to 3GB of directly accessible physical memory, 1GB each.
+
+Note that all chips and/or designs may not use the full range of this
+addressable memory.
+
+
+BOLT memory layout
+------------------
+
+BOLT's first stage loader (FSBL) executes from an on-chip SRAM, which is mapped
+at 0xfffe_0000, it then copies its second stage loader (SSBL) into the DRAM at
+approximately 112MB (0x00700_0000), sets up a stack at 114MB (0x0904_4800).
+
+BOLT is using a simple 1:1 mapping between physical and virtual addresses to
+greatly simplify the memory view in the system.
+
+
+Limitations in BOLT for kernel image sizes and DTB placement
+------------------------------------------------------------
+
+BOLT loads Linux kernel images packaged under the 'zImage' format, which requires
+the kernel to be loaded at virtual address 0x0000_8000 by convention. This also
+happens to be physical address 0x0000_8000 due to the 1:1 mapping set up by BOLT.
+
+The Device Tree Blob (DTB) is placed at approximately 117MB (0x0751_f000),
+which means that the total size of a zImage and the resulting decompressed
+Image must not exceed 112MB.  The reason that it requires the sum of size of
+the compressed and uncompressed image is that the linux decompressor process
+is:
+
+1. compressed image is loaded at 0x8000
+2. check if we will overwrite ourselves when decompressing: yes
+3. copy compressed image to end of 0x8000 + size of decompressed image
+4. decompress image to 0x8000
+
+If it does exceed 112MB, then BOLT needs to be modified to relocate itself as
+well as relocating the DTB.
+
+If such relocation is necessary, there are no real restrictions on where BOLT
+must be located except that it must live within any of the populated memory
+controllers (MEMC 0 through 2). BOLT is not resident in RAM, so overwriting BOLT
+in RAM after Linux has booted is not much of an issue.
+
+Relocating the DTB, on the other hand, has slightly more restrictions, since it
+has to be accessible early during boot by the Linux kernel, and cannot be
+overwritten. Linux also makes sure that the DTB is preserved by reserving the
+memory region where it lives to exclude it from being discarded. It is strongly
+advised not to relocate the DTB in a memory region which is also used for the
+Contiguous Memory Allocator (see below).
+
+
+Size limitations of the Linux kernel on ARM
+-------------------------------------------
+
+initramfs is a special form of root filesystem which is embedded as a payload in
+the Linux kernel at build time. The initramfs, on ARM ends up in the Linux
+kernel's .init section which contains code and data. Note that not all
+architectures have a consistent layout in how they place their initramfs in the
+.init section. Some architectures might create sub-sections (e.g: .init.ramfs)
+though ARM does not do that.
+
+In previous revisions of this document, it said here that the kernel image size
+was limited to 32MB because the ARM Linux kernel must be able to do PC-relative
+jumps to any code in the .init section. This was true prior to Linux 3.1, but
+changes were made that allowed moving the .init section to be after .text, so
+there is no longer such a restriction on initramfs size in Linux 3.1 and newer.
+
+There is a limitation imposed by the kernel boot interface, which is that the
+kernel should live in the first 128MiB of RAM. This limitation comes from
+auto-decompression boot wrapper, which attempts to determine the end address of
+the kernel in RAM before decompression. This address is masked with 0xf800_0000
+to ensure the end result is within 128MiB.
+
+
+Regions limitations specific to the Broadcom Set Top Box kernel
+---------------------------------------------------------------
+
+Broadcom Set Top Box platforms reserve contiguous regions of DRAM to allow the
+Nexus middleware to use these contiguous areas as allocation pools for buffers
+that need to be handed over to HW peripherals that need to work with contiguous
+buffers: Video decoders, GPU, audio decoders, security processors.
+
+In order to increase the likelihood of getting these contiguous allocations to
+succeed, early during boot, Linux reserves these contiguous regions, which
+basically removes these regions from the free amount of physical memory that
+Linux could be otherwise using for user-space programs and its internal
+data-structures.
+
+The Device Tree Blob is another region of memory which needs to be reserved by
+the Linux kernel to ensure DTB usability. In order to avoid fragmenting too much
+the memory, the Linux kernel will try to relocate the DTB at a convenient
+location.
+
+The first region it tries to relocate the DTB in is the range from
+0-0x0000_8000, which allows for a DTB size of 32KiB, though newer DTBs are
+actually larger than this, and they end up being relocated past the end of the
+kernel.
+
+
+Using initrd (initial RAM disk)
+-------------------------------
+
+initrd is a different, yet similar mechanism to initramfs. It is similar in the
+sense that no particular device drivers are required to access the filesystem,
+it can be mounted immediately after boot. It is different though because it is
+not embedded in the kernel image, and as such, BOLT cooperation is required to
+place the initrd at an appropriate place in RAM, as well as telling the Linux
+kernel where this initrd is located. Note that the initrd memory is not freed
+after kernel boot while the initramfs memory is (because it lives in the .init
+section).
+
+Note that the initrd must not be located in a memory region which is also used
+for CMA or the Device Tree Blob, because the kernel will first proceed to reserve
+memory for the initrd, then for the Device Tree Blob, and then for CMA.
+
+There are no particular size limitations on an initrd except that it must not
+exceed the physical amount of RAM available.
+
+If CONFIG_BLK_DEV_RAM_SIZE is specified, the initrd must fit within the
+specified amount of memory, or CONFIG_BLK_DEV_RAM_SIZE must be bumped up.
+
+
+TL;DR
+-----
+
+* A big ram filesystem may impinge on CMA (NEXUS, BMEM) pre-allocations. You'll
+have to cut those allocations and refactor your application memory usage.
+
+* We really DO NOT recommend using an initrd over 128MiB in size.
+
+* Know where things are and where they will eventually end up. You might get strange
+failures because you're decompressing Linux over an initrd, or loading an initrd over
+the BOLT code, or Linux overwriting the Devicetree blob (DTB) Linux needs.
+
+IMPORTANT: Storing a huge initrd or initramfs in nand flash is a REALLY BAD IDEA.
+Use a proper nand aware filesystem to prevent the eventual and inevitable failure.
+
+WARNING: Nand flash may suffer failures (e.g. due to read disturb) at any time and without
+warning. This will lead to either the bricking of your product, resulting in
+end user and/or media reports of your products unreliability, or running recovery
+code (which we hope is not a huge initramfs or initrd image in nand) at too frequent
+an interval, which will impact the end user's satisfaction with your product.
+
+
+A worked example for a 128MiB initrd on 7445d0
+----------------------------------------------
+
+For this configuration an initrd will be loaded by BOLT first,
+then a Linux zImage will be loaded and booted.
+
+Prerequisites:
+
+* BOLT source code.
+* Linux 3.8 Reference source code (Linux + uclinux-rootfs.)
+* Toolchain(s) for the above code.
+
+First make a standard initramfs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,shell]
+----
+ [user@machine]$ cd stblinux38/uclinux-rootfs
+ [user@machine]$ make vmlinuz-initrd-7445d0 
+----
+
+
+Make a 128MiB initrd image
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,shell]
+----
+ [user@machine]$ mkdir initrd
+ [user@machine]$ fakeroot
+ [user@machine]$ cd initrd
+ [root@machine]$ cpio -id < ../../linux/usr/initramfs_data.cpio
+ [root@machine]$ mkdir bloat
+ [root@machine]$ touch bloat/bigfile
+ [root@machine]$ dd if=/dev/urandom of=bloat/bigfile bs=1024 count=120000
+ [root@machine]$ cd ..
+ [root@machine]$ genext2fs --block-size 1024 -d initrd -b 131072 initrd.ext2
+ [root@machine]$ exit
+ [user@machine]$ cp initrd.ext2 /tftpboot
+----
+
+On our newer Linux distributions you will have to uncompress
+the initramfs_data.cpio file first:
+
+[source,shell]
+----
+ [user@machine]$ pushd ../linux/usr/
+ [user@machine]$ gunzip initramfs_data.cpio.gz
+ [user@machine]$ popd
+----
+
+Configure for an initrd aware Linux zImage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,shell]
+----
+ [user@machine]$ cd ../linux/
+ [user@machine]$ make xconfig
+----
+
+Now find the "General setup" section and delete the string
+associated with the "Initramfs source file(s)" entry:
+
+----
+-CONFIG_INITRAMFS_SOURCE="/home/user/stblinux38/uclinux-rootfs/romfs /home/user/stblinux38/uclinux-rootfs/misc/initramfs.dev"
++CONFIG_INITRAMFS_SOURCE=""
+----
+
+NOTE: As well as "make xconfig" you can also use "make menuconfig" instead,
+ or edit the .config file directly.
+
+
+Make an initrd aware Linux zImage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,shell]
+----
+ [user@machine]$ make zImage
+ [user@machine]$ cp arch/arm/boot/zImage /tftpboot
+----
+
+NOTE: You should see that zImage is a lot smaller than the original
+vmlinuz-initrd-7445d0 file.
+
+
+Where does everything go?
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[source,shell]
+----
+ [user@machine]$ make Image
+ [user@machine]$ ls -l arch/arm/boot/Image
+-rwxrwxr-x 1 user user 6540016 Jan  1 00:00 arch/arm/boot/Image
+----
+
+* The Linux zImage loads at 0x8000 and is ~3.5MiB in size, the
+uncompressed Linux is ~6.2MiB in size - for this worked example.
+
+* The initrd.ext2 is 128MiB in size.
+
+* The default BOLT starts at ~112MiB (or 0x06ffc000 in hex) for
+ a 7445d0 build. Ref: SSBL_BOARDINFO in bolt/config/layout-zeus42.cfg.
+
+We must leave at least a 3.5MiB + 6.2MiB gap between the
+zImage and initrd.ext2 just to be sure Linux decompression
+does not overwrite the initrd.ext2. To be cautious let us
+load the initrd.ext at a 16MiB offset (0x1000000.)
+
+From the above it can be seen that BOLT is in the way of
+the initrd.ext2 file - BOLT will be wiped out when it tries
+to load it.
+
+
+[[ref1]]
+ Put BOLT out of harms way
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The FSBL in BOLT runs from SRAM and is fine, the SSBL has
+to be put in a place where its not overwritten by loading
+either the zImage or the initrd.ex2. In this example we
+relocate its start to a ~624MiB (0x26ffc000) offset. This
+also takes care of the Devicetree as its in the BOLT heap
+and beyond the new starting address.
+
+[source,shell]
+----
+ [user@machine] cd /home/user/bolt
+ [user@machine] vi config/layout-zeus42.cfg
+----
+
+Now edit this config file to change the base addresses
+ of the BOLT 'SSBL':
+
+----
+ diff --git a/config/layout-zeus42.cfg b/config/layout-zeus42.cfg
+index 4ad8da7..f50693e 100644
+--- a/config/layout-zeus42.cfg
++++ b/config/layout-zeus42.cfg
+@@ -38,15 +38,15 @@
+  section -name SSBL   -off 0x0006c000 -size 0x00058000
+ 
+  # SSBL ddr placements
+- gset  SSBL_BOARDINFO           0x06ffc000
+- gset  SSBL_PAGE_TABLE          0x07000000
++ gset  SSBL_BOARDINFO           0x26ffc000
++ gset  SSBL_PAGE_TABLE          0x27000000
+ # The 1st-level page table maps 4GB worth of virtual address space.
+ # Each 32-bit section entry maps a 1MB region.
+ # (4GB / 1MB) * 4 = 1st-level PT size
+ gset  SSBL_PAGE_TABLE_SIZE      0x4000
+-gset  SSBL_PAGE_TABLE_2         0x07004000
++gset  SSBL_PAGE_TABLE_2         0x27004000
+ gset  SSBL_PAGE_TABLE_2_SIZE    0x4000
+- gset  SSBL_RAM_ADDR            0x07008000
++ gset  SSBL_RAM_ADDR            0x27008000
+ 
+  #  BOLT currently uses a 32 bit memory space
+  # and the 'device' (ebi & rdb) regions span
+----
+
+.Newer BOLT (v1.09 or later)
+----
+diff --git a/config/layout-zeus42.cfg b/config/layout-zeus42.cfg
+index 634e1e4..e1e60bb 100644
+--- a/config/layout-zeus42.cfg
++++ b/config/layout-zeus42.cfg
+@@ -51,7 +51,7 @@ section -name SSBL   -off 0x0006c000 -size 0x00090000
+ #              |       board info      |
+ #              +-----------------------+ SSBL_PAGE_TABLE - SSBL_BOARDINFO_SIZE
+ #
+-gset SSBL_PAGE_TABLE         0x07000000
++gset SSBL_PAGE_TABLE         0x27000000
+ gset SSBL_BOARDINFO_SIZE     0x4000
+ gset SSBL_BOARDINFO          $SSBL_PAGE_TABLE-$SSBL_BOARDINFO_SIZE
+ # The 1st-level page table maps 4GB worth of virtual address space.
+@@ -61,7 +61,7 @@ gset SSBL_PAGE_TABLE_SIZE    0x4000
+ gset SSBL_PAGE_TABLE_2_SIZE  0x400
+ gset SSBL_PAGE_TABLE_2       $SSBL_PAGE_TABLE+$SSBL_PAGE_TABLE_SIZE
+ gset SSBL_PAGE_TABLE_2_SRAM  $SSBL_PAGE_TABLE_2+$SSBL_PAGE_TABLE_2_SIZE
+-gset SSBL_RAM_ADDR           0x07008000
++gset SSBL_RAM_ADDR           0x27008000
+ 
+ #  BOLT currently uses a 32 bit memory space
+ # and the 'device' (ebi & rdb) regions span
+----
+
+Now remake BOLT:
+
+[source,shell]
+----
+ [user@machine] make clean
+ [user@machine] make 74450
+----
+
+
+[big]#=> Now re-flash the new BOLT before progressing! <=#
+
+
+Configuring for the test
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example uses a tftp server at 192.168.0.42 and BOLT setup with
+the static IP address 192.168.0.40. First we load the initrd.ext2 file,
+then boot the separate Linux image.
+
+We have to tell Linux about where the initrd is in memory, so we add
+the "initrd=0x1000000,0x8000000" command line parameter. That is
+specifying the physical start address and size of the initrd.
+
+We have to tell Linux about what its root filesystem is, if it should be
+read-write or read only and the size of ramdisk the initrd is copied to,
+so we add "root=/dev/ram0 rw ramdisk_size=131072 " to the command line.
+
+The 'ramdisk_size' parameter, should be at a minimum, the size in KiB of
+the initrd.ext2 file, or build Linux with the CONFIG_BLK_DEV_RAM_SIZE
+setup to reflect the required size and then the parameter will no
+longer need to be specified on the Linux boot commandline.
+
+Since the initrd may impinges on BMEM or CMA reserved regions we have to
+ensure that there is no overlap with those regions. Any overlap between
+an initrd (ramdisk) and CMA is a failure case. Without ensuring that
+specified BMEM or CMA regions  do not overlap with initrd, the kernel may fail
+to boot up, be unstable, or BMEM/CMA allocations will fail and lead to
+NEXUS failing.
+
+One more parameter that affects available size for an initrd is
+'vmalloc', which adjusts vmalloc space.  On systems that use HIGHMEM
+like 32-bit ARM Linux, increasing or decreasing the size of vmalloc also
+shifts the boundary between low (directly mapped kernel RAM) and high
+memory, respective decreasing/increasing the size of lowmem.  Ensure
+that vmalloc is small enough that there will be enough lowmem will be
+available for the initrd, as it cannot be placed in highmem.  'vmalloc' is the
+simplest way to change the size of the default BMEM/CMA reservation.
+
+Note that the default reserved regions (no bmem or brcm_cma parameters
+provided) may be large enough to overlap.  If you want to ensure that the
+default reservation does not overlap, use a lower 'vmalloc' value.  On
+stblinux-3.14-1.8+, there is the option to manually provide the location of
+BMEM and/or CMA regions using kernel command line parameters
+'bmem=<size>@<addr>' or 'brcm_cma=<size>@<addr>'.  Providing these parameters
+tuned to your specific use case is the best way to ensure optimal use of
+memory.  Please refer to the STB Linux memory appnote for more information on
+these parameters.
+
+If you think you have an issue then add "earlyprintk debug memblock=debug"
+to the Linux command line and look for early BMEM/CMA allocation failures
+in the console output log.  Alternatively, disable all default reservations by
+providing 'bmem=0 brcm_cma=0' on the Linux command line (stblinux-3.14-1.8+
+only).
+
+IMPORTANT: Its an engineering trade off, by having such a big ramdisk you have
+to scale back how much memory BMEM/CMA can have and hence how much NEXUS
+and your apps get.
+
+
+Running the test
+~~~~~~~~~~~~~~~~
+
+----
+ BOLT> ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+ BOLT> load -addr=0x1000000 -max=0x8000000 -raw 192.168.0.42:initrd.ext2
+ BOLT> boot 192.168.0.42:zImage "initrd=0x1000000,0x8000000 root=/dev/ram0 rw ramdisk_size=131072 vmalloc=248m bmem=0"
+----
+
+You should see the Linux kernel boot log
+contain something like this snippet:
+
+----
+...
+...
+Trying to unpack rootfs image as initramfs...
+rootfs image is not initramfs (junk in compressed archive); looks like an initrd
+Freeing initrd memory: 131072K
+
+RAMDISK: ext2 filesystem found at block 0
+RAMDISK: Loading 131072KiB [1 disk] into ram disk...
+...
+...
+EXT4-fs (ram0): couldn't mount as ext3 due to feature incompatibilities
+EXT4-fs (ram0): mounting ext2 file system using the ext4 subsystem
+EXT4-fs warning (device ram0): ext4_update_dynamic_rev:767: updating to rev 1 because of new feature flag, running e2fsck is recommended
+EXT4-fs (ram0): mounted filesystem without journal. Opts: (null)
+...
+...
+----
+
+
+Troubleshooting
+~~~~~~~~~~~~~~~
+
+If your kernel gets a very early failure or no output at all check that the
+BOLT SSBL is out of harms way (see <<ref1, Put BOLT out of harms way>>) as
+either the SSBL code or the Devicetree data may be getting overwritten by
+the loaded kernel, initrd or during the decompression stage of the kernel
+startup sequence.
+
+We have found that incorrect CMA reductions or for a huge initramfs or initrd
+show themselves as specific kinds of Linux kernel boot failure. Note: That may
+change if you use a different kernel (revision) or other kernel configurations.
+
+First, enable all the debug options listed in "Configuring for the test."
+
+For an initrd or initramfs you may see the kernel stalling at the
+line beginning "calling  populate_rootfs", e.g.
+
+----
+...
+...
+RPC: Registered tcp NFSv4.1 backchannel transport module.
+initcall init_sunrpc+0x0/0x64 returned 0 after 17438 usecs
+calling  pci_apply_final_quirks+0x0/0x124 @ 1
+PCI: CLS 0 bytes, default 64
+initcall pci_apply_final_quirks+0x0/0x124 returned 0 after 2813 usecs
+calling  populate_rootfs+0x0/0x214 @ 1
+<LINUX STALLS HERE>
+----
+
+TIP: For an initrd you may also see a failure to execute the "init" process.
+
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2014-2015, Broadcom Corporation.
+All Rights Reserved.
+Confidential Property of Broadcom Corporation.
+
