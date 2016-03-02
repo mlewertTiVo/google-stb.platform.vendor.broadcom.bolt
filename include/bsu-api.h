@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include "fileops.h"
 #include "ui_command.h"
+#include "ui_gpio.h"
 #include "devfuncs.h"
 
 #ifdef DROID_BSU
@@ -47,6 +48,7 @@ typedef void bolt_loader_t;
 #include "fileops.h"
 #include "console.h"
 #include "ui_command.h"
+#include "ui_gpio.h"
 #include "net_ebuf.h"
 #include "net_ether.h"
 #include "net_api.h"
@@ -255,6 +257,8 @@ struct bsu_api {
 		void *ref, char *help, char *usage, char *switches);
 
 	int (*xfn_ui_showerror)(int errcode, char *tmplt, ...);
+
+	int (*xfn_cmd_gpio_btn_state)(char* bank, int pin);
 
 #ifndef BSU /* export BOLT inner system info */
 	struct board_type *(*xfn_board_thisboard)(void);

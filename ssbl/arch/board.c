@@ -295,6 +295,16 @@ const moca_params *board_moca(void)
 	return board_params[inf->board_idx].moca;
 }
 
+const gpio_key_params *board_gpio_keys(void)
+{
+	struct fsbl_info *inf = board_info();
+
+	if (!inf || (inf->board_idx >= inf->n_boards))
+		return NULL;
+
+	return board_params[inf->board_idx].gpio_key;
+}
+
 const struct ssbl_board_params *board_current_params(void)
 {
 	struct fsbl_info *inf = board_info();

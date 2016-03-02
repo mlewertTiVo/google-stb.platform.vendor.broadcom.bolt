@@ -552,6 +552,13 @@ sub new($$) {
 	return $s;
 }
 
+package GpioKey;
+sub new($$) {
+	my ($class, $s) = @_;
+	bless $s, $class;
+	return $s;
+}
+
 package Cache;
 sub new($$) {
 	my $class = shift;
@@ -642,6 +649,7 @@ sub new($$) {
 	$s->{pmux} = [];
 	$s->{rdb} = "";
 	$s->{rtconfig} = [];
+	$s->{gpio_key} = [];
 	$s->{rtsbase} = undef;
 	$s->{section} = [];
 	$s->{mapselect} = "";
@@ -675,6 +683,8 @@ sub add($$$) {
 		push @{$s->{rtsconfig}}, $part;
 	} elsif ($item eq 'pmux') {
 		push @{$s->{pmux}}, $part;
+	} elsif ($item eq 'gpio_key') {
+		push @{$s->{gpio_key}}, $part;
 	} elsif ($item eq 'section') {
 		push @{$s->{section}}, $part;
 	} elsif ($item eq 'nandshape') {
@@ -808,6 +818,7 @@ my $ProcessingState = eStateInNone;
 
 my $file_has_version = 0;
 my $use_fixed_memsys_alt = 0;
+my $max_gpio_keys = 0;
 
 # family name are keys, values are pin dbase hashrefs
 my %bchp_info;
@@ -1263,6 +1274,23 @@ sub cmd_rtsconfig($) {
 	shift @$f; # drop 'rtsconfig'.
 	my $o = check_opts($f, [qw/id file/], []);
 	$Current->add('rtsconfig', RtsConfig->new($o));
+}
+
+sub cmd_gpio_key($) {
+	my ($f) = @_;
+	check_in_chip_or_board();
+	shift @$f;
+	my $o = check_opts($f, [qw/name gpio pin code/], []);
+	cfg_error("bad value for '-gpio'; must be 'upg_gio' or 'upg_gio_aon'")
+		if ($o->{gpio} !~ /^upg_gio(_aon)?$/);
+	cfg_error("bad value for '-pin'; must be a decimal number")
+		if ($o->{pin} !~ /^\d+$/);
+	cfg_error("bad value for '-code'; must be a decimal number")
+		if ($o->{code} !~ /^\d+$/);
+	$Current->add('gpio_key', GpioKey->new($o));
+	my $n = @{$Current->{gpio_key}};
+	$max_gpio_keys = $n
+		if ($n > $max_gpio_keys);
 }
 
 sub cmd_rtsbase($) {
@@ -1782,6 +1810,7 @@ my %commands = (
 		'pmux' =>	\&cmd_pmux,
 		'rtsbase' =>	\&cmd_rtsbase,
 		'rtsconfig' =>	\&cmd_rtsconfig,
+		'gpio_key' =>	\&cmd_gpio_key,
 		'rtsdefault' =>	\&cmd_rtsdefault,
 		'section' =>	\&cmd_section,
 		'sdio' =>	\&cmd_sdio,
@@ -2119,6 +2148,23 @@ sub check_enet_nulls($) {
 	return $e;
 }
 
+sub check_gpio_key_nulls($) {
+    my ($m) = @_;
+    if (!$m->{name}) { $m->{name} = "-"; }
+    if (!$m->{gpio}) { $m->{gpio} = "-"; }
+    if (scalar $m->{pin} < 0) { $m->{pin} = -1; }
+    if (scalar $m->{code} < 0) { $m->{code} = -1; }
+
+    foreach (qw/name gpio/) {
+        if ( $m->{$_} =~ /^-$/ ) {
+            $m->{$_} = "NULL";
+        } else {
+            $m->{$_} =  '"' . $m->{$_} . '"';
+        }
+    }
+    return $m;
+};
+
 sub check_moca_nulls($) {
 	my ($m) = @_;
 	if (!$m->{enet_node}) { $m->{enet_node} = "-"; }
@@ -2202,6 +2248,24 @@ sub gen_moca($) {
 	}
 
 	return $text . "\t\t\t{ 0, NULL, NULL}\n\t\t},\n";
+}
+
+sub gen_gpio_key($) {
+	my ($gpio_key) = @_;
+	my $text = "\t\t.gpio_key = {\n";
+	my $index = 0;
+	for my $m (@$gpio_key) {
+		$m = check_gpio_key_nulls($m);
+		$text .= "\t\t\t\{\n";
+		$text .= "\t\t\t\t.name = " . $m->{name} . ",\n";
+		$text .= "\t\t\t\t.gpio  = " . $m->{gpio} . ",\n";
+		$text .= "\t\t\t\t.pin  = " . $m->{pin} . ",\n";
+		$text .= "\t\t\t\t.code = " .  $m->{code} . ",\n";
+		$text .= "\t\t\t},\n";
+		$index++;
+	}
+
+	return $text . "\t\t\t{ NULL, NULL, -1, -1}\n\t\t},\n";
 }
 
 sub resolve_var
@@ -2982,6 +3046,7 @@ sub processed_board_params() {
 		$text .= gen_rtsdefault($b->{rtsdefault});
 		$text .= gen_enet($b->{enet});
 		$text .= gen_moca($b->{moca});
+		$text .= gen_gpio_key($b->{gpio_key});
 		$text .= gen_pinmux_fn($b->{board});
 		$text .= gen_dt_ops_ptr($b->{board});
 		$text .= gen_flash_map_selection($b->{mapselect});
@@ -3020,6 +3085,7 @@ sub processed_makefile_cvars($) {
 	}
 	$text .= "#define MAX_DDR " . $maxddr . "\n";
 	$text .= "#define MAX_BOARDS " . $nb . "\n";
+	$text .= "#define MAX_GPIO_KEY " . $max_gpio_keys . "\n";
 	$text .= "#define CFG_CMD_LEVEL " . $b->{cmdlevel} . "\n";
 	if (defined $b->{dts}) {
 		if ($b->{dts}->{loadaddr}) {

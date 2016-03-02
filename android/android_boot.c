@@ -653,6 +653,48 @@ uint32_t boot_reason_reg_get(void)
 }
 
 /*  *********************************************************************
+	*  int recovery_mode_boot_override(void)
+	*
+	*  Helper function for android_boot() to determine if user pressed
+	*  the front panel BT Pair gpio button during boot up to force device
+	*  boot into recovery mode.
+	*
+	*  Input parameters:
+	*     none
+	*
+	*  Return value:
+	*     0 - boot normal image
+	*     1 - boot recovery image
+	********************************************************************* */
+static int recovery_mode_boot_override(void)
+{
+	int pin,ret;
+	char buffer[20];
+	char *pin_str;
+	char *gpio_bank_pin_str;
+
+	gpio_bank_pin_str = env_getenv("BT_PAIR");
+
+	if (!gpio_bank_pin_str) {
+		os_printf("No button is configured, proceed with normal booting\n");
+		return 0;
+	}
+	os_strncpy(buffer, gpio_bank_pin_str, 20);
+	buffer[19] = '\0';
+
+	os_strtok_r(buffer, " ", &pin_str);
+	pin = os_atoi(pin_str);
+
+	ret = cmd_gpio_btn_state(buffer, pin);
+
+	if (ret < 0) {
+		/* always fall back to boot android image with error message */
+		return 0;
+	} else
+		return ret;
+}
+
+/*  *********************************************************************
     *  android_boot(cmd, argc, argv[])
     *
     *  Entry function to handle 'android boot' command
@@ -779,9 +821,12 @@ int android_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 			 * outage during recovery). We need to go back into
 			 * recovery mode to allow a complete image to be
 			 * updated before getting into normal boot */
-			os_printf("Checking 'misc' partition...\n");
+			/* Check gpio button state to determine the BT_PAIR
+			 * button is configured and it's pressed. If yes,
+			 * it means user want to boot into recovery image. */
+			os_printf("Checking 'misc' partition and front panel button state...\n");
 
-			if (is_in_boot_recovery_mode()) {
+			if (is_in_boot_recovery_mode() || recovery_mode_boot_override()) {
 				os_printf("boot reason = recovery\n");
 				boot_mode = BOOTMODE_RECOVERY;
 			} else {

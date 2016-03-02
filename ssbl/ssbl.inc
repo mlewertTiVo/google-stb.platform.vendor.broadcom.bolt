@@ -165,7 +165,8 @@ SSBL_S += \
 	ssbl/ui/ui_test_uart.c \
 	ssbl/ui/ui_devtree.c \
 	ssbl/ui/ui_memtest.c \
-	ssbl/ui/ui_shacmds.c
+	ssbl/ui/ui_shacmds.c \
+	ssbl/ui/ui_gpio.c
 
 ifeq ($(CFG_EMMC_FLASH),1)
 SSBL_S += \

@@ -475,6 +475,7 @@ static struct bsu_api bsu_xapi = {
 	.xfn_cmd_getarg = cmd_getarg,
 	.xfn_cmd_addcmd = cmd_addcmd,
 
+	.xfn_cmd_gpio_btn_state = cmd_gpio_btn_state,
 	.xfn_ui_showerror = ui_showerror,
 
 	.xfn_board_thisboard = board_thisboard,

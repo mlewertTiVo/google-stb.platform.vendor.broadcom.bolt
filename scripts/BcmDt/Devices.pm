@@ -2684,6 +2684,7 @@ sub add_gpio($$$)
 		$t .= "};\n";
 
 		$dt->add_node(DevTree::node->new($t));
+		add_reference_alias($dt, $intr_name, $intr_name);
 	}
 }
 

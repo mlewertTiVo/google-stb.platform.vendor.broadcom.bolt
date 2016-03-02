@@ -50,6 +50,15 @@ typedef struct moca_params
 }
 moca_params;
 
+typedef struct gpio_key_params
+{
+	const char *name;  /* Name given to gpio button */
+	const char *gpio;  /* Name of the connected GPIO controller i.e. upg_gio or upg_gio_aon */
+	unsigned int pin;  /* Pin Value of the connected gpio */
+	unsigned int code; /* Key Code generated from the gpio button */
+}
+gpio_key_params;
+
 typedef void(fpinmux_t)(void);
 
 
@@ -116,6 +125,7 @@ typedef struct ssbl_board_params
 	enet_params  enet[NUM_ENET+1];
 	moca_params  moca[NUM_MOCA+1];
 	sdio_params  sdio[NUM_SDIO+1];
+	gpio_key_params gpio_key[MAX_GPIO_KEY+1];
 	fpinmux_t   *pinmuxfn;
 	const dt_ops_s *dt_ops;
 	struct partition_profile *mapselect;

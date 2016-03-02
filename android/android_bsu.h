@@ -24,6 +24,7 @@
 #define cmd_sw_value	bsuapi->xfn_cmd_sw_value
 #define cmd_sw_isset	bsuapi->xfn_cmd_sw_isset
 #define cmd_getarg	bsuapi->xfn_cmd_getarg
+#define cmd_gpio_btn_state	bsuapi->xfn_cmd_gpio_btn_state
 #define ui_showerror	bsuapi->xfn_ui_showerror
 #define fs_init		bsuapi->xfn_fs_init
 #define fs_uninit	bsuapi->xfn_fs_uninit
@@ -35,6 +36,7 @@
 #define os_malloc	bsuapi->xfn_malloc
 #define os_free		bsuapi->xfn_free
 #define os_strcpy	bsuapi->xfn_strcpy
+#define os_strncpy	bsuapi->xfn_strncpy
 #define os_memset	bsuapi->xfn_memset
 #define os_memcmp	bsuapi->xfn_memcmp
 #define os_memcpy       bsuapi->xfn_memcpy
@@ -44,6 +46,7 @@
 #define os_strtok_r	bsuapi->xfn_strtok_r
 #define os_strtoul	bsuapi->xfn_strtoul
 #define os_strstr	bsuapi->xfn_strstr
+#define os_atoi	bsuapi->xfn_atoi
 #define os_printf	bsuapi->xfn_printf
 #define cmd_addcmd	bsuapi->xfn_cmd_addcmd
 #define bolt_docommands	bsuapi->xfn_bolt_docommands

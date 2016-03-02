@@ -330,6 +330,7 @@ Commands that enact a configuration at runtime.
     pcie
     sdio
     usb
+    gpio_key
 ----
 
 
@@ -1203,7 +1204,6 @@ Example:
   dt autogen -node watchdog -type upg webhif
 ----
 
-
  Points to regard with respect to USB
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Instead of using the register database (RDB) to source
@@ -1908,6 +1908,30 @@ USB device information based on the chip family, and the 'usb'
 command described here modifies or deletes individual USB devices on
 a per board basis.
 
+ gpio_key
+~~~~~~~~~
+
+Usage: gpio_key -name <NAME> -gpio <NAME_OF_GPIO_CONTROLLER> -pin <GPIO_PIN> -code <KEY_CODE>
+
+Note: Creates device node for the gpio button. You can create multiple gpio buttons.
+
+See also: dt autogen gpio
+
+* <NAME> is not used in kernel driver, it's better to give a descriptive name based on the usage of gpio pin.
+* <NAME_OF_GPIO_CONTROLLER> specifies the gpio controller that is connected to the button, i.e. 'upg_gio' or 'upg_gio_aon'.
+* <GPIO_PIN> specified the pin number of the gpio on the gpio controller used for the button.
+* <KEY_CODE> specified the key code generated when the button is pressed.
+
+KEY_CODE is determined based on the kernel uapi input header file
+'linux/include/uapi/linux/input.h' It should match the purpose of
+the gpio button.
+
+Examples:
+
+----
+  gpio_key -name button_A -gpio upg_gio -pin 93 -code 218
+  gpio_key -name button_B -gpio upg_gio -pin 90 -code 529
+----
 
 Appendix: Copyright Info
 ------------------------

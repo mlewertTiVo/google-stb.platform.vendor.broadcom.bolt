@@ -1424,6 +1424,82 @@ static void bolt_populate_rf4ce(void *fdt, uint8_t *macaddr)
 #endif /* End of rf4ce */
 
 
+static int bolt_populate_gpio_key(void *fdt)
+{
+	int rc = 0;
+	int property[3];
+	int gpio_key, phandle, gpio_key_btn, root_node;
+	const char *keys_node = "gpio_keys_polled";
+	char buffer[20];
+
+	const gpio_key_params *m = board_gpio_keys();
+
+	if (!m || !m->name || !m->gpio)
+		return rc;
+
+	root_node = bolt_devtree_node_from_path(fdt, DT_RDB_DEVNODE_BASE_PATH);
+	if (root_node < 0)
+		return root_node;
+
+	(void)bolt_devtree_delnode_at(fdt, keys_node, root_node);
+
+	rc = bolt_devtree_addnode_at(fdt, keys_node, root_node,
+				&gpio_key);
+	if (rc < 0)
+		return rc;
+
+	rc = bolt_dt_addprop_str(fdt, gpio_key,
+				"compatible", "gpio-keys-polled");
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_u32(fdt, gpio_key, "poll-interval", 100);
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_u32(fdt, gpio_key, "#address-cells", 2);
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_u32(fdt, gpio_key, "#size-cells", 0);
+	if (rc)
+		return rc;
+
+	/* generate sub node for each button */
+
+	while (m->name && m->gpio) {
+		rc = bolt_devtree_addnode_at(fdt, m->name, gpio_key,
+					&gpio_key_btn);
+		if (rc < 0)
+			return rc;
+
+		rc = bolt_dt_addprop_u32(fdt, gpio_key_btn,
+					"linux,code", m->code);
+		if (rc)
+			return rc;
+
+		phandle = bolt_devtree_phandle_from_alias(fdt, m->gpio);
+
+		property[0] = cpu_to_fdt32(phandle);
+		property[1] = cpu_to_fdt32(m->pin);
+		/* configure the pin to active low */
+		property[2] = cpu_to_fdt32(1);
+
+		rc = bolt_devtree_at_node_addprop(fdt, gpio_key_btn,
+					"gpios", property, 3 * sizeof(int));
+		if (rc)
+			return rc;
+
+		xsprintf(buffer, "%s %d", m->gpio, m->pin);
+		buffer[19] = '\0';
+		env_setenv(m->name, buffer, ENV_FLG_BUILTIN | ENV_FLG_READONLY);
+
+		m++;
+	}
+
+	return 0;
+}
+
 static int bolt_populate_enet(void *fdt)
 {
 	int rc = 0;
@@ -2177,6 +2253,10 @@ int bolt_devtree_boltset(void *fdt)
 		goto out;
 
 	rc = bolt_populate_enet(fdt);
+	if (rc)
+		goto out;
+
+	rc = bolt_populate_gpio_key(fdt);
 	if (rc)
 		goto out;
 

@@ -43,6 +43,7 @@ ANDROID_INC_FILES := \
 	include/lib_types.h \
 	include/loader.h \
 	include/ui_command.h \
+	include/ui_gpio.h \
 	include/zimage.h \
 	include/arm/arm.h \
 	include/arm/arm-macros.h \
