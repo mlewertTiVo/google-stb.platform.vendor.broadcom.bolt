@@ -1010,6 +1010,7 @@ sub mcp_wr_pairing_allowed($)
 	       "7364a0" => "1",
 	       "7364b0" => "1",
 	       "74371a0" => "1",
+	       "7439b0" => "1",
         );
 
 	return defined($mcp_wp_allowed_tbl{$family_name}) ? 1 : 0;

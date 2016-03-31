@@ -48,7 +48,8 @@ Broadcom Corporation <support@broadcom.com>
 
 * URSR 15.4 or newer should be used, or the Magnum XPT PI should be updated with link:http://jira.broadcom.com/browse/SW7439-510[SW7439-510]. Otherwise, XPT PI will not work correctly against S3 Standby/Resume operation.
 
-* 7439b0 build supports 7439b1
+* 7439b0 build supports corrected OTP 7439b1 and later.
+ ** 7439b0 chips and uncorrected OTP 7439b1 will no longer be supported going forward.
 
 * 7366c0 build supports 7366b0
 
