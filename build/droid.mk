@@ -21,10 +21,10 @@ DROID_BSU_POSTPATCH := android_postpatch
 ANDROID_TOP_DIR := android
 
 ANDROID_SCRIPTS_DIR := $(ANDROID_TOP_DIR)/scripts
-ANDROID_BOLT_INC_DIR := $(ANDROID_TOP_DIR)/boltinc
+ANDROID_BOLT_INC_DIR := $(GEN)/$(ANDROID_TOP_DIR)/boltinc
 
 ANDROID_INC_FILES := \
-	gen/$(FAMILY)/config.h \
+	$(GEN)/$(FAMILY)/config.h \
 	include/arch.h \
 	include/bitops.h \
 	include/boardcfg.h \
@@ -75,7 +75,7 @@ android_postpatch:
 	$(Q)echo "  Do NOT modify auto-gen include files"
 	$(Q)echo
 	$(Q)mkdir -p $(ANDROID_BOLT_INC_DIR)
-	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/gen/$(FAMILY)/*.h
+	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/$(GEN)/$(FAMILY)/*.h
 	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/include/*.h
 	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/include/$(FAMILY)/*.h
 	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/build/*

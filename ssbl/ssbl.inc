@@ -25,12 +25,12 @@ SSBL_S += \
 	ssbl/main/dtbolt_compile.c \
 
 SSBL_S += \
-	dtc/libfdt/fdt.c \
-	dtc/libfdt/fdt_ro.c \
-	dtc/libfdt/fdt_wip.c \
-	dtc/libfdt/fdt_sw.c \
-	dtc/libfdt/fdt_rw.c \
-	dtc/libfdt/fdt_strerror.c 
+	$(GEN)/dtc/libfdt/fdt.c \
+	$(GEN)/dtc/libfdt/fdt_ro.c \
+	$(GEN)/dtc/libfdt/fdt_wip.c \
+	$(GEN)/dtc/libfdt/fdt_sw.c \
+	$(GEN)/dtc/libfdt/fdt_rw.c \
+	$(GEN)/dtc/libfdt/fdt_strerror.c 
 
 ifeq ($(CFG_ENET),1)
 SSBL_S += \
@@ -88,7 +88,7 @@ endif
 endif
 
 SSBL_S += \
-	gen/$(FAMILY)/rts.c \
+	$(GEN)/$(FAMILY)/rts.c \
 	\
 	ssbl/arch/bcm_devices.c \
 	ssbl/arch/bcm_init_enet.c \
@@ -101,7 +101,7 @@ SSBL_S += \
 	\
 	ssbl/arch/board.c \
 	ssbl/arch/arch-$(ARCH).c \
-	gen/$(FAMILY)/board_params.c \
+	$(GEN)/$(FAMILY)/board_params.c \
 	ssbl/arch/board_update.c \
 	ssbl/arch/common_init.c \
 	ssbl/arch/exchandler.c \
@@ -183,25 +183,25 @@ endif
 ifeq ($(CFG_ZLIB),1)
 ifeq ($(ZLIB_VER),1.2.8)
 SSBL_S += \
-	zlib-$(ZLIB_VER)/adler32.c \
-	zlib-$(ZLIB_VER)/crc32.c \
-	zlib-$(ZLIB_VER)/infback.c \
-	zlib-$(ZLIB_VER)/inffast.c \
-	zlib-$(ZLIB_VER)/inflate.c \
-	zlib-$(ZLIB_VER)/inftrees.c \
-	zlib-$(ZLIB_VER)/uncompr.c \
-	zlib-$(ZLIB_VER)/zutil.c
+	$(GEN)/zlib-$(ZLIB_VER)/adler32.c \
+	$(GEN)/zlib-$(ZLIB_VER)/crc32.c \
+	$(GEN)/zlib-$(ZLIB_VER)/infback.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inffast.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inflate.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inftrees.c \
+	$(GEN)/zlib-$(ZLIB_VER)/uncompr.c \
+	$(GEN)/zlib-$(ZLIB_VER)/zutil.c
 else
 SSBL_S += \
-	zlib-$(ZLIB_VER)/adler32.c \
-	zlib-$(ZLIB_VER)/infblock.c \
-	zlib-$(ZLIB_VER)/infcodes.c \
-	zlib-$(ZLIB_VER)/inffast.c \
-	zlib-$(ZLIB_VER)/inflate.c \
-	zlib-$(ZLIB_VER)/inftrees.c \
-	zlib-$(ZLIB_VER)/infutil.c \
-	zlib-$(ZLIB_VER)/uncompr.c \
-	zlib-$(ZLIB_VER)/zutil.c
+	$(GEN)/zlib-$(ZLIB_VER)/adler32.c \
+	$(GEN)/zlib-$(ZLIB_VER)/infblock.c \
+	$(GEN)/zlib-$(ZLIB_VER)/infcodes.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inffast.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inflate.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inftrees.c \
+	$(GEN)/zlib-$(ZLIB_VER)/infutil.c \
+	$(GEN)/zlib-$(ZLIB_VER)/uncompr.c \
+	$(GEN)/zlib-$(ZLIB_VER)/zutil.c
 endif
 endif
 

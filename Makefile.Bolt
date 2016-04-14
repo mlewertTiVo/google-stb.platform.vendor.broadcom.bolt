@@ -13,7 +13,7 @@ all: famcheck $(FAMILY)
 unknown: famcheck
 
 -include toolpath
-include gen/$(FAMILY)/include.mk
+include $(GEN)/$(FAMILY)/include.mk
 include fsbl/fsbl.inc
 include avs/avs.inc
 
@@ -95,9 +95,9 @@ EXTRA_DEFINES += \
 
 EXTRA_DEFINES += -DLIBSTRING_ASM_MEMCPY
 EXTRA_DEFINES += -DSSBL_SOFTLOAD=$(SOFTLOAD)
-EXTRA_DEFINES += -include gen/$(FAMILY)/config.h
+EXTRA_DEFINES += -include $(GEN)/$(FAMILY)/config.h
 ifeq ($(CFG_ZLIB),1)
-EXTRA_DEFINES += -DMY_ZCALLOC -DZ_SOLO -Izlib-$(ZLIB_VER)
+EXTRA_DEFINES += -DMY_ZCALLOC -DZ_SOLO -I$(GEN)/zlib-$(ZLIB_VER)
 endif
 
 ifeq ($(CFG_EMULATION),1)
@@ -130,9 +130,10 @@ $(warning * -------->    YOU ARE ON YOUR OWN!     <-------- )
 $(warning **************************************************)
 endif
 
-_INC := custom include ssbl/net ssbl/usb dtc/libfdt include/$(ARCH) include/$(FAMILY) gen/$(FAMILY)
-
+_INC := custom include ssbl/net ssbl/usb
+_INC += include/$(ARCH) include/$(FAMILY)
 INCFLAGS := $(call rootincs,$(_INC))
+INCFLAGS += -I $(GEN)/dtc/libfdt -I $(GEN)/$(FAMILY)
 
 # Substitute chars in file path to c name conversion. For use by BOLT code
 # that references objcopy created .o files from binary blobs, e.g. the DTB.
@@ -239,9 +240,9 @@ $(ODIR)/fsbl.elf: $(ODIR)/fsbl-stripped.o $(ODIR)/bolt.lds
 	$(Q)$(LD) $(LDFLAGS) -Map $(ODIR)/fsbl.map -T $(ODIR)/bolt.lds -o $@ $(filter-out %.lds, $^)
 	$(Q)$(STRIP) --remove-section=$(ARCH_RM) $@
 
-$(ODIR)/config.dtb: $(ROOT)/$(DTS)
+$(ODIR)/config.dtb: $(DTS)
 	$(Q)$(call pretty_print,DTB,$@)
-	$(Q)$(ROOT)/dtc/dtc -Idts -Odtb -o $@ -i . -d $@.d $<
+	$(Q)$(GEN)/dtc/dtc -Idts -Odtb -o $@ -i . -d $@.d $<
 
 $(ODIR)/config_dtb.o: $(ODIR)/config.dtb
 	$(Q)$(call pretty_print,OBJCOPY,$@)
@@ -304,10 +305,11 @@ include security/postmake.mk
 ifeq ($(SECPATCH),1)
 postpatch: secpatch
 else
-postpatch: $(ROOT)/scripts/patcher.pl $(FINAL_PRODUCTS)
+postpatch: $(GEN)/scripts/patcher.pl $(FINAL_PRODUCTS)
 	$(call pretty_print,EXEC,$@)
 	$(Q)$(ROOT)/scripts/postpatch.pl -D $(ODIR) -o -z $(ZEUS_VER) \
-           -p $(SEC_PFX) -l $(SEC_BBL) -w $(SEC_BFW) -f $(FAMILY) -v $(BUILDTAG) -s
+		-p $(SEC_PFX) -l $(SEC_BBL) -w $(SEC_BFW) \
+		-f $(FAMILY) -v $(BUILDTAG) -s -T $(GEN)/scripts/patcher.pl
 endif
 
 ################################################################################
