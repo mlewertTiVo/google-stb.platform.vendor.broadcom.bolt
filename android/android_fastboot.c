@@ -1998,7 +1998,7 @@ static int fastboot_poll(void)
 				fb_info.cmd_buf_size);
 
 	/* Return error code if something is wrong in reading the transport
-	 * layer buffer */	
+	 * layer buffer */
 	if (res < 0) {
 		os_printf("Error: failed to rx data from host (%d)\n", res);
 		return res;
@@ -2016,7 +2016,7 @@ static int fastboot_poll(void)
 		 * Fastboot command can be as long as 64 bytes */
 		if (res < (int)fb_info.cmd_buf_size)
 			fb_info.cmd_buf[res] = '\0';
-		
+
 		/* If a command is received, process the command */
 		DLOG("fb-in-cmd: %s\n", fb_info.cmd_buf);
 
@@ -2049,6 +2049,7 @@ int android_fastboot(ui_cmdline_t *cmd, int argc, char *argv[])
 	int fb_transport_mode;
 	char *fb_flashdev_name;
 	const char *input_opts;
+	int fb_exit_on_tty = 0;
 
 	/* Before parsing command line parameters for "android fastboot"
 	 * command, we blindly clear the boot reason register because we
@@ -2082,7 +2083,7 @@ int android_fastboot(ui_cmdline_t *cmd, int argc, char *argv[])
 	else
 	{
 		fb_transport_mode = FB_TRANSPORT_USB;
-	}	
+	}
 
 	if (cmd_sw_value(cmd, "-device", &input_opts))
 	{
@@ -2109,7 +2110,7 @@ int android_fastboot(ui_cmdline_t *cmd, int argc, char *argv[])
 		 * which device the image should be written to. */
 		return ui_showerror(BOLT_ERR_INV_PARAM,
 			"The 'device' option must be specified\n");
-	}	
+	}
 
 	DLOG("transport=%d; device=%s\n", fb_transport_mode, fb_flashdev_name);
 
@@ -2127,6 +2128,13 @@ int android_fastboot(ui_cmdline_t *cmd, int argc, char *argv[])
 	if (res < 0)
 		goto exit;
 
+	fb_exit_on_tty = env_getval("FB_EXIT_ON_TTY");
+	if (fb_exit_on_tty > 0) {
+		os_printf("fastboot may exit on console input...\n");
+	} else {
+		fb_exit_on_tty = 0;
+   }
+
 	/* Transport device opened OK. Wait for connection from remote host */
 	while (1) {
 
@@ -2138,19 +2146,21 @@ int android_fastboot(ui_cmdline_t *cmd, int argc, char *argv[])
 		poll_task();
 
 		/* See if there is a command to be processed */
-		res = fastboot_poll();	
-	
+		res = fastboot_poll();
+
 		if (res < 0) {
 			os_printf("Unexpected error (%d): stop fastboot\n", res);
 			break;
 		}
 
-		if (console_status()) {
-			os_printf("Console keyevent: stop fastboot\n");
-			os_printf("***You can re-enter fastboot mode only if you are using -transport=tcp***\n\n");
-			break;
+		if (fb_exit_on_tty) {
+			res = console_status();
+			if (res == 1) {
+				os_printf("Console keyevent: stop fastboot\n");
+				os_printf("***You can re-enter fastboot mode only if you are using -transport=tcp***\n\n");
+				break;
+			}
 		}
-
 	}
 
 exit:
