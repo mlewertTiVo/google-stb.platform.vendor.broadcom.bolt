@@ -41,12 +41,8 @@ void setup_chip_for_avs_uart(void)
 	if (!ENABLE_AVS_UART)
 		return;
 
-#if defined(CONFIG_BCM7145B0)
-	PMUX(SUN_TOP, 2, gpio_008, TP_IN_08);
-	PMUX(SUN_TOP, 3, gpio_009, TP_OUT_00);
-	BDEV_WR_F(SUN_TOP_CTRL_UART_ROUTER_SEL_0, port_4_cpu_sel, 12);
-	BDEV_WR_F(SUN_TOP_CTRL_TEST_PORT_CTRL, encoded_tp_enable, 16);
-#else
-	/* If not defined then it just won't set anything up */
-#endif
+	/* Chip specific local pinmuxing and/or SUN_TOP_CTRL routing
+	 * goes here for avs. If not defined then it just won't set
+	 * anything up.
+	 */
 }

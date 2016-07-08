@@ -1,13 +1,17 @@
-[[TOP]]
+:toc2:
+:toclevels: 4
+:max-width: 100%
 
 Tips n' tricks
 ==============
-Broadcom Corporation <support@broadcom.com>
+Broadcom Ltd <support@broadcom.com>
 
 A grab-bag of assorted things that may be of assistance. No assurance
 of completeness or validity is made for things here: 'YMMV'.
 
 
+ Devicetree and Linux
+---------------------
 IMPORTANT: BOLT provides a devicetree to Linux. That means the versions
 of each are tied more closely together. You can't just upgrade
 one without considering the other. Note the actual devicetree
@@ -35,7 +39,9 @@ or size is wrong, or your 'cma' nodes are wrong (for non-dynamic CMA
 kernels.) Note that bogus cma nodes might fail early in the kernel
 boot process, but with dynamic CMA you should not have that problem.
 
-* Changing DDR parameters at runtime: Instead of a single shmoo
+ Changing DDR (aka MCB) at runtime
+----------------------------------
+Instead of a single shmoo
 configuration we try to pack as many of them into the files in
 shmoo/<MEMC:PHY revision>/mcb-\{family}.c as possible, that means
 you can override the default values for each BOLT build configuration.
@@ -53,9 +59,10 @@ You might notice this option is in the FSBL menu:
  RESET + 1 = this menu
 
 NOTE: This return to FSBL menu option is not available if the
-SECURE_BOOT build option is set. Note that in the future
-we might choose another method of board detection so the
-board selection menu may disappear. We intend to keep
+SECURE_BOOT build option is set.
+
+NOTE: In the future we might choose another method of board detection
+so the board selection menu may disappear. We intend to keep
 the alternate shmoo selection (if possible) as its useful.
 
 The shmoo menu allows you to enable debug or select another
@@ -90,22 +97,27 @@ e)      933MHz  4Gx16 32b
 shmoo: 
 ----
 
-''''
-<<TOP,Top>>
+IMPORTANT: Only the primary MCBs (see the 'memsys std' script command)
+can be selected. Those referenced by 'memsys alt' cannot.
 
-* AVS can be disabled on a one-shot basis to bypass a
+
+ AVS on/off
+-----------
+AVS can be disabled on a one-shot basis to bypass a
 crash situation that is preventing the code from reaching
-the Bolt prompt where it can be disabled permanently:
+the Bolt prompt where it can be disabled permanently.
 
 WARNING: AVS should never be disabled in final production
 builds of BOLT.
 
-- To do so, hold down the '8' (eight) numeric key so that
+* Hold down the '8' (eight) numeric key so that
 it autorepeats and then reset the board.  AVS will not be
 reloaded on this boot.  Use the Bolt "setboard" command
 (-noavs option) to disable it on all subsequent boots
 until the issue is resolved.
 
+ Checklists & misc
+------------------
 * Check your board! Pinmuxing differences and shmoo
 can be different. If you have a DDR not listed in the
 shmoo menu (above) then contact your FAE. Remember to
@@ -114,13 +126,12 @@ file to match it; i.e. the memory, region & cma
 devicetree nodes for the 'dt autogen' and 'ddr' build
 commands.
 
+
 * The newer BOLTs are bigger than the older ones (v0.5x) so
 if you find upgrading BOLT via BOLT e.g. using TFTP fails, use
 'flash0' as a parameter to the 'flash' command instead of
 'flash0.bolt'.
 
-* 'make cfgclean' has been deprecated. The makefile now checks
- changes to config files. Use 'make clean' instead.
 
 * The build products will be in the objs/<FAMILY> directory and below.
 'make family' will tell you what <FAMILY> is. As well as bolt-*.bin
@@ -129,46 +140,19 @@ when things go wrong when you need to follow the memory allocations and
 code generated.
 
 
-* Buy a good book on ARM assembly if haven't already. Join
- at http://www.arm.com for online documentation.
-
-
 * dtc woes/fails to build:
- The GPL-BSD-dtc-577b874961.tgz package is unzipped from the thirdparty/
-directory to dtc/ and GPL-dtc-577b874961-cruftyflexpatch.tgz is
-added on top for older CentOS systems that have an earlier version of Flex.
-Then the libfdt_env.patch is next applied so that BOLT can build libfdt.
- If any of these steps fails and dtc/dtc is not built, or the patch fails,
-BOLT cannot be built. Check your host x86 gcc version as well, that
-could also fail to build dtc.
-
-
-* If you have just installed 'patch' then 'rm -rf dtc' for BOLT to re-do
-its unpacking and patching - if dtc/ exists then it will presume that
-you don't need to do it again and libfdt will remain unpatched.
-
-
-* 'make clean' in dtc/ on an older (CentOS) system is a no-go. It will
-wipe out the files we added in GPL-dtc-577b874961-cruftyflexpatch.tgz, so
-don't do it. We've updated to GPL-BSD-dtc-g448faa43.tgz, to obviate
-the need for the crufty patch, so just let BOLT unpack and build it
-for you on BOLT v0.79 or later.
-
-
-* If you have overlaid an earlier version of BOLT from the pre SWBOLT-12
-days e.g. v0.53, then BOLT may not build. The older version put object files
-alongside source files and the build finds them but then looks for the
-build files in build/<FAMILY> (where they don't exist) and then make
-fails. 'find . -name \*.o | grep -v dtc | rm -f' &
-'find . -name .dep* | grep -v dtc | rm -f' will sort you out.
+Your PATH should be picking up x86 gcc to build dtc and not the
+ARM gcc. Check your host x86 gcc version, not all may manage
+to build dtc.
 
 
 * Don't rely on anything in build/brcm.mk from version to version,
 don't expect it to work for you either.
 
 
-* Autogenerated stuff will always go in gen/<FAMILY> for code files,
-and objs/<FAMILY> for linker scripts.
+* Autogenerated stuff will always go in gen/<FAMILY> for code files
+and common items such as dtc, script helpers and zlib. Linker
+scripts end up in objs/<FAMILY>.
 
 
 * Its bad news to hand hack anything in gen/ as it will disappear
@@ -207,8 +191,6 @@ othe parameter. For multiple boards select them e.g. based on a pin
 strap. That would of course mean having some code in FSBL instead
 of the menu.
 
-''''
-<<TOP,Top>>
 
 * The DTS source file for the chip family *.cfg file is modified by
 BOLT with runtime parameters. This is done either by the user
@@ -271,9 +253,6 @@ to the ddr, or a subset of them. The 'ddr' entries in the
 config file have a physical effect (SHMOO), those in
 devicetree are only to setup Linux.
 
-''''
-<<TOP,Top>>
-
 * Try to make sure any modifications you make to BOLT
 also work on our reference boards. Its the key to
 getting any issue you may have sorted out quickly:
@@ -305,8 +284,20 @@ and boot but it won't work as you expect.
 
 [big]#You have been warned!#
 
-''''
-<<TOP,Top>>
+* For debugging reasons you may not want the gen directory to be rebuilt.
+To do this use: SCRIPT_ENG=`which true` when re-making.
+e.g.
+
+ make 7445d0 -j8  SCRIPT_ENG=`which true`
+
+WARNING: You are on your own if you do this! Hand hacking the code in the
+'gen/' directory is not supported by us.
+
+
+ BOLT and ARM
+-------------
+* Buy a good book on ARM assembly if haven't already. Join
+ at http://www.arm.com for online documentation.
 
 * With ARM, we have a internal static ram memory to run FSBL in.
  For 7445a0 its 64k. FSBL is limited to about 32K as the other
@@ -338,25 +329,28 @@ problems using SPI flash, USB or and possibly areas of BOLT
 in this case, or when using uncached (KUMALLOC) memory
 directly.
 
-* When you boot up you will see something like this:
 
- PTE RANGE 00000000 - C0000000
+[line-through]#When you boot up you will see something like this:#
 
-This is the page table range. If running with MMU then a read
-or write outside this range is bad news. The page table lives
-in DDR at a 32K region just before the SSBL code.
+[line-through]#PTE RANGE 00000000 - C0000000#
 
-The pagetable default is for 1Mb or 'section' per entry,
+[line-through]#This is the page table range.#
+
+* If running with the MMU enabled then a read or write outside
+the MMU page table description of memory is bad news, you'll
+get either an exception or a chip reset.
+
+* The pagetable default is for 1Mb or 'section' per entry,
 not 4Kb. See ARM MMU documentation for more info. See
-the file config/layout.cfg for how the BOLT binary is
-partitioned (nothing to do with the 'show devices'
+the config/layout*.cfg file for your chip on how the
+BOLT binary is partitioned (nothing to do with the 'show devices'
 command which shows total flash partitions) and
-where the page table (SSBL_PAGE_TABLE) is located
+where the page table base (SSBL_PAGE_TABLE) is located
 in memory.
 
-''''
-<<TOP,Top>>
 
+ Flash partitions
+-----------------
 * To use a traditional fixed flash map, create your flash map/partition
  layout and then specify it to the 'mapselect' command in your config file,
  example config file snippet:
@@ -391,19 +385,8 @@ in memory.
 ----
 
 
-''''
-<<TOP,Top>>
-
-* For debugging reasons you may not want the gen directory to be rebuilt.
-To do this use: SCRIPT_ENG=`which true` when re-making.
-e.g.
-
- make 7145a0 -j8  SCRIPT_ENG=`which true`
-
-WARNING: You are on your own if you do this! Hand hacking the code in the
-'gen/' directory is not supported by us.
-
-
+ Alternate toolchains
+---------------------
 * We now can support alternate ARM toolchains. Note that you are responsible
  for the limitations of such toolchains, e.g. missing headers BOLT needs,
  or weird configurations. Here is an example of setting up and building with
@@ -413,7 +396,7 @@ WARNING: You are on your own if you do this! Hand hacking the code in the
 ----
  make toolfind CROSS=arm-eabi- ALT_TOOL=~/arm-eabi-4.7/bin
 
- # cat config/toolpath:
+ # cat toolpath
  PATH:=/home/user/arm-eabi-4.7/bin:$(PATH)
  CROSS:=arm-eabi-
 
@@ -421,11 +404,17 @@ WARNING: You are on your own if you do this! Hand hacking the code in the
  make 7445d0 USTRICT=
 ----
 
+
+ TFTP options
+-------------
 * User has an option to enable TFTP blksize option negotiation by setting
 the following environment variables:
 
-   - NET_TFTP_AUTO_BLKSIZE: set to 1 to enable blksize option negotiation
-   - NET_TFTP_BLKSIZE: set the BLKSIZE value to be used in negotiation
+
+|==========================================================================
+| NET_TFTP_AUTO_BLKSIZE | Set to 1 to enable blksize option negotiation
+| NET_TFTP_BLKSIZE      | Set the BLKSIZE value to be used in negotiation
+|==========================================================================
 
 By default, NET_TFTP_AUTO_BLKSIZE is not set and 512 bytes is used as the
 TFTP block size.  In order to improve the performance for TFTP, user
@@ -452,12 +441,11 @@ smallest MTU on the network (Ethernet MTU size is 1500) minus 32 bytes
 To find out whether your TFTP server support RFC 2348, check the manpage
 and look for --blocksize option.
 
-<<TOP,Top>>
 
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

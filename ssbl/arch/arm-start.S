@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -14,6 +12,7 @@
 #endif
 
 #include "arm-macros.h"
+#include "psci.h"
 
 	.arm
 
@@ -41,7 +40,7 @@ ENTRY_PROC(ssbl_init)
 END_PROC(ssbl_init)
 
 setup_vector_table:
-	@ Check ID_PFR if security extensions are supported, which implies
+	@ Check ID_PFR1 if security extensions are supported, which implies
 	@ support for VBAR
 	mrc	p15, 0, r0, c0, c1, 1
 	ands	r0, #(1 << 4)
@@ -61,10 +60,9 @@ setup_vector_table:
 .align 4
 
 ENTRY_PROC(__setstack)
-	mov		sp, r0
-
 	@ Enforce ARM-EABI stack requirements on entry
-	bic		sp, sp, #7
+	bic		r0, r0, #7
+	mov		sp, r0
 
 	@ Initialize the stack pointers of all exception modes
 	mrs		r1, CPSR
@@ -75,9 +73,17 @@ ENTRY_PROC(__setstack)
 	set_mode_sp	r1, r0, MODE_SYS
 	set_mode_sp	r1, r0, MODE_SVC	@ return in SVC mode
 
-	mov		r0, #0
 	bx 		lr
 END_PROC(__setstack)
+
+
+ENTRY_PROC(arch_call_bolt_main)
+	bl	__setstack
+	mov	r0, #0
+	mov	r1, #0
+	ldr	r2, =bolt_main
+	bx	r2
+END_PROC(arch_call_bolt_main)
 
 
 ENTRY_PROC(__getstack)

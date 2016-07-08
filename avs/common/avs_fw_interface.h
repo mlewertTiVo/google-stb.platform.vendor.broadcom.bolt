@@ -39,9 +39,14 @@ typedef struct {
 				  * reading voltage */
 	uint32_t polling_delay;  /* delay between polling loops */
 	uint32_t chip_id;        /* this STB family ID */
+#if (BCHP_CHIP == 3390)
 	uint32_t bbu_used;       /* flag indicating if Battery Backup (Battery)
 				  * used in this project */
 	uint32_t bbm_flag;       /* true if booting under battery backup mode */
+#else
+	uint32_t single_domain;  /* set for 72xx boards with single regulator */
+	uint32_t cpu_offset;     /* for devices with STB/CPU domains */
+#endif
 	uint32_t product_id;     /* this STB product ID */
 	uint32_t over_temp_flag; /* flag telling firmware init due to
 				  * over-temperature condition */
@@ -97,7 +102,7 @@ typedef struct {
 	uint32_t PV0;   /* initial predicted voltage value (in milli-volts) */
 	uint32_t MV0;   /* initial measured voltage value (in milli-volts) */
 	/* These next values are only used when two implementations of AVS
-	 * Monitor exist (CM side of 7145) */
+	 * Monitor exist (CM side of STB chip - if we have one) */
 	uint32_t voltage1;      /* (see above for units) */
 	int32_t temperature1;
 	uint32_t PV1;
@@ -141,9 +146,10 @@ typedef struct {
 #define CMD_STB_S3_ENTER 0x16	/* Powering off STB (entering S3 Mode). */
 #define CMD_STB_S3_EXIT  0x17	/* Powering on STB (existing S3 Mode). */
 #define CMD_BALANCE      0x18	/* Balance.
-                                 * This request is used to periodically balance
-                                 * the voltage settings between the two blocks
-                                 * (CM and STB). [7145 only] */
+				 * This request is used to periodically balance
+				 * the voltage settings between the two blocks
+				 * (CM and STB).
+				 */
 
 /* Responses: */
 #define RSP_SUCCESS	0xF0	/* Notification accepted */

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -633,7 +631,7 @@ int ui_init_examcmds(void)
 		   "-v;Address is a kernel virtual address (deprecated)|"
 		   "-loop;Loop till keypress");
 
-	prev_addr = UNCADDR(0);
+	prev_addr = BOOT_START_ADDRESS;
 
 	return 0;
 }

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -27,6 +25,10 @@
 
 #if defined(CONFIG_BCM7250B0)
 #include <bchp_aon_ctrl.h>
+#endif
+
+#if defined(CONFIG_BCM7268) || defined(CONFIG_BCM7271)
+#include <bchp_sun_top_ctrl.h>
 #endif
 
 #if defined(CONFIG_BCM7364)
@@ -82,32 +84,6 @@ static void bcm3390_clock_init(void)
 }
 #endif
 
-#if defined(CONFIG_BCM7145B0)
-static void bcm7145b0_clock_init(void)
-{
-	/* Change PLLLC to have DCO=6480MHz,
-	CH1=60MHz, CH0 & CH2 are don't care */
-	BDEV_WR_F(CLKGEN_PLL_LC_PLL_DIV, PDIV, 2);
-	BDEV_WR_F(CLKGEN_PLL_LC_PLL_DIV, NDIV_INT, 120);
-	BDEV_WR_F(CLKGEN_PLL_LC_PLL_CHANNEL_CTRL_CH_1, MDIV_CH1, 54);
-
-	/* reset LC PLL */
-	BDEV_WR_F(CLKGEN_PLL_LC_PLL_RESET, RESETD, 1);
-	BDEV_WR_F(CLKGEN_PLL_LC_PLL_RESET, RESETA, 1);
-
-	BDEV_WR_F(CLKGEN_PLL_LC_PLL_RESET, RESETD, 0);
-	BDEV_WR_F(CLKGEN_PLL_LC_PLL_RESET, RESETA, 0);
-
-	udelay(30);
-
-	/* GPHY to use XTAL 54MHz CMOS, and run internal
-	PLL in fractional mode */
-	BDEV_WR_F(CLKGEN_EGPHY28_4PORT_33V_90O_FC_INST_CLOCK_SELECT,
-		EGPHY_REFCLK_CLOCK_SELECT, 2);
-	BDEV_WR_F(CLKGEN_EGPHY28_4PORT_33V_90O_FC_INST_CLOCK_SELECT,
-		EGPHY_25_54_CLOCK_SELECT, 1);
-}
-#endif /* #if defined(CONFIG_BCM7145B0) */
 
 #if defined(CONFIG_BCM7250B0)
 /* Dongle Under-clock profile (Profile = 2)
@@ -921,13 +897,13 @@ void adjust_clocks(struct board_type *b, uint32_t mhl_power)
 	bcm3390_clock_init();
 #endif
 
-#if defined(CONFIG_BCM7145B0)
-	bcm7145b0_clock_init();
-#endif
-
 #if defined(CONFIG_BCM7250B0)
 	bcm7250b0_apply_powerprofile(b, mhl_power);
 	bcm7250b0_gphy_pll_init();
+#endif
+
+#if defined(CONFIG_BCM7268) || defined(CONFIG_BCM7271)
+	BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_0, clk_freerun_mode, 0);
 #endif
 
 #if defined(CONFIG_BCM7364)

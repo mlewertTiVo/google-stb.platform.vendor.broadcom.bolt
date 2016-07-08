@@ -1,7 +1,5 @@
 /***************************************************************************
- *	 Copyright (c) 2012-2015, Broadcom Corporation
- *	 All Rights Reserved
- *	 Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -15,7 +13,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <compiler.h>
+#include <config.h>
 
+
+#if CFG_MEMDMA_MCPB
+#define PID_CHANNEL_A	1022
+#define PID_CHANNEL_B	1023
+#else
+#define PID_CHANNEL_A	510
+#define PID_CHANNEL_B	511
+#endif
 
 /* always assume 64 bit physical address */
 typedef uint64_t dma_addr_t;
@@ -47,6 +54,7 @@ struct memdma_initparams {
 	void (*die)(char *msg);
 	void (*udelay)(uint32_t time);
 	void *(*memset)(void *s, int c, size_t n);
+	int (*wait_for_int)(void);
 };
 
 
@@ -58,12 +66,13 @@ int memdma_prepare_descs(struct mcpb_dma_desc *descs, dma_addr_t descs_pa,
 
 int mcpb_init_desc(struct mcpb_dma_desc *mcpb, struct dma_region *region);
 
-void wdma_init_desc(struct wdma_desc *desc, struct dma_region *region);
+void wdma_init_desc(struct wdma_desc *desc, struct dma_region *region,
+		bool int_enable);
 
 int memdma_run(dma_addr_t desc1, dma_addr_t desc2, bool dual_channel);
 
 int mem2mem_dma_run(dma_addr_t mcpb_desc, dma_addr_t wdma_desc,
-			int pid_channel);
+		int pid_channel, bool int_enable);
 
 void get_hash(uint32_t *hash, bool dual_channel);
 

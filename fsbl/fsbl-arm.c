@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -19,6 +17,7 @@
 #include "cache_ops.h"
 #include "config.h"
 
+#include "bchp_clkgen.h"
 #include "bchp_cntcontrolbase.h"
 #include "bchp_hif_cpubiuctrl.h"
 
@@ -55,9 +54,10 @@ void late_cpu_init(void)
 		RAC_SETTING(RAC_DISABLED, RAC_NO_PREF);
 	const uint32_t rac_data_cfg =
 		RAC_SETTING(RAC_DISABLED, RAC_NO_PREF);
-	uint32_t cntfreq;
 
-#ifndef CFG_EMULATION
+	uint32_t __maybe_unused cntfreq;
+
+#if defined(CFG_EMULATION) || defined(CFG_FULL_EMULATION)
 	/* The A15 comes up in div-by-2 mode. Set to div-by-4 mode
 	 (375MHz for 1.5GHz parts.)
 	*/
@@ -66,11 +66,21 @@ void late_cpu_init(void)
 	/* Full throttle CPU speed. arch_set_cpu_clk_ratio(CPU_CLK_RATIO_ONE)
 	should be used for non-emulation targets i.e. older
 	chips with HW7366-552 or HW7445-1480. */
+#ifdef BCHP_HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG 
+	/* CPU/L2 clock control */
+	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG, 0);
+#endif
 	BDEV_WR_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, CLK_RATIO, 0);
 	dsb();
 
 	BDEV_WR_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, SAFE_CLK_MODE, 0);
 	dsb();
+#ifdef BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K 
+	/* CH0 for CPU, and CH1 for sysIF */
+	BDEV_WR(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0_4K, 2); /* MDIV_CH0 */
+	BDEV_WR(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K, 4); /* MDIV_CH1 */
+	dsb();
+#endif
 #endif
 
 	/* enable RAC */
@@ -108,15 +118,25 @@ void late_cpu_init(void)
 	BDEV_WR(BCHP_CNTControlBase_CNTCV_LO, 0);
 	BDEV_WR(BCHP_CNTControlBase_CNTCV_HI, 0);
 
-	/* Set the ARM generic timer frequency using the CPU system counter.
-	 * system counter clock @ BCHP_CNTControlBase_CNTFID0 (27MHz - default)
-	*/
-	cntfreq = BDEV_RD(BCHP_CNTControlBase_CNTFID0);
-	__asm__ __volatile__(
-	"	mcr	p15, 0, %0, c14, c0, 0\n"
-	: /* no outputs */
-	: "r" (cntfreq)
-	: "memory");
+#ifdef STUB64_START
+	/* If we booted via A64 @EL3 then we now don't have permission
+	 * to write to cntfrq, but STUB64 has set it up for us anyway.
+	 */
+	if (0 == a53_bootmode()) {
+#endif
+		/* Set the ARM generic timer frequency using the CPU system
+		 * counter. system counter clock @ BCHP_CNTControlBase_CNTFID0
+		 * (27MHz - default)
+		 */
+		cntfreq = BDEV_RD(BCHP_CNTControlBase_CNTFID0);
+		__asm__ __volatile__(
+		"	mcr	p15, 0, %0, c14, c0, 0\n"
+		: /* no outputs */
+		: "r" (cntfreq)
+		: "memory");
+#ifdef STUB64_START
+	}
+#endif
 	BARRIER();
 
 	/* Start CPU System Counter with the 1st entry of the frequency modes

@@ -10,7 +10,7 @@
  ***************************************************************************/
 #if CFG_BATTERY_BACKUP
 
-/* Very 7145a0 specific at the moment */
+/* Supports: 3390 */
 
 #include <common.h>
 #include <lib_types.h>

@@ -562,11 +562,71 @@ static int sf2_mdio_close(bolt_devctx_t *ctx)
 	return 0;
 }
 
+static int sf2_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
+{
+	sf2_softc *softc = ctx->dev_softc;
+	int retval = BOLT_OK;
+	int phy_addr[NUM_SWITCH_PHY];
+	int i, cnt = 0;
+	unsigned int port, phyid;
+
+	buffer->buf_retlen = 0;
+
+	switch ((int)buffer->buf_ioctlcmd) {
+	case IOCTL_ETHER_SET_PHY_DEFCONFIG:
+		for (i = 0; i < NUM_SWITCH_PHY; i++)
+			if (softc->int_phy_params[i])
+				phy_addr[cnt++] =
+				atoi(softc->int_phy_params[i]->phy_id);
+		bcm_gphy_workaround(softc->mdio, &phy_addr[0], cnt);
+		break;
+
+	case IOCTL_ETHER_GET_PHY_REGBASE:
+		*(unsigned long **)(buffer->buf_ptr) =
+					(unsigned long *)softc->base;
+		buffer->buf_retlen = sizeof(unsigned long *);
+		break;
+
+	case IOCTL_ETHER_GET_PORT_PHYID:
+		port = (unsigned int)buffer->buf_offset;
+		if (port >= NUM_SWITCH_PHY) {
+			retval = BOLT_ERR_INV_PARAM;
+			break;
+		}
+
+		if (!softc->int_phy_params[port]) {
+			retval = BOLT_ERR_DEVNOTFOUND;
+			break;
+		}
+
+		phyid = atoi(softc->int_phy_params[port]->phy_id);
+		*(int *)(buffer->buf_ptr) = phyid;
+		buffer->buf_retlen = sizeof(int);
+	break;
+
+	case IOCTL_ETHER_GET_MDIO_PHYID:
+		if (!softc->mdio) {
+			retval = BOLT_ERR_DEVNOTFOUND;
+			break;
+		}
+		*(int *)(buffer->buf_ptr) = (int)softc->mdio->phy_id;
+		buffer->buf_retlen = sizeof(int);
+	break;
+
+	default:
+		err_msg("SF2: Invalid IOCTL");
+		retval = BOLT_ERR_UNSUPPORTED;
+		break;
+	}
+	return retval;
+}
+
 static const bolt_devdisp_t sf2_mdio_dispatch = {
 	.dev_open = sf2_mdio_open,
 	.dev_read = sf2_mdio_read,
 	.dev_write = sf2_mdio_write,
 	.dev_close = sf2_mdio_close,
+	.dev_ioctl = sf2_mdio_ioctl,
 };
 
 static bolt_driver_t sf2_mdiodrv = {

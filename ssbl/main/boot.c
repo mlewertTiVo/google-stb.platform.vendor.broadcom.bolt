@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,9 +8,9 @@
  ***************************************************************************/
 
 #include <arch_ops.h>
-#include <boot.h>
 #include <bootblock.h>
 #include <bolt.h>
+#include <board.h>
 #include <bsu-api.h>
 #include <cache_ops.h>
 #include <console.h>
@@ -98,6 +96,9 @@ int bolt_go(bolt_loadargs_t *la)
 	bolt_devtree_params_t p;
 	int boot_bsu = la->la_flags & LOADFLG_BSU;
 	int ret;
+#ifdef STUB64_START
+	struct dt_boot_mods bm = {0};
+#endif
 
 	if (la->la_entrypt == 0) {
 		xprintf("No program has been loaded.\n");
@@ -106,6 +107,8 @@ int bolt_go(bolt_loadargs_t *la)
 
 	bolt_devtree_getenvs(&p);
 	if (p.dt_address) {
+		void *fdt = p.dt_address;
+
 		/* boltset is allowed to fail if the tree is in RONLY memory */
 		char *dt_off = env_getenv("DT_OFF");
 
@@ -113,7 +116,6 @@ int bolt_go(bolt_loadargs_t *la)
 			xprintf("DT_OFF: bypass device tree modification\n");
 		} else {
 			/* Run-time DT patching */
-			void *fdt = p.dt_address;
 			if (!bolt_devtree_sane(fdt, NULL)) {
 				ret = bolt_devtree_boltset(fdt);
 				if (ret) {
@@ -122,6 +124,17 @@ int bolt_go(bolt_loadargs_t *la)
 				}
 			}
 		}
+
+#ifdef STUB64_START
+		if (!boot_bsu) {
+			/* inform that we have a 32 bit app that needs to
+			 * be run via a jump instead of an indirect method
+			 * such as a PSCI call.
+			 */
+			bm.loader_32bit = (la->la_flags & LOADFLG_DIRECT_CALL);
+			(void)bolt_devtree_boltset_boot(fdt, &bm);
+		}
+#endif
 	}
 
 #if CFG_NETWORK
@@ -161,8 +174,17 @@ int bolt_go(bolt_loadargs_t *la)
 
 		/* make sure that the loaded BSU code is executable */
 		arch_mark_executable(base, size, true);
+
+		/* BSU has to be in the same operating
+		 * environment as BOLT as it calls back into BOLT,
+		 * that means no aarch64/32 switches between the
+		 * two, hence no alternate bolt_start_bsu64()
+		 * for STUB64_START chips. Its all 32 or 64 bit,
+		 * no arch or EL swapping.
+		 */
 		bolt_start_bsu(la->la_entrypt, 0xffffffff,
 				(unsigned int)p.dt_address);
+
 		/* DO NOT attempt taking executability back.
 		 *
 		 * It is possible that BSU returns back. But, taking
@@ -170,16 +192,38 @@ int bolt_go(bolt_loadargs_t *la)
 		 * logic between BSU and BOLT. Without such a glue logic,
 		 * BSU may override BOLT's various memory areas.
 		 */
-	} else {
-		/* MMU is disabled right before jumping to the target,
-		 * and should be re-enabled by code located at the target
-		 * after re-constructing page table
-		 */
-		bolt_start(la->la_entrypt, 0xffffffff,
-				(unsigned int)p.dt_address, 0);
+		return BOLT_OK;
 	}
 
-	/* May get here in BSU case? */
+	/* MMU is disabled right before jumping to the target,
+	 * and should be re-enabled by code located at the target
+	 * after re-constructing page table
+	 */
+#ifdef STUB64_START
+	if (!(la->la_flags & LOADFLG_DIRECT_CALL)) {
+		if (la->la_flags & LOADFLG_APP64) {
+			xprintf("64 bit PSCI boot...\n");
+			bolt_start64(la->la_entrypt, 0xffffffff,
+					(unsigned int)p.dt_address, 0);
+		} else {
+			xprintf("32 bit PSCI boot...\n");
+			bolt_start32(la->la_entrypt, 0xffffffff,
+					(unsigned int)p.dt_address, 0);
+		}
+		/* In the remote event a non-BSU app saved
+		 * BOLT state for a return.
+		 */
+		return BOLT_OK;
+	} else
+#endif
+	{
+		xprintf("32 bit boot...\n");
+		bolt_start(la->la_entrypt, 0xffffffff,
+			(unsigned int)p.dt_address, 0);
+	}
+	/* In the remote event a non-BSU app saved
+	 * BOLT state for a return.
+	 */
 	return BOLT_OK;
 }
 

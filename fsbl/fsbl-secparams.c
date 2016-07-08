@@ -33,8 +33,13 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x0d] = 0x00000800,
 	[0x0e] = 0x00000000,
 	[0x0f] = AVS_TEXT_OFFS,
+#if CFG_ZEUS4_2_1
+	[0x10] = 0x00003a00,
+	[0x11] = 0x00000d80, /* last 256 bytes is reservered */
+#else
 	[0x10] = 0x00003000,
 	[0x11] = 0x00000B00, /* last 256 bytes is reservered */
+#endif
 	[0x12] = 0x00000800,
 	[0x13] = 0x00000000,
 	[0x14] = MEMSYS_TEXT_OFFS, /* 0x90 */

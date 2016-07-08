@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -35,7 +33,7 @@ static char bsp[BSP_VER_STRLEN];
 static uint32_t bsp_version;
 
 
-static int sec_check_for_IRDY2(void)
+static int __maybe_unused sec_check_for_IRDY2(void)
 {
 	uint32_t ready;
 	int to = 10;
@@ -50,7 +48,7 @@ static int sec_check_for_IRDY2(void)
 	return (ready) ? BOLT_OK : BOLT_ERR_TIMEOUT;
 }
 
-static int sec_check_for_OLOAD2(void)
+static int __maybe_unused sec_check_for_OLOAD2(void)
 {
 	uint32_t oload;
 	int to = 10;
@@ -66,7 +64,7 @@ static int sec_check_for_OLOAD2(void)
 }
 
 
-static int sec_do_bsp_cmd_prologue(void)
+static int __maybe_unused sec_do_bsp_cmd_prologue(void)
 {
 	if (sec_check_for_IRDY2())
 		return BOLT_ERR;
@@ -78,7 +76,7 @@ static int sec_do_bsp_cmd_prologue(void)
 	return BOLT_OK;
 }
 
-static int sec_do_bsp_cmd_epilogue(void)
+static int __maybe_unused sec_do_bsp_cmd_epilogue(void)
 {
 	REG(BCHP_BSP_GLB_CONTROL_GLB_ILOAD2) = 0x1;
 
@@ -93,6 +91,7 @@ static int sec_do_bsp_cmd_epilogue(void)
 
 const char *sec_get_bsp_version(void)
 {
+#ifndef CFG_FULL_EMULATION
 	if (bsp_version)
 		return bsp;
 
@@ -117,7 +116,7 @@ const char *sec_get_bsp_version(void)
 		(bsp_version >> BSP_S_FW_MAJOR_VERSION_SHIFT) & 0x3F,
 		(bsp_version >> BSP_S_FW_MINOR_VERSION_SHIFT) & 0x3F,
 		(bsp_version >> BSP_S_FW_SUB_MINOR_VERSION_SHIFT) & 0x0F);
-
+#endif
 	return (bsp_version) ? bsp : NULL;
 }
 

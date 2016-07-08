@@ -216,22 +216,22 @@ static int gen_bootargs(char *bootargs_buf, const char *cmdline)
 }
 
 /*  *********************************************************************
-    *  imgload_internal(ops,ref,entrypt,flags)
+    *  imgload_internal(fsctx,ref,la,kernelsize)
     *
     *  Read an ELF file (main routine)
     *
     *  Input parameters:
-    *  	   ops - file I/O dispatch
-    *  	   ref - open file handle
-    *  	   entrypt - filled in with entry vector
-    *      flags - generic boot flags
+    *  	   fsctx - context
+    *  	   ref   - open file handle
+    *  	   la    - loader args
+    *       kernelsize - returned size of kernel image when valid
     *
     *  Return value:
     *  	   0 if ok
     *  	   else error code
     ********************************************************************* */
 
-static int imgload_internal(fileio_ctx_t *fsctx, void *ref, bolt_loadargs_t *la)
+static int imgload_internal(fileio_ctx_t *fsctx, void *ref, bolt_loadargs_t *la, int32_t *kernelsize)
 {
 	struct img_hdr hdr;
 	int n, m;
@@ -269,6 +269,8 @@ static int imgload_internal(fileio_ctx_t *fsctx, void *ref, bolt_loadargs_t *la)
 
 	n = (hdr.kernel_size + hdr.page_size - 1) / hdr.page_size;
 	m = (hdr.ramdisk_size + hdr.page_size - 1) / hdr.page_size;
+
+	*kernelsize = hdr.kernel_size;
 
 	kernel_offset = 1 * hdr.page_size;
 	ramdisk_offset = (1 + n) * hdr.page_size;
@@ -364,6 +366,7 @@ static int bolt_imgload(bolt_loadargs_t *la)
 	uint8_t *ptr;
 	uint8_t *bootcode;
 	int32_t maxsize;
+	int32_t kernelsize;
 	int amtcopy;
 	int thisamt;
 	int onedot;
@@ -372,6 +375,7 @@ static int bolt_imgload(bolt_loadargs_t *la)
 	unsigned long long pt_bytes_offset;
 	char filename[25];
 	const char *partition;
+	int iter =0;
 
 	bootcode = (uint8_t *) la->la_address;
 	maxsize = la->la_maxsize;
@@ -381,7 +385,7 @@ static int bolt_imgload(bolt_loadargs_t *la)
 	if (la->la_flags & LOADFLG_COMPRESSED)
 		return BOLT_ERR_INV_PARAM;
 
-	/* 
+	/*
 	 * Check file system type - either 'raw' or 'fat'.
 	 * If file-system is 'raw' & we are using USB flash drive, then we
 	 * need to construct the proper filename with "offset,length" format
@@ -395,7 +399,7 @@ static int bolt_imgload(bolt_loadargs_t *la)
 	 */
 	if (!os_strcmp(la->la_filesys, "raw") &&
 				(!os_strcmp(la->la_device, "usbdisk0"))) {
-		
+
 		partition = la->la_filename;
 
 		if (partition == NULL) {
@@ -449,7 +453,7 @@ static int bolt_imgload(bolt_loadargs_t *la)
 	if (res != 0)
 		goto uninit_fs;
 
-	res = imgload_internal(fsctx, ref, la);
+	res = imgload_internal(fsctx, ref, la, &kernelsize);
 	if (res != 0)
 		goto close_file;
 
@@ -466,7 +470,6 @@ static int bolt_imgload(bolt_loadargs_t *la)
 	ptr = bootcode;
 	amtcopy = maxsize;
 
-	DLOG("Reading zImage header\n");
 	res = fs_read(fsctx, ref, ptr, ZIMAGE_HEADER);
 	if (res < 0) {
 		goto close_file;
@@ -475,19 +478,22 @@ static int bolt_imgload(bolt_loadargs_t *la)
 		goto close_file;
 	}
 
-	DLOG("Checking zImage\n");
 	res = zimage_check(ptr);
-	if (res < 0)
-		goto close_file;
+	if (res >= 0) {
+		la->la_flags &= ~(LOADFLG_APP64);
+		imagebytes = res;
+		os_printf("Reading %d bytes from zImage.\n", imagebytes);
+		amtcopy = imagebytes - ZIMAGE_HEADER;
+		zimage_set_end_env((unsigned int)bootcode + imagebytes);
+		ttlcopy = 0;
+	} else {
+		la->la_flags |= LOADFLG_APP64;
+		ttlcopy += ZIMAGE_HEADER;
+		amtcopy = kernelsize  - ZIMAGE_HEADER;
+		os_printf("Reading %d bytes from Image.\n", kernelsize);
+	}
 
-	imagebytes = res;
-
-	os_printf("Reading %d bytes from zImage", imagebytes);
-	amtcopy = imagebytes - ZIMAGE_HEADER;
 	ptr += ZIMAGE_HEADER;
-	zimage_set_end_env((unsigned int)bootcode + imagebytes);
-
-	ttlcopy = 0;
 
 	onedot = amtcopy / 10;	/* ten dots for entire load */
 	if (onedot < 4096)
@@ -507,6 +513,8 @@ static int bolt_imgload(bolt_loadargs_t *la)
 		ptr += res;
 		amtcopy -= res;
 		ttlcopy += res;
+
+		iter++;
 	}
 
 	/*
@@ -746,19 +754,9 @@ int android_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 	if (cmd_sw_isset(cmd, "-rawfs"))
 		len += os_sprintf(boot_cmd + len, " -rawfs");
 
-	/* Get the boot image based on switches */
-	if (cmd_sw_value(cmd, "-i", &boot_image)) {
-		os_printf("Boot Image '%s'\n", boot_image);
-		boot_mode = BOOTMODE_USER_DEFINED;
-	} else if (cmd_sw_isset(cmd, "-r")) {
-		os_printf("Boot recovery\n");
-		boot_mode = BOOTMODE_RECOVERY;
-	} else if (cmd_sw_isset(cmd, "-n")) {
-		os_printf("Boot normal\n");
-		boot_mode = BOOTMODE_ANDROID;
-	} else {
-		os_printf("Boot auto\n");
-
+	/* Get the boot image based on reason register (if set) or command
+    * line switches */
+	{
 		/* Read and clear the boot reason register */
 		boot_reason = boot_reason_reg_get();
 		boot_reason_reg_set(0);
@@ -833,6 +831,16 @@ int android_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 				/* Treat all other reasons as Android normal boot */
 				os_printf("boot reason = normal\n");
 				boot_mode = BOOTMODE_ANDROID;
+			}
+		}
+
+		if (boot_mode == BOOTMODE_ANDROID) {
+			if (cmd_sw_value(cmd, "-i", &boot_image)) {
+				os_printf("boot reason = select image '%s'\n", boot_image);
+				boot_mode = BOOTMODE_USER_DEFINED;
+			} else if (cmd_sw_isset(cmd, "-r")) {
+				os_printf("boot reason = recovery (user setup)\n");
+				boot_mode = BOOTMODE_RECOVERY;
 			}
 		}
 	}

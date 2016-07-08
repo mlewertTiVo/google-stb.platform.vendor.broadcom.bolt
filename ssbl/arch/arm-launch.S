@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -49,9 +47,13 @@ ENTRY_PROC(bolt_launch)
 	ldr		sp, =SRAM_STACK
 	push	{r0-r3}
 	bl		clear_all_d_cache
+	pop	{r4-r7}
 	bl		invalidate_all_i_cache
 	bl		disable_caches
-	pop		{r0-r3}
+	mov	r0, r4
+	mov	r1, r5
+	mov	r2, r6
+	mov	r3, r7
 	mov 	pc, r0
 END_PROC(bolt_launch)
 
@@ -68,3 +70,67 @@ ENTRY_PROC(bolt_launch_bsu)
 # our caller.
 	mov 	pc, r0
 END_PROC(bolt_launch_bsu)
+
+
+#ifdef STUB64_START
+#include "psci.h"
+	/* r0: la->la_entrypt
+	 * r1: 0xffffffff (unused)
+	 * r2: (unsigned int)p.dt_address
+	 * r3: 0 (unused)
+	 *
+	 * PSCI call
+	 * r0: SMM_FUNC_EXEC64
+	 * r1: Linux address
+	 * r2: DTB address
+	 *
+	 * Linux64 gets (Rn == Wn)
+	 * r0: DTB
+	 * r1: zero
+	 * r2: zero
+	 * r3: zero
+	 *
+	 * Linux32 gets (Rn == Wn)
+	 * r0: ?
+	 * r1: architecture i.d
+	 * r2: DTB
+	 * r3: ?
+	 */
+ENTRY_PROC(psci_exec)
+	ldr	sp, =SRAM_STACK
+	push	{r0-r4}
+	bl	clear_all_d_cache
+	pop	{r4-r8}
+	bl	invalidate_all_i_cache
+	bl	disable_caches
+
+	mov	r1, r4
+	mov	r2, r6
+	mov	r3, r7
+	mov	r0, r8 /* PSCI func */
+	isb
+	bl	psci
+1:	wfi	/* booting Linux: we should not get back here */
+	b	1b
+END_PROC(psci_exec)
+
+
+ENTRY_PROC(bolt_launch64)
+	ldr	r4, =OEM_FUNC_EXEC64
+	b	psci_exec
+END_PROC(bolt_launch64)
+
+
+ENTRY_PROC(bolt_launch32)
+	ldr	r4, =OEM_FUNC_EXEC32
+	b	psci_exec
+END_PROC(bolt_launch32)
+
+
+ENTRY_PROC(psci)
+	smc	#0 /* do the PSCI call */
+	isb
+	bx	lr
+END_PROC(psci)
+
+#endif /* STUB64_START */

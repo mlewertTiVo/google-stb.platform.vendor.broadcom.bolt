@@ -1,7 +1,5 @@
 ################################################################################
-# Copyright (c) 2013-2014 Broadcom Corporation
-# All Rights Reserved
-# Confidential Property of Broadcom Corporation
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
 # 
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -11,6 +9,7 @@
 package BcmDt::Devices;
 use strict;
 use warnings FATAL=>q(all);
+no if $] >= 5.017011, warnings => 'experimental::smartmatch';
 use Data::Dumper;
 use File::Basename;
 use BcmUtils;
@@ -610,27 +609,43 @@ sub output_interrupt_prop($$)
 	return $t;
 }
 
-sub start_uart_body($$$$$$$$$$)
+sub start_uart_body($$$$$$)
 {
-	my ($rh, $info, $label, $addr, $start, $size,
-		$intr0, $intr1, $intr2, $intr_name) = @_;
+	my ($rh, $info, $label, $addr, $regs_ref, $intr_ref) = @_;
 
+	my @regs = @$regs_ref;
+	my @intrs = @$intr_ref;
 	my %default = ("compatible" => "ns16550a",
 		       "clock-frequency" => [ "dec", 81000000 ],
 		       "reg-shift" => [ "hex", 2 ],
 		       "reg-io-width" => [ "hex", 4 ],
 		      );
-	my %intr = ("name" => $intr_name,
-		    "irq" => $intr1,
-		    "flags" => [$intr0, $intr2],
-		   );
-
 	override_default(\%default, $info);
 
+	my $reg_count = scalar(@regs);
+
+	# If there's more than 1 register defined, it means this UART
+	# has the additional DMA hardware.
+	if ($reg_count > 1) {
+	    $default{compatible} =
+		sprintf("brcm,brcm7271-uart\", \"%s", $default{compatible});
+	}
 	my $t = sprintf("%s: serial@%x {\n", $label, $addr);
 	$t .= output_default(\%default);
-	$t .= sprintf("reg = <0x%x 0x%x>;\n", $start, $size);
-	$t .= output_interrupt_prop($rh, \%intr);
+	my $reg_addrs;
+	my $reg_names;
+	my $i;
+	for ($i=0; $i < $reg_count; $i++) {
+	    if ($i != 0) {
+		$reg_addrs .= " ";
+		$reg_names .= "\", \"";
+	    }
+	    $reg_addrs .= sprintf("0x%x 0x%x", $regs[$i][0], $regs[$i][1]);
+	    $reg_names .= $regs[$i][2];
+	}
+	$t .= sprintf("reg = <%s>;\n", $reg_addrs);
+	$t .= sprintf("reg-names = \"%s\";\n", $reg_names);
+	$t .= output_interrupt_prop($rh, \@intrs);
 	return $t;
 }
 
@@ -638,27 +653,55 @@ sub start_uart_body($$$$$$$$$$)
 sub add_serial($$$$$)
 {
 	my ($dt, $rh, $n, $info, $default_baud) = @_;
-
+	my @reg_names = (
+	    ["uart", ""],
+	    ["dma_arb", "_DMA_ARB"],
+	    ["dma_rx", "_DMA_RX"],
+	    ["dma_tx", "_DMA_TX"],
+	    ["dma_intr2", "_DMA_INTR2"]);
 	my @stdout = @{$info->{'-stdout'}} if (defined($info->{'-stdout'}));
 	die "Error: incorrect number of args for '-stdout'\n\tin $info->{__cfg_where__}\n"
 		if (scalar(@stdout) > 1);
-
-	my ($i, $j);
+	my ($i, $j, $k);
 	my $bchp_defines = $rh->{rh_defines};
+	my @enable_dma = @{$info->{'-dma'}} if $info->{'-dma'};
 
 	for ($i=0; $i<$n; $i++) {
+		my @regs;
 		next if ($info->{'-choose'} && !$info->{'-choose'}->[$i]);
 		my $letter = chr(65 + $i);
 		my $lc_letter = lc($letter);
-		my ($reg_first, $bank_size)
-			= get_reg_range($rh, "BCHP_UART${letter}");
-		my $intr_name = sprintf('UPG_UART%d', $i);
-		my $intr = find_l1_interrupt($bchp_defines, $intr_name);
+		my $reg_count = ($i ~~ @enable_dma) ? scalar(@reg_names) : 1;
+
+		for ($k = 0; $k < $reg_count; $k++) {
+		    my ($rstart, $rsize)
+			= get_reg_range($rh,
+					"BCHP_UART${letter}" . $reg_names[$k][1]);
+		    if (!$rstart) {
+			last;
+		    }
+		    ($regs[$k][0], $regs[$k][1], $regs[$k][2]) =
+			($rstart, $rsize, $reg_names[$k][0]);
+		}
+		my @intr_prop;
+		my $intr_name = "UART";
+		my $intr = find_l1_interrupt($bchp_defines,
+					     sprintf("UPG_UART%d", $i));
+		push @intr_prop, { "irq" => $intr, "name" => $intr_name,
+				   "flags" => [ 0, 4 ]  };
+		# If additional DMA registers were specified, add DMA interrupt
+		if (scalar(@regs) > 1) {
+		    $intr_name = "DMA";
+		    $intr = find_l1_interrupt($bchp_defines,
+					      sprintf("UPG_UART_DMA%d", $i));
+		    push @intr_prop, { "irq" => $intr, "name" => $intr_name,
+				       "flags" => [ 0, 4 ] };
+		}
 		my $uart_x = sprintf("uart%s", $lc_letter);
 		my $is_stdout = (@stdout && lc($stdout[0]) eq $lc_letter);
 
-		my $t = start_uart_body($rh, $info, $uart_x, $reg_first || 0,
-			$reg_first, $bank_size, 0, $intr, 4, $intr_name);
+		my $t = start_uart_body($rh, $info, $uart_x, $regs[0][0],
+			\@regs, \@intr_prop);
 		# Default stdout console
 		if ($is_stdout) {
 			$t .= sprintf("current-speed = <%d>;\n", $default_baud);
@@ -692,16 +735,22 @@ sub add_named_serial($$$)
 	my $name = $info->{'-name'}[0];
 	my $alias = $info->{'-alias'}[0];
 	my $intr_name = $info->{'-l1intr'}[0];
+	my @regs;
 
-	my $re = my ($reg_first, $bank_size) =
-		get_reg_range($rh, "BCHP_" . $name);
+	($regs[0][0], $regs[0][1]) = get_reg_range($rh, "BCHP_" . $name);
+	$regs[0][2] = "uart";
 
 	my $intr = find_l1_interrupt($bchp_defines, $intr_name);
 	die "$P: cannot find  " . $intr_name . "interrupt"
 		if !defined $intr;
 
-	my $t = start_uart_body($rh, $info, lc($name), $reg_first || 0,
-			$reg_first, $bank_size, 0, $intr, 4, $intr_name);
+	my @intr_prop;
+	push @intr_prop, { "irq" => $intr, "name" => $intr_name,
+			   "flags" => [ 0, 4 ]  };
+
+
+	my $t = start_uart_body($rh, $info, lc($name), $regs[0][0] || 0,
+			\@regs, \@intr_prop);
 	$t .= "};\n";
 
 	$dt->add_node(DevTree::node->new($t));
@@ -744,9 +793,19 @@ sub add_bsc($$$$)
 		my $intr_name = sprintf('UPG_BSC%s', $letter);
 		my $intr = __find_l2_irq0_interrupt($bchp_defines, "IRQ0", "iic" . lc(${letter}));
 		if (!defined($intr)) {
-		  $intr = find_l2_irq0_interrupt($bchp_defines, "IRQ0_AON", "iic" . lc(${letter}));
+		  $intr = __find_l2_irq0_interrupt($bchp_defines, "IRQ0_AON", "iic" . lc(${letter}));
 		  $intr_name = sprintf("UPG_BSC%s_AON", $letter);
 		  $parent_phandle = "irq0_aon_intc";
+		}
+		if (!defined($intr)) {
+		  $intr = __find_l2_interrupt($bchp_defines, "UPG_BSC_IRQ", "iic" . lc(${letter}));
+		  $intr_name = sprintf("UPG_BSC%s", $letter);
+		  $parent_phandle = "upg_bsc_irq_intc";
+		}
+		if (!defined($intr)) {
+		  $intr = __find_l2_interrupt($bchp_defines, "UPG_BSC_AON_IRQ", "iic" . lc(${letter}));
+		  $intr_name = sprintf("UPG_BSC%s_AON", $letter);
+		  $parent_phandle = "upg_bsc_aon_irq_intc";
 		}
 		die "$P: cannot find bsc$i level-2 interrupt"
 			if !defined $intr;
@@ -803,7 +862,7 @@ sub add_usb_v2($$$$$)
 			? sprintf(", <0x%x 0x%x>;\n", $xhci_ec_start, $xhci_ec_size)
 			: ";\n";
 		$t .= output_default(\%default);
-		$t .= sprintf("#phy-cells = <%d>;\n", $xhci_ec_start ? 1 : 0);
+		$t .= "#phy-cells = <1>;\n";
 		$t .= sprintf("%s;\n", 'ranges');
 		my ($xhci_start, $xhci_size) 
 			= get_reg_range($rh, "${pre}_XHCI");
@@ -837,7 +896,7 @@ sub add_usb_v2($$$$$)
 				if ($type eq 'bdc') {
 					$compatible = "brcm,bdc-udc-v2";
 				} else {
-					$compatible = "brcm,$type-brcm-v2";
+					$compatible = "brcm,$type-brcm-v2\", \"generic-$type";
 				}
 
 				my %intr_prop = (
@@ -958,17 +1017,18 @@ sub add_usb($$$$$)
 	return \@usb_info;
 }
 
-sub add_mdio($$)
+sub add_mdio($$$)
 {
-	my ($rh, $i) = @_;
+	my ($rh, $i, $compatible) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my $unimac_start = $bchp_defines->{"BCHP_GENET_${i}_UMAC_REG_START"} -
 		$bchp_defines->{"BCHP_GENET_${i}_SYS_REG_START"};
 	my $mdio_start = $unimac_start + 0x614;
 	my $mdio_end = $mdio_start + 8;
 	my $mdio_size = $mdio_end - $mdio_start;
+	$compatible =~ s/genet/genet-mdio/;
 	my %mdio_default =
-		("compatible" => "brcm,genet-mdio-v4",
+		("compatible" => $compatible,
 		 "#address-cells" => [ "dec", 1 ],
 		 "#size-cells" => [ "dec", 0 ],
 	       );
@@ -1023,7 +1083,7 @@ sub add_genet($$$$$)
 					   "parent_intc" => $l2_intr . "_intc" };
 		}
 		$t .= output_interrupt_prop($rh, \@intr_prop);
-		$t .= add_mdio($rh, $i);
+		$t .= add_mdio($rh, $i, $default{"compatible"});
 
 		$t .= "};\n";
 
@@ -1050,10 +1110,10 @@ sub sata_get_phy_reg_range($$$)
 	my ($rh, $sata_inst, $n_phy_ports) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 
-	# 7145b0 has (2) SATA controllers, each with (1) port. As a result,
+	# We could have (2) SATA controllers, each with (1) port. As a result,
 	# the RDB naming convention for some SATA registers was changed.
-	# New (7145b0): BCHP_SATAn_PORT0_PCB_REG_START, n = {0, 1}
-	# Others:       BCHP_PORTn_SATA3_PCB_REG_START, n = {0, 1}
+	#    New: BCHP_SATAn_PORT0_PCB_REG_START, n = {0, 1}
+	# Others: BCHP_PORTn_SATA3_PCB_REG_START, n = {0, 1}
 	my @a = grep { /^BCHP_(PORT\d_SATA3|SATA${sata_inst}_PORT0)_PCB_REG_START/ }
 		keys %${bchp_defines};
 	my @b = grep { /^BCHP_(PORT\d_SATA3|SATA${sata_inst}_PORT0)_PCB_REG_END/ }
@@ -1337,7 +1397,7 @@ sub add_moca($$$$$)
 	my $bchp_defines = $rh->{rh_defines};
 
 	my %default = (compatible => 'brcm,bmoca-instance',
-		'hw-rev' => [ "hex", 0x2003 ],
+		'hw-rev' => [ "hex", BcmUtils::get_moca_hwrev($bchp_defines) ],
 		);
 	override_default(\%default, $info);
 
@@ -1681,6 +1741,12 @@ sub add_ddr_phy($$$$)
 		$bchp_defines->{BCHP_PHY_CONTROL_REGS_0_REVISION_MAJOR_DEFAULT},
 		$bchp_defines->{BCHP_PHY_CONTROL_REGS_0_REVISION_MINOR_DEFAULT});
 		($reg, $size) = get_reg_range($rh, "BCHP_PHY_CONTROL_REGS_${phy_idx}");
+	} elsif (defined($bchp_defines->{BCHP_DDR34_PHY_COMMON_REGS_0_PRIMARY_REVISION})) {
+		# 7271A0
+		$compatible = sprintf("brcm,brcmstb-ddr-phy-v%d.%d",
+		$bchp_defines->{BCHP_DDR34_PHY_COMMON_REGS_0_PRIMARY_REVISION_MAJOR_DEFAULT},
+		$bchp_defines->{BCHP_DDR34_PHY_COMMON_REGS_0_PRIMARY_REVISION_MINOR_DEFAULT});
+		($reg, $size) = get_reg_range($rh, "BCHP_DDR34_PHY_COMMON_REGS_${phy_idx}");
 	} else {
 		# everything else
 		$compatible = sprintf("brcm,brcmstb-ddr-phy-v%d.%d",
@@ -1777,16 +1843,18 @@ sub add_spi($$$)
 	my ($dt, $rh, $info) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my %default = (
-		"compatible" => "brcm,spi-brcmstb",
+		"compatible" => [ 'string',
+				  [ "brcm,spi-brcmstb", "brcm,spi-bcm-qspi" ] ],
 		"#size-cells" => [ 'dec', 0 ],
 		"#address-cells" => [ 'dec', 1 ],
 		"status" => "disabled",
 	);
-	my @reg_names = ("HIF_MSPI", "BSPI", "BSPI_RAF");
+	my @reg_names = ("HIF_MSPI", "BSPI", "BSPI_RAF", "HIF_SPI_INTR2");
 	my @regs;
 	my $i;
 	my $t = '';
 	my $reg_t = '';
+	my $ebi_cs_spi_reg = bphysaddr($rh, $bchp_defines->{BCHP_EBI_CS_SPI_SELECT});
 
 	override_default(\%default, $info);
 
@@ -1806,8 +1874,9 @@ sub add_spi($$$)
 		$t .= sprintf("0x%x 0x%x%s", $regs[$i][0], $regs[$i][1],
 			$i ne scalar(@reg_names) -1 ? " " : "");
 		$reg_t .= sprintf("\"%s\"", lc($reg_names[$i]));
-		$reg_t .= $i ne scalar(@reg_names) -1 ? ",\n" : ";\n";
+		$reg_t .= $i ne scalar(@reg_names) -1 ? ",\n" : ",\"cs_reg\";\n";
 	}
+	$t .= sprintf(" 0x%x 0x4 ", $ebi_cs_spi_reg);
 	$t .= ">;\n";
 	$t .= $reg_t;
 	$t .= output_interrupt_prop($rh, \%intr_prop);
@@ -1842,7 +1911,15 @@ sub add_mspi($$$$$)
 	for ($i = 0; $i < scalar(@reg_names); $i++) {
 		($regs[$i][0], $regs[$i][1]) = get_reg_range($rh, "BCHP_" . $reg_names[$i]);
 	}
-	my $intr = find_l2_irq0_interrupt($bchp_defines, uc($l2_intr), "spi");
+
+	my $intr = __find_l2_irq0_interrupt($bchp_defines, uc($l2_intr), "spi");
+	if (!defined($intr)) {
+		$l2_intr = "upg_spi_aon_irq";
+		$intr = __find_l2_interrupt($bchp_defines, uc($l2_intr), "spi");
+	}
+	die "$P: cannot find spi level-2 interrupt"
+		if !defined $intr;
+
 	my %intr_prop = ("name" => "mspi_done",
 			 "irq" => $intr,
 			 "parent_intc" => $l2_intr . "_intc",
@@ -2572,6 +2649,71 @@ sub add_nexus_irq0_aon($$$)
 	__add_nexus_irq0($dt, $rh, "irq0_aon");
 }
 
+sub __add_nexus_irq($$$)
+{
+	my ($dt, $rh, $parent) = @_;
+
+	return if !defined($parent);
+	my $bchp_defines = $rh->{rh_defines};
+
+	my $t = "nexus-$parent {\n";
+	my $regex = '(?=^((?!reserved).)*$)BCHP_' . uc($parent) . '_CPU_STATUS_[A-Za-z_0-9]*_SHIFT';
+	my $l2_names = BcmUtils::get_rdb_fields($regex, $bchp_defines);
+	my $intr;
+	my $num_l2 = scalar @$l2_names;
+	my @intr_prop;
+
+	foreach my $name (@{$l2_names}) {
+		my $patt = "BCHP_" . uc($parent) . "_CPU_STATUS_";
+		$name =~ s/$patt//;
+		$name =~ s/_SHIFT//;
+		$intr = find_l2_interrupt($bchp_defines, uc($parent), $name);
+		push @intr_prop, { "irq" => $intr,
+				   "name" => $name,
+				   "parent_intc" => $parent . "_intc" };
+	}
+
+	$t .= output_interrupt_prop($rh, \@intr_prop);
+	$t .= "};\n";
+
+	$dt->add_node(DevTree::node->new($t));
+}
+
+sub add_nexus_upg_main_irq($$$)
+{
+	my ($dt, $rh, $info) = @_;
+
+	__add_nexus_irq($dt, $rh, "upg_main_irq");
+}
+
+sub add_nexus_upg_main_aon_irq($$$)
+{
+	my ($dt, $rh, $info) = @_;
+
+	__add_nexus_irq($dt, $rh, "upg_main_aon_irq");
+}
+
+sub add_nexus_upg_bsc_irq($$$)
+{
+	my ($dt, $rh, $info) = @_;
+
+	__add_nexus_irq($dt, $rh, "upg_bsc_irq");
+}
+
+sub add_nexus_upg_bsc_aon_irq($$$)
+{
+	my ($dt, $rh, $info) = @_;
+
+	__add_nexus_irq($dt, $rh, "upg_bsc_aon_irq");
+}
+
+sub add_nexus_upg_spi_aon_irq($$$)
+{
+	my ($dt, $rh, $info) = @_;
+
+	__add_nexus_irq($dt, $rh, "upg_spi_aon_irq");
+}
+
 sub add_rf4ce($$$$$$)
 {
 	my ($dt, $rh, $info, $intr_name, $l2_intr, $l2_bit) = @_;
@@ -2639,29 +2781,41 @@ sub add_gpio($$$)
 		my @intr_prop;
 
 		if (index($intr_name, 'aon') != -1) {
-			$intr = find_l2_irq0_interrupt($bchp_defines,
-			                               "IRQ0_AON", "gio");
+			$intr = __find_l2_irq0_interrupt($bchp_defines,
+							 "IRQ0_AON", "gio");
+			$parent_phandle = "irq0_aon_intc";
+			if (!defined($intr)) {
+			  $intr = __find_l2_interrupt($bchp_defines,
+						      "UPG_MAIN_AON_IRQ", "gio");
+			  $parent_phandle = "upg_main_aon_irq_intc";
+			}
 			push @intr_prop, { "irq" => $intr,
 					   "name" => "upg_gio_aon",
-					   "parent_intc" => "irq0_aon_intc" };
-
-			$ext_intr = find_l2_interrupt($bchp_defines,
-				"AON_PM_L2", "GPIO");
-			die "$P: cannot find " . $gio . " level-2 interrupt"
-				if !defined $ext_intr;
-			push @intr_prop, { "irq" => $ext_intr,
-					   "name" => "upg_gio_aon_wakeup",
-					   "parent_intc" => "aon_pm_l2_intc" };
-			$ext_t .= "wakeup-source;\n";
+					   "parent_intc" => $parent_phandle };
+			$ext_t .= "always-on;\n";
 		} else {
-			$intr = find_l2_irq0_interrupt($bchp_defines,
-				"IRQ0", "gio");
+			$intr = __find_l2_irq0_interrupt($bchp_defines,
+							 "IRQ0", "gio");
+			$parent_phandle = "irq0_intc";
+			if (!defined($intr)) {
+			  $intr = __find_l2_interrupt($bchp_defines,
+						      "UPG_MAIN_IRQ", "gio");
+			  $parent_phandle = "upg_main_irq_intc";
+			}
 			push @intr_prop, { "irq" => $intr,
 					   "name" => "upg_gio",
-					   "parent_intc" => "irq0_intc" };
+					   "parent_intc" => $parent_phandle };
 		}
 		die "$P: cannot find " . $gio . " level-2 interrupt"
 			if !defined $intr;
+		$ext_intr = find_l2_interrupt($bchp_defines,
+			"AON_PM_L2", "GPIO");
+		die "$P: cannot find " . $gio . " level-2 interrupt"
+			if !defined $ext_intr;
+		push @intr_prop, { "irq" => $ext_intr,
+				   "name" => "upg_gio_aon_wakeup",
+				   "parent_intc" => "aon_pm_l2_intc" };
+		$ext_t .= "wakeup-source;\n";
 
 		# Put together list of GPIO bank widths in physical address
 		# order
@@ -2822,6 +2976,36 @@ sub add_pwm($$$$$)
 	}
 }
 
+sub add_wlan($$$$)
+{
+	my ($dt, $rh, $n, $info) = @_;
+	my $bchp_defines = $rh->{rh_defines};
+	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
+
+	my %defaults = (
+		"compatible" => [ 'string', [ sprintf("brcm,bcm%x-wlan", $chipid) ]],
+	);
+	my ($base, $size) = get_reg_range_from_regexp($rh, "^BCHP_WLAN");
+	my $intr_name = "WLAN_D2H";
+	my %intr_prop = (
+		"irq" => find_l1_interrupt($bchp_defines, $intr_name),
+		"name" => $intr_name,
+	);
+	my $t = "";
+
+	for (my $i = 0; $i < $n; $i++) {
+		$t .= sprintf("wlan%d: wlan\@%x {\n", $i, $base);
+		$t .= output_default(\%defaults);
+		$t .= sprintf("reg = <0x%x 0x%x>;\n", $base, $size);
+		$t .= output_interrupt_prop($rh, \%intr_prop);
+		$t .= "};\n";
+
+		add_reference_alias($dt, sprintf("wlan%d", $i), sprintf("wlan%d", $i));
+
+		$dt->add_node(DevTree::node->new($t));
+	}
+}
+
 ###############################################################
 # FUNCTION:
 #   gen_clocks_prop
@@ -2859,6 +3043,8 @@ sub gen_clocks_prop
 	$str1 =~ s/\b(sw_usb)\d+\b/$1/g;
 	# change pcie clock names to generic
 	$str1 =~ s/\b(sw_pcie)\d+\b/$1/g;
+	# change sata30 => sata3
+	$str1 =~ s/\b(sw_sata3)\d+\b/$1/g;
 
 	my $clks = DevTree::prop->new($str0);
 	my $clock_names = DevTree::prop->new($str1);
@@ -3117,7 +3303,7 @@ STOP
 
 	# SATA3
 	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'none',
-		qr/^SATA3$/, qr/^sata\@/);
+		qr/^SATA3\d?$/, qr/^sata\@/);
 	print "$P: WARN: no clocks inserted for SATA!\n"
 		if (!$ni && BcmUtils::get_num_sata($bd));
 
@@ -3172,6 +3358,10 @@ STOP
 	# xhci
 	insert_clocks_prop_into_devs($rdb, $rh_funcs, 'grow',
 		qr/^USB3[01]$/, qr/^xhci_v2\@/, undef, 1);
+	# bdc (only needed for new style because it onlys exists
+	# on new systems which will have the new style driver.
+	insert_clocks_prop_into_devs($rdb, $rh_funcs, 'grow',
+		qr/^USBD$/, qr/^bdc_v2\@/, undef, 1);
 	# phy
 	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'grow',
 		qr/^USB2[01]$/, qr/^usb-phy\@/, undef, 1);

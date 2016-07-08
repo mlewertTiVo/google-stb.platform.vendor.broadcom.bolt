@@ -1,12 +1,10 @@
 # ***************************************************************************
-# *     Copyright (c) 2012-2013, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
-# *
-# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-# * 
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved
+#
+# THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
 # ***************************************************************************
 
 ifneq ($(V),1)
@@ -32,7 +30,24 @@ gen_autodep = \
 	rm -f $(ODIR)/$(1).d.tmp
 
 
+gen_autodep64 = \
+	@$(CC64) -MM $(3) $(2) > $(ODIR)/$(1).d.tmp; \
+	sed -e 's|.*:|$(ODIR)/$(1).o:|' < $(ODIR)/$(1).d.tmp > \
+        $(ODIR)/$(1).d; \
+	sed -e 's/.*://' -e 's/\\$$//' < $(ODIR)/$(1).d.tmp | \
+        fmt -1 | \
+	sed -e 's/^ *//' -e 's/$$/:/' >> \
+        $(ODIR)/$(1).d; \
+	rm -f $(ODIR)/$(1).d.tmp
+
+
 .PHONY: FORCE
+
+$(ODIR)/%.64.o: %.64.c
+	$(call pretty_print,CC64,$@)
+	$(Q)[ -d $(dir $@) ] || mkdir -p $(dir $@)
+	$(call gen_autodep64,$*,$<,$(CFLAGS64))
+	$(Q)$(CC64) $(SAVE_TEMPS) -c $(CFLAGS64) $(CFLAGS64_$<) $< -o $@ -I$(dir $<)
 
 $(ODIR)/%.o: %.c
 	$(call pretty_print,CC,$@)
@@ -40,79 +55,45 @@ $(ODIR)/%.o: %.c
 	$(call gen_autodep,$*,$<,$(CFLAGS))
 	$(Q)$(CC) $(SAVE_TEMPS) -c $(CFLAGS) $(CFLAGS_$<) $< -o $@ -I$(dir $<)
 
+$(ODIR)/%.64.o: %.64.S
+	$(call pretty_print,AS64,$@)
+	$(Q)[ -d $(dir $@) ] || mkdir -p $(dir $@)
+	$(call gen_autodep64,$*,$<,$(AFLAGS64))
+	$(Q)$(CC64) $(SAVE_TEMPS) -c $(AFLAGS64) $(AFLAGS64_$<) $< -o $@ -I$(dir $<)
+
 $(ODIR)/%.o: %.S
 	$(call pretty_print,AS,$@)
 	$(Q)[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	$(call gen_autodep,$*,$<,$(AFLAGS))
 	$(Q)$(CC) $(SAVE_TEMPS) -c $(AFLAGS) $(AFLAGS_$<) $< -o $@ -I$(dir $<)
 
+%-stripped.64.o: %.64.o
+	$(call pretty_print,STRIP64,$@)
+	$(Q)$(STRIP64) --strip-all $< -o $@
+
 %-stripped.o: %.o
 	$(call pretty_print,STRIP,$@)
 	$(Q)$(STRIP) --strip-all $< -o $@
 
+%.64.bin: %.64.elf
+	$(call pretty_print,OBJCPY64,$@)
+	$(Q)$(OBJCOPY64) --gap-fill $(FILLB) -O binary $< $@
+
 %.bin: %.elf
 	$(call pretty_print,OBJCOPY,$@)
 	$(Q)$(OBJCOPY) --gap-fill $(FILLB) -O binary $< $@
+
+%.64.asm: %.64.elf
+	$(call pretty_print,OBJDMP64,$@)
+	$(Q)rm -f $@
+	$(Q)$(OBJDUMP64) -Sd $< > $@
 
 %.asm: %.elf
 	$(call pretty_print,OBJDUMP,$@)
 	$(Q)rm -f $@
 	$(Q)$(OBJDUMP) -Sd $< > $@
 
-%.srec: %.elf
-	$(call pretty_print,"SREC",$@)
-	$(Q)$(OBJCOPY) -I $(ARCH_OFORMAT) -O srec $< $@
-
-%_flash.srec: %.srec %.asm
-	$(call pretty_print,"ADJ",$@)
-	$(Q)$(OBJCOPY) --set-start=$(FSBL_TEXT_ADDR) -I srec -O srec $< $@
-	$(Q)if command -v srec_info &> /dev/null ; then \
-             srec_info $@; \
-            fi
-
 %.html: %.txt
 	$(call pretty_print,HTML,$@)
 	$(Q)asciidoc --section-numbers --doctype=book --out-file=$@ $<
 
-define EMUSWP
-$(1): $(2)
-ifeq ($(FAMILY),3390a0)
-	$$(call pretty_print,"ASIS",$$@)
-	$$(Q)perl -e 'undef $$$$/; $$$$x=<STDIN>."\0\0\0"; \
-		print pack("N*", unpack("N*",$$$$x));' \
-		< $$< \
-		> $$@
-else
-	$$(call pretty_print,"SWAP",$$@)
-	$$(Q)perl -e 'undef $$$$/; $$$$x=<STDIN>."\0\0\0"; \
-		print pack("N*", unpack("V*",$$$$x));' \
-		< $$< \
-		> $$@
-endif
-endef
-
-define MAKE_SREC
-$(1): $(2)
-	$$(call pretty_print,"SREC",$$@)
-	$$(Q)$$(OBJCOPY) -I binary -O srec --srec-forceS3 \
-		--adjust-vma=$(3) -S $$< $$@
-endef
-
-# "Super-SREC" map        => Veloce memory map
-# ----------------           -----------------
-# +---------------------+
-# |         FSBL        | => 0xe000_0000 (flash)
-# +---------------------+
-# |   image (swapped)   | => 0x0000_8000 (DRAM)
-# +---------------------+
-# |    DTB (swapped)    | => 0x0000_1000 (DRAM)
-# +---------------------+
-
-$(eval $(call EMUSWP,$(ODIR)/img.bin.swp,$(VMLINUZ)))
-$(eval $(call EMUSWP,$(ODIR)/config.dtb.swp,$(ODIR)/config.dtb))
-$(eval $(call MAKE_SREC,$(ODIR)/img.bin.swp.srec,$(ODIR)/img.bin.swp,0x8000))
-$(eval $(call MAKE_SREC,$(ODIR)/config.dtb.swp.srec,$(ODIR)/config.dtb.swp,0x1000))
-
-$(ODIR)/fsbl-img-dtb.swp.srec: $(ODIR)/fsbl_flash.srec $(ODIR)/img.bin.swp.srec $(ODIR)/config.dtb.swp.srec
-	$(call pretty_print,"CAT",$@)
-	$(Q)cat $^ > $@

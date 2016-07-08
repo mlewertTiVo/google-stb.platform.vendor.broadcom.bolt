@@ -1,12 +1,10 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
 #ifndef __BOLT_H__
@@ -55,7 +53,6 @@ void bolt_command_loop(void);
 void bolt_config_info(int detail);
 int  bolt_docommands(const char *buf);
 void bolt_free_envdevname(void);
-void bolt_launch(unsigned long ept, unsigned long param1, unsigned long param2, unsigned long param3);
 void bolt_leds(unsigned int val);
 void bolt_main(int, int);
 void bolt_restart(void);
@@ -63,8 +60,33 @@ int  bolt_set_console(char *);
 int  bolt_set_envdevice(char *);
 void bolt_set_envdevname(char *name);
 int  bolt_set_macdevice(char *);
-void bolt_start(unsigned long ept, unsigned long param1, unsigned long param2, unsigned long param3);
 void bolt_warmstart(unsigned long long);
 void console_init(void);
+void bolt_psci_init(void);
+
+/*  _start() are 'c' wrappers for assembly code _launch()
+ * functions.
+ */
+void bolt_start(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
+void bolt_launch(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
+/* PSCI */
+void bolt_start64(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
+void bolt_start32(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
+void bolt_launch64(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
+void bolt_launch32(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
+unsigned long psci(unsigned long r0, unsigned long r1,
+		unsigned long r2, unsigned long r3);
 
 #endif /* __BOLT_H__ */

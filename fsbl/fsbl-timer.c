@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,21 +7,27 @@
  *
  ***************************************************************************/
 
+#include <arch_ops.h>
 #include <common.h>
 #include "fsbl.h"
 #include "bchp_cntcontrolbase.h"
 
+#if (BCHP_CNTControlBase_CNTFID0_CNTFID_DEFAULT != 27000000)
+#error "Timer API's have to be reviewed since 27MHz assumption is invalid."
+#endif
+
+static const uint32_t TicksPerMicrosecond =
+	BCHP_CNTControlBase_CNTFID0_CNTFID_DEFAULT / 1000000;
 
 void udelay(uint32_t us)
 {
-	uint32_t now, f, duration, elapsed;
+	uint32_t now, duration, elapsed;
 
-	f = BDEV_RD(BCHP_CNTControlBase_CNTFID0);
-	now = BDEV_RD(BCHP_CNTControlBase_CNTCV_LO);
-	duration = (f / 1000000) * us;
+	now = arch_getticks();
+	duration = (TicksPerMicrosecond * us) + 1;
 
 	do {
-		elapsed = BDEV_RD(BCHP_CNTControlBase_CNTCV_LO) - now;
+		elapsed = arch_getticks() - now;
 	} while (elapsed < duration);
 }
 
@@ -32,41 +36,22 @@ void sleep_ms(uint32_t ms)
 	udelay(1000 * ms);
 }
 
-/* return 64-bit counter value (27MHz counter) */
-uint64_t get_syscount(void)
+/* return time in micro-seconds. Counter overflows after 4294.97 seconds.
+ *  4294967295 == maximum number of an unsigned 32 bit integer, (2^32 - 1)
+ *  4,294,967,295 micro-seconds ~= 4,294.97 seconds (71 minutes 34.97 seconds)
+ */
+uint32_t get_time_us(void)
 {
-	uint64_t count_hi1, count_hi2, count_lo, count;
-
-	count_hi1 = BDEV_RD(BCHP_CNTControlBase_CNTCV_HI);
-	count_lo = BDEV_RD(BCHP_CNTControlBase_CNTCV_LO) & 0xFFFFFFFF;
-	count_hi2 = BDEV_RD(BCHP_CNTControlBase_CNTCV_HI);
-	if ((count_hi1 != count_hi2)  &&  (count_lo & 0x80000000))
-		count = (count_hi1 << 32) | count_lo;
-	else
-		count = (count_hi2 << 32) | count_lo;
-
-	return count;
-}
-
-/* Return time in micro-seconds.  Counter overflows after 4 months */
-uint64_t get_systime(void)
-{
-	uint32_t f, frac, q = 16;
+	uint32_t frac, q = 16;
 	uint64_t time_us;
 
-	f = BDEV_RD(BCHP_CNTControlBase_CNTFID0);
-	f = f / 1000000;
-	if (f == 0)
-		f = 1;
-	frac = (1 << q) / f;
-	time_us = (get_syscount() * frac) >> q;
+	frac = (1 << q) / TicksPerMicrosecond;
+	time_us = (arch_getticks64() * frac) >> q;
 
-	return time_us;
+	return time_us & 0x00000000ffffffffULL;
 }
 
-
-uint64_t get_time_diff(uint64_t was)
+uint32_t get_time_diff(uint32_t was)
 {
-
-	return get_systime() - was;
+	return get_time_us() - was;
 }

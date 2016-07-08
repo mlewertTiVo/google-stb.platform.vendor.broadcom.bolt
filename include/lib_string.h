@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -70,8 +68,6 @@ static inline void *lib_xtop(const char *s)
 #define memcpy(d,s,c) lib_memcpy(d,s,c)
 #define memmove(d,s,c) lib_memmove(d,s,c)
 #define memchr(s,c,n) lib_memchr(s,c,n)
-#define bcopy(s,d,c) lib_memcpy(d,s,c)
-#define bzero(d,c) lib_memset(d,0,c)
 #define strupr(s) lib_strupr(s)
 #define toupper(c) lib_toupper(c)
 #define strcat(d,s) lib_strcat(d,s)

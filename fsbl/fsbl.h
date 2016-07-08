@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -31,11 +29,19 @@
 /* Do not generate function prologue */
 #define NAKED __attribute__((naked))
 
-#if defined(MEMC_ALT) && (MEMSYS_ALT_SIZE > MEMSYS_SIZE)
- #define SHMOO_SRAM_ADDR (MEMSYS_SRAM_ADDR + MEMSYS_ALT_SIZE)
+#ifdef STUB64_START
+/* Zeus 4.2.1, ARMv8. Currently, no MEMSYS in lower 64KiB
+ * so we can shift the SHMOO & BOARD sections down.
+ */
+#define SHMOO_SRAM_ADDR (SRAM_ADDR + FSBL_SIZE)
 #else
- #define SHMOO_SRAM_ADDR (MEMSYS_SRAM_ADDR + MEMSYS_SIZE)
+/* Zeus 4.2, ARMv7 */
+#if defined(MEMC_ALT) && (MEMSYS_ALT_SIZE > MEMSYS_SIZE)
+#define SHMOO_SRAM_ADDR (MEMSYS_SRAM_ADDR + MEMSYS_ALT_SIZE)
+#else
+#define SHMOO_SRAM_ADDR (MEMSYS_SRAM_ADDR + MEMSYS_SIZE)
 #endif
+#endif /* STUB64_START */
 
 /* architecture specific
 */
@@ -45,6 +51,16 @@ void mmu_add_pages(unsigned long base, unsigned long size);
 void mmu_enable(void);
 void mmu_disable(void);
 int get_num_cpus(void);
+
+#ifdef STUB64_START
+uint32_t setup_mvbar(uint32_t vecbaseaddr);
+static inline uint32_t a53_bootmode(void)
+{
+	volatile uint32_t *p = (volatile uint32_t *)(STUB64_START + 4);
+
+	return *p;
+}
+#endif
 
 
 /* flash
@@ -92,11 +108,10 @@ int getc(void);
 
 /* hardware timer
 */
-uint64_t get_syscount(void);
-uint64_t get_systime(void);
 void udelay(uint32_t micro_seconds);
 void sleep_ms(uint32_t ms);
-uint64_t get_time_diff(uint64_t was);
+uint32_t get_time_us(void);
+uint32_t get_time_diff(uint32_t was);
 
 /* misc
 */

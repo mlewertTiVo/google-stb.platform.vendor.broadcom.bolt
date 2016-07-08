@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -564,8 +562,10 @@ static int ui_cmd_ifconfig(ui_cmdline_t *cmd, int argc, char *argv[])
 
 	x = (char *)net_getparam(NET_DEVNAME);
 
-	if ((x != NULL) && (strcmp(x, devname) != 0))
+	if ((x != NULL) && (strcmp(x, devname) != 0)) {
+		x = NULL;
 		net_uninit();
+	}
 
 	/*
 	 * Okay, initialize the network if it is not already on.  If it
@@ -877,6 +877,10 @@ static const struct phy_intf phy_options[] = {
 #if CONFIG_BRCM_GENET_VERSION == 4
 	{7, "Internal GPHY (built-in PHY)",
 		"INT",                  "1",            "1000",         __stringify(INT_PHY_ADDR) },
+#endif
+#if CONFIG_BRCM_GENET_VERSION == 5
+	{7, "Internal EPHY (built-in PHY)",
+		"INT",                  "1",            "100",         __stringify(INT_PHY_ADDR) },
 #endif
 };
 

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -129,8 +127,13 @@ int select_image(image_info *info)
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &= ~AON_FW_TYPE_MASK;
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |= aon_value;
 
+#ifdef CFG_FULL_EMULATION
+	/* no sec in generic emulation */
+	disaster = 0;
+#else
 	/* if fail, set error in its aon register */
 	disaster = REG(BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR);
+#endif
 	boot_status = REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
 	if ((disaster &
 		BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR_DISASTER_RECOVER_MASK) ||
@@ -149,10 +152,11 @@ int select_image(image_info *info)
 			REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |=
 				(BOOT_STATUS_FAIL << boot_status_shift);
 
+#ifndef CFG_FULL_EMULATION
 			/* clear disaster flag */
 			disaster &= ~BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR_DISASTER_RECOVER_MASK;
 			REG(BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR) = disaster;
-
+#endif
 			/* clear bsp reset flag */
 			REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &=
 						~BOOT_BSP_RESET_MASK;
@@ -272,7 +276,7 @@ void sec_init(void)
 	uint32_t  *dst;
 	int __maybe_unused ret;
 
-#if CFG_ZEUS4_2
+#if CFG_ZEUS4_2 && !defined(CFG_FULL_EMULATION)
 	if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS)
 		& 0x0f000000) == 0x07000000) {
 		if (sec_memsys_ready())
@@ -318,7 +322,7 @@ void sec_bfw_load(bool warm_boot)
 		die("no BFW image");
 
 #if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
-	if (g_info.flash.cs == 1) {
+	if (g_info.flash.cs == 1 || BFW_USE_EMMC_DATA_PART == 1) {
 		__puts("using page list, ");
 #if CFG_PM_S3
 		if (warm_boot) {
@@ -396,6 +400,13 @@ void sec_verify_memsys(void)
 	uint32_t flash_offs = MEMSYS_TEXT_OFFS;
 	size_t len = MEMSYS_SIZE;
 	struct board_type *b = get_tmp_board();
+#if CFG_ZEUS4_2
+	image_info info;
+
+	info.image_type = IMAGE_TYPE_MEMSYS;
+	if (select_image(&info))
+		die("no MemsysFW image");
+#endif
 
 	__puts("MEMSYS-");
 	if (b->memsys) {
@@ -459,7 +470,8 @@ void sec_scramble_sdram(bool warm_boot)
 
 void sec_mitch_check(void)
 {
-#if !defined(S_UNITTEST)
+#if !defined(S_UNITTEST) && !defined(CFG_FULL_EMULATION)
+
 	__puts("MICH: ");
 	/* if blank chip, skip disable_MICH */
 	if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS) & 0x0f000000) != 0x0a000000) {
@@ -521,7 +533,17 @@ uint32_t glitch_entry = (uint32_t)die; /*void ()(struct fsbl_info *) */
 
 INITSEG void __noreturn handle_boot_err(uint32_t err_code)
 {
-	if (err_code <= ERR_WARM_BOOT_FAILED) {
+	uint32_t value;
+
+	/* log error code into MS 16 bit, and trace value in LS 16 bit */
+	value = REG(BCHP_SUN_TOP_CTRL_UNCLEARED_SCRATCH);
+	value &= 0x0000FFFF;
+	value |= ((uint32_t)(err_code << 16));
+	REG(BCHP_SUN_TOP_CTRL_UNCLEARED_SCRATCH) = value;
+
+	if ((err_code <= ERR_WARM_BOOT_FAILED) ||
+		(err_code == ERR_S3_PARAM_HASH_FAILED) ||
+		(err_code == ERR_S3_DDR_HASH_FAILED)) {
 		/* TBD: need to clear warm boot indicator in AON */
 
 		/* reset for ERR_BAD_IMAGE, ERR_WARM_BOOT_FAILED */
@@ -560,4 +582,3 @@ INITSEG void __noreturn fsbl_end(struct fsbl_info *info)
 }
 
 #endif /* !CFG_EMULATION */
-

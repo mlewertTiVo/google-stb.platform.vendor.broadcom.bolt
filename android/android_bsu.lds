@@ -17,7 +17,7 @@
 ENTRY(android_bsu_init)
 
 MEMORY {
-	android_bsu	: ORIGIN = 0x00900000,	LENGTH = 0x00100000
+	android_bsu	: ORIGIN = 0x01800000,	LENGTH = 0x00100000
 }
 
 SECTIONS {

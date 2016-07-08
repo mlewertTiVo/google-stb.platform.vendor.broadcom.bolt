@@ -1,0 +1,258 @@
+:toc2:
+:toclevesl: 4
+:max-width: 100%
+
+Device Tree in BOLT
+===================
+Broadcom Ltd <support@broadcom.com>
+
+ Introduction
+-------------
+
+BOLT makes use of Device Tree as a way to communicate platform information to an
+operating system such as Linux, which is expected to be Device Tree aware to
+consume and manipulate this information.
+
+This documentation is not a about Device Tree compilers, syntax, nor Device Tree
+bindings documents, but references to all of these can be found at the end of
+this document. The intent of this document is to describe how BOLT constructs,
+utilizes and passes the Device Tree Blob to the Operating System, and what are
+the different options if utilizing BOLT's built-in Device Tree blob is not an
+option.
+
+ Terminology
+------------
+
+Device Tree designates the general technology (compiler, language, set of tools)
+associated with it. The following terms will be used throughout this document:
+
+* *Device Tree Source* (.dts files): a textual file containing valid Device Tree
+  syntax under the form of nodes, properties, aliases and compiler directives
+
+* *Device Tree Source Include* (.dtsi files): similar to the DTS file, but usually
+  included within a .dts file to provide some kind of inheritance/overloading
+  scheme (analoguous to what a header file is in the C language)
+
+* *Device Tree Blob* (.dtb): binary file, produced by the Device Tree Compiler
+  (dtc) from a .dts file. Represents Device Tree information in a machine
+  independent way, and is usable under its binary format. A DTB is also know
+  as a Flattened Device Tree (FDT)
+
+* *Device Tree Compiler* (dtc): tool which takes either a Device Tree Source or
+  Device Tree Blob as an input, and can output either a Blob (from source) or
+  a source (from blob)
+
+* *libfdt*: BSD-licensed library which is used by the dtc compiler itself as well
+  as by operating systems or software projects which need to manipulate a Device
+  Tree blob/Flattened Device Tree, either under a read-only mode or a read-write
+  mode.
+
+ Build process
+--------------
+
+BOLT starts building its own copy of the Device Tree Compiler (dtc) which can be
+found under `thirdparty/GPL-BSD-dtc-g448faa43.tgz`. The Device Tree compiler also
+contains the sources for libfdt which is linked into BOLT later in the build
+process.
+
+The Device Tree building process is divided into 2 distinct parts:
+
+* a build-time part, where the Device Tree is constructed out of static files,
+  and scripted out of the BCHP header files targeting a specific family
+
+* a run-time part, where the Device Tree is live in main memory, and is
+  manipulated by BOLT, as a result of user interactions, and hardware
+  (chip, board) specifities
+
+ Build time process
+-------------------
+
+The initial Device Tree is constructed out of the following files, located under
+the `config/` directory from BOLT's top-level directory:
+
+* `A15.dtsi`, `A53.dtsi`: processor-specific invariants such as hardware
+  addresses, built-in timers, enabling method for multi-core boot etc.
+
+* `common.dtsi`: chip/family agnostic invariants, e.g: reserved addresses
+
+* `family-$(FAMILY).dtsi`: chip-specific (for all revisions) model, compatible
+  and chosen nodes
+
+* `family-$(FAMILY).dts`: chip-specific (for a revision) model, compatible and
+  chosen nodes, this files does an included of `family-$(FAMILY).dtsi`,
+  `common.dtsi` and `A15.dtsi` or `A53.dtsi`
+
+* `clk-$(FAMILY).plx`: Device Tree fragment containing chip-specific clocking
+  information (register, clock references/phandles)
+
+A graphical include graph would look like the following:
+
+----
+  A15.dtsi		----|
+  common.dtsi		----|
+  family-$(FAMILY).dtsi ----|
+			    \-> family-$(FAMILY).dts
+----
+
+`family-$(FAMILY).dts` acts as the basic building block for Device Tree, and is
+then complemented by BOLT's scripting engine.
+
+The scripting engine proceeds with reading `config/family-$(FAMILY).cfg` to know a
+few essential things:
+
+* which dts file to use and assemble: typically `config/family-$(FAMILY).dts`
+  (can be changed by using a different parameter to the `dts` configuration
+  command, see link:build_configuration_script.html[build_configuration_script.html])
+
+* looking for the "dt autogen" configuration directive to know which
+  peripherals to generate Device Tree nodes for
+
+Note: the exact configuration syntax and directives are described under
+link:build_configuration_script.html[build_configuration_script.html].
+
+A large number of Device Tree nodes peripherals are generated from the BCHP
+headers, which provide an accurate description of the hardware and its register
+interface. The syntax of the Device Tree node does, to the best possible extent,
+respect the existing Device Tree bindings documents (ePAPR or newer) and strives
+to be standard.
+
+The low-level logic and code doing that is located under `scripts/config.pl`,
+`scripts/BcmUtils.pm` and `scripts/BcmDt/Devices.pm`.
+
+Once the scripting engine has invoked these different auto-generation routines,
+it has produced a file under `gen/$(FAMILY)/family-$(FAMILY).dtx` which contains
+valid Device Tree syntax, and includes `config/family-$(FAMILY).dts`. The clock
+description file under `config/clks-$(FAMILY).plx` is then concatened to the *.dtx
+file, and the resulting output is fed to the Device Tree compiler to produce
+`obj/$(FAMILY)/config.dtb` which is a Device Tree blob linked into BOLT's binary.
+
+
+  Runtime modification process
+------------------------------
+
+All the board-specific sections are also parsed by `scripts/config.pl` and produce
+different C files with structures (Flash partition maps, pinmux settings,
+Ethernet configurations etc.) under `gen/$(FAMILY)/board_params.[ch]`, these
+structures are also linked into the BOLT image (FSBL and SSBL).
+
+On Broadcom reference boards, there is a special EEPROM-like chip (resistors
+essentially) which returns an unique identifier per board model, called the
+Board ID (BID), which allows us to runtime detect which boards we are on.
+Customer boards are expected to either build support for a single board, or
+offer an alternative or identical runtime detection mechanism to offer per-board
+selection.
+
+Once this runtime detection occurs, during FSBL, we read this board ID, map it
+against the local array of board structures we have, and from there we can infer
+anything we need:
+
+* amount and placement of DDR
+* pinmuxing
+* peripheral-specific configuration (Ethernet, USB, SDIO, PCIe etc.)
+
+Later on, in the SSBL, we have a full libfdt environment, so based on the board
+ID, plus other runtime-configuration tunables, like the command-line commands,
+we can further patch the Device Tree Blob to taylor it to our needs, that
+includes:
+
+* reading the One Time Programmable bits (OTP) to trim/disable
+  peripherals which are not enabled on that particular variant of the
+  System-on-Chip, remove additional CPUs not enabled etc.
+
+* reading the environment variables and patch the Ethernet Device Tree
+  nodes to include the right PHYs, modes etc.
+
+* insert Flash partition tables nodes etc.
+
+All of this happens in `ssbl/main/dtbolt.c`. When `bolt_devtree_boltset()`
+finishes, the live Device Tree blob is no longer touched, and its physical
+address is given to the OS.
+
+  Dealing with Device Tree updates
+----------------------------------
+
+As new peripherals or features are brought up, updates to Device Tree blobs can
+result in new nodes and properties to appear, to the extent that they are not
+breaking existing bindings. It is not uncommon for vendors to lock down their
+bootloader version, so a few options exist to deal with Device Tree updates made
+in newer releases of BOLT:
+
+Frozen FSBL with newer SSBL
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There is a supported mechanism allowing vendors to freeze their FSBL version,
+yet update the SSBL version and have a mix of an older FSBL and newer SSBL,
+thus allowing the latest and greatest SSBL to be utilized, and therefore still
+benefiting from the build-time and run-time DTB construction. This is the
+recommended way by Broadcom to benefit from frequent updates and be on the
+actively supported path.
+
+Frozen FSBL and SSBL
+~~~~~~~~~~~~~~~~~~~~
+
+In this case, the options are fairly limited, especially if the need for a newer
+Device Tree Blob arises. The recommended way by Broadcom to deal with that
+situation is to do a side-by-side comparison of the DTB provided by the frozen
+SSBL version, and the DTB provided by the newest BOLT version. The process would
+go like this:
+
+Boot the frozen BOLT version on a Broadcom reference board, save it on a TFTP
+server by doing the following:
+
+----
+BOLT> dt bolt
+BOLT> save <host>:bolt-$VERSION.dtb $DT_ADDRESS $DT_SIZE
+----
+
+Flash the new version of BOLT on a Broadcom reference board, and also save the
+file as shown above. To allow a side-by-side comparison, we want to convert
+these files back to a Device Tree sources:
+
+----
+/path/to/bolt/sources/dtc/dtc -I dtb -O dts /path/to/bolt-$VERSION<X>.dtb
+bolt-$VERSION<X>.dts
+----
+
+Repeat the operation for the later version of BOLT, and compare the differences:
+----
+diff -wurN bolt-$VERSION<X>.dts bolt-$VERSION<Y>.dts
+----
+
+Note:
+
+As new Device Tree nodes are inserted, it is not infrequent to notice a change
+in the phandle properties which are global index numbers allocated for the
+entire Device Tree blob. These changes need to be carefuly audited, and
+adjustments done so as to avoid creating conflicts. The phandle mechanism is a
+two-sided property, one allocated at the node level, which is to be referenced
+(this node contains a phandle = <integer value> property) and another
+reference to that node by the consumer node (this node contains a custom named
+property referencing the other node, e.g: phy-handle = <integer value>)
+
+Once adjustments to the Device Tree sources are made, a recompilation to the DTB
+format is expected to occur:
+
+----
+/path/to/bolt/sources/dtc/dtc -I dts -O dtb /path/to/bolt-$VERSION<Y>.dts
+bolt-$VERSION<Y>.dtb
+----
+
+This DTB can then be loaded by BOLT prior to the OS booting, see
+link:porting_bolt_to_customer_platforms.html[porting_bolt_to_customer_platforms.html]
+for details on how to load a DTB and/or appended DTB alongside Linux.
+
+ Resources
+----------
+
+link:http://elinux.org/images/c/cf/Power_ePAPR_APPROVED_v1.1.pdf[ePAPR specification]
+
+link:http://www.devicetree.org/Main_Page[DeviceTree.org website]
+
+link:http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/devicetree/bindings/[Linux kernel Device Tree bindings document directory]
+
+Appendix: Copyright Info
+------------------------
+
+Copyright (C) 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.

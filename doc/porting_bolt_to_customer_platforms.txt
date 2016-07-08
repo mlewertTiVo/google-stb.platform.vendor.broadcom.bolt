@@ -3,7 +3,7 @@
 :max-width: 100%
 Porting BOLT to customer platforms
 ==================================
-Broadcom Corporation <support@broadcom.com>
+Broadcom Ltd <support@broadcom.com>
 
 This is a guide to moving BOLT from a working reference board
 implementation to your own hardware. The major prerequisite is the ability to
@@ -698,7 +698,7 @@ gen/7445d0/family-7445d0.dtx
 In the above file you can see the peripheral configurations used
 for Linux (+USB for BOLT as well) Since we have to support multiple
 boards that is not the end of it - the devicetree is compiled into
-a binary blob by the dtc tool (dtc/dtc in the BOLT source tree)
+a binary blob by the dtc tool (gen/dtc/dtc in the BOLT source tree)
 and built into BOLT. Then BOLT manipulates that binary version of
 gen/7445d0/family-7445d0.dtx with regard to the current board.
  That manipulation occurs via the 'dt bolt' command, also a
@@ -742,7 +742,7 @@ can read:
 
 [source,shell]
 ----
- [user@linuxbox] dtc/dtc -I dts -O dtb plat.dts > plat.dtb
+ [user@linuxbox] gen/dtc/dtc -I dts -O dtb plat.dts > plat.dtb
 ----
 
 From there its flashed back (e.g. for testing) to flash0.devtree.
@@ -848,7 +848,7 @@ be processed by the dtc tool in the BOLT build directory:
 
 [source,shell]
 ----
-[user@linuxbox] dtc/dtc -I dts -O dtb bolt.dts >  bolt.dtb
+[user@linuxbox] gen/dtc/dtc -I dts -O dtb bolt.dts >  bolt.dtb
 ----
 
 IMPORTANT: We specify the final image as a 'raw' binary, 'load -raw'
@@ -893,6 +893,37 @@ to support AVS, please reference the AVS APP Note on DocSafe (title:
 
  Splash screen and audio
 ------------------------
+
+ Important changes for BOLT v1.11
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+As of BOLT v1.11 we will be no longer be shipping the chip specific files created
+with 'splashgen' (see the splashgen section below) that we import from our reference
+software. This is to strongly encourage you to run the reference software
+'splashgen' app on _your_ specific platform to create the proper 'rul' and 'rdc'
+data files for BOLT.
+
+
+ Splashgen
+~~~~~~~~~~
+The splash code used in BOLT was derived and modified from the Broadcom reference software
+'splashrun' app. To generate or modify splash screen parameters you will have to boot Linux
+and run the reference software version of the 'splashgen' app.
+footnote:['splashgen' is shipped with Broadcom reference software releases.
+ You must configure and then run the splashgen app. Afterward, feed the
+generated files back into BOLT and rebuild. The location for the generated files
+is bolt/splash/BSEAV/app/splash/splashrun/<CHIP>.]
+
+. The 'splashgen' app must be run again if:
+
+** Your splash screen bitmap is of a different size or colorspace.
+
+** Your DDR configuration has changed.
+
+** Your board has differently wired video DAC configurations
+or require a different mix of composite, component or HDMI. Check the
+'bsplash_board.h' and 'platformconfig.c' files in the Broadcom reference
+software 'BSEAV/app/splash/splashgen/<CHIP>' directory to make sure they
+match your setup.
 
  Configuring the build
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -943,9 +974,9 @@ options as shown below:
 ----
 [user@linuxbox] make env
 
-[user@linuxbox] ./scripts/splash_create_flash_file \
-	-b splash/BSEAV/app/splash/splashgen/splash.bmp  \
-	-p splash/BSEAV/app/splash/splashgen/audio-testtones.bin \
+[user@linuxbox] ./gen/scripts/splash_create_flash_file \
+	-b splash/splash.bmp  \
+	-p splash/audio-testtones.bin \
 	-o splashFile
 
 [user@linuxbox] ls -l splashFile 
@@ -958,10 +989,10 @@ Alternately, compression (via the '-z' flag) of the meda file is now supported:
 ----
 [user@linuxbox] make env
 
-[user@linuxbox] ./scripts/splash_create_flash_file \
-	-b splash/BSEAV/app/splash/splashgen/splash.bmp  \
-	-p splash/BSEAV/app/splash/splashgen/audio-testtones.bin \
-	-t splash/BSEAV/app/splash/splashgen/fire.bmp  \
+[user@linuxbox] ./gen/scripts/splash_create_flash_file \
+	-b splash/splash.bmp \
+	-p splash/audio-testtones.bin \
+	-t splash/fire.bmp \
 	-z -o splashFile.zb
 
 [user@linuxbox] ls -l splashFile.zb
@@ -999,11 +1030,9 @@ Programming...done. 442576 bytes written
 BOLT> reboot
 ----
 
-The video will be seen on component & composite outputs after you reboot with both
+The video will be seen on your (reference software configured) screen
+devices (HDMI, component, composite etc.) outputs after you reboot with both
 the new BOLT and the splashFile file in flash.
-
-Splash audio is supported on HDMI, I2S, SPDIF and Composite outputs
-for now. Other outputs will be added after verification.
 
  Interactions with Devicetree
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1049,69 +1078,12 @@ footnote:[See the 'mmap' configuration script command for how your DDR/MEMC
 banks are configured for the chip. Note these values are read only/hard wired
 for your chip.].
 
-
-
-
-IMPORTANT: As BOLT ships with default splash configurations for fully populated DDRs
-it would not be suitable for other chips using less memory or unpopulated
-DDRs. E.g. the 7252d0 has 2 MEMCs and the 7445d0 has 3. In this case we
-ship with a default splash that runs in DDR #2 (MEMC 2), so 7252d0 will
-not work out of the box, in fact it will crash BOLT due to invalid
-memory accesses (as expected.)
-
-
- Special instructions for the 7252d0
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-For the 7252d0 we do ship the configuration files, but some additional
-changes are required for them to be incorporated into the build:
-
-----
-diff --git a/splash/splash.inc b/splash/splash.inc
-index 5fd7b66..297ca13 100644
---- a/splash/splash.inc
-+++ b/splash/splash.inc
-@@ -25,7 +25,7 @@ ifeq ($(CFG_SPLASH),1)
-     -I$(ROOT)/splash/BSEAV/app/splash/common \
-     -I$(ROOT)/splash/BSEAV/app/splash/os/cfe \
-     -I$(ROOT)/splash/BSEAV/app/splash/splashrun \
--    -I$(ROOT)/splash/BSEAV/app/splash/splashrun/9$(BCHP_CHIP) \
-+    -I$(ROOT)/splash/BSEAV/app/splash/splashrun/97252D0 \
-----
-
-
  Notes
 ~~~~~~
 
-The splash code used in BOLT was derived and modified
-from the Broadcom reference software 'splashrun' app.
-
-To generate or modify splash screen parameters you will
-have to boot Linux and run the reference software version
-of the 'splashgen' app, *do not* use the BOLT version.
-
-. Use the 'splashgen' app
-footnote:['splashgen' is shipped with Broadcom reference software releases.
- You must configure and then run the splashgen app. Afterward, feed the
-generated header files back into BOLT and rebuild. The BOLT header files
-you replace are in bolt/splash/BSEAV/app/splash/splashrun/<CHIP>.]
-if:
-
-** Your bitmap is of a different size or colorspace than the
-default supplied with BOLT.
-
-** Your DDR configuration is different than that supplied by BOLT for
-Broadcom reference boards.
-
-** Your board may have differently wired video DAC configurations
-or require a different mix of composite, component or HDMI than
-the default. Check the 'bsplash_board.h' and 'platformconfig.c' files
-in the Broadcom reference software 'BSEAV/app/splash/splashgen/<CHIP>' 
-directory to make sure they match your setup.
-
-. You can also not do the '/memreserve/' and hence avoid the lowering of
-available memory in the Devicetree. To accomplish this edit out
-'bolt_populate_splash()' from 'bolt/ssbl/main/dtbolt.c'.
+. To recover CMA/BMEM memory you can also not do the '/memreserve/' and hence
+avoid the lowering of available memory in the Devicetree. To accomplish this edit
+out 'bolt_populate_splash()' from 'bolt/ssbl/main/dtbolt.c'.
 
 ** Your splash screen may not survive long after Linux is up as
 the register update list (RUL) for SPLASH must not be tampered
@@ -1326,7 +1298,7 @@ the same or similar (not placed) components on the same board.
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

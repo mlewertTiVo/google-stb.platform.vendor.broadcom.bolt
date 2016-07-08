@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -57,7 +55,12 @@ enum {
 };
 
 /* Consecutive readable/writeable spare area registers, in bytes */
+#if (BCHP_NAND_REVISION_MAJOR_DEFAULT >= 7 && \
+	BCHP_NAND_REVISION_MINOR_DEFAULT >= 2)
+#define NAND_MAX_SPARE_AREA 128
+#else
 #define NAND_MAX_SPARE_AREA 64
+#endif
 
 #define REG_ACC_CONTROL(cs) (BCHP_NAND_ACC_CONTROL_CS0 + \
 	(cs) * (BCHP_NAND_ACC_CONTROL_CS1 - BCHP_NAND_ACC_CONTROL_CS0))
@@ -1028,13 +1031,13 @@ static int nand_handle_partition_read_disturb(bolt_devctx_t * ctx)
 	/* correctable error occured */
 	if (rval == NAND_ERR_CORR) {
 		/* check bolt partition */
-		read_buffer = KMALLOC(flash->blocksize, 4);
+		read_buffer = KMALLOC(flash->writesize, 4);
 		if (read_buffer) {
-			buffer.buf_length = flash->blocksize;
+			buffer.buf_length = flash->writesize;
 			buffer.buf_offset = 0;
 			buffer.buf_ptr = (bolt_ptr_t) read_buffer;
 
-			for (offs = 0; offs < part->size; offs += flash->blocksize)
+			for (offs = 0; offs < part->size; offs += flash->writesize)
 				nanddrv_read(ctx, &buffer);
 			KFREE(read_buffer);
 		} else {
@@ -1094,21 +1097,40 @@ static int nand_verify_erased_page(struct nand_dev *nand, uint64_t addr,
 	struct flash_dev *flash = &nand->flash;
 	unsigned int i, j;
 	int ret = 0;
+	int max_bitflips = 0, bitflips = 0;
+	unsigned int sector_size = flash->ecc_step;
 
 	nand_enable_read_ecc(nand, false);
 	for (i = 0; i < flash->writesize; i += NAND_FC_SIZE) {
 		nand_read_sector(info, addr + i, buf + i);
 		for (j = 0; j < NAND_MAX_SPARE_AREA; j += 4)
-			if (BDEV_RD(BCHP_NAND_SPARE_AREA_READ_OFS_0 + j) != 0xffffffff)
-				ret = NAND_ERR_UNCORR;
-	}
-	for (i = 0; i < flash->writesize; i += 4)
-		if (((uint32_t *)buf)[i / 4] != 0xffffffff)
+			bitflips += 32 - bcnt(BDEV_RD(BCHP_NAND_SPARE_AREA_READ_OFS_0 + j));
+
+		for (j = 0; j < NAND_FC_SIZE; j += 4)
+			bitflips += 32 - bcnt(((uint32_t *)buf)[(i + j) / 4]);
+
+		/* 1K sector we need to read 2 times NAND_FC_SIZE */
+		if (((sector_size - 1) & (addr + i)) != 0)
+			continue;
+
+		DBG("NAND: %d bitflips @ sector 0x%llx\n", bitflips, addr + i);
+		if (bitflips > flash->ecc_strength) {
 			ret = NAND_ERR_UNCORR;
+			break;
+		} else {
+			max_bitflips = max(max_bitflips, bitflips);
+			bitflips = 0;
+		}
+	}
 	nand_enable_read_ecc(nand, true);
 
-	DBG("NAND: verified %s page @ %llx\n", ret ? "erased" : "corrupt",
-			(unsigned long long)addr);
+	if (ret != NAND_ERR_UNCORR) {
+		/* fill return buffer with all ffs */
+		memset(buf, 0xff, flash->writesize);
+	}
+
+	DBG("NAND: verified %s page @ %llx with %d bitflips\n",
+	    ret == 0 ? "erased" : "corrupt", addr, max_bitflips);
 
 	return ret;
 }
@@ -1380,8 +1402,7 @@ try_dmaread:
 			}
 
 			/* Re-check all uncorrectable errors, CRNAND-57 */
-			if (nand_verify_erased_page(nand, addr + offs, buf + offs))
-				ret = NAND_ERR_UNCORR;
+			ret = nand_verify_erased_page(nand, addr + offs, buf + offs);
 		} else if (!ret && desc->status_valid & FLASH_DMA_CORR_ERROR) {
 			ret = NAND_ERR_CORR;
 		}
@@ -1477,7 +1498,9 @@ static int nand_block_read(struct nand_dev *nand, uint64_t address,
 			memcpy(data, buf + offset, copy_len);
 
 		/* Keep the strongest error code */
-		if (res && ret != NAND_ERR_UNCORR)
+		if (res > 0)
+			ret = NAND_ERR_CORR;
+		else
 			ret = res;
 
 		data += copy_len;
@@ -1871,6 +1894,7 @@ static int nand_do_probe(struct nand_dev *softc)
 
 	flash->ecc_strength = info->ecc_level << info->sector_size_1k;
 	flash->ecc_step = 512 << info->sector_size_1k;
+	flash->oob_sector_size = info->oob_sector;
 
 	for (i = 0; i < ARRAY_SIZE(nand_page_sizes); i++)
 		if (nand_page_sizes[i] == flash->writesize) {
@@ -2459,6 +2483,7 @@ static int nanddrv_ioctl(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 		info->flash_size = softc->flash.size;
 		info->type = softc->flash.type;
 		info->flags = FLASH_FLAG_NOERASE;
+		info->page_size = softc->flash.writesize;
 		return 0;
 
 	case IOCTL_FLASH_GETPARTINFO:

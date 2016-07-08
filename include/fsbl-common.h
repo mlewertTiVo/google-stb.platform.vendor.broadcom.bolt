@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -209,9 +207,11 @@ power_det_e;
 	bit [0]: Indicate if the current board has been runtime
 		detected, only applicable for a CFG_BOARD_ID build.
 	bit [1..3]: MHL boot/power status
+	bit [4]: Booted in A64 mode.
 */
 enum {
 	FSBL_RUNFLAG_BID_MATCH	= BIT(0),
+	FSBL_RUNFLAG_A64_BOOT	= BIT(4),
 };
 
 

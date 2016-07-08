@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -175,5 +173,9 @@ void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 
 	/* Reset R_CAL/RC_CAL engine */
 	r_rc_cal_reset(mdio, phy[0]);
+}
+#elif defined(CONFIG_BCM7271A0) || defined(CONFIG_BCM7268A0)
+void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
+{
 }
 #endif

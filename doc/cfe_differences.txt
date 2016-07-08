@@ -2,9 +2,9 @@
 :toclevels: 4
 :max-width: 100%
 
-CFE difference
-==============
-Broadcom Corporation <support@broadcom.com>
+ CFE differences
+================
+Broadcom Ltd <support@broadcom.com>
 
  UI commands
 ------------
@@ -52,6 +52,7 @@ mii ............... Reads or writes register contents from/to specified PHY addr
 uncache ........... Mark (all ddr) memory access via the mmu as uncached.
 sha ............... Calculate SHA256 of a memory region via BCM dma h/w engine.
 time .............. Timing utility.
+psci .............. Call PSCI feature using smc
 ----
 
  eMMC
@@ -64,6 +65,8 @@ rpmb use-key ...... Specify the key to be used for all RPMB operations.
 
  Notes
 ~~~~~~
+
+* The 'psci' command is currently only available on ARM64 based platforms.
 
 * The 'dt' commands are for manipulating and showing Devicetrees that
 ARM Linux needs for its configuration.
@@ -126,6 +129,9 @@ Linux LPAE (40 bit) addressing support. If you look at the
 memory node in Devicetree it can be seen to have moved from
 sets of 32 bit values to now be sets of 64 bit values.
 
+* As of version v1.07 CMA is deprecated for new designs,
+with BMEM now being the default.
+
 The way BOLT is built is different from CFE. The bolt.bin file
 is built as a single unit then a script splits it up into fsbl.bin and
 ssbl.bin, whereas CFE make a separate FSBL & SSBL to then concatenate
@@ -181,7 +187,7 @@ to have a working data space.
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

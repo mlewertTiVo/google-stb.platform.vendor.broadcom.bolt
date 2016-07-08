@@ -49,7 +49,7 @@ static struct partition_profile __maybe_unused partition_profile_STB_NO_MIRROR[]
        { NULL, 0, 0, 0 } /* Terminate */
 };
 
-#if defined(CONFIG_BCM3390) || defined(CONFIG_BCM7145)
+#if defined(CONFIG_BCM3390)
 static struct partition_profile __maybe_unused partition_profile_GATEWAY_VCM[] = {
        { "bolt",   BOLT_IMG_MAX,        0,                    PARTITION_BOOT_DEVICE },
        { "macadr",   144,               0,                    PARTITION_BOOT_DEVICE },

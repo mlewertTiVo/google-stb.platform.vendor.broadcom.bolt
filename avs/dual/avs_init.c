@@ -10,7 +10,7 @@
  * Module Description:
  *  This performs two things:
  *  1) The Resistor Calibration Procedure
- *  2) AVS Balance Procedure (7145)
+ *  2) AVS Balance Procedure (STB chips with CM)
  *  The Resistor Calibration Procedure measures some resistors on the part and
  *  provides a set of ratios for the external versus the internal resistor sets.
  *  This must be run before setting up the AVS processing.

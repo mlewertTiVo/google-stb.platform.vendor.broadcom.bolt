@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -20,15 +18,10 @@
 #include <bchp_hif_cpubiuctrl.h>
 
 
-#if defined (CONFIG_BCM3390A0) || defined (CONFIG_BCM3390B0) ||\
-	defined(CONFIG_BCM7145B0)
+#if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM3390B0)
 #include <bchp_g2u_regs.h>
 #include <bchp_rg_top_ctrl.h>
 #include <bchp_mbox_cpuc.h>
-#if defined(CONFIG_BCM7145B0)
-#include <bchp_clkgen.h>
-#include <bchp_control_gfap.h>
-#endif
 #endif
 
 /* ------------------------------------------------------------------------- */
@@ -120,84 +113,19 @@ void bcm3390_hack_late_bus_cfg(void)
 }
 #endif /* defined(CONFIG_BCM3390A0) */
 
-#if defined(CONFIG_BCM7145B0)
-void bcm7145_hack_early_bus_cfg(void)
+#if defined(CONFIG_BCM7268A0) || defined(CONFIG_BCM7271A0)
+void orion_hack_early_bus_cfg(void)
 {
-	/* SWBOLT-25 */
-	/* enable UBUS clock */
-	BDEV_WR_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, UBUS_CLK_EN, 1);
-
-	/* limit0: RBUS FFD0_0000 - FFFF_FFFF MPCore, Boot SRAM/ROM */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT0, 0x00FFD000);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT0, 0x00FFFFF2);
-
-	/* limit1: RBUS E000_0000 - F1FF_FFFF EBI and registers */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT1, 0x00E00000);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT1, 0x00F1FFF2);
-
-	/* limit2: RBUS 04_0000_0000 - 0B_FFFF_FFFF EBI and PCIe ext */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT2, 0x04000000);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT2, 0x0BFFFFF2);
-
-	/* limit3: MCP0 0000_0000 - 7FFF_FFFF DRAM-0 */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT3, 0x00000000);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT3, 0x007FFFF4);
-
-	/* limit4: MCP0 01_0000_0000 - 01_BFFF_FFFF DRAM-0 ext */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT4, 0x01000000);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT4, 0x01BFFFF4);
-
-	/* limit5: MCP1 4000_0000 - 7FFF_FFFF DRAM-0 */
-	/* HW default (0x007ffff5, ULIMIT=0x7ffff, BUSNUM=MCP1/b0101) is OK,
-	this is redundant as it's covered in limit3 */
-
-	/* limit6: MCP1 03_0000_0000 - 03_BFFF_FFFF DRAM-1 ext */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT6, 0x03000000);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT6, 0x03BFFFF5);
-
-	/* limit7: MCP1 8000_0000 - BFFF_FFFF DRAM-1 */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT7, 0x00800000);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7, 0x00BFFFF5);
-
-	/* limit8: UBUS D000_0000 - DFFF_FFFF UBUS registers  */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT8, 0x00D00001);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT8, 0x00DFFFF1);
-
-	/* limit9: RBUS C000_0000 - CFFF_FFFF PCIe */
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT9, 0x00C00000);
-	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT9, 0x00CFFFF2);
-
-	/* limit10: not used */
-
+	/* limit4: MCP0 0x1_0000_0000..0x1_3FFF_FFFF */
+	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT4,
+		(0x13FFFF << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT4_ULIMIT_SHIFT) |
+		(4 << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT4_BUSNUM_SHIFT));
+	/* limit5: MCP0 0x0_4000_0000..0x0_BFFF_FFFF */
+	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5,
+		(0xBFFFF << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_ULIMIT_SHIFT) |
+		(4 << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_BUSNUM_SHIFT));
 }
-#endif /* defined(CONFIG_BCM7145B0) */
-
-
-#if defined(CONFIG_BCM7145B0)
-void bcm7145_hack_late_bus_cfg(void)
-{
-	BDEV_WR(BCHP_RG_TOP_CTRL_SW_INIT_0_CLEAR, 0x3F8000A1);
-
-	sleep_ms(1);
-
-	BDEV_WR(BCHP_G2U_REGS_G2U_WINDOW_START,   0xD0000000);
-	BDEV_WR(BCHP_G2U_REGS_G2U_WINDOW_END,     0xD7FFFFFF);
-	BDEV_WR(BCHP_G2U_REGS_G2U_TRANSLATE_MASK, 0xFFFFFFFF);
-
-	/* --- Attempt to read from CM UBUS Space --- */
-
-	/* MBOX15: 'U' 'B' 'U' 'S' */
-	BDEV_WR(BCHP_MBOX_CPUC_DATA15, 0x55425553);
-	if (BDEV_RD(BCHP_MBOX_CPUC_DATA15) != 0x55425553)
-		__puts("Warning! UBUS Access Failed!");
-
-	/* GFAP Scratch:  'G' 'F' 'A' 'P' */
-	BDEV_WR(BCHP_Control_GFAP_SCRATCH, 0x47464150);
-	if (BDEV_RD(BCHP_Control_GFAP_SCRATCH) != 0x47464150)
-		__puts("Warning! GFAP Access Failed!");
-
-}
-#endif /* defined(CONFIG_BCM7145B0) */
+#endif /* defined(CONFIG_BCM7268A0) || defined(CONFIG_BCM7271A0) */
 
 #if defined(CONFIG_BCM7366B0) || defined(CONFIG_BCM7366C0)
 void bcm7366b0_mii_rx_err_cfg(void)

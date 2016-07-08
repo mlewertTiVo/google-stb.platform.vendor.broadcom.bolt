@@ -35,9 +35,9 @@
 *  LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF
 *  ANY LIMITED REMEDY.
 *
-* $brcm_Workfile: splash_main.c $
-* $brcm_Revision: 10 $
-* $brcm_Date: 4/12/13 2:06p $
+* $brcm_Workfile: $
+* $brcm_Revision: $
+* $brcm_Date: $
 *
 * Module Description:
 *   This file is meant for unit testing of RAP PI for 7401. This file
@@ -46,49 +46,7 @@
 *
 * Revision History:
 *
-* $brcm_Log: /BSEAV/app/splash/splashrun/splash_main.c $
-* 
-* 10   4/12/13 2:06p syang
-* SW7445-213: change to use cached addr for surface and RULs
-* 
-* 9   4/11/13 3:22p syang
-* SW7445-213: make num of mem fully scalable
-* 
-* 8   3/29/13 11:41a syang
-* SW7435-676: deep refactor for memc, surface and display number
-* scalabilty; flexibility for diff configure combination; and easy
-* adding of new chips
-* 
-* 7   9/10/12 4:40p jessem
-* SW7425-3872: Removed hMem1 use with 7425.
-* 
-* 6   4/18/12 12:41p jessem
-* SW7425-2828: Corrected method on obtaining heap.
-*
-* 5   4/10/12 2:16p jessem
-* SW7425-2828: Used NEXUS_Platform_GetFrameBufferHeap to determine
-* correct heap to use.
-*
-* 4   3/19/12 1:39p jessem
-* SW7425-2653: Changed MEMC1 to use heap2 for 7425.
-*
-* 3   8/8/11 11:53p nickh
-* SW7425-878: Add 7425 support
-*
-* 2   9/21/09 5:32p nickh
-* SW7420-351: Expand functions to provide heap for MEMC1 required by 7420
-*
-* 1   4/8/09 4:18p shyam
-* PR52386 : Build system now based on nexus
-*
-* 2   4/8/09 12:52p shyam
-* PR52386 : Port splash to nexus Base Build system
-*
-* 1   9/29/08 11:34a erickson
-* PR46184: added splash app
-*
-* 1   5/14/07 7:15p shyam
-* PR 30741 : Add reference support for generic portable splash
+* $brcm_Log: $
 *
 ***************************************************************************/
 /* #define debug_only */
@@ -108,11 +66,32 @@
 #endif
 #include "nexus_types.h"
 
+/* Programming note:
+ * ----------------
+ *  The next two paragraphs involve some trickery in order to arrive at the
+ *  correct file name. In a real application, please don't do this. You will
+ *  have one or two include files with names similar to splash_vdc_rul.h. You
+ *  know what these names are, because you picked them yourself when you built
+ *  splashgen. Just #include these one or two files directly. Don't bother with
+ *  STRINGIZE and macros. This complexity exists only to solve a problem in
+ *  splashrun.
+ */
+
+/* Tuning from Makefile */
+#define XSTRINGIZE(x) #x
+#define  STRINGIZE(x) XSTRINGIZE(x)
+
+/* pre-generated register and RUL header files from splashgen */
+#include "splash_script_load.h"
+#include STRINGIZE(SPLASH_RUL_HFILE)
+#ifndef SPLASH_VERSION_2
+#include "splash_vdc_reg.h"
+#endif
+
 BDBG_MODULE(splashrun);
 
-extern uint32_t g_ulNumMem;
-
-int splash_script_run(BREG_Handle hReg, BMEM_Handle *phMem);
+int splash_script_run(
+BREG_Handle hReg, BMEM_Handle *phMem, SplashData* pSplashData);
 
 
 int main(void)
@@ -122,7 +101,36 @@ int main(void)
 	NEXUS_MemoryStatus stat;
 	BMEM_Handle  *phMem;
     int ii, jj;
+#ifdef SPLASH_VERSION_2
 
+/* Programming note:
+ * ----------------
+ *  The next line of code involves the use of a preprocessor macro to arrive
+ *  at the correct function name. In a real application, please don't do this.
+ *  You will have one or two function names similar to GetSplashData. You
+ *  know what these names are, because you picked them yourself when you built
+ *  splashgen. Just type one or two function names directly. Don't bother with
+ *  the macro. This complexity exists only to solve a problem in splashrun.
+ */
+	SplashData* pSplashData = SPLASH_RUL_FUNCTION();
+#else
+	SplashData lSplashData = {
+		BSPLASH_NUM_MEM,
+		0,                        /* Fill in later */
+		BSPLASH_NUM_SURFACE,
+		&g_SplashSurfaceInfo[0],
+		BSPLASH_NUM_DISPLAY,
+		&g_SplashDisplayInfo[0],
+		sizeof(g_aTriggerMap)/sizeof(g_aTriggerMap[0]),
+		&g_aTriggerMap[0],
+		sizeof(g_aulReg)/(2*sizeof(g_aulReg[0])),
+		&g_aulReg[0]
+	};
+	SplashData* pSplashData = &lSplashData;
+	lSplashData.iRulMemIdx = g_iRulMemIdx;
+#endif
+
+    NEXUS_SetEnv("NEXUS_BASE_ONLY_INIT","y");
     NEXUS_Platform_GetDefaultSettings(&platformSettings);
     platformSettings.openI2c = false;
     platformSettings.openFrontend = false;
@@ -132,28 +140,30 @@ int main(void)
 
     BDBG_ASSERT(!rc);
 
-	phMem = (BMEM_Handle *) BKNI_Malloc(sizeof(BMEM_Handle) * g_ulNumMem);
-	BKNI_Memset((void *)phMem, 0, sizeof(BMEM_Handle) * g_ulNumMem);
+	phMem =
+		(BMEM_Handle *)BKNI_Malloc(sizeof(BMEM_Handle) * pSplashData->ulNumMem);
+	BKNI_Memset(
+		(void *)phMem, 0, sizeof(BMEM_Handle) * pSplashData->ulNumMem);
 	for (ii=0; ii<NEXUS_MAX_HEAPS; ii++)
 	{
-		if (g_pCoreHandles->nexusHeap[ii] == NULL)
+		if (g_pCoreHandles->heap[ii].nexus == NULL)
 			continue;
-		
-		rc = NEXUS_Heap_GetStatus(g_pCoreHandles->nexusHeap[ii], &stat);
+
+		rc = NEXUS_Heap_GetStatus(g_pCoreHandles->heap[ii].nexus, &stat);
 		if (!rc)
 		{
 			bool bGotAll = true;
-			
+
 			BDBG_MSG(("mem %d: idx %d, type 0x%x", ii, stat.memcIndex, stat.memoryType));
-			if (stat.memcIndex<g_ulNumMem &&
+			if (stat.memcIndex<pSplashData->ulNumMem &&
 				stat.memoryType & NEXUS_MEMORY_TYPE_APPLICATION_CACHED /* &&
 				stat.memoryType & NEXUS_MEMORY_TYPE_DRIVER_CACHED */)
 			{
-				*(phMem+stat.memcIndex) = NEXUS_Heap_GetMemHandle(g_pCoreHandles->nexusHeap[ii]);
+				*(phMem+stat.memcIndex) = NEXUS_Heap_GetMemHandle(g_pCoreHandles->heap[ii].nexus);
 				BDBG_MSG(("   hMem 0x%x", *(phMem + stat.memcIndex)));
 			}
 
-			for (jj=0; jj<(int)g_ulNumMem; jj++)
+			for (jj=0; jj<(int)pSplashData->ulNumMem; jj++)
 			{
 				if (NULL == *(phMem+jj))
 				{
@@ -163,8 +173,8 @@ int main(void)
 			if (bGotAll) break;
 		}
 	}
-	
-	for(ii=0; ii<(int)g_ulNumMem; ii++)
+
+	for(ii=0; ii<(int)pSplashData->ulNumMem; ii++)
 	{
 		BMEM_HeapInfo  info;
 
@@ -179,9 +189,9 @@ int main(void)
 	}
 
 #ifdef debug_only
-    splash_script_run(NULL,NULL);
+    splash_script_run(NULL,NULL,NULL);
 #else
-    splash_script_run(g_pCoreHandles->reg, phMem);
+    splash_script_run(g_pCoreHandles->reg, phMem, pSplashData);
 #endif
 
 	BKNI_Free(phMem);

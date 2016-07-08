@@ -36,6 +36,7 @@ my $arg_bbl_ver = 1;
 my $arg_symlinks = 0;
 my $arg_keep = 0;
 my $arg_odir = undef;
+my $arg_tool = undef;
 
 
 # helpers ------------------------------------------------------------------
@@ -48,6 +49,7 @@ sub usage_exit()
 	print "-d (debug) -o (omit BBL version) ";
 	print "-k (keep original, as 'last.bin')\n";
 	print "-D <build object base dir>\n";
+	print "-T <patching tool name and path>\n";
 	print " Note: <list N...> is a comma separated list with no spaces, ";
 	print "-d, -k -o and -D are optional\n";
 	exit(-1);
@@ -79,7 +81,7 @@ sub do_shell($)
 # getopts ------------------------------------------------------------------
 
 my %cmdflags=();
-getopts("sz:p:l:w:f:v:dokD:", \%cmdflags) or usage_exit();
+getopts("sz:p:l:w:f:v:dokD:T:", \%cmdflags) or usage_exit();
 
 $arg_zeusver = $cmdflags{z} if (defined $cmdflags{z});
 $arg_pfx    = $cmdflags{p} if (defined $cmdflags{p});
@@ -89,6 +91,7 @@ $arg_family = $cmdflags{f} if (defined $cmdflags{f});
 $arg_ver    = $cmdflags{v} if (defined $cmdflags{v});
 $arg_debug  = $cmdflags{d} if (defined $cmdflags{d});
 $arg_odir  = $cmdflags{D} if (defined $cmdflags{D});
+$arg_tool  = $cmdflags{T} if (defined $cmdflags{T});
 
 $arg_bbl_ver = 0 if (defined $cmdflags{o});
 $arg_symlinks = 1 if (defined $cmdflags{s});
@@ -109,6 +112,9 @@ failed("-f missing chip family")
 	if (!defined $arg_family);
 failed("-v missing bolt version")
 	if (!defined $arg_ver);
+
+failed("-T missing patching tool")
+	if (!defined $arg_tool);
 
 $arg_odir = "objs/$arg_family"
 	if (!defined $arg_odir);
@@ -192,8 +198,7 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 
 	print "  PATCH   $bname...";
 
-	my $cmd = "./scripts/patcher.pl -z $arg_zeusver -i $bolt -o $arg_odir/$bname";
-
+	my $cmd = "$arg_tool -z $arg_zeusver -i $bolt -o $arg_odir/$bname";
 	my $sub_bbl = "-t bbl -p $file_bbl -i $bolt";
 	my $sub_bfw = "-t bfw -p $file_bfw -i $arg_odir/$bname";
 

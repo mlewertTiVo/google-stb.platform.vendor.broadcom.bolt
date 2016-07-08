@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -901,7 +899,7 @@ int usb_get_descriptor(usbdev_t *dev, uint8_t reqtype, int dsctype, int dscidx,
     *	number of characters in returned string
     ********************************************************************* */
 
-int usb_get_string(usbdev_t *dev, int id, char *buf, int maxlen)
+int __optimize_O0 usb_get_string(usbdev_t *dev, int id, char *buf, int maxlen)
 {
 	int amtcopy;
 	uint8_t *respbuf;

@@ -7,9 +7,9 @@
 *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
 *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
 *
-* $brcm_Workfile: splash_main.c $
-* $brcm_Revision: 1 $
-* $brcm_Date: 5/14/07 7:15p $
+* $brcm_Workfile: $
+* $brcm_Revision: $
+* $brcm_Date: $
 *
 * Module Description:
 *   This file is meant for unit testing of RAP PI for 7401. This file 
@@ -18,10 +18,7 @@
 *
 * Revision History:
 *
-* $brcm_Log: /BSEAV/app/splash/splashrun/splash_main.c $
-* 
-* 1   5/14/07 7:15p shyam
-* PR 30741 : Add reference support for generic portable splash
+* $brcm_Log: $
 * 
 ***************************************************************************/
 

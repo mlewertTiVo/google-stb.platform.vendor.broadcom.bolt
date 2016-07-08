@@ -95,7 +95,7 @@ void board_final_init(void)
 #endif
 #if CFG_USB
 	clist = usb_dt_init();
-	usbmode = board_init_usb(clist);
+	usbmode = usb_board_init(clist);
 	usb_init(usbmode);
 #endif /* CFG_USB */
 }

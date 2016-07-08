@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -23,12 +21,10 @@ static inline void bcm3390_hack_early_bus_cfg(void) { }
 static inline void bcm3390_hack_late_bus_cfg(void) { }
 #endif
 
-#if defined(CONFIG_BCM7145B0)
-void bcm7145_hack_early_bus_cfg(void);
-void bcm7145_hack_late_bus_cfg(void);
+#if defined(CONFIG_BCM7268A0) || defined(CONFIG_BCM7271A0)
+void orion_hack_early_bus_cfg(void);
 #else
-static inline void bcm7145_hack_early_bus_cfg(void) { }
-static inline void bcm7145_hack_late_bus_cfg(void) { }
+static inline void orion_hack_early_bus_cfg(void) { }
 #endif
 
 #if defined(CONFIG_BCM7366B0) || defined(CONFIG_BCM7366C0)

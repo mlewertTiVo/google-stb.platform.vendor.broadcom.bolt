@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -442,6 +440,7 @@ static int emmcdrv_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		info->flash_size = part->size;
 		info->type = FLASH_TYPE_EMMC;
 		info->flags = FLASH_FLAG_NOERASE;
+		info->page_size = 0; /* not applicable */
 
 		DBG_MSG_DRV_DISPATCH("  [flash_info]\n");
 		DBG_MSG_DRV_DISPATCH("      info->flash_base: %d (0x%08X)\n",

@@ -16,7 +16,6 @@
 #include "lib_queue.h"
 #include "lib_malloc.h"
 #include "lib_printf.h"
-#include "lib_setjmp.h"
 
 #include "iocb.h"
 #include "device.h"
@@ -33,8 +32,6 @@
 /*  *********************************************************************
     *  Globals
     ********************************************************************* */
-
-static jmp_buf ui_jmpbuf;	/* for getting control in exceptions */
 
 const char *ui_errstring(int errcode)
 {
@@ -67,21 +64,11 @@ int ui_docommand(const char *buffer)
 			return BOLT_ERR_INV_PARAM;
 		}
 
-		if (lib_setjmp(ui_jmpbuf) != 0)
-			return -1;
 		res = (*cmd.func) (&cmd, cmd.argc - cmd.argidx,
 				   &(cmd.argv[cmd.argidx]));
 	}
 	cmd_free(&cmd);
 	return res;
-}
-
-void ui_restart(int arg)
-{
-	if (arg == 0)
-		arg = -1;
-
-	lib_longjmp(ui_jmpbuf, arg);
 }
 
 int ui_init_cmddisp(void)

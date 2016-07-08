@@ -3,7 +3,7 @@
 :max-width: 100%
 Bolt commands
 =============
-Broadcom Corporation <support@broadcom.com>
+Broadcom Ltd <support@broadcom.com>
 
 A list of available BOLT user interface commands, with examples.
 
@@ -191,6 +191,22 @@ OPTIONS
 * -addr=* .......... Specify the load address (hex) (raw and zImage)
 * -noclose ......... Don't close network link before executing program
 
+ Additional options for ARM64
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*  -32 .............. Boot a 32 bit app
+*  -64 .............. Boot a 64 bit app
+*  -nopsci .......... Don't use PSCI to boot app
+
+ Additional notes for ARM64
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A zImage format file implies a 32 bit binary. An Image or gz compressed
+Image implies a 64 bit binary. The zImage/Image loader may override the
+'-32' and '-64' flags, and also automatically select the right 32 or 64
+bit load address, if not specified here. See also BOOT_START_ADDRESS_ZIMAGE
+in the file 'config/A53.cfg'.
+
+The '-nopsci' option will use the old way of jumping to the Linux entry point
+instead of doing it via PSCI. This is only valid for 32 bit apps.
 
 EXAMPLE
 ~~~~~~~
@@ -1429,7 +1445,7 @@ Programming...done. 442576 bytes written
 ----
 
 ----
-BOLT> flash -header 192.168.0.42:vmlinuz-initrd-7145a0 flash0.kernel  
+BOLT> flash -header 192.168.0.42:vmlinuz-initrd-7445d0 flash0.kernel
 Invalid option; '-header' is deprecated
 *** command status = -8
 ----
@@ -1518,6 +1534,23 @@ OPTIONS
 ~~~~~~~
 * -noclose ......... Don't close network link before executing program
 * -bsu ............. Run as a sidecar app
+
+ Additional options for ARM64
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*  -32 .............. Boot a 32 bit app
+*  -64 .............. Boot a 64 bit app
+*  -nopsci .......... Don't use PSCI to boot app
+
+ Additional notes for ARM64
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A zImage format file implies a 32 bit binary. An Image or gz compressed
+Image implies a 64 bit binary. The zImage/Image loader may override the
+'-32' and '-64' flags, and also automatically select the right 32 or 64
+bit load address, if not specified here. See also BOOT_START_ADDRESS_ZIMAGE
+in the file 'config/A53.cfg'.
+
+The '-nopsci' option will use the old way of jumping to the Linux entry point
+instead of doing it via PSCI. This is only valid for 32 bit apps.
 
 EXAMPLE
 ~~~~~~~
@@ -1853,6 +1886,13 @@ OPTIONS
 * -max=* ........... Specify the maximum number of bytes to load (raw and zImage)
 * -addr=* .......... Specify the load address (hex) (raw and zImage)
 
+ Additional notes for ARM64
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A zImage format file implies a 32 bit binary. An Image or gz compressed
+Image implies a 64 bit binary. The zImage/Image loader may automatically
+select the right 32 or 64 bit boot type, and also the load address - if it's
+not been specified here. See also BOOT_START_ADDRESS_ZIMAGE in the file
+'config/A53.cfg'.
 
 EXAMPLE
 ~~~~~~~
@@ -2261,6 +2301,46 @@ Variable Name        Value
           MEMORYSIZE 3072
           DT_ADDRESS 1000
              DT_SIZE abe
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ psci
+-----
+psci .............. Call PSCI feature using smc
+
+
+SUMMARY
+~~~~~~~
+Call PSCI feature using smc (ARM trap to EL3/monitor mode)
+
+
+USAGE
+~~~~~
+PSCI should be present in memory
+
+
+OPTIONS
+~~~~~~~
+
+* -r0 ............ Function id
+* -r1 ............ Arg1
+* -r2 ............ Arg2
+* -r3 ............ Arg3
+
+
+NOTES
+~~~~~
+The 'psci' command is currently only available on ARM64 based platforms.
+
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> psci -r0=0x84000000
+PSCI result: 0x2
 *** command status = 0
 ----
 
@@ -3724,7 +3804,7 @@ BOLT>
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

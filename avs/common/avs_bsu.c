@@ -236,8 +236,12 @@ void avs_info_print(void)
 			(revision >> 8 & 0xFF),
 			(revision >> 0 & 0xFF)
 		);
-#ifdef AVS_DUAL_MONITORS
+#if defined(AVS_DUAL_MONITORS) || defined(AVS_DUAL_DOMAINS)
+#if (BCHP_CHIP == 3390)
 		xprintf("AVS: DCD: V=%d.%03dV, T=%c%d.%03dC, PV=%d.%03dV, MV=%d.%03dV\n",
+#else
+		xprintf("AVS: CPU: V=%d.%03dV, T=%c%d.%03dC, PV=%d.%03dV, MV=%d.%03dV\n",
+#endif
 			mantissa(results.voltage1), fraction(results.voltage1),
 			sign(results.temperature1),
 			mantissa(results.temperature1),

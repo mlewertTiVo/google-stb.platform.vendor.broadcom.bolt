@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -14,7 +12,7 @@
  *  provides a set of ratios for the external versus the internal resistor sets.
  *  This must be run before setting up the AVS processing.
  *
-***************************************************************************/
+ ***************************************************************************/
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -253,7 +251,7 @@ static void avs_reset_sequencer(void)
 
 #define PVT_MON_CTRL_FOR_RC 0x00000F00
 
-static void avs_resistor_calibration(bool quiet)
+static __optimize_O0 void avs_resistor_calibration(bool quiet)
 {
 	unsigned i;
 	uint32_t reg, result0, result1, external, internal, ratios[6];

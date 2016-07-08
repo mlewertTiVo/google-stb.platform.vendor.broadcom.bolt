@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -22,16 +20,23 @@ uint64_t	arch_get_cpu_pll_hz(void);
 uint64_t	arch_get_cpu_vco_hz(void);
 uint64_t	arch_get_cpu_freq_hz(void);
 uint64_t	arch_get_cpu_min_safe_hz(void);
+uint32_t	arch_get_midr(void);
 int		arch_get_num_processors(void);
 uint64_t	arch_get_scb_freq_hz(void);
+uint64_t	arch_get_sysif_freq_hz(void);
 uint32_t	arch_get_timer_freq_hz(void);
-uint32_t	arch_getticks(void);
-uint64_t	arch_getticks64(void);
 void		arch_mark_uncached(uintptr_t uc, unsigned int size);
 int		arch_mark_executable(uintptr_t addr, unsigned int size,
 			bool executable);
 void		arch_config(void);
 int		arch_pte_type(bool first_level, uint32_t pte);
+void		arch_call_bolt_main(unsigned int new_stack_pointer);
+const char	*arch_get_cpu_bootname(void);
+int		arch_booted64(void);
+
+/* common */
+uint32_t	arch_getticks(void);
+uint64_t	arch_getticks64(void);
 
 enum {
 	CPU_CLK_RATIO_ONE = 0,

@@ -17,6 +17,8 @@
 #include "iocb.h"
 
 int bolt_open(char *name);
+int bolt_gethandle(char *name);
+
 int bolt_close(int handle);
 int bolt_readblk(int handle, bolt_offset_t offset, unsigned char *buffer,
 		int length);

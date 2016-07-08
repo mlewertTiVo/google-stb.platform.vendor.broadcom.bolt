@@ -1,16 +1,11 @@
 /***************************************************************************
- *     Copyright (c) 2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
  *
- * Module Description:
- *  This provides the methods used to load and start the AVS CPU processor.
- *
-***************************************************************************/
+ ***************************************************************************/
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -106,6 +101,10 @@
 static void avs_reset_cpu(void)
 {
 	BDEV_WR_F(AVS_CPU_CTRL_CTRL, AVS_RST, 1);
+#if defined(CONFIG_BCM7268A0) || defined(CONFIG_BCM7271A0)
+	/* FIXME: delay seems be required only for 7268a0 and 7271a0 */
+	avs_sleep(10);
+#endif
 }
 
 /* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
@@ -202,6 +201,11 @@ static void avs_ask_margins(at_initialization *params)
 	   avs_print_val(params->margin_low); */
 	/* avs_print_string("using high=");
 	   avs_print_val(params->margin_high); */
+
+#if (BCHP_CHIP == 7271) || (BCHP_CHIP == 7268)
+	params->cpu_offset =
+	    avs_get_int_number("CPU voltage offset", params->cpu_offset);
+#endif
 }
 
 /* this is debug code and will be optimized out when debug not enabled */
@@ -227,12 +231,28 @@ static void avs_ask_limits(at_initialization *params)
 #define DEFAULT_VMARGIN_LOW  50     /* default low margin in mV */
 #define DEFAULT_VMARGIN_HIGH 100    /* default high margin in mV */
 
-#elif (BCHP_CHIP==7145) || (BCHP_CHIP==3390)
+#elif (BCHP_CHIP == 3390)
 /* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=30mV VmarginH=50mV */
 #define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
 #define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
 #define DEFAULT_VMARGIN_LOW  30     /* default low margin in mV */
 #define DEFAULT_VMARGIN_HIGH 50     /* default high margin in mV */
+
+#elif (BCHP_CHIP == 7271)
+/* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
+#define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
+#define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
+#define DEFAULT_VMARGIN_LOW  20     /* default low margin in mV */
+#define DEFAULT_VMARGIN_HIGH 20     /* default high margin in mV */
+#define DEFAULT_CPU_OFFSET   150    /* default stb to cpu margin in mV*/
+
+#elif (BCHP_CHIP == 7268)
+/* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
+#define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
+#define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
+#define DEFAULT_VMARGIN_LOW  20     /* default low margin in mV */
+#define DEFAULT_VMARGIN_HIGH 20     /* default high margin in mV */
+#define DEFAULT_CPU_OFFSET   150    /* default stb to cpu margin in mV*/
 
 #else
 /* single core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=30mV VmarginH=50mV */
@@ -260,26 +280,18 @@ static void avs_get_default_params(at_initialization *params)
 	params->max_voltage = DEFAULT_MAX_VOLTAGE;
 	params->extra_delay = DEFAULT_EXTRA_DELAY;
 	params->polling_delay = DEFAULT_POLLING_DELAY;
+#if (BCHP_CHIP == 7271) || (BCHP_CHIP == 7268)
+	params->cpu_offset = DEFAULT_CPU_OFFSET;
+#endif
 
-	/* Special case: some parts run at 1.7GHz and need extra margin.
-	 * Use this for anything greater than 1.503GHz */
-	if (get_cpu_freq_mhz() > 1503)
-	{
-		params->margin_low  = 50; /* extra low margin of 50mV */
-		params->margin_high = 100; /* extra high margin of 100mV */
-	}
-
-	if (ENABLE_TEST_PROMPTS) {
-		avs_ask_margins(params);
-		avs_ask_limits(params);
-	}
-
+#if (BCHP_CHIP == 3390)
 #if CFG_BATTERY_BACKUP
 	params->bbu_used = true;	/* using battery backup */
 	params->bbm_flag = !!fsbl_booted_on_battery();
 #else
 	params->bbu_used = false;	/* not using battery backup */
 	params->bbm_flag = false;	/* not in battery backup mode */
+#endif
 #endif
 
 	/* Let firmware know if this is a warm boot due to S3 resume */
@@ -296,11 +308,26 @@ static void avs_get_default_params(at_initialization *params)
 	params->chip_id = BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
 	params->product_id = BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID);
 
+#if (BCHP_CHIP != 7271) && (BCHP_CHIP != 7268)
+	/* Special case: some parts run at 1.7GHz and need extra margin.
+	 * Use this for anything greater than 1.503GHz */
+	if (get_cpu_freq_mhz() > 1503)
+	{
+		params->margin_low  = 50; /* extra low margin of 50mV */
+		params->margin_high = 100; /* extra high margin of 100mV */
+	}
+#endif
+
 	/* Special case for dongle version of the 7250 (72502) */
 	/* Dongle version uses a smaller set of margin values */
 	if ((params->product_id & 0x0FFFFF00) == 0x07250200) {
 		params->margin_low  = 5;
 		params->margin_high = 25;
+	}
+
+	if (ENABLE_TEST_PROMPTS) {
+		avs_ask_margins(params);
+		avs_ask_limits(params);
 	}
 }
 
@@ -369,8 +396,10 @@ static int load_code(void)
 	uint32_t flash_offs = AVS_TEXT_OFFS; /* this is where the firmware
 					      * lives in the flash */
 	unsigned bytes;
-	int code_length = (12 * 1024);
-	int data_length = (3 * 1024) - AVS_RESERVED_SPACE;
+	int code_length = (BCHP_AVS_CPU_PROG_MEM_WORDi_ARRAY_END + 1) *
+		sizeof(uint32_t); /* in bytes */
+	int data_length = (BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_END + 1) *
+		sizeof(uint32_t) - AVS_RESERVED_SPACE; /* in bytes */
 	image_info info;
 
 #define round_up(x) (((x)+3)/4*4)
@@ -485,8 +514,12 @@ static void avs_dump_results(void)
 	avs_print_this(" temperature=", results.temperature0);
 	avs_print_this(" PV=", results.PV0);
 	avs_print_this(" MV=", results.MV0);
-#ifdef AVS_DUAL_MONITORS
+#if defined(AVS_DUAL_MONITORS) || defined(AVS_DUAL_DOMAINS)
+#if (BCHP_CHIP == 3390)
 	avs_print_this("DCD: Current voltage=", results.voltage1);
+#else
+	avs_print_this("CPU: Current voltage=", results.voltage1);
+#endif
 	avs_print_this(" temperature=", results.temperature1);
 	avs_print_this(" PV=", results.PV1);
 	avs_print_this(" MV=", results.MV1);
@@ -727,6 +760,10 @@ int avs_common_start(void)
 	avs_start_firmware(&params);
 
 	result = avs_wait_for_firmware();
+
+	/* enable this to stop everything after AVS starts */
+	if (1 && ENABLE_TEST_PROMPTS)
+		ask_y_or_n("Continue", true);
 
 	if (ENABLE_AVS_LOCK && result == AVS_SUCCESS)
 		avs_lock_avs_cpu();

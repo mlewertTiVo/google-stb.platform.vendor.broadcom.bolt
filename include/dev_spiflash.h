@@ -6,7 +6,7 @@
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
 #ifndef __DEV_SPIFLASH_H__
@@ -39,9 +39,12 @@
 #define SPI_WRDI_CMD			0x04
 #define SPI_RDSR_CMD			0x05
 #define SPI_READ_CMD			0x03
+#define SPI_QREAD_CMD			0x6B
 #define SPI_PP_CMD			0x02
 #define SPI_RCR_CMD			0x35
 #define SPI_SE_CMD			0xd8
+#define SPI_SE_4K_CMD			0x20
+#define SPI_SE_32K_CMD			0x52
 #define SPI_RDID_CMD			0x9f
 #define SPI_RD_SFDP_CMD			0x5a
 
@@ -59,12 +62,6 @@
  */
 #define MACRONIX_SPI_EN4B_CMD		0xb7
 #define MACRONIX_SPI_EX4B_CMD		0xe9
-
-/*
- * ATMEL flash command set
- */
-#define ATMEL_SPI_SE_CMD		0x52
-#define ATMEL_SPI_RDID_CMD		0x15
 
 /*
  * Winbond flash command set (from W25Q256FV Revision H, Feb 11, 2015)
@@ -130,6 +127,7 @@ typedef struct spiflash_probe_t {
 	int flash_page_size;	/* page size for page programming */
 	/* The following are used when manually sectoring */
 	int flash_nsectors;	/* number of ranges */
+	uint32_t flash_max_blocksize;
 } spiflash_probe_t;
 
 /*  *********************************************************************
@@ -142,7 +140,7 @@ typedef struct spiflash_probe_t {
     ********************************************************************* */
 
 typedef struct {
-	uint8_t sector_erase;
+	uint8_t erase_cmd;
 	uint8_t enter_4byte;
 	uint8_t exit_4byte;
 	uint8_t read_br;
@@ -157,6 +155,7 @@ typedef struct {
 	uint32_t total_size;
 	uint32_t sector_size;
 	uint32_t page_size;
+	uint32_t erase_block_size;
 } spi_flash_device_lookup_t;
 
 #endif /* __DEV_SPIFLASH_H__ */

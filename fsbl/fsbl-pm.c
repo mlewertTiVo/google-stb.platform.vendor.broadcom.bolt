@@ -62,6 +62,7 @@ bool fsbl_ack_warm_boot(void)
 			BRCMSTB_S3_MAGIC_SHORT) {
 		return true;
 	}
+	AON_REG(AON_REG_MAGIC_FLAGS) = magic & ~BRCMSTB_S3_MAGIC_MASK;
 	return false;
 }
 
@@ -250,7 +251,7 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 	uintptr_t addr;
 	uint32_t flags;
 	extern uint32_t glitch_addr, glitch_trace;
-	const struct memdma_initparams e = {die, udelay, memset};
+	const struct memdma_initparams e = {die, udelay, memset, NULL};
 
 	/*
 	 * FIXME: once BFW stops making assumptions about AON_REG(0), we can
@@ -269,11 +270,15 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 	memdma_init(&e);
 
 	params = (struct brcmstb_s3_params *)addr;
-	if (verify_s3_params(params, flags))
-		die("S3 params verification failed");
+	if (verify_s3_params(params, flags)) {
+		puts("S3 params verification failed");
+		handle_boot_err(ERR_S3_PARAM_HASH_FAILED);
+	}
 
-	if (verify_s3_memory(params, flags))
-		die("S3 memory verification failed");
+	if (verify_s3_memory(params, flags)) {
+		puts("S3 memory verification failed");
+		handle_boot_err(ERR_S3_DDR_HASH_FAILED);
+	}
 
 	sec_mitch_check();
 

@@ -1,12 +1,10 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
 #ifndef __LOADER_H__
@@ -21,6 +19,8 @@
 #define LOADFLG_BATCH		0x0040	/* batch file */
 #define LOADFLG_SKIPHEAD	0x0080	/* skip BRCM image header (8K) */
 #define LOADFLG_BSU 		0x0100	/* BSU sidecar app */
+#define LOADFLG_APP64		0x0200	/* 64 bit app */
+#define LOADFLG_DIRECT_CALL	0x0400	/* Don't use PSCI etc. */
 
 typedef struct bolt_loadargs_s {
 	const char *la_filename; /* name of file on I/O device */

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -13,23 +11,21 @@
 #include "lib_malloc.h"
 #include "lib_string.h"
 #include "lib_printf.h"
-#include "lib_queue.h"
 #include "common.h"
 
 #include "timer.h"
 #include "ui_command.h"
 #include "env_subr.h"
 
-#include "usbchap9.h"
 #include "usbd.h"
 #include "usbdt.h"
 #include "usb_externs.h"
+#include "usb-brcm-common-init.h"
 
 
 /*  *********************************************************************
     *  Chip specific headers
     ********************************************************************* */
-#include "bchp_usb_ctrl.h"
 #include "bchp_usb_ohci.h"
 #include "bchp_usb_ehci.h"
 
@@ -45,35 +41,6 @@
 #define R_OHCI_CMDSTAT         0x08
 #define R_OHCI_HcRhDescriptorA 0x48
 #define R_OHCI_HcRhDescriptorB 0x4c
-
-
-/*  *********************************************************************
-    *  Chip specific address macros
-    ********************************************************************* */
-#define USB_CTRL_REG(base, reg)	(base + BCHP_USB_CTRL_##reg - \
-		BCHP_USB_CTRL_SETUP)
-
-
-/*  *********************************************************************
-    *  Chip  endian constants
-    ********************************************************************* */
-#if defined(__BIG_ENDIAN)
-#define USB_ENDIAN_CTL (BCHP_USB_CTRL_SETUP_FNHW_MASK)
-#else
-#define USB_ENDIAN_CTL (BCHP_USB_CTRL_SETUP_BABO_MASK | \
-			BCHP_USB_CTRL_SETUP_FNHW_MASK)
-#endif
-
-#define USB_SETUP_MASK \
-	(BCHP_USB_CTRL_SETUP_utmi_pls_en_MASK | \
-	BCHP_USB_CTRL_SETUP_soft_reset_MASK | \
-	BCHP_USB_CTRL_SETUP_IPP_MASK | \
-	BCHP_USB_CTRL_SETUP_IOC_MASK | \
-	BCHP_USB_CTRL_SETUP_WABO_MASK | \
-	BCHP_USB_CTRL_SETUP_FNBO_MASK | \
-	BCHP_USB_CTRL_SETUP_FNHW_MASK | \
-	BCHP_USB_CTRL_SETUP_BABO_MASK)
-
 
 /*
  * We keep track of the pointers to USB buses here.
@@ -253,79 +220,6 @@ static void usb_reset_ehci(uint32_t addr)
 
 
 /*  *********************************************************************
-    *  usb_gen_workarounds()
-    ********************************************************************* */
-static void usb_gen_workarounds(uint32_t base)
-{
-	uint32_t reg;
-
-	/* Disable OHCI transaction combining */
-	reg = DEV_RD(USB_CTRL_REG(base, OBRIDGE));
-	reg &= ~BCHP_USB_CTRL_OBRIDGE_OBR_SEQ_EN_MASK;
-	DEV_WR(USB_CTRL_REG(base, OBRIDGE), reg);
-
-	/* Avoid OUT underflows under heavy a/v processing
-	 Set EHCI bridge FIFO threshold to 256 bytes
-	 */
-	reg = DEV_RD(USB_CTRL_REG(base, EBRIDGE));
-
-	/* Disable EHCI transaction combining */
-	reg &= ~BCHP_USB_CTRL_EBRIDGE_EBR_SEQ_EN_MASK;
-
-	reg &= ~BCHP_USB_CTRL_EBRIDGE_EBR_SCB_SIZE_MASK;
-	reg |= (0x08 << BCHP_USB_CTRL_EBRIDGE_EBR_SCB_SIZE_SHIFT);
-	DEV_WR(USB_CTRL_REG(base, EBRIDGE), reg);
-}
-
-
-/*  *********************************************************************
-    *  usb_platform_init()
-    *
-    *  Initialize the USB chip specific h/w
-    *
-    *  Input parameters:
-    *	base - control register base offset
-    *
-    *  Return value:
-    *	0 if ok
-    *	else error code
-    ********************************************************************* */
-static int usb_platform_init(struct usb_controller *ctl)
-{
-	uint32_t setup, ioc = 0, ipp = 0;
-	uint32_t base = ctl->ctrl_regs;
-
-	usb_gen_workarounds(base); /* per instance */
-
-	/* 'setup' _may_ override things done in
-	usb_gen_workarounds() in the future, so
-	take note! */
-	setup = DEV_RD(USB_CTRL_REG(base, SETUP));
-
-	/*	   0 for positive polarity USB_PWRON,
-		0x20 for negative polarity.
-	*/
-	ipp = ctl->ipp ? BCHP_USB_CTRL_SETUP_IPP_MASK : 0;
-
-	/*	   0 for positive polarity USB_PWRON,
-		0x10 for negative polarity USB_PWRFLT
-	*/
-	ioc = ctl->ioc ? BCHP_USB_CTRL_SETUP_IOC_MASK : 0;
-
-	printf("USB @ 0x%x: IPP is active %s, ", base, (ipp?"low":"high"));
-	printf("IOC is %stive polarity\n", (ioc?"nega":"posi"));
-
-	/* Init power and endian control of setup register
-	*/
-	setup = (setup & ~(USB_SETUP_MASK)) | (ipp | ioc | USB_ENDIAN_CTL);
-
-	DEV_WR(USB_CTRL_REG(base, SETUP), setup);
-
-	return 0;
-}
-
-
-/*  *********************************************************************
     *  usb_exit()
     *
     *  Disable the USB h/w by placing it in reset state
@@ -378,6 +272,11 @@ static int usb_system_init(void)
 	int x;
 	int y;
 	int ehci_enabled = 1, ohci_enabled = 1, bdc_enabled = 1;
+	static const char *ipp_msgs[] = {
+		"active high",
+		"active low",
+		"determined by board strap"
+	};
 
 	if (initdone) {
 		printf("USB has already been initialized.\n");
@@ -400,9 +299,13 @@ static int usb_system_init(void)
 
 		if (usb_clist.ctrls[x].disabled)
 			continue;
-
-		/* Controller init */
-		usb_platform_init(&(usb_clist.ctrls[x]));
+		if (env_getenv("USBDBG")) {
+			printf("USB @ 0x%x: IPP polarity is %s, ", 
+				usb_clist.ctrls[x].ctrl_regs,
+				ipp_msgs[usb_clist.ctrls[x].ipp]);
+			printf("IOC is %stive polarity\n",
+				(usb_clist.ctrls[x].ioc ? "nega" : "posi"));
+		}
 		for (y = 0; y < usb_clist.ctrls[x].port_cnt; y++) {
 			port = &usb_clist.ctrls[x].ports[y];
 
@@ -590,4 +493,53 @@ int usb_init(int usbmode)
 	}
 
 	return 0;
+}
+
+/*  *********************************************************************
+    *  usb_board_init()
+    *
+    *  Chip and board dependent USB initialization
+    *
+    *  Input parameters:
+    *      nothing
+    *
+    *  Return value:
+    *      USBD_NOUSB if USB should not be activated at all
+    *      USBD_ACTIVATED if USB is to be initialized and ready to use
+    *      USBD_ONDEMAND if USB is to be available, but only on command
+    ********************************************************************* */
+int usb_board_init(struct usb_controller_list *clist)
+{
+	int usbmode = CFG_USB_STARTMODE;
+	int usbmode_userchoice;
+	uint32_t __maybe_unused minor_rev;
+	struct brcm_usb_common_init_params params;
+	int x;
+
+	/* Disable XHCI so 3.0 devices will be recognized as 2.0
+	 * devices by BOLT.
+	 */
+	params.has_xhci = 0;
+
+	for (x = 0; x < clist->cnt; x++) {
+		struct usb_controller *ctl = &clist->ctrls[x];
+
+		if (ctl->disabled)
+			continue;
+		params.ctrl_regs = ctl->ctrl_regs;
+		params.device_mode = ctl->device_mode;
+		params.ioc = ctl->ioc;
+		params.ipp = ctl->ipp;
+		brcm_usb_common_init(&params);
+	}
+
+	usbmode_userchoice = env_getval("USBMODE");
+	if (usbmode_userchoice >= 0) {
+		usbmode = usbmode_userchoice;
+		/* always report USBMODE is set. */
+		warn_msg("Override USB start mode %d -> %d",
+			CFG_USB_STARTMODE, usbmode_userchoice);
+	}
+
+	return usbmode;
 }

@@ -1,9 +1,9 @@
 :toc2:
-:toclevels: 2
+:toclevels: 3
 :max-width: 100%
 Environment variables.
 =====================
-Broadcom Corporation <support@broadcom.com>
+Broadcom Ltd <support@broadcom.com>
 
 
  System start
@@ -61,12 +61,12 @@ Starting program at 0x00008000 (DTB @ 0x00001000)
 ...
 ----
 
-The *SYSINIT* environment variable has the effect, if set, of preventing the
-build time *CFG_SYSINIT* command(s) from running. 
+The *SYSINIT* environment variable has the effect, if set and zero,
+of preventing the build time *CFG_SYSINIT* command(s) from running.
 
 .Example
 ----
-BOLT> setenv -p SYSINIT 1
+BOLT> setenv -p SYSINIT 0
 BOLT> reboot
 ----
 
@@ -840,7 +840,8 @@ AUTOBOOT [waitusb -t=0 -d='USB Disk' && batch usbdisk0:sysinit.txt]
 Override the value for USB 'ipp' previously setup at build time. 
 This feature is mainly for debugging USB signal polarity issues
 on customer boards that have not yet been fully described by the
-BOLT configuration script.
+BOLT configuration script. Use 0 for active low, 1 for active high
+and 2 to allow a board strap to control the polarity.
 
 .Example of a build time ipp value
 ----
@@ -977,6 +978,48 @@ If set to any value, disables the OHCI portion of the BOLT USB driver.
 ~~~~~~~
 If set to any value, disables the BDC portion of the BOLT USB driver.
 
+ BDC_VENDEV
+~~~~~~~~~~~
+If BDCOFF is _not_ set and BDC_VENDEV set to any value other than
+0xffffffff (-1), then during startup the USB vendor:device pair the
+BDC driver responds with is changed to the value in BDC_VENDEV.
+
+ BDC_DBG
+~~~~~~~~
+Enable debug of the BDC driver. The option bitmask selects what
+parts of the driver are to be debugged:
+
+|=======================================
+|DBG_CMD        | 0x00000001
+|DBG_BD_QUEUE   | 0x00000002
+|DBG_BD_RING    | 0x00000004
+|DBG_BD_STATS   | 0x00000008
+|DBG_PSC1       | 0x00000010
+|DBG_PSC2       | 0x00000020
+|DBG_CTL_STATE  | 0x00000040
+|DBG_CTL_DATA   | 0x00000080
+|DBG_CTL_SETUP  | 0x00000100
+|DBG_CTL_IN     | 0x00000200
+|DBG_CTL_OUT    | 0x00000400
+|DBG_CTL_STATUS | 0x00000800
+|DBG_BULK_IN    | 0x00001000
+|DBG_BULK_IN2   | 0x00002000
+|DBG_BULK_OUT   | 0x00004000
+|DBG_BULK_OUT2  | 0x00008000
+|DBG_EVENT1     | 0x00010000
+|DBG_EVENT2     | 0x00020000
+|DBG_EVENT3     | 0x00040000
+|DBG_EVENT4     | 0x00080000
+|DBG_INIT1      | 0x00100000
+|DBG_INIT2      | 0x00200000
+|DBG_GEN1       | 0x01000000
+|DBG_GEN2       | 0x02000000
+|DBG_GEN3       | 0x04000000
+|DBG_DB         | 0x08000000
+|DBG_LPBK_MODE  | 0x40000000
+|DBG_FUNC_TRACE | 0x80000000
+|=======================================
+
  USBDBG
 ~~~~~~~
 If set to any value, enable USB initialization debug ouput.
@@ -1036,6 +1079,6 @@ unsetenv  USBMOUSETEST
  Appendix: Copyright Info
 -------------------------
 
-Copyright (C) 2015-2016, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.

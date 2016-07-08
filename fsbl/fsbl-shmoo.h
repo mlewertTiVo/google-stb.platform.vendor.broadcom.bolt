@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -103,6 +101,37 @@ static const struct memsys_params __maybe_unused shmoo_params[] = {
 	SHMOO_PARAMS(2),
 #endif
 };
+
+
+#elif defined(BCHP_DDR34_PHY_CONTROL_REGS_A_0_REG_START)
+
+#include <bchp_ddr34_phy_common_regs_0.h>
+#include <bchp_ddr34_phy_control_regs_a_0.h>
+#include <bchp_memc_edis_0_0.h>
+#include <bchp_memc_gen_0.h>
+#include <bchp_shimphy_addr_cntl_0.h>
+
+#define MEMC(n) 	BCHP_MEMC_GEN_##n##_CORE_REV_ID
+#define DDR_PHY(n)	BCHP_DDR34_PHY_COMMON_REGS_##n##_PRIMARY_REVISION
+#define SHIM_PHY(n)	BCHP_SHIMPHY_ADDR_CNTL_##n##_CONFIG
+#define MEMC_EDIS(n)	BCHP_MEMC_EDIS_##n##_0_REV_ID
+
+#define SHMOO_PARAMS(n) { \
+	.memc_reg_base	= BCHP_PHYSICAL_OFFSET + MEMC(n), \
+	.phy_reg_base	= BCHP_PHYSICAL_OFFSET + DDR_PHY(n), \
+	.shim_reg_base	= BCHP_PHYSICAL_OFFSET + SHIM_PHY(n), \
+	.edis_reg_base	= BCHP_PHYSICAL_OFFSET + MEMC_EDIS(n), \
+}
+
+#define EDIS_NPHY	0x2 /* FIXME: should snoop from RDB on config */
+#define EDIS_OFFS	BCHP_MEMC_EDIS_0_1_REG_START - \
+			BCHP_MEMC_EDIS_0_0_REG_START
+
+static const struct memsys_params __maybe_unused shmoo_params[] = {
+	SHMOO_PARAMS(0),
+};
+/* ------------------------------------- */
+
 
 #else /* TBD: Other DDR controller types. */
 

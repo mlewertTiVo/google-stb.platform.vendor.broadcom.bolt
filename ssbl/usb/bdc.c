@@ -441,6 +441,8 @@ static void bdc_ring_db(bdc_softc *softc, int db)
 {
 	uint32_t val;
 
+	/* Make sure DMA information is flushed to memory */
+	dmb();
 	val = V_XSFNTF_EPN(db);
 	BDC_WRITECSR(softc, R_BDC_XSFNTF, val);
 	if (softc->debug & DBG_DB) {

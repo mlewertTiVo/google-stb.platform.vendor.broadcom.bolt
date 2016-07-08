@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -72,7 +70,14 @@ struct flash_write_s {
  * These are the default values to use in case we couldn't detect the flash type
  */
 #define DEFAULT_SPI_FLASH_SIZE			(16*1024*1024)
-#define DEFAULT_FLASH_SPI_SECTOR_SIZE		(64*1024)
+
+#if(CFG_SPI_ERASE_SIZE == 4 || CFG_SPI_ERASE_SIZE == 32 || \
+	CFG_SPI_ERASE_SIZE == 64)
+#define DEFAULT_SPI_ERASE_SIZE_KB	((uint32_t)_KB(CFG_SPI_ERASE_SIZE))
+#else
+#define DEFAULT_SPI_ERASE_SIZE_KB	((uint32_t)_KB(64))
+#endif
+
 #define DEFAULT_FLASH_SPI_MAX_PAGE_SIZE		(256)
 #define DEFAULT_OPCODE_TABLE			spansion_opcodes
 
@@ -136,7 +141,6 @@ const bolt_driver_t spiflashdrv = {
     *  flash opcodes
     ********************************************************************* */
 static spi_flash_op_codes_t spansion_opcodes = {
-	.sector_erase	= SPI_SE_CMD,
 	.enter_4byte	= SPANSION_SPI_EN4B_CMD,
 	.exit_4byte	= SPANSION_SPI_EX4B_CMD,
 	.read_br	= SPANSION_SPI_BRRD_CMD,
@@ -144,17 +148,11 @@ static spi_flash_op_codes_t spansion_opcodes = {
 };
 
 static spi_flash_op_codes_t macronix_opcodes = {
-	.sector_erase	= SPI_SE_CMD, /* 64KB block erase in Macronix term */
 	.enter_4byte	= MACRONIX_SPI_EN4B_CMD,
 	.exit_4byte	= MACRONIX_SPI_EX4B_CMD,
 };
 
-static spi_flash_op_codes_t atmel_opcodes = {
-	.sector_erase	= ATMEL_SPI_SE_CMD,
-};
-
 static spi_flash_op_codes_t winbond_opcodes = {
-	.sector_erase	= SPI_SE_CMD, /* 64KB block erase in Winbond term */
 	.enter_4byte	= WINBOND_SPI_EN4B_CMD,
 	.exit_4byte	= WINBOND_SPI_EX4B_CMD,
 };
@@ -163,27 +161,27 @@ static spi_flash_op_codes_t *spi_flash_op_tbl;
 
 static spi_flash_device_lookup_t spi_id_table[] = {
 	/* ID, ID len, total_size, sector_size, page_size */
-	{ {0xc2, 0x20, 0x13},             3, _KB(512),  _KB(64), 256 },
-	{ {0xc2, 0x20, 0x14},             3, _MB(1),    _KB(64), 256 },
-	{ {0xc2, 0x20, 0x16},             3, _MB(4),    _KB(64), 256 },
-	{ {0xc2, 0x20, 0x18},             3, _MB(16),   _KB(64), 256 },
-	{ {0xc2, 0x20, 0x19},             3, _MB(32),   _KB(64), 256 },
-	{ {0xc2, 0x25, 0x33},             3, _KB(512),  _KB(64), 256 },
-	{ {0xc2, 0x25, 0x34},             3, _MB(1),    _KB(64), 256 },
-	{ {0xc2, 0x9e, 0x16},             3, _MB(4),    _KB(64), 256 },
+	{ {0xc2, 0x20, 0x13},             3, _KB(512),  _KB(64), 256, _KB(64) },
+	{ {0xc2, 0x20, 0x14},             3, _MB(1),    _KB(64), 256, _KB(64) },
+	{ {0xc2, 0x20, 0x16},             3, _MB(4),    _KB(64), 256, _KB(64) },
+	{ {0xc2, 0x20, 0x18},             3, _MB(16),   _KB(64), 256, _KB(64) },
+	{ {0xc2, 0x20, 0x19},             3, _MB(32),   _KB(64), 256, _KB(64) },
+	{ {0xc2, 0x25, 0x33},             3, _KB(512),  _KB(64), 256, _KB(64) },
+	{ {0xc2, 0x25, 0x34},             3, _MB(1),    _KB(64), 256, _KB(64) },
+	{ {0xc2, 0x9e, 0x16},             3, _MB(4),    _KB(64), 256, _KB(64) },
+	{ {0x01, 0x02, 0x14},             3, _MB(2),    _KB(64), 256, _KB(64) },
 
-	{ {0x01, 0x02, 0x14},             3, _MB(2),    _KB(64), 256 },
-	{ {0x01, 0x02, 0x15},             3, _MB(4),    _KB(64), 256 },
-	{ {0x01, 0x02, 0x16},             3, _MB(8),    _KB(64), 256 },
-	{ {0x01, 0x02, 0x19, 0x4d, 0x00}, 5, _MB(32),  _KB(256), 256 },
-	{ {0x01, 0x02, 0x19},             3, _MB(32),   _KB(64), 256 },
-	{ {0x01, 0x02, 0x18, 0x03, 0x00}, 5, _MB(16),  _KB(256), 256 },
-	{ {0x01, 0x02, 0x18, 0x4d, 0x00}, 5, _MB(16),  _KB(256), 256 },
-	{ {0x01, 0x20, 0x18},             3, _MB(16),   _KB(64), 256 },
+	{ {0x01, 0x02, 0x15},             3, _MB(4),    _KB(64), 256, _KB(64) },
+	{ {0x01, 0x02, 0x16},             3, _MB(8),    _KB(64), 256, _KB(64) },
+	{ {0x01, 0x02, 0x19, 0x4d, 0x00}, 5, _MB(32),  _KB(256), 256, _KB(64) },
+	{ {0x01, 0x02, 0x19},             3, _MB(32),   _KB(64), 256, _KB(64) },
+	{ {0x01, 0x02, 0x18, 0x03, 0x00}, 5, _MB(16),  _KB(256), 256, _KB(64) },
+	{ {0x01, 0x02, 0x18, 0x4d, 0x00}, 5, _MB(16),  _KB(256), 256, _KB(64) },
+	{ {0x01, 0x20, 0x18},             3, _MB(16),   _KB(64), 256, _KB(64) },
 
-	{ {0x1f, 0x63},	                  2, _KB(256),  _KB(64), 256 },
-	{ {0x1f, 0x26},                   2, _MB(2),   _KB(128), 512 },
-	{ {},                             0, 0,         0,       0 },
+	{ {0x1f, 0x63},			  2, _KB(256),  _KB(64), 256, _KB(64) },
+	{ {0x1f, 0x26},                   2, _MB(2),   _KB(128), 512, _KB(64) },
+	{ {},                             0, 0,         0,       0,    0 },
 };
 
 struct sfdp_header {
@@ -277,6 +275,23 @@ static int spi_op_execute(struct spidev *softc)
 	return 0;
 }
 
+static void spi_set_erase_cmd(spi_flash_op_codes_t *spi_opcode_table,
+			      uint32_t erase_block_size)
+{
+	switch (erase_block_size) {
+	case _KB(4):
+		spi_opcode_table->erase_cmd = SPI_SE_4K_CMD;
+		break;
+	case _KB(32):
+		spi_opcode_table->erase_cmd = SPI_SE_32K_CMD;
+		break;
+	default:
+		/* 64K block erase cmd */
+		spi_opcode_table->erase_cmd = SPI_SE_CMD;
+		break;
+	}
+}
+
 static void bspi_set_4byte_addressing(bool enabled)
 {
 	BDEV_WR_F(BSPI_STRAP_OVERRIDE_CTRL, addr_4byte_n_3byte, !!enabled);
@@ -302,7 +317,6 @@ static int spi_set_4byte_addressing(bool enabled)
 	return 1;
 }
 
-#if CFG_SPI_QUAD_MODE
 static void bspi_set_quad_mode(void)
 {
 	/* set the BSPI STRAP_OVERRIDE to do quad io */
@@ -310,15 +324,29 @@ static void bspi_set_quad_mode(void)
 	BDEV_WR_F(BSPI_STRAP_OVERRIDE_CTRL, data_quad, 1);
 }
 
-static void mspi_set_spansion_quad_mode(void)
+static void mspi_set_spansion_quad_mode(const bool enable)
 {
 	uint8_t tx_buf[4];
 	uint8_t cfg_reg, sts_reg;
+	static const uint8_t SPANSION_CR1_QUAD_BIT = 1 << 1;
+	bool is_already_enabled;
 
 	/* RCR */
 	tx_buf[0] = SPI_RCR_CMD;
 	mspi_read_flash_data(tx_buf, 1, &cfg_reg, 1);
-	cfg_reg |= 0x2;
+
+	/* No action is required if the current state of the device
+	 * already matches the request.
+	 */
+	is_already_enabled = cfg_reg & SPANSION_CR1_QUAD_BIT;
+	if (enable == is_already_enabled)
+		return;
+
+	if (enable)
+		cfg_reg |= SPANSION_CR1_QUAD_BIT;
+	else
+		cfg_reg &= ~SPANSION_CR1_QUAD_BIT;
+
 	/* WREN */
 	tx_buf[0] = SPI_WREN_CMD;
 	mspi_read_flash_data(tx_buf, 1, NULL, 0);
@@ -335,21 +363,35 @@ static void mspi_set_spansion_quad_mode(void)
 	} while (sts_reg & 1);
 }
 
-static void mspi_set_macronix_quad_mode(void)
+static void mspi_set_macronix_quad_mode(const bool enable)
 {
 	uint8_t tx_buf[4];
-	uint8_t cfg_reg, sts_reg;
+	uint8_t sts_reg;
+	static const uint8_t MACRONIX_SR_QE_BIT = 1 << 6;
+	bool is_already_enabled;
 
 	/* RDSR */
 	tx_buf[0] = SPI_RDSR_CMD;
-	mspi_read_flash_data(tx_buf, 1, &cfg_reg, 1);
-	cfg_reg |= 0x40;
+	mspi_read_flash_data(tx_buf, 1, &sts_reg, 1);
+
+	/* No action is required if the current state of the device
+	 * already matches the request.
+	 */
+	is_already_enabled = sts_reg & MACRONIX_SR_QE_BIT;
+	if (enable == is_already_enabled)
+		return;
+
+	if (enable)
+		sts_reg |= MACRONIX_SR_QE_BIT;
+	else
+		sts_reg &= ~MACRONIX_SR_QE_BIT;
+
 	/* WREN */
 	tx_buf[0] = SPI_WREN_CMD;
 	mspi_read_flash_data(tx_buf, 1, NULL, 0);
 	/* WRSR */
 	tx_buf[0] = SPI_WRSR_CMD;
-	tx_buf[1] = cfg_reg; /* status register */
+	tx_buf[1] = sts_reg; /* status register */
 	mspi_read_flash_data(tx_buf, 2, NULL, 0);
 	/* wait till ready */
 	do {
@@ -357,49 +399,45 @@ static void mspi_set_macronix_quad_mode(void)
 		mspi_read_flash_data(tx_buf, 1, &sts_reg, 1);
 		bspi_busy_poll();
 	} while (sts_reg & 1);
-	/* RDSR */
-	tx_buf[0] = SPI_RDSR_CMD;
-	mspi_read_flash_data(tx_buf, 1, &cfg_reg, 1);
 }
 
-static int mspi_set_quad_mode(struct spidev *softc)
+static int mspi_set_quad_mode(struct spidev *softc, const bool enable)
 {
 
 	switch (softc->mfr_id) {
 	case SPANSION_ID:
-		mspi_set_spansion_quad_mode();
+		mspi_set_spansion_quad_mode(enable);
 		break;
 
 	case MACRONIX_ID:
-		mspi_set_macronix_quad_mode();
+		mspi_set_macronix_quad_mode(enable);
 		break;
 
 	/* known part ids not needing any custom cmds to set quad lane io */
 	case MICRON_ID:
-	case ATMEL_ID:
 	case SST_ID:
 	case NUMONYX_ID:
 	case WINBOND_ID:
 		break;
 
 	default:
-		xprintf("spi: quad mode io disabled\n");
+		if (enable)
+			xprintf("spi: quad mode io disabled\n");
 		return -1;
 	}
 
 	return 0;
 }
 
-static void spi_set_quad_mode(struct spidev *softc)
+static void spi_set_quad_mode(struct spidev *softc, const bool enable)
 {
 	int ret;
 
-	ret = mspi_set_quad_mode(softc);
+	ret = mspi_set_quad_mode(softc, enable);
 
-	if (ret == 0)
+	if (ret == 0 && enable)
 		bspi_set_quad_mode();
 }
-#endif
 
 /*  *********************************************************************
     *  spi_erase_range(softc,range)
@@ -555,7 +593,8 @@ static int spi_lookup_device_type(struct spidev *softc,
 		if (match) {
 			/* Found it */
 			softc->flash.size = table->total_size;
-			softc->flash.blocksize = table->sector_size;
+			softc->fd_probe.flash_max_blocksize = table->sector_size;
+			softc->flash.blocksize = table->erase_block_size;
 			softc->fd_probe.flash_page_size = table->page_size;
 
 			softc->type = SPI_IDENT_ID;
@@ -613,7 +652,7 @@ static int spi_sfdp_probe(struct spidev *softc)
 	tmp = 0;
 	for (i = 0; i < ARRAY_SIZE(sfdp_param.sector_types); i++)
 		tmp = max(sfdp_param.sector_types[i].size, tmp);
-	softc->flash.blocksize = 1 << tmp;
+	softc->fd_probe.flash_max_blocksize = 1 << tmp;
 
 	/* Assume page size is 256B - not specified in SFDP 1.0 */
 	softc->fd_probe.flash_page_size = DEFAULT_FLASH_SPI_MAX_PAGE_SIZE;
@@ -649,8 +688,7 @@ static int spi_cfi_probe(struct spidev *softc)
 			/* Does the sector size divide evenly? */
 			if (sector_size == 0 || softc->flash.size % sector_size)
 				return -1;
-			softc->flash.blocksize = sector_size;
-
+			softc->fd_probe.flash_max_blocksize = sector_size;
 			softc->type = SPI_IDENT_CFI;
 
 			return 0;
@@ -699,6 +737,11 @@ static int spi_probe_device(struct spidev *softc)
 	uint8_t cmd;
 	uint8_t id[SPI_MAX_RDID_LEN];
 	const char *ident_string;
+#if CFG_SPI_QUAD_MODE
+	const bool whether_enable_quad = true;
+#else
+	const bool whether_enable_quad = false;
+#endif
 
 	cmd = SPI_RDID_CMD;
 	mspi_read_flash_data(&cmd, 1, id, sizeof(id));
@@ -709,11 +752,18 @@ static int spi_probe_device(struct spidev *softc)
 		if (spi_lookup_device_type(softc, spi_id_table, id) == 0) {
 			warn_msg("Flash type not found, using defaults!");
 			softc->flash.size = DEFAULT_SPI_FLASH_SIZE;
-			softc->flash.blocksize = DEFAULT_FLASH_SPI_SECTOR_SIZE;
+			softc->fd_probe.flash_max_blocksize = DEFAULT_SPI_ERASE_SIZE_KB;
 			softc->fd_probe.flash_page_size =
 				DEFAULT_FLASH_SPI_MAX_PAGE_SIZE;
 		}
 	}
+
+	/*
+	   set a valid erase block size based on the config and the probed
+	   vendor spi-nor max sector/block size
+	*/
+	softc->flash.blocksize = min(DEFAULT_SPI_ERASE_SIZE_KB,
+				     softc->fd_probe.flash_max_blocksize);
 
 	/* Assign command set */
 	switch (softc->mfr_id) {
@@ -724,9 +774,6 @@ static int spi_probe_device(struct spidev *softc)
 	case MICRON_ID:
 		spi_flash_op_tbl = &macronix_opcodes;
 		break;
-	case ATMEL_ID:
-		spi_flash_op_tbl = &atmel_opcodes;
-		break;
 	case WINBOND_ID:
 		spi_flash_op_tbl = &winbond_opcodes;
 		break;
@@ -735,9 +782,10 @@ static int spi_probe_device(struct spidev *softc)
 		break;
 	}
 
-#if CFG_SPI_QUAD_MODE
-	spi_set_quad_mode(softc);
-#endif
+	spi_set_quad_mode(softc, whether_enable_quad);
+
+	/* set the erase command based on the erase block size */
+	spi_set_erase_cmd(spi_flash_op_tbl, softc->flash.blocksize);
 
 	if (softc->flash.size > 0x01000000) {
 		/* Size >= 32MB requires 32-bit addressing */
@@ -757,9 +805,10 @@ static int spi_probe_device(struct spidev *softc)
 		break;
 	}
 
-	printf("CS0:%s SPI, %dMB, %dkB blocks, %uB pages\n",
+	printf("CS0:%s SPI, %dMB, %dkB blocks, %dkB erase block, %uB pages\n",
 	       ident_string,
 	       (int)softc->flash.size / (1024 * 1024),
+	       softc->fd_probe.flash_max_blocksize / 1024,
 	       softc->flash.blocksize / 1024,
 	       softc->fd_probe.flash_page_size);
 
@@ -828,7 +877,6 @@ static void spidrv_probe(bolt_driver_t *drv, unsigned long probe_a,
 		return;
 	}
 
-	/* 64KB is the size of the block */
 	softc->fd_sectorbuffer =
 		(unsigned char *)KMALLOC(softc->flash.blocksize, 4);
 
@@ -1117,6 +1165,7 @@ static int spidrv_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		info->flash_size = softc->flash.size;
 		info->type = softc->flash.type;
 		info->flags = FLASH_FLAG_NOERASE;
+		info->page_size = softc->fd_probe.flash_page_size;
 		return 0;
 
 	case IOCTL_FLASH_GETPARTINFO:
@@ -1535,7 +1584,7 @@ static int mspi_sector_erase(unsigned int offset, int fourb_enabled)
 	if (mspi_enable_write() != 1)
 		goto done;
 
-	cmd[cmd_len++] = spi_flash_op_tbl->sector_erase;
+	cmd[cmd_len++] = spi_flash_op_tbl->erase_cmd;
 
 	cmd_len += spi_fill_addr_buff((uint8_t *)cmd + cmd_len, offset,
 				      fourb_enabled);

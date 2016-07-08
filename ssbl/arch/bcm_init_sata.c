@@ -19,7 +19,7 @@ void board_init_sata(void)
 #ifdef OTP_OPTION_SATA_DISABLE
 	if (!OTP_OPTION_SATA_DISABLE())
 #endif
-		for (port = 0; port < 2; port++)
+		for (port = 0; port < NUM_SATA; port++)
 			bolt_add_device(&satadrv, port, 0, 0);
 #endif
 }

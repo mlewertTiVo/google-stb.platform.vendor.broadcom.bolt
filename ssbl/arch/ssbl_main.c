@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -243,6 +241,43 @@ static void set_ssbl_page(uint32_t *pt_1st, uint32_t _fdata)
 	arch_mark_executable(SSBL_RAM_ADDR, _fdata-SSBL_RAM_ADDR, true);
 }
 
+
+#ifdef STUB64_START /* aarch64/smm(smc) & PSCI32 support */
+
+/* Use the pre-processor to stringify the name
+*/
+#define _SMM_VAR(odir, modname) _binary_ ## odir ## _smm_64_bin_ ## modname
+#define SMM_VAR(odir, modname) _SMM_VAR(odir, modname)
+
+extern unsigned char SMM_VAR(ODIR, start);
+extern unsigned char SMM_VAR(ODIR, size);
+
+#define _PSCI32_VAR(odir, modname) _binary_ ## odir ## _psci32_bin_ ## modname
+#define PSCI32_VAR(odir, modname) _PSCI32_VAR(odir, modname)
+
+extern unsigned char PSCI32_VAR(ODIR, start);
+extern unsigned char PSCI32_VAR(ODIR, size);
+
+static void install_smm64(void)
+{
+	__puts("smm64@");
+
+	memcpy((uint8_t *)PSCI_BASE,
+		(uint8_t *)&SMM_VAR(ODIR, start),
+		(uint32_t)&SMM_VAR(ODIR, size));
+}
+
+static void install_smm32(void)
+{
+	__puts("psci32@");
+
+	memcpy((uint8_t *)PSCI_BASE,
+		(uint8_t *)&PSCI32_VAR(ODIR, start),
+		(uint32_t)&PSCI32_VAR(ODIR, size));
+}
+#endif /* STUB64_START */
+
+
 /* ssbl_main -- C entry point of SSBL, called from ssbl_init
  *
  * Parameters:
@@ -265,14 +300,36 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 
 	__noisy_flush_caches();
 
-	__puts("MMU ");
 	pt_1st = (uint32_t *)get_pagetable_location();
 	supplement_fsbl_pagetable(pt_1st);
 	/* The whole DDR area was marked XN by FSBL, or assured by
 	 * supplement_fsbl_pagetable().
 	 */
+#ifdef STUB64_START
+	__puts("CLR PSCI MEM @ ");
+	writehex(PSCI_BASE);
+	memset((void *)PSCI_BASE, 0, PSCI_SIZE);
+	puts(" OK");
+
+	__puts("INSTALL ");
+	if (arch_booted64())
+		install_smm64();
+	else
+		install_smm32();
+
+	writehex(PSCI_BASE);
+
+	/* TBD: 2nd level 4KiB Table */
+	arch_mark_executable(PSCI_BASE, SECTION_SIZE, true);
+	arch_mark_uncached(PSCI_BASE,  SECTION_SIZE);
+	puts(" OK");
+
+	dsb(); /* make sure its there before we call it */
+#endif
 	arch_mark_executable(SRAM_ADDR, SRAM_LEN, false);
 	set_ssbl_page(pt_1st, _fdata);
+
+	__puts("MMU ");
 	enable_caches();
 	puts("ON");
 
@@ -295,7 +352,6 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	case -fstack-protector-all is used. */
 	*((uint32_t *)(sp + sizeof(uint32_t))) = SSBL_STACK_CHECK_VAL;
 #endif
-	__setstack(sp);
 	mem_topofmem = sp;
 	writehex(sp);
 	puts("");
@@ -351,5 +407,11 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	puts(" OK");
 
 	puts("GO!");
-	bolt_main(0, 0);
+	
+	/* SWBOLT-1757: The compiler may choose to put its
+	 * parameters on the stack so we set SP last, just
+	 * before we call ssbl_main() or else _fbss, _ebss
+	 * etc. disappear.
+	 */
+	arch_call_bolt_main(sp);
 }

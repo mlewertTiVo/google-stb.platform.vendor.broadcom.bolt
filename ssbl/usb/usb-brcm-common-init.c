@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Broadcom Corporation
+ * Copyright (C) 2014-2016 Broadcom Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -143,6 +143,95 @@ static void usb3_pll_fix(uintptr_t ctrl_base)
 }
 
 
+static void usb3_enable_pipe_reset(uintptr_t ctrl_base)
+{
+	uint32_t val;
+
+	/* Re-enable USB 3.0 pipe reset */
+	usb_mdio_write(ctrl_base, 0x1f, 0x8000, MDIO_USB3);
+	val = usb_mdio_read(ctrl_base, 0x0f, MDIO_USB3) | 0x200;
+	usb_mdio_write(ctrl_base, 0x0f, val, MDIO_USB3);
+}
+
+
+static void usb3_enable_sigdet(uintptr_t ctrl_base)
+{
+	uint32_t val, ofs;
+	int ii;
+
+	ofs = 0;
+	for (ii = 0; ii < 2; ++ii) {
+		/* Set correct default for sigdet */
+		usb_mdio_write(ctrl_base, 0x1f, (0x8080 + ofs), MDIO_USB3);
+		val = usb_mdio_read(ctrl_base, 0x05, MDIO_USB3);
+		val = (val & ~0x800f) | 0x800d;
+		usb_mdio_write(ctrl_base, 0x05, val, MDIO_USB3);
+		ofs = 0x1000;
+	}
+}
+
+
+static void usb3_enable_skip_align(uintptr_t ctrl_base)
+{
+	uint32_t val, ofs;
+	int ii;
+
+	ofs = 0;
+	for (ii = 0; ii < 2; ++ii) {
+		/* Set correct default for SKIP align */
+		usb_mdio_write(ctrl_base, 0x1f, (0x8060 + ofs), MDIO_USB3);
+		val = usb_mdio_read(ctrl_base, 0x01, MDIO_USB3) | 0x200;
+		usb_mdio_write(ctrl_base, 0x01, val, MDIO_USB3);
+		ofs = 0x1000;
+	}
+}
+
+
+static void usb3_pll_54Mhz(uintptr_t ctrl_base)
+{
+#if defined(CONFIG_BCM7271A0) || defined(CONFIG_BCM7268A0)
+	/*
+	 * On the 7271a0 and 7268a0, the reference clock for the
+	 * 3.0 PLL has been changed from 50MHz to 54MHz so the
+	 * PLL needs to be reprogramed. Later chips will have
+	 * the PLL programmed correctly on power-up.
+	 * See SWLINUX-4006.
+	 */
+	uint32_t ofs;
+	int ii;
+
+	/* set USB 3.0 PLL to accept 54Mhz reference clock */
+	USB_CTRL_UNSET(ctrl_base, USB30_CTL1, phy3_pll_seq_start);
+
+	usb_mdio_write(ctrl_base, 0x1f, 0x8000, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x10, 0x5784, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x11, 0x01d0, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x12, 0x1DE8, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x13, 0xAA80, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x14, 0x8826, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x15, 0x0044, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x16, 0x8000, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x17, 0x0851, MDIO_USB3);
+	usb_mdio_write(ctrl_base, 0x18, 0x0000, MDIO_USB3);
+
+	/* both ports */
+	ofs = 0;
+	for (ii = 0; ii < 2; ++ii) {
+		usb_mdio_write(ctrl_base, 0x1f, (0x8040 + ofs), MDIO_USB3);
+		usb_mdio_write(ctrl_base, 0x03, 0x0090, MDIO_USB3);
+		usb_mdio_write(ctrl_base, 0x04, 0x0134, MDIO_USB3);
+		usb_mdio_write(ctrl_base, 0x1f, (0x8020 + ofs), MDIO_USB3);
+		usb_mdio_write(ctrl_base, 0x01, 0x00e2, MDIO_USB3);
+		ofs = 0x1000;
+	}
+
+	/* restart  PLL sequence */
+	USB_CTRL_SET(ctrl_base, USB30_CTL1, phy3_pll_seq_start);
+	msleep(1);
+#endif
+}
+
+
 static void usb3_ssc_enable(uintptr_t ctrl_base)
 {
 	uint32_t val;
@@ -162,9 +251,20 @@ static void usb3_ssc_enable(uintptr_t ctrl_base)
 }
 
 
+static void usb3_phy_workarounds(uintptr_t ctrl_base)
+{
+	usb3_pll_fix(ctrl_base);
+	usb3_pll_54Mhz(ctrl_base);
+	usb3_ssc_enable(ctrl_base);
+	usb3_enable_pipe_reset(ctrl_base);
+	usb3_enable_sigdet(ctrl_base);
+	usb3_enable_skip_align(ctrl_base);
+}
+
+
 static void memc_fix(uintptr_t ctrl_base)
 {
-#if defined(CONFIG_BCM7445D0)
+#if defined(CONFIG_BCM7445D0) || defined(CONFIG_BCM7445E0)
 	/*
 	 * This is a workaround for HW7445-1869 where a DMA write ends up
 	 * doing a read pre-fetch after the end of the DMA buffer. This
@@ -243,6 +343,7 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 {
 	uint32_t reg;
 	uintptr_t ctrl = params->ctrl_regs;
+	int change_ipp = 0;
 
 	xhci_soft_reset(ctrl, 1);
 #if defined(CONFIG_BCM7366)
@@ -274,6 +375,11 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	/* 1 millisecond - for USB clocks to settle down */
 	msleep(1);
 #endif
+#if defined(BCHP_USB_CTRL_USB_PM_soft_reset_MASK)
+	/* 7271a0. */
+	USB_CTRL_UNSET(ctrl, USB_PM, soft_reset);
+	msleep(1);
+#endif
 
 #if defined(BCHP_USB_CTRL_USB30_CTL1_usb3_ipp_MASK)
 	/* Starting with the 7445d0, there are no longer separate 3.0
@@ -281,7 +387,7 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	 */
 	if (params->ioc)
 		USB_CTRL_SET(ctrl, USB30_CTL1, usb3_ioc);
-	if (params->ipp)
+	if (params->ipp == 1)
 		USB_CTRL_SET(ctrl, USB30_CTL1, usb3_ipp);
 #endif
 
@@ -303,12 +409,10 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	/* Block auto PLL suspend by USB2 PHY */
 	USB_CTRL_SET(ctrl, PLL_CTL, PLL_SUSPEND_EN);
 
-	usb2_eye_fix(ctrl);
 	usb_phy_ldo_fix(ctrl);
-	if (params->has_xhci) {
-		usb3_pll_fix(ctrl);
-		usb3_ssc_enable(ctrl);
-	}
+	usb2_eye_fix(ctrl);
+	if (params->has_xhci)
+		usb3_phy_workarounds(ctrl);
 
 	/* Setup the endian bits */
 	reg = DEV_RD(USB_CTRL_REG(ctrl, SETUP));
@@ -322,23 +426,36 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 #endif
 
 #if defined(BCHP_USB_CTRL_SETUP_strap_ipp_sel_MASK)
-	/* override ipp strap pin (if it exits) */
-	reg &= ~(USB_CTRL_MASK(SETUP, strap_ipp_sel));
+	if (params->ipp != 2)
+		/* override ipp strap pin (if it exists) */
+		reg &= ~(USB_CTRL_MASK(SETUP, strap_ipp_sel));
 #endif
 	/*
 	 * Make sure the the second and third memory controller
-	 * interfaces are enabled.
+	 * interfaces are enabled, if they exist.
 	 */
-	reg |= (USB_CTRL_MASK(SETUP, scb1_en) |
-		USB_CTRL_MASK(SETUP, scb2_en));
+#if defined(BCHP_USB_CTRL_SETUP_scb1_en_MASK)
+	reg |= USB_CTRL_MASK(SETUP, scb1_en);
+#endif
+#if defined(BCHP_USB_CTRL_SETUP_scb2_en_MASK)
+	reg |= USB_CTRL_MASK(SETUP, scb2_en);
+#endif
 
 	/* Override the default OC and PP polarity */
 	if (params->ioc)
 		reg |= USB_CTRL_MASK(SETUP, IOC);
-	if (params->ipp)
+	if ((params->ipp == 1) && ((reg & USB_CTRL_MASK(SETUP, IPP)) == 0)) {
+		change_ipp = 1;
 		reg |= USB_CTRL_MASK(SETUP, IPP);
+	}
 	DEV_WR(USB_CTRL_REG(ctrl, SETUP), reg);
 
+	/*
+	 * If we're changing IPP, make sure power is off long enough
+	 * to turn off any connected devices.
+	 */
+	if (change_ipp)
+		msleep(50);
 	memc_fix(ctrl);
 	if (params->has_xhci) {
 		xhci_soft_reset(ctrl, 0);

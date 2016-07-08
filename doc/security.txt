@@ -5,7 +5,7 @@
 
 BOLT security options
 =====================
-Broadcom Corporation <support@broadcom.com>
+Broadcom Ltd <support@broadcom.com>
 
  Libraries and build options
 ----------------------------
@@ -142,20 +142,20 @@ with an external binary file.
 
 The script is called 'scripts/bpatch.pl'. Its a generic binary file patching
 utility. A more user friendy version of it, with information derived from
-'config/layout-*.cg' files is called 'scripts/patcher.pl'.
+'config/layout-*.cg' files is called 'gen/scripts/patcher.pl'.
 
-NOTE: 'scripts/patcher.pl' is only created when you either make a BOLT binary
+NOTE: 'gen/scripts/patcher.pl' is only created when you either make a BOLT binary
 or do 'make env'. This enables you to edit a 'config/layout-*.cg' file and
-then rebuild 'scripts/patcher.pl' to pick up the changes.
+then rebuild 'gen/scripts/patcher.pl' to pick up the changes.
 
 To show the available sub-sections of BOLT for patching, use the '-c' flag.
 
 [source,shell]
 ----
-[user@machine]$ ./scripts/patcher.pl -c
+[user@machine]$ ./gen/scripts/patcher.pl -c
 ----
 
-Example output from './scripts/patcher.pl -c'
+Example output from './gen/scripts/patcher.pl -c'
 
 ----
 configuration flags -t(ype) for -z(eus):
@@ -187,14 +187,14 @@ Example of patching a replacement BBL into a BOLT binary:
 
 [source,shell]
 ----
-[user@machine]$ ./scripts/patcher.pl -p bbl-new.bin -i objs/7445d0/bolt-v0.98-7445d0-ba-bfw-2.1.0.bin -o new-bolt.bin -t bbl -z zeus42
+[user@machine]$ ./gen/scripts/patcher.pl -p bbl-new.bin -i objs/7445d0/bolt-v0.98-7445d0-ba-bfw-2.1.0.bin -o new-bolt.bin -t bbl -z zeus42
  ==> patching bbl-new.bin (92432) into objs/7445d0/bolt-v0.98-7445d0-ba-bfw-2.1.0.bin (773576) at offset 0x96f0
 ----
 
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

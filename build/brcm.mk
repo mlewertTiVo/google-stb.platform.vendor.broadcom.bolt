@@ -1,15 +1,13 @@
 # ***************************************************************************
-# *     Copyright (c) 2012-2014, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
-# *
-# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-# * 
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+#
+# THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
 # ***************************************************************************
 
-famcheck:
+famcheck: family_dirs
 	$(Q)if [ "$(FAMILY)" = "unknown" ]; then \
 		echo; \
 		echo "For the first build, please specify the chip, e.g. 'make 7445d0'"; \
@@ -17,7 +15,7 @@ famcheck:
 		false; \
 	else \
 		if [ "$(FAMILY)" != "$(SAVED_FAMILY)" ] ; then \
-			echo -n $(FAMILY) > .family ; \
+			echo -n $(FAMILY) > $(GEN)/.family ; \
 		fi \
 	fi; \
 	if [ ! -f "$(CFG)" ]; then \
@@ -27,29 +25,37 @@ famcheck:
 		false; \
 	else \
 		if [ "$(CFG)" != "$(SAVED_CFG)" ] ; then \
-			echo -n $(CFG) > .config ; \
+			echo -n $(CFG) > $(GEN)/.config ; \
 		fi \
 	fi
 
+stubpatch = \
+	$(Q)if [ -f $(ODIR)/stub.64.bin ]; then \
+		echo "  PATCH   $(ODIR)/stub.64.bin"; \
+		scripts/bpatch.pl -a $(STUB64_OFFSET) \
+		-p $(ODIR)/stub.64.bin \
+		-i $(ODIR)/bolt.bin \
+		-o $(ODIR)/bolt.bin > /dev/null 2>&1; \
+	fi
 
-ddr_update: scripts/mcb2c
+ddr_update: $(GEN)/scripts/mcb2c
 	$(Q)rm -f shmoo/$(MEMC_REV)/mcb-$(FAMILY).c
-	$(Q)scripts/mcb2c -c -i $(FAMILY) -m shmoo/$(MEMC_REV)/mcb/ \
+	$(Q)$(GEN)/scripts/mcb2c -c -i $(FAMILY) -m shmoo/$(MEMC_REV)/mcb/ \
 		-o shmoo/$(MEMC_REV)/mcb-$(FAMILY).c
 
 # append an 's' to the chip family e.g. make 7445d0s
 _VERSWITCH:=%a0s %b0s s%c0s %d0s %e0s s%f0s
 
 $(_VERSWITCH): FORCE
-	$(Q)echo $@ | sed 's/s//;' > .family
-	$(Q)echo "FAMILY is now" `cat .family`
+	$(Q)echo $@ | sed 's/s//;' > $(GEN)/.family
+	$(Q)echo "FAMILY is now" `cat $(GEN)/.family`
 
 boardinfo: FORCE
 	$(Q)scripts/boardinfo.sh $(FAMILIES)
 
 ifneq ($(MAKECMDGOALS),distclean)
-  ifneq (,$(wildcard gen/$(FAMILY)/include.mk))
-    include gen/$(FAMILY)/include.mk
+  ifneq (,$(wildcard $(GEN)/$(FAMILY)/include.mk))
+    include $(GEN)/$(FAMILY)/include.mk
   endif
 endif
 
@@ -101,12 +107,12 @@ sec_show:
 	$(Q)find security -name \*.a  -exec echo {} \; -exec $(AR) -t {} \; -exec echo "" \;
 
 # add layouts cfg file deps as the cfg script will validate it for us beforehand.
-$(ROOT)/scripts/patcher.pl: $(ROOT)/config/layout*.cfg $(ROOT)/scripts/gen_layouts.sh $(ROOT)/scripts/bpatch.pl
+$(GEN)/scripts/patcher.pl: $(ROOT)/config/layout*.cfg $(ROOT)/scripts/gen_layouts.sh $(ROOT)/scripts/bpatch.pl
 	$(call pretty_print,APP,$@)
-	$(Q) if [ -e $(ROOT)/scripts/patcher.pl ]; then \
-               rm -f $(ROOT)/scripts/patcher.pl; \
+	$(Q) if [ -e $(GEN)/scripts/patcher.pl ]; then \
+               rm -f $(GEN)/scripts/patcher.pl; \
              fi; \
-             $(ROOT)/scripts/gen_layouts.sh > $(ROOT)/scripts/patcher.pl && \
-                     chmod a+x $(ROOT)/scripts/patcher.pl;
+             $(ROOT)/scripts/gen_layouts.sh > $(GEN)/scripts/patcher.pl && \
+                     chmod a+x $(GEN)/scripts/patcher.pl;
 
 .PHONY: softload softwipe boardinfo sfsbl sec_clean sec_show

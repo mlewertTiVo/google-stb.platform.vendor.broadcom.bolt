@@ -1,105 +1,21 @@
 /***************************************************************************
- *     Copyright (c) 2003-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
  *
- * $brcm_Workfile: splash_vdc_run.c $
- * $brcm_Revision: 17 $
- * $brcm_Date: 4/12/13 2:06p $
- *
- * Module Description:
- *
- * Revision History:
- *
- * $brcm_Log: /BSEAV/app/splash/splashrun/splash_vdc_run.c $
- * 
- * 17   4/12/13 2:06p syang
- * SW7445-213: change to use cached addr for surface and RULs
- * 
- * 16   3/29/13 11:41a syang
- * SW7435-676: deep refactor for memc, surface and display number
- * scalabilty; flexibility for diff configure combination; and easy
- * adding of new chips
- * 
- * 15   10/31/12 7:03p mward
- * SW7435-114:  Back out dual surface support.  Move to branch pending CFE
- * support.
- * 
- * 13   9/10/12 4:41p jessem
- * SW7425-3872: Removed hMem1 use with 7425.
- * 
- * 12   9/4/12 4:40p jessem
- * SW7425-3872: NULLed hMem1 for 7425 to reflect reassignment of GFD0 and
- * GFD1 to MEMC0.
- *
- * 11   4/19/12 4:41p mward
- * SW7435-114:  Add support for 7435.  Uses MEMC0 for graphics surface in
- * 4 transcode RTS use-case, MEMC1 for others.
- *
- * 10   4/12/12 5:05p randyjew
- * SWCFE-769: Memc0 only support
- *
- * 9   4/10/12 2:15p jessem
- * SW7425-2828: Used NEXUS_Platform_GetFrameBufferHeap to determine
- * correct heap to use.
- *
- * 8   8/23/11 10:01a jrubio
- * SW7340-277: add Support for 7340
- *
- * 7   8/22/11 5:14p jessem
- * SW7425-878: Added MEMC1 support for 7425.
- *
- * 6   8/8/11 11:54p nickh
- * SW7425-878: Add 7425 splash support
- *
- * 5   9/21/09 5:38p nickh
- * SW7420-351: Pass in the appropriate heaps for 7420
- *
- * 4   5/14/09 5:42p shyam
- * PR52592 : Add support for ARGB8888 surfaces
- *
- * 3   10/8/07 7:45p shyam
- * PR 30741 : Simplify the bitmap filename
- *
- * 2   6/28/07 5:07p shyam
- * PR 30741 : Syncup with cfe portability
- *
- * 1   5/14/07 7:17p shyam
- * PR 30741 : Add reference support for generic portable splash
- *
- * Hydra_Software_Devel/2   2/6/06 7:36a dkaufman
- * PR3481: Moved surface update code to new file
- *
- * Hydra_Software_Devel/1   11/17/05 4:49p dkaufman
- * PR3481: Added file
- *
- *
  ***************************************************************************/
 
 /* This file is a copy of BSEAV/app/splash/splashrun/splash_vdc_run.c
- that has been modified to run under BOLT. If you update BSEAV/app/splash
- be sure to check any changes in that original file.
-*/
-
-#if 0 /* original */
-#include <stdio.h>
-#include <string.h>
-
-#include "bstd.h"
-#include "bmem.h"
-#include "bkni.h"
-#include "breg_mem.h"
-#endif
+ * that has been modified to run under BOLT. If you update BSEAV/app/splash
+ * be sure to check any changes in that original file.
+ */
 
 #include "splash_bmp.h"
 #include "splash_file.h"
 #include "splash-media.h"
 #include "splash_script_load.h"
-
 
 BDBG_MODULE(splashrun);
 
@@ -114,8 +30,8 @@ void *splash_api_get_imgbuff(int idx)
 	return (idx < SPLASH_MAX_SURFACE) ? splash_apvBuf[idx] : NULL;
 }
 
-
-int splash_script_run(BREG_Handle hReg, BMEM_Handle *phMem)
+int splash_script_run(BREG_Handle hReg, BMEM_Handle *phMem,
+	SplashData *pSplashData)
 {
 	SplashBufInfo  splashBuf;
 	uint8_t  *bmpBuf = NULL;
@@ -130,14 +46,39 @@ int splash_script_run(BREG_Handle hReg, BMEM_Handle *phMem)
 #if (CFG_CMD_LEVEL >= 5)
 	printf("******************* Splash BVN Script Loader !!!! *************************\n");
 #endif
+	/* hReg can be NULL, it is unused */
+	if (!phMem || !pSplashData)
+	{
+		xprintf("ERROR: invalid parameters to %s(0x%x, 0x%x, 0x%x)\n",
+			__func__, (unsigned int)hReg, (unsigned int)phMem,
+			(unsigned int)pSplashData);
+		return 1;
+	}
+
 	BKNI_Memset((void *) &splashBuf, 0, sizeof(SplashBufInfo));
 
-	splashBuf.hRulMem = *(phMem + g_iRulMemIdx);
+	splashBuf.hRulMem = *(phMem + pSplashData->iRulMemIdx);
 	
-	for (ii=0; ii<(int)g_ulNumSurface; ii++)
+	for (ii=0; ii<pSplashData->iNumSurface; ii++)
 	{
-		pSurInfo = &g_SplashSurfaceInfo[ii];
-		apvBuf[ii] = BMEM_Alloc(*(phMem+pSurInfo->ihMemIdx), BSPLASH_SURFACE_BUF_SIZE(pSurInfo));
+		BMEM_Handle heap;
+		unsigned int bufSize;
+
+		pSurInfo = pSplashData->pSurfInfo + ii;
+		heap = *(phMem+pSurInfo->ihMemIdx);
+		bufSize = BSPLASH_SURFACE_BUF_SIZE(pSurInfo);
+
+		/* skip invalid surface */
+		if (bufSize == 0)
+			continue;
+
+		apvBuf[ii] = BMEM_Alloc(heap, bufSize);
+		if (!apvBuf[ii])
+		{
+			xprintf("ERROR: allocating %d bytes from heap %u "
+				"failed\n", bufSize, (unsigned int)heap);
+			return 1;
+		}
 		BMEM_Heap_ConvertAddressToCached(*(phMem+pSurInfo->ihMemIdx), apvBuf[ii], &pvBuf);
 		BMEM_ConvertAddressToOffset(
 			*(phMem+pSurInfo->ihMemIdx), apvBuf[ii], &splashBuf.aulSurfaceBufOffset[ii]);
@@ -156,7 +97,7 @@ int splash_script_run(BREG_Handle hReg, BMEM_Handle *phMem)
 				splash_bmp_getinfo(bmpBuf, &myBmpInfo);
 #if (CFG_CMD_LEVEL >= 3)
 				xprintf("Loaded BMP: W=%d H=%d\n",
-				 myBmpInfo.info.width, myBmpInfo.info.height);
+				myBmpInfo.info.width, myBmpInfo.info.height);
 #endif
 			}
 #if (CFG_CMD_LEVEL >= 5)
@@ -190,20 +131,7 @@ int splash_script_run(BREG_Handle hReg, BMEM_Handle *phMem)
 		BMEM_Heap_FlushCache(*(phMem+pSurInfo->ihMemIdx), pvBuf, BSPLASH_SURFACE_BUF_SIZE(pSurInfo));
 	}
 
-	splash_bvn_init(hReg, &splashBuf);
-#if 0 /* original */
-	printf("** Splash display done **\n");
-#if 0 /* either mem leak error or GFD access unallocted mem error */
-	printf("Press any key to continue ...");
-	getchar();
-
-	for (ii=0; ii<(int)g_ulNumSurface; ii++)
-	{
-		pSurInfo = &g_SplashSurfaceInfo[ii];
-		BMEM_Free(*(phMem + pSurInfo->ihMemIdx), apvBuf[ii]);
-	}
-#endif
-#endif /* original */
+	splash_bvn_init(hReg, &splashBuf, pSplashData);
 	
 	return 0;
 }

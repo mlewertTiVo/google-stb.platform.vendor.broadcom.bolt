@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -31,10 +29,10 @@
 #include "fileops.h"
 #include "common.h"
 #include "error.h"
-#include "boot.h"
 #include "loader.h"
 #include "devtree.h"
 #include "splash-api.h"
+#include "arch_ops.h"
 
 #if (CFG_CMD_LEVEL >= 1)
 static int ui_cmd_load(ui_cmdline_t *cmd, int argc, char *argv[]);
@@ -55,8 +53,6 @@ static int ui_cmd_go(ui_cmdline_t *cmd, int argc, char *argv[]);
 #endif
 
 static bolt_loadargs_t bolt_loadargs;
-
-#define DEF_NETDEV "eth0"
 
 #ifdef __long64
 #define XTOI(x) xtoq(x)
@@ -100,6 +96,11 @@ int ui_init_loadcmds(void)
 #if CFG_ZLIB
 		   "-z;Load gzip-compressed file (default)|"
 		   "-nz;Load uncompressed file|"
+#endif
+#ifdef STUB64_START
+		   "-32;boot a 32 bit app|"
+		   "-64;boot a 64 bit app|"
+		   "-nopsci;don't use PSCI to boot app|"
 #endif
 		   "-loader=*;Specify BOLT loader name|"
 		   "-tftp;Load the file using the TFTP protocol|"
@@ -152,9 +153,15 @@ int ui_init_loadcmds(void)
 		   "the 'load' command.  You can override the start address by\n"
 		   "specifying it as a parameter to the 'go' command.",
 #if CFG_BSU
-		   "-bsu;run as a sidecar app|"
+		   "-bsu;run as a sidecar app"
 #endif
-		   "-noclose;Don't close network link before executing program");
+		   "|-noclose;Don't close network link before executing program"
+#ifdef STUB64_START
+		   "|-32;boot a 32 bit app"
+		   "|-64;boot a 64 bit app"
+		   "|-nopsci;don't use PSCI to boot app"
+#endif
+		   );
 #endif
 
 #if (CFG_CMD_LEVEL >= 3)
@@ -194,6 +201,28 @@ static int ui_cmd_go(ui_cmdline_t *cmd, int argc, char *argv[])
 	else
 		bolt_loadargs.la_flags &= ~LOADFLG_BSU;
 
+#ifdef STUB64_START
+	if (cmd_sw_isset(cmd, "-nopsci"))
+		bolt_loadargs.la_flags |= LOADFLG_DIRECT_CALL;
+	else
+		bolt_loadargs.la_flags &= ~LOADFLG_DIRECT_CALL;
+
+	if (cmd_sw_isset(cmd, "-32"))
+		bolt_loadargs.la_flags &= ~LOADFLG_APP64;
+	else if (cmd_sw_isset(cmd, "-64")) {
+		/* BSU can only boot in 32 bit as we're
+		 * running this hybrid type of BOLT.
+		 */
+		if ((bolt_loadargs.la_flags & LOADFLG_BSU) || !arch_booted64())
+			return BOLT_ERR_INV_PARAM;
+
+		/* Jumping to a 64 bit app is not doable without PSCI. */
+		if (bolt_loadargs.la_flags & LOADFLG_DIRECT_CALL)
+			return BOLT_ERR_INV_PARAM;
+
+		bolt_loadargs.la_flags |= LOADFLG_APP64;
+	}
+#endif
 	return bolt_go(&bolt_loadargs);
 }
 #endif
@@ -333,6 +362,33 @@ static int ui_cmd_bootcommon(ui_cmdline_t *cmd, int flags)
 	else
 		la->la_flags &= ~LOADFLG_BSU;
 
+	/* Default to booting 64 bit apps
+	 * if we are running on an aarch64
+	 * cpu.
+	 */
+#ifdef STUB64_START
+	if (cmd_sw_isset(cmd, "-nopsci"))
+		bolt_loadargs.la_flags |= LOADFLG_DIRECT_CALL;
+	else
+		bolt_loadargs.la_flags &= ~LOADFLG_DIRECT_CALL;
+
+	if (cmd_sw_isset(cmd, "-32"))
+		la->la_flags &= ~LOADFLG_APP64;
+
+	if (cmd_sw_isset(cmd, "-64")) {
+		/* BSU can only boot in 32 bit as we're
+		 * running this hybrid type of BOLT.
+		 */
+		if ((bolt_loadargs.la_flags & LOADFLG_BSU) || !arch_booted64())
+			return BOLT_ERR_INV_PARAM;
+
+		/* Jumping to a 64 bit app is not doable without PSCI. */
+		if (bolt_loadargs.la_flags & LOADFLG_DIRECT_CALL)
+			return BOLT_ERR_INV_PARAM;
+
+		la->la_flags |= LOADFLG_APP64;
+	}
+#endif
 	/*
 	 * This is where we guess based on the device type what
 	 * sort of load method we're going to use.

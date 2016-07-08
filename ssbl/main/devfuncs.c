@@ -36,6 +36,26 @@ int bolt_open(char *name)
 	return (iocb.iocb_status < 0) ? iocb.iocb_status : iocb.iocb_handle;
 }
 
+int bolt_gethandle(char *name)
+{
+	bolt_iocb_t iocb;
+
+	memset(&iocb, 0, sizeof(iocb));
+
+	iocb.iocb_fcode = BOLT_CMD_DEV_GETHANDLE;
+	iocb.iocb_status = 0;
+	iocb.iocb_handle = 0;
+	iocb.iocb_flags = 0;
+	iocb.iocb_psize = sizeof(iocb_buffer_t);
+	iocb.plist.iocb_buffer.buf_offset = 0;
+	iocb.plist.iocb_buffer.buf_ptr = (unsigned char *)name;
+	iocb.plist.iocb_buffer.buf_length = strlen(name);
+
+	bolt_iocb_dispatch(&iocb);
+
+	return (iocb.iocb_status < 0) ? iocb.iocb_status : iocb.iocb_handle;
+}
+
 int bolt_close(int handle)
 {
 	bolt_iocb_t iocb;

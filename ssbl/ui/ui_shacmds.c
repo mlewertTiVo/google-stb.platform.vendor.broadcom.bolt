@@ -1,7 +1,5 @@
 /***************************************************************************
- *	 Copyright (c) 2015, Broadcom Corporation
- *	 All Rights Reserved
- *	 Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -21,7 +19,7 @@
 
 #include "ui_command.h"
 #include "bolt.h"
-#include "boot.h"
+#include "config.h"
 #include "timer.h"
 #include "error.h"
 #include "sha2.h"
@@ -91,7 +89,7 @@ static int ui_cmd_sha(ui_cmdline_t *cmd, int argc, char *argv[])
 		uint32_t sha[8];
 		struct mcpb_dma_desc *desc;
 		const struct memdma_initparams e = {
-			ssbl_die, bolt_usleep, lib_memset};
+			ssbl_die, bolt_usleep, lib_memset, NULL};
 
 		desc = KMALLOC(sizeof(*desc), MCB_DESCRIPTOR_SIZE);
 		if (!desc)

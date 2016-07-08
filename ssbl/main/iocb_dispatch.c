@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -19,7 +17,6 @@
 #include "device.h"
 #include "timer.h"
 #include "fileops.h"
-#include "boot.h"
 #include "env_subr.h"
 #include "bolt.h"
 #include "console.h"
@@ -103,7 +100,7 @@ static const struct bolt_cmd_dispatch_s
 	,			/* 7 : */
 	{-1, 0, NULL}
 	,			/* 8 : */
-	{0, 0, bolt_cmd_dev_gethandle}
+	{sizeof(iocb_buffer_t), 0, bolt_cmd_dev_gethandle}
 	,			/* 9 : BOLT_CMD_DEV_GETHANDLE */
 	{sizeof(iocb_envbuf_t), 0, bolt_cmd_dev_enum}
 	,			/* 10 : BOLT_CMD_DEV_ENUM */
@@ -352,16 +349,33 @@ static int bolt_cmd_dev_enum(bolt_devctx_t *ctx, bolt_iocb_t *iocb)
 
 static int bolt_cmd_dev_gethandle(bolt_devctx_t *ctx, bolt_iocb_t *iocb)
 {
-	switch (iocb->iocb_flags) {
-	case BOLT_STDHANDLE_CONSOLE:
-		if (console_handle == -1)
-			return BOLT_ERR_DEVNOTFOUND;
-		iocb->iocb_handle = console_handle;
-		return BOLT_OK;
-		break;
-	default:
-		return BOLT_ERR_INV_PARAM;
+	int i;
+	char *devname;
+	bolt_device_t *dev;
+
+	devname = (char *)iocb->plist.iocb_buffer.buf_ptr;
+
+	dev = bolt_finddev(devname);
+	if (!dev)
+		return BOLT_ERR_DEVNOTFOUND;
+
+	for (i = 0; i < BOLT_MAX_HANDLE; i++) {
+		ctx = bolt_handle_table[i];
+		if (!ctx)
+			continue;
+
+		if (ctx->dev_dev &&
+				(strcmp(devname,
+					ctx->dev_dev->dev_fullname) == 0))
+			break;
 	}
+
+	if (i >= BOLT_MAX_HANDLE)
+		i = BOLT_ERR_NOHANDLES;
+	else
+		iocb->iocb_handle = i;
+
+	return i;
 }
 
 static int bolt_cmd_dev_open(bolt_devctx_t *ctx, bolt_iocb_t *iocb)

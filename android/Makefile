@@ -14,20 +14,11 @@
 #
 ###############################################################################
 
-BOLT_DIR = boltinc
-
-FAMILIES := $(shell if [ -d $(BOLT_DIR) ]; then cat $(BOLT_DIR)/build-family-list; else echo ""; fi)
-ifeq ($(filter clean distclean, $(MAKECMDGOALS)),)
-ifndef FAMILIES
-$(error Please build BOLT first before building Android BSU)
-endif
-endif
-SAVED_FAMILY := $(shell [ -e .family ] && cat .family || echo unknown)
+SAVED_FAMILY := $(shell [ -e $(GEN)/.family ] && cat $(GEN)/.family || echo unknown)
 FAMILY = $(firstword $(filter $(FAMILIES), $(MAKECMDGOALS)) $(SAVED_FAMILY))
 
 ifeq ($(filter clean distclean, $(MAKECMDGOALS)),)
-include $(BOLT_DIR)/build/tools.mk
--include $(BOLT_DIR)/toolpath
+include $(GEN)/android/boltinc/build/tools.mk
 endif
 
 ODIR := objs/$(FAMILY)
@@ -37,11 +28,11 @@ OBJS := $(addprefix $(ODIR)/, $(OBJS))
 BSU = $(ODIR)/android_bsu.elf
 
 INCFLAGS = \
-	-I$(BOLT_DIR)/include \
-	-I$(BOLT_DIR)/include/arm \
-	-I$(BOLT_DIR)/include/$(FAMILY) \
+	-I$(GEN)/android/boltinc/include \
+	-I$(GEN)/android/boltinc/include/arm \
+	-I$(GEN)/android/boltinc/include/$(FAMILY)
 
-EXTRA_DEFINES = -include $(BOLT_DIR)/gen/$(FAMILY)/config.h
+EXTRA_DEFINES = -include $(GEN)/$(FAMILY)/config.h
 CSTRICT	:= -Wall -Wmissing-field-initializers -Wundef -Wextra -Wno-unused-parameter -Wshadow -Werror
 
 # Note: Build env var 'TARGET_BOARD_PLATFORM' is set when BOLT is built from
@@ -51,7 +42,7 @@ CFLAGS := $(COMMON_FLAGS) $(ARCH_CFLAGS) -nostdlib -ffreestanding -Os \
 	  $(CSTRICT) -g -ffunction-sections -fdata-sections -DBSU -DDROID_BSU -DDROID_PRODUCT='"${TARGET_BOARD_PLATFORM}"'
 AFLAGS := $(COMMON_FLAGS) -D__ASSEMBLER__ -D_ASMLANGUAGE
 LDFLAGS := $(ARCH_LDFLAGS)
-LIBGCC := $(BOLT_DIR)/thirdparty/libgcc/libgcc.a
+LIBGCC := $(GEN)/android/boltinc/thirdparty/libgcc/libgcc.a
 
 $(ODIR)/%.o: %.c | $(ODIR)
 	$(CC) -c $(CFLAGS) $(CFLAGS_$<) $< -o $@
@@ -74,7 +65,7 @@ clean:
 
 distclean:
 	$(RM) -rf objs
-	$(RM) -f .family
+	$(RM) -f $(GEN)/.family
 
 $(ODIR):
 	mkdir -p $(ODIR)
@@ -87,8 +78,8 @@ famcheck:
 		false; \
 	else \
 		if [ "$(FAMILY)" != "$(SAVED_FAMILY)" ]; then \
-			echo -n $(FAMILY) > .family ; \
+			echo -n $(FAMILY) > $(GEN)/.family ; \
 		fi \
 	fi
 
-.PHONY: all famcheck clean distclean $(FAMILY)
+.PHONY: all famcheck clean distclean $(FAMILY) $(BSU)

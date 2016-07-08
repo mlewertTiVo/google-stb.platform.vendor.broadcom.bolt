@@ -1,7 +1,5 @@
 ################################################################################
-#     Copyright (c) 2012-2015, Broadcom Corporation
-#     All Rights Reserved
-#     Confidential Property of Broadcom Corporation
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
 #
 #  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 #  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -13,7 +11,7 @@ all: famcheck $(FAMILY)
 unknown: famcheck
 
 -include toolpath
-include gen/$(FAMILY)/include.mk
+include $(GEN)/$(FAMILY)/include.mk
 include fsbl/fsbl.inc
 include avs/avs.inc
 
@@ -26,6 +24,8 @@ include custom/custom.inc
 include splash/splash.inc
 include security/security.inc
 include common/common.inc
+include stub64/stub.64.inc
+include psci32/psci32.inc
 
 include build/utils.mk
 include build/ver.mk
@@ -36,7 +36,12 @@ include build/tools.mk
 DROID_BSU_POSTPATCH :=
 -include build/droid.mk
 
-$(FAMILY): $(ODIR)/ssbl.bin $(ODIR)/memsys.bin $(ODIR)/fsbl.elf postpatch $(DROID_BSU_POSTPATCH)
+FAMILY_DEPS:=$(ODIR)/ssbl.bin $(ODIR)/memsys.bin $(ODIR)/fsbl.elf postpatch $(DROID_BSU_POSTPATCH)
+ifneq ($(STUB64_START),)
+FAMILY_DEPS+= $(ODIR)/stub.64.bin $(ODIR)/smm.64.bin $(ODIR)/psci32.bin
+endif
+
+$(FAMILY): $(FAMILY_DEPS)
 
 ################################################################################
 #
@@ -48,6 +53,9 @@ FSBL_S		+= $(AVS_FSBL_S) $(COMMON_S)
 SSBL_S		+= $(AVS_SSBL_S) $(SPLASH_S) $(COMMON_S)
 ALL_S		:= $(FSBL_S) $(SSBL_S) $(SHMOO_S) $(BOARDS_S)
 FSBL_O		:= $(call src2obj,$(FSBL_S))
+STUB_O		:= $(call src2obj,$(STUB_S))
+SMM_O		:= $(call src2obj,$(SMM_S))
+PSCI32_O	:= $(call src2obj,$(PSCI32_S))
 BSL_O		:= $(call src2obj,$(BSL_S))
 ASL_O		:= $(call src2obj,$(ASL_S))
 SHMOO_O		:= $(call src2obj,$(SHMOO_S))
@@ -95,14 +103,23 @@ EXTRA_DEFINES += \
 
 EXTRA_DEFINES += -DLIBSTRING_ASM_MEMCPY
 EXTRA_DEFINES += -DSSBL_SOFTLOAD=$(SOFTLOAD)
-EXTRA_DEFINES += -include gen/$(FAMILY)/config.h
+EXTRA_DEFINES += -include $(GEN)/$(FAMILY)/config.h
 ifeq ($(CFG_ZLIB),1)
-EXTRA_DEFINES += -DMY_ZCALLOC -DZ_SOLO -Izlib-$(ZLIB_VER)
+EXTRA_DEFINES += -DMY_ZCALLOC -DZ_SOLO -I$(GEN)/zlib-$(ZLIB_VER)
 endif
 
 ifeq ($(CFG_EMULATION),1)
-CFG_EMULATION_JUMP_TARGET?=0x8000
-EXTRA_DEFINES += -DCFG_EMULATION=1 -DCFG_EMULATION_JUMP_TARGET=$(CFG_EMULATION_JUMP_TARGET)
+EXTRA_DEFINES += -DCFG_EMULATION=1
+-include build/emul.mk
+endif
+
+ifeq ($(CFG_FULL_EMULATION),1)
+EXTRA_DEFINES += -DCFG_FULL_EMULATION=1
+-include build/emul.mk
+endif
+
+ifeq ($(QEMU),y)
+EXTRA_DEFINES += -DQEMU=1
 endif
 
 ifeq ($(CFG_NOSHMOO),1)
@@ -130,14 +147,18 @@ $(warning * -------->    YOU ARE ON YOUR OWN!     <-------- )
 $(warning **************************************************)
 endif
 
-_INC := custom include ssbl/net ssbl/usb dtc/libfdt include/$(ARCH) include/$(FAMILY) gen/$(FAMILY)
-
+_INC := stub64 custom include ssbl/net ssbl/usb
+_INC += include/$(ARCH) include/$(FAMILY)
 INCFLAGS := $(call rootincs,$(_INC))
+INCFLAGS += -I $(GEN)/dtc/libfdt -I $(GEN)/$(FAMILY)
 
 # Substitute chars in file path to c name conversion. For use by BOLT code
 # that references objcopy created .o files from binary blobs, e.g. the DTB.
 # Chars: ( ) . \ / # + <space> - ] [
 TMP := $(shell echo $(ODIR) | sed "s/[().\\\/\#\+ --]/_/g;s/\]/_/g;s/\[/_/g;")
+
+########################################
+# T32/A32 (armv7-a compatible)
 
 COMMON_FLAGS:= $(INCFLAGS) $(ARCHFLAGS) $(EXTRA_DEFINES) -D_BOLT_ -DODIR="$(TMP)"
 NOSTDINC_FLAGS := -nostdinc -isystem $(shell $(CC) -print-file-name=include)
@@ -147,8 +168,24 @@ CFLAGS := $(COMMON_FLAGS) $(ARCH_CFLAGS) -nostdlib $(NOSTDINC_FLAGS) \
 	  $(USTRICT) -g -ffunction-sections -fdata-sections
 AFLAGS := $(COMMON_FLAGS) -D__ASSEMBLER__ -D_ASMLANGUAGE
 LDFLAGS := $(ARCH_LDFLAGS)
+
+########################################
+# A64 (armv8-a/64 compatible)
+
+COMMON_FLAGS64:= $(INCFLAGS) $(ARCHFLAGS64) $(EXTRA_DEFINES) -D_BOLT_ -DODIR="$(TMP)"
+NOSTDINC_FLAGS64 := -nostdinc -isystem $(shell $(CC64) -print-file-name=include)
+
+CFLAGS64 := $(COMMON_FLAGS64) $(ARCH_CFLAGS64) -nostdlib $(NOSTDINC_FLAGS64) \
+	  -ffreestanding -Os -fomit-frame-pointer \
+	  $(USTRICT) -g -ffunction-sections -fdata-sections
+
+AFLAGS64 := $(COMMON_FLAGS64) -D__ASSEMBLER__ -D_ASMLANGUAGE
+LDFLAGS64 := $(ARCH_LDFLAGS64)
+########################################
+
 ifeq ($(V),1)
 LDFLAGS += --print-gc-sections
+LDFLAGS64 += --print-gc-sections
 endif
 
 BOLT_CORE:= fsbl shmoo boards memsys ssbl avs_fw
@@ -201,7 +238,52 @@ $(ASL): $(ASL_O)
 	$(call pretty_print,AR,$@)
 	$(Q)$(AR) -src $@ $^
 
-$(ODIR)/fsbl.o: $(FSBL_O) $(ODIR)/fsbl.lds $(LIBGCC) $(BSL) $(ASL)
+################################################################################
+# FSBL aarch64 to aarch32 switcher
+
+$(ODIR)/stub.64.o: $(STUB_O) $(ODIR)/stub-64.lds
+	$(call pretty_print,LD64,$@)
+	$(Q)$(LD64) $(LDFLAGS64) --gc-sections -T $(ODIR)/stub-64.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/stub.64.elf: $(ODIR)/stub-stripped.64.o $(ODIR)/stub-64.lds
+	$(call pretty_print,LD64,$@)
+	$(Q)$(LD64) $(LDFLAGS64) -Map $(ODIR)/stub.64.map -T $(ODIR)/stub-64.lds -o $@ $(filter-out %.lds, $^)
+	$(Q)$(STRIP64) --remove-section=$(ARCH_RM64) $@
+
+$(ODIR)/stub.64.bin: $(ODIR)/stub.64.elf $(ODIR)/stub.64.asm
+
+
+################################################################################
+# aarch64 System Management Mode (EL3) features.
+
+$(ODIR)/smm.64.o: $(SMM_O) $(ODIR)/smm-64.lds
+	$(call pretty_print,LD64,$@)
+	$(Q)$(LD64) $(LDFLAGS64) --gc-sections -T $(ODIR)/smm-64.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/smm.64.elf: $(ODIR)/smm-stripped.64.o $(ODIR)/smm-64.lds
+	$(call pretty_print,LD64,$@)
+	$(Q)$(LD64) $(LDFLAGS64) -Map $(ODIR)/smm.64.map -T $(ODIR)/smm-64.lds -o $@ $(filter-out %.lds, $^)
+	$(Q)$(STRIP64) --remove-section=$(ARCH_RM64) $@
+
+$(ODIR)/smm.64.bin: $(ODIR)/smm.64.elf $(ODIR)/smm.64.asm
+
+################################################################################
+# aarch32 System Management Mode (MON) features.
+
+$(ODIR)/psci32.o: $(PSCI32_O) $(LIBGCC) $(ODIR)/psci32.lds
+	$(call pretty_print,LD32,$@)
+	$(Q)$(LD) $(LDFLAGS) -T $(ODIR)/psci32.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/psci32.elf: $(ODIR)/psci32-stripped.o $(ODIR)/psci32.lds
+	$(call pretty_print,LD32,$@)
+	$(Q)$(LD) $(LDFLAGS) -Map $(ODIR)/psci32.map -T $(ODIR)/psci32.lds -o $@ $(filter-out %.lds, $^)
+	$(Q)$(STRIP) --remove-section=$(ARCH_RM) $@
+
+$(ODIR)/psci32.bin: $(ODIR)/psci32.elf $(ODIR)/psci32.asm
+
+################################################################################
+
+$(ODIR)/fsbl.o: $(FSBL_O) $(ODIR)/fsbl.lds $(BSL) $(ASL) $(LIBGCC)
 	$(call pretty_print,LD,$@)
 	$(Q)$(LD) $(LDFLAGS) --gc-sections -T $(ODIR)/fsbl.lds -o $@ $(filter-out %.lds, $^)
 
@@ -224,7 +306,16 @@ $(ODIR)/memsys_alt.o: $(MEMSYS_ALT_O) $(ODIR)/memsys_alt.lds $(MEMSYS_ALT_LIB) $
 $(ODIR)/avs_fw.o: $(AVS_FW_S)
 	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $^ $@
 
-$(ODIR)/ssbl.o: $(SSBL_O) $(ODIR)/ssbl.lds $(CA_LIB) $(CA_LIB_EXT) $(LIBGCC) $(ODIR)/config_dtb.o $(ODIR)/build_date.o
+SSBL_DEPS:=$(SSBL_O) $(ODIR)/ssbl.lds $(CA_LIB) $(CA_LIB_EXT) $(LIBGCC)
+SSBL_DEPS+= $(ODIR)/config_dtb.o $(ODIR)/build_date.o
+
+ifneq ($(STUB64_START),)
+ SSBL_DEPS += $(ODIR)/ssbl-smm64.o $(ODIR)/ssbl-psci32.o
+#Explicit dependency (for ordering) between unrelated build targets
+$(ODIR)/bolt.bin: $(ODIR)/stub.64.bin
+endif
+
+$(ODIR)/ssbl.o: $(SSBL_DEPS)
 	$(call pretty_print,LD,$@)
 	$(Q)$(LD) $(LDFLAGS) --gc-sections -T $(ODIR)/ssbl.lds -o $@ $(filter-out %.lds, $^) $(SSBL_EXTLIBS)
 
@@ -239,13 +330,27 @@ $(ODIR)/fsbl.elf: $(ODIR)/fsbl-stripped.o $(ODIR)/bolt.lds
 	$(Q)$(LD) $(LDFLAGS) -Map $(ODIR)/fsbl.map -T $(ODIR)/bolt.lds -o $@ $(filter-out %.lds, $^)
 	$(Q)$(STRIP) --remove-section=$(ARCH_RM) $@
 
-$(ODIR)/config.dtb: $(ROOT)/$(DTS)
+$(ODIR)/config.dtb: $(DTS)
 	$(Q)$(call pretty_print,DTB,$@)
-	$(Q)$(ROOT)/dtc/dtc -Idts -Odtb -o $@ -i . -d $@.d $<
+	$(Q)$(GEN)/dtc/dtc -Idts -Odtb -o $@ -i . -d $@.d $<
 
 $(ODIR)/config_dtb.o: $(ODIR)/config.dtb
 	$(Q)$(call pretty_print,OBJCOPY,$@)
 	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $< $@
+
+################################################################################
+# convert aarch64 System Management Mode to a blob for SSBL.
+
+$(ODIR)/ssbl-smm64.o: $(ODIR)/smm.64.bin
+	$(Q)$(call pretty_print,OBJCOPY,$@)
+	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $< $@
+################################################################################
+# convert aarch32 System Management Mode to a blob for SSBL.
+
+$(ODIR)/ssbl-psci32.o: $(ODIR)/psci32.bin
+	$(Q)$(call pretty_print,OBJCOPY,$@)
+	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $< $@
+################################################################################
 
 # final (split) products from bolt.bin
 
@@ -304,10 +409,12 @@ include security/postmake.mk
 ifeq ($(SECPATCH),1)
 postpatch: secpatch
 else
-postpatch: $(ROOT)/scripts/patcher.pl $(FINAL_PRODUCTS)
+postpatch: $(GEN)/scripts/patcher.pl $(FINAL_PRODUCTS)
 	$(call pretty_print,EXEC,$@)
+	$(call stubpatch)
 	$(Q)$(ROOT)/scripts/postpatch.pl -D $(ODIR) -o -z $(ZEUS_VER) \
-           -p $(SEC_PFX) -l $(SEC_BBL) -w $(SEC_BFW) -f $(FAMILY) -v $(BUILDTAG) -s
+           -p $(SEC_PFX) -l $(SEC_BBL) -w $(SEC_BFW) \
+	   -f $(FAMILY) -v $(BUILDTAG) -s -T $(GEN)/scripts/patcher.pl
 endif
 
 ################################################################################
@@ -315,4 +422,4 @@ endif
 .PHONY: help famcheck family toolcheck config config emu family_dirs
 .PHONY: fullemu split clean $(FAMILIES) build_date show
 .PHONY: release version toolfind bolts postpatch
-.PHONY: baseline bloatcheck
+.PHONY: baseline bloatcheck stubpatch

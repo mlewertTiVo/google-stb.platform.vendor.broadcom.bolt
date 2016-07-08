@@ -25,6 +25,7 @@ sub usage($)
 	print "OPTIONS:\n";
 	print "  -j<int> .... pass -j<int> to make.\n";
 	print "  -d ......... dry run.\n";
+	print "  -m ......... multi-threaded.\n";
 	exit shift;
 }
 
@@ -33,11 +34,13 @@ Getopt::Long::Configure(qw/no_ignore_case bundling/);
 my $dry_run;
 my $jobs = "";
 my $help;
+my $multi;
 
 GetOptions(
 	'd|dry'		=> \$dry_run,
 	'h|help'	=> \$help,
-	'j|jobs=i'	=> \$jobs
+	'j|jobs=i'	=> \$jobs,
+	'm|multi'	=> \$multi
 	);
 
 usage(0) if ($help);
@@ -59,35 +62,45 @@ foreach (glob('config/family-*.cfg')) {
 }
 
 my %builds = ();
-foreach my $chip (@a) {
-	my $cmd = "make $chip $jobs";
-	print "[$P: spawning '$cmd']\n";
-	next if $dry_run;
-	FORK: {
-		if (my $pid = fork) {
-			$builds{$chip}{'pid'} = $pid;
-		} elsif (defined($pid)) {
-			my $ecode = system("$cmd") >> 8;
-			if ($ecode) {
-				exit($ecode);
-			} else {
-				exit;
-			}
-		} elsif ($! == 'EAGAIN') {
-			sleep 1;
-			redo FORK;
-		} else {
-			die "Can't fork: $!\n";
+my $errs = '';
+if (!$multi) {
+	foreach my $chip (@a) {
+		my $cmd = "make $chip $jobs";
+		my $ecode = system("$cmd") >> 8;
+		if ($ecode) {
+			$errs .= "[$P: $chip build failed with exit code $ecode]\n";
+			exit($ecode);
 		}
 	}
-}
-
-my $errs = '';
-foreach my $chip (@a) {
-	waitpid($builds{$chip}{'pid'}, 0);
-	my $ecode = $?;
-	if ($ecode) {
-		$errs .= "[$P: $chip build failed with exit code $ecode]\n";
+} else {
+	foreach my $chip (@a) {
+		my $cmd = "make $chip $jobs";
+		print "[$P: spawning '$cmd']\n";
+		next if $dry_run;
+		FORK: {
+			if (my $pid = fork) {
+				$builds{$chip}{'pid'} = $pid;
+			} elsif (defined($pid)) {
+				my $ecode = system("$cmd") >> 8;
+				if ($ecode) {
+					exit($ecode);
+				} else {
+					exit;
+				}
+			} elsif ($! == 'EAGAIN') {
+				sleep 1;
+				redo FORK;
+			} else {
+				die "Can't fork: $!\n";
+			}
+		}
+	}
+	foreach my $chip (@a) {
+		waitpid($builds{$chip}{'pid'}, 0);
+		my $ecode = $?;
+		if ($ecode) {
+			$errs .= "[$P: $chip build failed with exit code $ecode]\n";
+		}
 	}
 }
 

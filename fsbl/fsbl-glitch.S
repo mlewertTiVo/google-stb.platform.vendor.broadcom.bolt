@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,6 +8,9 @@
  ***************************************************************************/
 #ifndef CFG_EMULATION
 #include "arm-macros.h"
+#include "bchp_common.h"
+#include "bchp_bsp_glb_control.h"
+#include "bchp_bsp_cmdbuf.h"
 
 #define ERR_GLITCH_TRACE_CHECK 15
 #define S3_TRACE_VALUE	0x712A0006
@@ -59,7 +60,65 @@ ENTRY_PROC(anti_glitch_a)
 	blx		r2
 
 entry_ok:
+#if !defined(CFG_EMULATION) && !defined(CFG_FULL_EMULATION) && defined(CFG_ZEUS4_2)
+	ldr		r1,	=g_bsp_version
+	ldr		r8,	[r1]
+	cmp		r8,	#3
+	bls		clear_sram
 
+	@ Store JTAG unblock command data at (BCHP_BSP_OTP_SCRATCH_REG_START + 128).
+	@ JTAG unblock command is sent after data section is clear, need to store
+	@ it somewhere.
+	@
+	@ r6: (BCHP_BSP_OTP_SCRATCH_REG_START + 128)
+	@
+	@ 0:  BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE
+	@ 4:  BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE + 0x194
+	@ 8:  BCHP_BSP_GLB_CONTROL_GLB_IRDY
+	@ 12: BCHP_BSP_GLB_CONTROL_GLB_OLOAD1
+	@ 16: BCHP_BSP_GLB_CONTROL_GLB_ILOAD1
+	@ 20: BCHP_BSP_GLB_CONTROL_GLB_HOST_INTR_STATUS
+	@ 24: 0xabcdef00
+	@ 28: 0xbe55aa41
+	@ 32: 0x789a0004
+	@ 36: 0x1057a675
+	@ 40: status
+
+	ldr		r2,	=BCHP_PHYSICAL_OFFSET
+	ldr		r1,	=BCHP_BSP_OTP_SCRATCH_REG_START
+	add		r1, r1, r2
+	mov		r6,	#128
+	add		r6, r1, r6
+	ldr		r1,	=BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE
+	add		r1, r1, r2
+	str		r1,	[r6]
+	mov		r3,	#404	@0x194
+	add		r1, r1, r3
+	str		r1,	[r6, #4]
+	ldr		r1,	=BCHP_BSP_GLB_CONTROL_GLB_IRDY
+	add		r1, r1, r2
+	str		r1,	[r6, #8]
+	ldr		r1,	=BCHP_BSP_GLB_CONTROL_GLB_OLOAD1
+	add		r1, r1, r2
+	str		r1,	[r6, #12]
+	ldr		r1,	=BCHP_BSP_GLB_CONTROL_GLB_ILOAD1
+	add		r1, r1, r2
+	str		r1,	[r6, #16]
+	ldr		r1,	=BCHP_BSP_GLB_CONTROL_GLB_HOST_INTR_STATUS
+	add		r1, r1, r2
+	str		r1,	[r6, #20]
+	ldr		r1,	=0xabcdef00
+	str		r1,	[r6, #24]
+	ldr		r1,	=0xbe55aa41
+	str		r1,	[r6, #28]
+	ldr		r1,	=0x789a0004
+	str		r1,	[r6, #32]
+	ldr		r1,	=0x1057a675
+	str		r1,	[r6, #36]
+	ldr		r1,	=0x12347890
+	str		r1,	[r6, #40]
+#endif
+clear_sram:
 	@ clear SRAM from start of sram to pc
 	ldr		r1,	=SRAM_ADDR	@0xffe0_0000
 	mov		r2, 	pc
@@ -77,10 +136,78 @@ entry_ok:
 
 	@clear anti_glitch_b to end of SRAM
 	ldr		r1, =anti_glitch_b
-	ldr		r2, =SRAM_STACK		@0xffe1_0000
+
+	@ A15:0xffe1_0000, A53:0xffe2_0000
+	ldr		r2, =(SRAM_ADDR + SRAM_LEN)
 	mov  		r3, #0
 	sram_memset	clear2, r1, r2, r3
 
+#if !defined(CFG_EMULATION) && !defined(CFG_FULL_EMULATION) && defined(CFG_ZEUS4_2)
+	cmp		r8,	#3
+	bls		call_entry
+
+	@ =================
+	@ send JTAG unblock
+	@ =================
+
+	@ check for IRDY1
+	ldr		r2,	[r6, #8]
+irdy1:
+	ldr		r3,	[r2]
+	lsls		r1, r3, #31
+	bpl		irdy1
+
+	@ r6: (BCHP_BSP_OTP_SCRATCH_REG_START + 128)
+	@ r7: BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE
+	ldr		r7,	[r6]
+
+	@ REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE) = 0x10
+	movs		r2, 	#16
+	str		r2,	[r7]
+	@ REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+4) = 0xdb
+	movs		r2,	#219
+	str		r2,	[r7, #4]
+	@ REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+8) = 0xabcdef00
+	ldr		r2,	[r6, #24]
+	str		r2,	[r7, #8]
+	@ REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+12) = 0xbe55aa41
+	ldr		r2,	[r6, #28]
+	str		r2,	[r7, #12]
+	@ REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+16) = 0x789a0004
+	ldr		r2,	[r6, #32]
+	str		r2,	[r7, #16]
+	@ REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+20) = 0x1057a675
+	ldr		r2,	[r6, #36]
+	str		r2,	[r7, #20]
+
+	@ REG(BCHP_BSP_GLB_CONTROL_GLB_ILOAD1) = 0x1
+	ldr		r2,	[r6, #16]
+	movs		r3, 	#1
+	str		r3,	[r2]
+
+	@ check for OLOAD1
+	ldr		r2,	[r6, #12]
+oload1:
+	ldr		r3,	[r2]
+	lsls		r3, r3, #31
+	bpl		oload1
+
+	@ REG(BCHP_BSP_GLB_CONTROL_GLB_HOST_INTR_STATUS) = 0x00
+	ldr		r2,	[r6, #20]
+	movs		r3, 	#0
+	str		r3,	[r2]
+
+	@ REG(BCHP_BSP_GLB_CONTROL_GLB_OLOAD1) = 0x00
+	ldr		r2,	[r6, #12]
+	str		r3,	[r2]
+
+	@ status = REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+0x194)
+	ldr		r1,	[r6, #4]
+	ldr		r2,	[r1]
+	str		r2,	[r6, #40]
+#endif
+call_entry:
+	@ r4: ssbl_entry, r5: handle_boot_err, r0: fsbl_info
 	@ call ssbl_entry(*fsbl_info)
 	blx		r4
 	mov		r0,	#ERR_GLITCH_TRACE_CHECK

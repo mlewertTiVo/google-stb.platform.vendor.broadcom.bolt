@@ -1,0 +1,14 @@
+/ {
+	model = "Broadcom STB (7268)";
+	compatible = "brcm,bcm7268", "brcm,brcmstb";
+	#address-cells = <0x2>;
+	#size-cells = <0x2>;
+
+	chosen {
+		/* For kernels with earlycon */
+/*		bootargs = "initcall_debug console=ttyS0,115200 earlycon=uart8250,mmio32,0xf040c000,115200n8 debug"; */
+
+		/* For kernels with early printk */
+/*		bootargs = "initcall_debug console=ttyS0,115200 earlyprintk=uart8250-32bit,0xf040c000 bcm_full_clk=0 mem=1G debug";*/
+	};
+};

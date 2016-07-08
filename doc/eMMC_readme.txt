@@ -3,7 +3,7 @@
 :max-width: 100%
 eMMC support in BOLT
 ====================
-Broadcom Corporation <support@broadcom.com>
+Broadcom Ltd <support@broadcom.com>
 
 
 Introduction
@@ -214,7 +214,7 @@ other eMMC devices.
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

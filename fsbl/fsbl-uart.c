@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -22,7 +20,7 @@ unsigned long get_uart_base(void)
 
 void uart_init(unsigned long base)
 {
-#if defined(CFG_EMULATION)
+#if defined(CFG_EMULATION) || defined(CFG_FULL_EMULATION)
 	/* The Veloce environment utilizes a divider of 1, so reassert
 	 * the value here.
 	 */

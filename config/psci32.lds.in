@@ -1,0 +1,74 @@
+/***************************************************************************
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ *
+ ***************************************************************************/
+
+/* psci32.lds.in */
+
+MEMORY {
+	psci32 : ORIGIN = @PSCI_BASE@, LENGTH = @PSCI_SIZE@
+}
+
+SECTIONS {
+	.init :
+	{
+		psci32_start = .;
+		* (.init*)
+	} > psci32 =@FILLB@
+
+	.text :
+	{
+		* (.text*)
+	} > psci32 =@FILLB@
+
+	.rodata :
+	{
+		* (.rodata)
+		* (.rodata.*)
+	} > psci32 =@FILLB@
+
+	.data :
+	{
+		* (.data*)
+		. = ALIGN(16);
+	} > psci32 =@FILLB@
+
+	.bss :
+	{
+		_psci32_zero_start = .;
+		* (.bss*)
+		* (.sbss*)
+		. = ALIGN(4);
+		_psci32_zero_end = .;
+	} > psci32 =0x00
+
+	psci32_end = .;
+
+	. = ALIGN(4);
+	__exidx_start = .;
+	PROVIDE(__exidx_start = __exidx_start);
+
+	.ARM.exidx :
+	{
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*);
+	} > psci32 /* index entries for section unwinding */
+
+	. = ALIGN(4);
+	__exidx_end = .;
+	PROVIDE(__exidx_end = __exidx_end);
+
+	. += 3;
+	. = ALIGN(64);
+	 __config_info = .;
+
+	/* force __config_info != __per_cpu_info */
+	. += 3;
+	. = ALIGN(64);
+	__per_cpu_info = .;
+};
+
+/* EOF */

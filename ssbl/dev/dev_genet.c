@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -136,6 +134,7 @@ static void genet_mdio_probe(bolt_driver_t * drv, unsigned long probe_a,
 static int genet_mdio_open(bolt_devctx_t * ctx);
 static int genet_mdio_read(bolt_devctx_t * ctx, iocb_buffer_t * buffer);
 static int genet_mdio_write(bolt_devctx_t * ctx, iocb_buffer_t * buffer);
+static int genet_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer);
 static int genet_mdio_close(bolt_devctx_t * ctx);
 
 /* Set loopback mode */
@@ -169,7 +168,7 @@ static const bolt_devdisp_t genet_mdio_dispatch = {
 	genet_mdio_read,
 	NULL,
 	genet_mdio_write,
-	NULL,
+	genet_mdio_ioctl,
 	genet_mdio_close,
 	NULL,
 	NULL
@@ -479,8 +478,20 @@ static int ephy_probe(genet_softc * softc)
 	 */
 	GENET_RGMII_OOB_CTRL(softc) |= RGMII_MODE_EN;
 
+#if CONFIG_BRCM_GENET_VERSION == 5
+	softc->ext->ext_ephy_ctrl |=
+		(EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_EN |
+		 EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_RD |
+		 EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_SD |
+		 EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_RX |
+		 EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_TX |
+		 EXT_EPHY_CNTRL_EXT_PWR_DOWN_BIAS |
+		 EXT_EPHY_CNTRL_EXT_PWR_DOWN_DLL |
+		 EXT_EPHY_CNTRL_IDDQ_GLOBAL_PWR);
+#else
 	softc->ext->ext_pwr_mgmt |=
 		(EXT_PWR_DOWN_PHY | EXT_PWR_DOWN_DLL | EXT_PWR_DOWN_BIAS);
+#endif
 
 	addr = mdio_phy_find_first(softc->mdio, MII_INT);
 	if (addr >= 0) {
@@ -515,6 +526,24 @@ static void genet_ether_powerup(genet_softc * softc)
 	 * No need for powering up, do nothing but returning.
 	 */
 	return;
+#elif CONFIG_BRCM_GENET_VERSION == 5
+	/* Power up EPHY */
+	softc->ext->ext_ephy_ctrl &=
+		~(EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_EN |
+		EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_RD |
+		EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_SD |
+		EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_RX |
+		EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_TX |
+		EXT_EPHY_CNTRL_IDDQ_GLOBAL_PWR |
+		EXT_EPHY_CNTRL_EXT_PWR_DOWN_BIAS |
+		EXT_EPHY_CNTRL_EXT_PWR_DOWN_DLL);
+
+	softc->ext->ext_ephy_ctrl |= EXT_EPHY_CNTRL_RESET;
+	isb();
+	bolt_usleep(60); /* 60us, for asserting RESET from RDB */
+
+	softc->ext->ext_ephy_ctrl &= ~(EXT_EPHY_CNTRL_RESET);
+	bolt_usleep(100); /* 100us, no PHY activity after reset from RDB */
 #else
 	/* GPHY is powered down by default. To power it up, GPHY AFE and BIAS
 	 * need be out of power down, which requires reset.
@@ -734,9 +763,21 @@ static void genet_ether_init(bolt_driver_t * drv, int instance)
 
 		port_ctl_set_physpeed(softc);
 
+#if CONFIG_BRCM_GENET_VERSION == 5
+		softc->ext->ext_ephy_ctrl |=
+			(EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_EN |
+			 EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_RD |
+			 EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_SD |
+			 EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_RX |
+			 EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_TX |
+			 EXT_EPHY_CNTRL_EXT_PWR_DOWN_BIAS |
+			 EXT_EPHY_CNTRL_EXT_PWR_DOWN_DLL |
+			 EXT_EPHY_CNTRL_IDDQ_GLOBAL_PWR);
+#else
 		softc->ext->ext_pwr_mgmt |=
 			(EXT_PWR_DOWN_PHY | EXT_PWR_DOWN_DLL | EXT_PWR_DOWN_BIAS);
 
+#endif
 		/* All *MII variants require us to power on the RGMII block by
 		 * setting RGMII_MODE_EN
 		 */
@@ -1322,6 +1363,47 @@ static int genet_mdio_write(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 	mdio_access(softc->umac, MDIO_WR, xfer->addr, xfer->regnum, xfer->data);
 
 	return 0;
+}
+
+static int genet_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
+{
+	genet_softc *softc = ctx->dev_softc;
+	int retval = 0;
+
+	switch ((int)buffer->buf_ioctlcmd) {
+	case IOCTL_ETHER_SET_PHY_DEFCONFIG:
+		ephy_workaround(softc);
+		break;
+
+	case IOCTL_ETHER_GET_PHY_REGBASE:
+		*(unsigned long **)(buffer->buf_ptr) =
+			(unsigned long *)&softc->ext->ext_gphy_ctrl;
+		buffer->buf_retlen = sizeof(unsigned long *);
+		break;
+
+	case IOCTL_ETHER_GET_PORT_PHYID:
+		/* We ignore port (ioctl() param bolt_offset_t offset)
+		 * for GENET devcies and return a common value.
+		 */
+		*(int *)(buffer->buf_ptr) = softc->phyaddr;
+		buffer->buf_retlen = sizeof(int);
+		break;
+
+	case IOCTL_ETHER_GET_MDIO_PHYID:
+		if (!softc->mdio) {
+			retval = BOLT_ERR_DEVNOTFOUND;
+			break;
+		}
+		*(int *)(buffer->buf_ptr) = (int)softc->mdio->phy_id;
+		buffer->buf_retlen = sizeof(int);
+	break;
+
+	default:
+		xprintf("GENET: Invalid IOCTL to genet_mdio_ioctl\n");
+		retval = -1;
+	}
+
+	return retval;
 }
 
 static void loopback_disable(genet_softc * softc, uint8_t loopmode)

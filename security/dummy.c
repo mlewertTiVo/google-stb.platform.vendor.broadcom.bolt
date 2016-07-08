@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,77 +7,63 @@
  *
  ***************************************************************************/
 
-#include <boot_defines.h>
-#include <common.h>
+#include "../fsbl/fsbl.h"
+#include "../fsbl/fsbl-pm.h"
 
-#define RETVAL 0
+#include "error.h"
+#include "boot_defines.h"
 
-int __weak get_bootparam(unsigned long *param)
+/* Fake BSL */
+
+void sec_print_version(void)
 {
-	return RETVAL;
+	puts("seclib-fake");
 }
 
-int __weak verify_avs(image_info *info)
+void sec_print_bsp_version(void)
 {
-	return RETVAL;
+	puts("0.0");
 }
 
-int __weak verify_memsys(image_info *info)
+uint32_t sec_memsys_ready(void)
 {
-	return RETVAL;
+	return 0;
 }
 
-int __weak reverify_region(int magic, int *secure_otp)
+uint32_t sec_read_otp_bit(uint32_t field, uint32_t *otp_value)
 {
-	return RETVAL;
+	*otp_value = 0;
+	return 0;
 }
 
-int __weak memsys_region_disable(void)
+uint32_t sec_scramble_sdram_impl(bool warm_boot)
 {
-	return RETVAL;
+	return 0;
 }
 
-int __weak disable_region(int magic)
+uint32_t sec_disable_MICH(void)
 {
-	return RETVAL;
+	return 0;
 }
 
-int __weak wait_for_disable_region(int magic)
+#if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
+uint32_t sec_bfw_load_impl(image_info *info, uint32_t pagelist)
+#else
+uint32_t bseck_reload(void)
+#endif
 {
-	return RETVAL;
+	return 0;
 }
 
-int __weak verify_ssbl(void)
+void sec_print_bsp_debug_info(void)
 {
-	return RETVAL;
 }
 
-int __weak lock_memc(int memc)
+uint32_t sec_get_bootparam(uint32_t *param)
 {
-	return RETVAL;
+	*param = BOOT_PARAMETER_OFFSET + SRAM_ADDR;
+	return 0;
 }
 
-uint32_t __weak memsys_ready(void)
-{
-	return RETVAL;
-}
 
-uint32_t __weak read_otp_bit(uint32_t bit, uint32_t *value)
-{
-	return RETVAL;
-}
-
-uint32_t __weak disable_MICH(void)
-{
-	return RETVAL;
-}
-
-uint32_t __weak bfw_load(image_info *info, uint32_t pagelist)
-{
-	return RETVAL;
-}
-
-uint32_t __weak scramble_sdram(void)
-{
-	return RETVAL;
-}
+/* END */

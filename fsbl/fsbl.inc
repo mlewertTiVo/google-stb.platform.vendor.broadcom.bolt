@@ -1,12 +1,10 @@
 # ***************************************************************************
-# *     Copyright (c) 2012-2016, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
-# *
-# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-# *
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+#
+# THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
 # ***************************************************************************
 
 FSBL_S += \
@@ -28,7 +26,7 @@ FSBL_S += \
  fsbl/fsbl-uart.c \
  fsbl/fsbl-vectors.S \
  fsbl/fsbl-board.c \
- gen/$(FAMILY)/fsbl-pinmux.c
+ $(GEN)/$(FAMILY)/fsbl-pinmux.c
 
 
 ifeq ($(CFG_BOARD_ID),1)

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -233,6 +231,7 @@ static void say_hello(int blink)
 	uint32_t prod, fam;
 	unsigned int i;
 	struct board_type *b = board_thisboard();
+	uint32_t sysif_mhz;
 
 	xprintf("\n");
 	for (i = 0; i < ARRAY_SIZE(logo); i++) {
@@ -245,7 +244,7 @@ static void say_hello(int blink)
 		else if (i == 2)
 			xprintf("(%s %s)\n", builddate, builduser);
 		else if (i == 3)
-			xprintf("Copyright (C) %d Broadcom Corporation\n",
+			xprintf("Copyright (C) %d Broadcom\n",
 					buildyear);
 		else
 			xprintf("\n");
@@ -264,9 +263,16 @@ static void say_hello(int blink)
 
 	print_otp();
 
-	xprintf("CPU: %dx %s, %d MHz\n", arch_get_num_processors(),
-		"A15", get_cpu_freq_mhz()); /* FIXME: Get CPU ID string */
+	xprintf("CPU: %dx %s [%08x] %d MHz\n",
+		arch_get_num_processors(),
+		arch_get_cpu_bootname(),
+		arch_get_midr(),
+		get_cpu_freq_mhz());
+
 	xprintf("SCB: %d MHz\n", (uint32_t)arch_get_scb_freq_hz()/1000000);
+	sysif_mhz = (uint32_t)arch_get_sysif_freq_hz() / 1000000;
+	if (sysif_mhz != 0)
+		xprintf("SYSIF: %d MHz\n", sysif_mhz);
 	board_print_ddrspeed();
 
 	/* SWBOLT-99
@@ -305,6 +311,20 @@ void bolt_start(unsigned long ept, unsigned long param1,
 {
 	bolt_launch(ept, param1, param2, param3);
 }
+
+#ifdef STUB64_START
+void bolt_start64(unsigned long ept, unsigned long param1,
+				unsigned long param2, unsigned long param3)
+{
+	bolt_launch64(ept, param1, param2, param3);
+}
+
+void bolt_start32(unsigned long ept, unsigned long param1,
+				unsigned long param2, unsigned long param3)
+{
+	bolt_launch32(ept, param1, param2, param3);
+}
+#endif
 
 /*  *********************************************************************
     *  bolt_config_info()
@@ -586,6 +606,8 @@ void bolt_main(int a, int b)
 #ifdef S_UNITTEST
 	bolt_aegis_cr_unblock();
 #endif
+
+	bolt_psci_init();
 
 	/* Printout BOLT identification info */
 	say_hello(0);

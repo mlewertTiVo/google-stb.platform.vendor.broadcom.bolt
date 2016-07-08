@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -53,6 +51,7 @@ struct flash_info {
 	uint64_t flash_size;	/* available device size in bytes */
 	unsigned int type;	/* the flash type */
 	unsigned int flags;	/* Various flags (FLASH_FLAG_xxx) */
+	unsigned int page_size; /* size of a page */
 };
 
 typedef struct flash_sector_s {
@@ -97,6 +96,12 @@ typedef struct nvram_info_s {
 #define IOCTL_ETHER_SETLOOPBACK	8	/* set loopback state */
 #define IOCTL_ETHER_SETPACKETFIFO 9	/* set packet fifo mode (int) */
 #define IOCTL_ETHER_SETSTROBESIG 10	/* set strobe signal (int) */
+
+/* Added for ephytest */
+#define IOCTL_ETHER_GET_PHY_REGBASE	11 /* Get PHY registers base address */
+#define IOCTL_ETHER_GET_PORT_PHYID	12 /* Get the PHY ID for a given port */
+#define IOCTL_ETHER_GET_MDIO_PHYID	13 /* Get the PHY ID for the mdio */
+#define IOCTL_ETHER_SET_PHY_DEFCONFIG	14 /* Apply default phy workarounds */
 
 #define ETHER_LOOPBACK_OFF	0	/* no loopback */
 #define ETHER_LOOPBACK_MAC_INT	1	/* MAC Internal loopback */

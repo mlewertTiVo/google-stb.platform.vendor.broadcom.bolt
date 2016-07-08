@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -64,6 +62,18 @@ uint64_t arch_get_cpu_freq_hz(void)
 	return arch_get_cpu_pll_hz() >> shift;
 }
 
+#if defined(BCHP_HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG)
+/* table of divisors for CPU/L2 clock */
+static const unsigned int CPU_L2_DIV_TABLE[] = {
+	 1, /* 0 - SEL_CLK_PATTERN  */
+	 2, /* 1 - SEL_CLK_PATTERN */
+	 3, /* 2 - SEL_CLK_PATTERN */
+	 4, /* 3 - SEL_CLK_PATTERN */
+	 8, /* 4 - SEL_CLK_PATTERN */
+	16, /* 5 - SEL_CLK_PATTERN */
+	32}; /* 6 - SEL_CLK_PATTERN */
+#endif
+
 /*
  * Source for the CPU PLL; can be divided dynamically with MDIV
  */
@@ -71,9 +81,21 @@ uint64_t arch_get_cpu_vco_hz(void)
 {
 	uint32_t regval;
 	unsigned int pdiv, ndiv;
+#if defined(BCHP_HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG)
+	unsigned int cpu_l2_div;
+#endif
 
-#if defined(BCHP_CLKGEN_PLL_CPU_CORE_PLL_CHANNEL_CTRL_CH_0)
-	/* 7145B0 */
+#if defined(BCHP_CLKGEN_PLL_CPU_PLL_DIV_4K)
+	/* 7271a0, 7268a0 */
+	regval = BDEV_RD(BCHP_CLKGEN_PLL_CPU_PLL_DIV);
+	pdiv = (regval & BCHP_CLKGEN_PLL_CPU_PLL_DIV_PDIV_MASK) >>
+		 BCHP_CLKGEN_PLL_CPU_PLL_DIV_PDIV_SHIFT;
+
+	regval = BDEV_RD(BCHP_CLKGEN_PLL_CPU_PLL_DIV_4K);
+	ndiv = (regval & BCHP_CLKGEN_PLL_CPU_PLL_DIV_4K_NDIV_INT_MASK) >>
+	                 BCHP_CLKGEN_PLL_CPU_PLL_DIV_4K_NDIV_INT_SHIFT;
+#elif defined(BCHP_CLKGEN_PLL_CPU_CORE_PLL_CHANNEL_CTRL_CH_0)
+	/* 3390 */
 	regval = BDEV_RD(BCHP_CLKGEN_PLL_CPU_CORE_PLL_DIV);
 	pdiv = (regval & BCHP_CLKGEN_PLL_CPU_CORE_PLL_DIV_PDIV_MASK) >>
 		BCHP_CLKGEN_PLL_CPU_CORE_PLL_DIV_PDIV_SHIFT;
@@ -89,13 +111,26 @@ uint64_t arch_get_cpu_vco_hz(void)
 #error CLKGEN info not found
 #endif
 
+#if !defined(BCHP_HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG)
 	return (uint64_t)CHIP_REFCLOCK_FREQUENCY / pdiv * ndiv;
+#else
+	regval = BDEV_RD_F(HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG,
+		SEL_CLK_PATTERN);
+	if (regval >= sizeof(CPU_L2_DIV_TABLE)/sizeof*(CPU_L2_DIV_TABLE)) {
+		regval = BCHP_HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG_SEL_CLK_PATTERN_DEFAULT;
+	}
+	cpu_l2_div = CPU_L2_DIV_TABLE[regval];
+	return (uint64_t)CHIP_REFCLOCK_FREQUENCY / pdiv * ndiv / cpu_l2_div;
+#endif
 }
 
 static unsigned int arch_get_cpu_mdiv(void)
 {
-#if defined(BCHP_CLKGEN_PLL_CPU_CORE_PLL_CHANNEL_CTRL_CH_0)
-	/* 7145B0 */
+#if defined(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0_4K)
+	/* 7271a0, 7268a0 */
+	return BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0_4K, MDIV_CH0);
+#elif defined(BCHP_CLKGEN_PLL_CPU_CORE_PLL_CHANNEL_CTRL_CH_0)
+	/* 3390 */
 	return BDEV_RD_F(CLKGEN_PLL_CPU_CORE_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0);
 #else
 	return BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0);
@@ -114,6 +149,19 @@ static unsigned int arch_get_cpu_mdiv(void)
 uint64_t arch_get_cpu_pll_hz(void)
 {
 	return arch_get_cpu_vco_hz() / arch_get_cpu_mdiv();
+}
+
+/* arch_get_midr -- returns Main ID Register, ARM specific
+ *
+ * returns MIDR
+ */
+uint32_t arch_get_midr(void)
+{
+	uint32_t midr;
+
+	__asm__ ("mrc   p15, 0, %0, c0, c0, 0" : "=r" (midr));
+
+	return midr;
 }
 
 int arch_get_num_processors(void)
@@ -184,11 +232,12 @@ uint64_t arch_get_scb_freq_hz(void)
 	ndiv = (regval & BCHP_CLKGEN_PLL_SYS0_PLL_DIV_NDIV_INT_MASK) >>
 		BCHP_CLKGEN_PLL_SYS0_PLL_DIV_NDIV_INT_SHIFT;
 	mdiv = BDEV_RD_F(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1, MDIV_CH1);
-#elif defined(CONFIG_BCM7145B0) || \
-	defined(CONFIG_BCM7250B0) || \
+#elif defined(CONFIG_BCM7250B0) || \
 	defined(CONFIG_BCM7364) || \
 	defined(CONFIG_BCM7366) || \
-	defined(CONFIG_BCM74371A0)
+	defined(CONFIG_BCM74371A0)|| \
+	defined(CONFIG_BCM7271A0)|| \
+	defined(CONFIG_BCM7268A0)
 	/* channel#2 */
 	regval = BDEV_RD(BCHP_CLKGEN_PLL_SYS0_PLL_DIV);
 	pdiv = (regval & BCHP_CLKGEN_PLL_SYS0_PLL_DIV_PDIV_MASK) >>
@@ -205,6 +254,22 @@ uint64_t arch_get_scb_freq_hz(void)
 	return scbfreq;
 }
 
+/* arch_get_sysif_freq_hz -- returns sysIF frequency in HZ
+ *
+ * Returns
+ *  sysIF frequency in HZ
+ *  0 (zero) if not applicable
+ */
+uint64_t arch_get_sysif_freq_hz(void)
+{
+#if !defined(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K)
+	return 0;
+#else
+	return arch_get_cpu_vco_hz() /
+		BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K, MDIV_CH1);
+#endif
+}
+
 uint32_t arch_get_timer_freq_hz(void)
 {
 	uint32_t timer_freq_hz;
@@ -215,50 +280,6 @@ uint32_t arch_get_timer_freq_hz(void)
 	return timer_freq_hz;
 }
 
-
-/* arch_getticks -- returns timer tick value
- *
- * The lower 32 bits of the phycal count register (CNTPCT) of ARM System
- * Counter is returned. The speed of the counter should be referred to
- * the CNTFRQ register.
- *
- * returns the lower 32 bits of the CNTPCT register
- * see also: arch_get_timer_freq_hz()
- */
-uint32_t arch_getticks(void)
-{
-	uint32_t count_low;
-	uint32_t count_high;
-
-	/* CNTPCT : 64 bits */
-	isb(); /* Reads of CNTPCT can occur speculatively and out of order
-		* relative to other instructions executed on the same
-		* processor, on page B8-1960 of ARM Architectural Reference
-		* Manual (ARMv7-A and ARMv7-R).
-		*/
-	__asm__ ("mrrc     p15, 0, %0, %1, c14"
-		: "=r" (count_low), "=r" (count_high) : : "memory");
-
-	return count_low;
-}
-
-
-uint64_t arch_getticks64(void)
-{
-       uint32_t count_low;
-       uint32_t count_high;
-
-       /* CNTPCT : 64 bits */
-       isb(); /* Reads of CNTPCT can occur speculatively and out of order
-	       * relative to other instructions executed on the same
-	       * processor, on page B8-1960 of ARM Architectural Reference
-	       * Manual (ARMv7-A and ARMv7-R).
-	       */
-       __asm__ ("mrrc	  p15, 0, %0, %1, c14"
-	       : "=r" (count_low), "=r" (count_high) : : "memory");
-
-       return (((uint64_t)count_high) << 32) | (uint64_t)count_low;
-}
 
 /* Minimum CPU clock frequency allowed without using SAFE_MODE */
 uint64_t arch_get_cpu_min_safe_hz(void)
@@ -372,13 +393,19 @@ static int walk_page_table(uintptr_t addr, unsigned int size,
 
 static uint32_t mark_pte_uncacheable(int ptetype, uint32_t pte)
 {
-	/* assuming TRE == 0 and TEX[2:0] is either b000 or b001 */
+	/*
+	 * Change normal cached memory to  Device Memory (TEX=0, C=0, B=1)
+	 * so the uncached accesses are never reordered.
+	 */
 	switch (ptetype) {
 	case PTE_SECTION:
-		pte &= ~(BUFFERABLE | CACHABLE);
+		pte &= ~(BUFFERABLE | CACHABLE | TEX_2_0(7));
+		pte |= SECT_DEVICE;
 		break;
 	case PTE_SMALL:
-		pte &= ~(SMALL_PG_BUFFERABLE | SMALL_PG_CACHABLE);
+		pte &= ~(SMALL_PG_BUFFERABLE | SMALL_PG_CACHABLE |
+			SMALL_PG_TEX_2_0(7));
+		pte |= SMALL_PG_DEVICE;
 		break;
 	default:
 		/* do nothing */
@@ -564,7 +591,10 @@ void arch_dump_registers(struct arm_regs *regs)
 
 /* HW7439-655. Verify against e.g. HW7366-587
 before adding newer chips listed there. */
-#if defined(CONFIG_BCM7439B0) || defined(CONFIG_BCM7366C0)
+#if	defined(CONFIG_BCM7439B0) || \
+	defined(CONFIG_BCM7366C0) || \
+	defined(CONFIG_BCM7271A0) || \
+	defined(CONFIG_BCM7268A0)
 #define HW7445_1480 0
 #else
 #define HW7445_1480 1
@@ -821,6 +851,12 @@ void arch_set_cpu_clk_ratio(int ratio)
 		return;
 	}
 
+#if defined(BCHP_HIF_CPUBIUCTRL_SYSIF_BPCM_ID)
+	BDEV_WR_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, CLK_RATIO, ratio);
+	/* With sysIF, turning on/off SAFE_MODE is not required when
+	 * changing CPU clock ratio.
+	 */
+#else
 	/* else with HW7445-1480 fixed. */
 	BDEV_WR_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, SAFE_CLK_MODE, 1);
 	BARRIER();
@@ -833,4 +869,40 @@ void arch_set_cpu_clk_ratio(int ratio)
 				SAFE_CLK_MODE, 0);
 		BARRIER();
 	}
+#endif
+}
+
+
+int arch_booted64(void)
+{
+#ifdef STUB64_START
+	struct fsbl_info *info = board_info();
+
+	if (!info) /* default */
+		return 0;
+
+	if (info->runflags & FSBL_RUNFLAG_A64_BOOT)
+		return 1;
+#endif
+	return 0;
+}
+
+/**********************************************************************
+  * arch_get_cpu_bootname
+  *
+  *  Get the bootup type (64 or 32 bit) that FSBL (possibly via STUB64)
+  * reports. This helps if FSBL is set to no UART output.
+  *
+  * Input parameters:
+  *     none
+  *
+  *  Return value:
+  *     name of the bootup mode as a string
+  **********************************************************************/
+const char *arch_get_cpu_bootname(void)
+{
+#ifdef STUB64_START
+	return (arch_booted64()) ? "B53 (64-bit)" : "B53 (32-bit)";
+#endif
+	return "B15";
 }

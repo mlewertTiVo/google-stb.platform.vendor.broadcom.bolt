@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -61,6 +59,12 @@
 #define PHY_TYPE_MOCA			7
 #endif /* ENET_DEPRECATED_DT_BINDING */
 
+
+#if CONFIG_BRCM_GENET_VERSION == 5
+#define ENET_COMPAT_INT_PHY_STR "brcm,28nm-ephy"
+#else
+#define ENET_COMPAT_INT_PHY_STR "brcm,28nm-gphy"
+#endif
 
 /* ------------------------------------------------------------------------- */
 /*      Modify an existing DTB with bolt specifics, may get messy here.      */
@@ -216,6 +220,18 @@ static int bolt_populate_nand(void *fdt, struct flash_dev *flash)
 	if (rc < 0)
 		return rc;
 
+	/* For NAND flashes at CS0, we inherit the OOB sector size, and do not
+	 * use ONFI detection, there may be a disagreement here (ONFI will
+	 * round up to the nearest even number), so indicate that here that we
+	 * want the strapped OOB size so BOLT and the OS agree on what to use.
+	 */
+	if (flash->cs == 0 && flash->oob_sector_size) {
+		rc = bolt_dt_addprop_u32(fdt, sat, "brcm,nand-oob-sector-size",
+					 flash->oob_sector_size);
+		if (rc < 0)
+			return rc;
+	}
+
 	/* create partiton map sub-sub nodes + its prop.
 	*/
 	rc = populate_partitions(fdt, flash, sat);
@@ -271,6 +287,13 @@ static int bolt_populate_spi(void *fdt, struct flash_dev *flash)
 	rc = bolt_dt_addprop_u32(fdt, sat, "spi-max-frequency", 40000000);
 	if (rc)
 		return rc;
+
+#if CFG_SPI_QUAD_MODE
+	rc = bolt_dt_addprop_u32(fdt, sat, "spi-rx-bus-width", 4);
+	if (rc)
+		return rc;
+#endif
+
 	rc = bolt_dt_addprop_u32(fdt, sat, "reg", flash->cs);
 	if (rc)
 		return rc;
@@ -621,6 +644,37 @@ static int bolt_populate_memory_ctls(void *fdt)
 	return rc;
 }
 
+static int bolt_populate_scb_freq(void *fdt)
+{
+	int node;
+	int rc;
+
+	rc = bolt_devtree_node_from_path(fdt, DT_RDB_DEVNODE_BASE_PATH
+					 "/brcmstb-clks");
+	if (rc < 0) /* no clock tree (PLX file) */
+		return BOLT_OK;
+
+	/* delete then create subnode */
+	(void)bolt_devtree_delnode_at(fdt, "sw_scb", rc);
+
+	rc = bolt_devtree_addnode_at(fdt, "sw_scb", rc, &node);
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_str(fdt, node, "compatible", "fixed-clock");
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_u32(fdt, node, "#clocks-cells", 0);
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_u32(fdt, node, "clock-frequency",
+				 arch_get_scb_freq_hz());
+
+	return rc;
+}
+
 /* ------------------------------------------------------------------------- */
 
 #define OPP_TBL_MAX_SZ 16
@@ -721,6 +775,15 @@ static int bolt_populate_cpus(void *fdt)
 			return rc;
 		}
 
+#ifdef STUB64_START
+		rc = bolt_dt_addprop_str(fdt, cpu_node,
+			"enable-method", "psci");
+		if (rc < 0) {
+			xprintf("%s: couldn't set enable method\n",
+				__func__);
+			return rc;
+		}
+#endif
 		if (cpu == 0) {
 			rc = gen_operating_points(fdt, cpu_node);
 			if (rc) {
@@ -730,6 +793,9 @@ static int bolt_populate_cpus(void *fdt)
 		}
 	}
 
+#ifdef STUB64_START
+	(void)bolt_devtree_add_memreserve(fdt, PSCI_BASE, PSCI_SIZE);
+#endif
 	return 0;
 }
 
@@ -995,7 +1061,7 @@ static void bolt_devtree_add_phy(void *fdt, int phandle,
 
 	if (!strcmp(phy_type, "INT")) {
 		needs_gphy_clk = 1;
-		xsprintf(phystr, "%s", "brcm,28nm-gphy");
+		xsprintf(phystr, "%s", ENET_COMPAT_INT_PHY_STR);
 	} else if (e->ethsw) {
 		/* Skip the trailing 0x */
 		broken_ta = 11;
@@ -1810,7 +1876,7 @@ static void bolt_otp_unpopulate(void *fdt)
 	/*	For usb/devtree work we need to consider:
 
 			OTP_OPTION_USB[0..1]_P[0..1]_DISABLE (7366a0)
-			OTP_OPTION_USB_P[0..1]_DISABLE (7145a0)
+			OTP_OPTION_USB_P[0..1]_DISABLE
 	*/
 }
 
@@ -1965,11 +2031,29 @@ void bolt_board_specific_mods(void *fdt)
 
 			parent = bolt_devtree_node_from_path(fdt, cull->path);
 			if (parent >= 0) {
-				err = bolt_devtree_delnode_at(fdt,
-						cull->node, parent);
-				if (CFG_CMD_LEVEL >= 5)
-					xprintf("%s() removed %s %s, err=%d\n",
-						__func__, cull->path, cull->node, err);
+				if (cull->prop) {
+					/* CULL the property, not the node */
+					child = bolt_devtree_subnode(fdt,
+						     cull->node, parent);
+					if (child >= 0)
+						err = bolt_devtree_at_node_delprop(fdt,
+							child, cull->prop);
+					else
+						err = child;
+					if (err)
+						xprintf("failure deleting prop=%s"
+							" (err=%d)\n",
+							cull->prop, err);
+				} else {
+					/* CULL the node */
+					err = bolt_devtree_delnode_at(fdt,
+						      cull->node, parent);
+					if (CFG_CMD_LEVEL >= 5)
+						xprintf("%s() removed %s %s, "
+							"err=%d\n",
+							__func__, cull->path,
+							cull->node, err);
+				}
 			} else {
 				/* we could have repeated runs of 'dt bolt' or
 				duplicated inherited things to nuke, so just
@@ -2220,6 +2304,20 @@ static int bolt_populate_bsp(void *fdt)
 
 /* ------------------------------------------------------------------------- */
 
+
+int bolt_devtree_boltset_boot(void *fdt, struct dt_boot_mods *bm)
+{
+	if (!bm) /* Nothing (else) requiring external bm options. */
+		return BOLT_OK;
+
+#ifdef STUB64_START
+	if (bm->loader_32bit)
+		(void)bolt_devtree_delnode_at(fdt, "psci", 0);
+#endif
+	return BOLT_OK;
+}
+
+
 int bolt_devtree_boltset(void *fdt)
 {
 	int rc = 0;
@@ -2237,6 +2335,10 @@ int bolt_devtree_boltset(void *fdt)
 		goto out;
 
 	rc = bolt_populate_memory_ctls(fdt);
+	if (rc)
+		goto out;
+
+	rc = bolt_populate_scb_freq(fdt);
 	if (rc)
 		goto out;
 

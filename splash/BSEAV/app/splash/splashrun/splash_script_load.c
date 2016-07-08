@@ -7,92 +7,15 @@
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
  *
- * $brcm_Workfile: splash_script_load.c $
- * $brcm_Revision: 27 $
- * $brcm_Date: 4/12/13 2:06p $
+ * $brcm_Workfile: $
+ * $brcm_Revision: $
+ * $brcm_Date: $
  *
  * Module Description:
  *
  * Revision History:
  *
- * $brcm_Log: /BSEAV/app/splash/splashrun/splash_script_load.c $
- * 
- * 27   4/12/13 2:06p syang
- * SW7445-213: change to use cached addr for surface and RULs
- * 
- * 26   4/1/13 5:48p syang
- * SW7435-676: make it easy to support dynamic script selecttion in CFE at
- * run time
- * 
- * 25   3/30/13 12:21a syang
- * SW7435-676: rm "include <stdio.h>", it cause CFE compile problem
- * 
- * 24   3/29/13 2:39p syang
- * SW7435-676: print out surface offset msg
- * 
- * 23   3/29/13 11:41a syang
- * SW7435-676: deep refactor for memc, surface and display number
- * scalabilty; flexibility for diff configure combination; and easy
- * adding of new chips
- * 
- * 22   10/31/12 7:02p mward
- * SW7435-114:  Back out dual surface support.  Move to branch pending CFE
- * support.
- * 
- * 19   9/18/12 2:10p jessem
- * SW7425-3872: Removed BSPLASH_RDC_SCRATCH_DISP1_REG1.
- *
- * 18   9/10/12 4:40p jessem
- * SW7425-3872: Removed hMem1 use with 7425.
- *
- * 17   4/19/12 2:53p mward
- * SW7435-114:  Add support for 7435.
- *
- * 16   4/12/12 5:04p randyjew
- * SWCFE-769: Memc0 only support
- *
- * 15   4/10/12 2:15p jessem
- * SW7425-2828: Used NEXUS_Platform_GetFrameBufferHeap to determine
- * correct heap to use.
- *
- * 14   8/22/11 5:14p jessem
- * SW7425-878: Added MEMC1 support for 7425.
- *
- * 13   6/27/11 11:34a katrep
- * SW7231-220:add support for 7231 &newer 40nm chips
- *
- * 12   2/24/11 5:09p gmohile
- * SW7408-239 : Add 7408 splash support
- *
- * 11   10/14/10 5:22p jkim
- * SWCFE-386: remove compiler warning.
- *
- * 10   11/30/09 3:10p jrubio
- * SW7335-627: fix for non-7420 chips
- *
- * 9   9/24/09 11:44p nickh
- * SW7420-351: Modify load script to add MEMC1 for 7420 support
- *
- * 8   10/18/07 2:37p shyam
- * PR 30741 : Add error check for empty reg dump
- *
- * 6   9/28/07 2:39p shyam
- * PR 30741 : Avoid brdc.h inclusion in script loader
- *
- * 5   9/27/07 7:41p shyam
- * PR 30741 : Bug with code that filters out baadfood ruls
- *
- * 4   8/9/07 3:52p shyam
- * PR 33858 : Got 480p and dual compositor  working on 7403
- *
- * 3   7/18/07 12:39p shyam
- * PR 30741 : Add support for 480p on HDMI and NTSC on Composite
- *
- * 2   6/28/07 5:06p shyam
- * PR 30741 : syncup with cfe version
- *
- * 1   5/14/07 7:15p shyam
- * PR 30741 : Add reference support for generic portable splash
+ * $brcm_Log: $
  *
  ***************************************************************************/
 #include "splash_script_load.h"
@@ -105,22 +28,44 @@
 
 #include "splash_script_load.h"
 
-/* pre-generated register and RUL header files from splashgen */
-#include "splash_vdc_rul.h"
-#include "splash_vdc_reg.h"
-
 BDBG_MODULE(splash_script_load);
 
 #define BRDC_REGISTER(reg)      ((reg) + BCHP_PHYSICAL_OFFSET)
 
+/* Remember highest slot number ever used */
+static int s_highSlot = -1;
+/* A little package for remembering pointers */
+#define REMEMBER_CHUNK 256
+static unsigned int s_numPointers = 0;
+static unsigned int s_maxPointers = 0;
+static uint32_t** s_Pointers = NULL;
+static void RememberPointer (uint32_t* pointer)
+{
+	if (s_numPointers == s_maxPointers)
+	{
+		unsigned int new_length = s_maxPointers + REMEMBER_CHUNK;
+		uint32_t** new_array =
+			(uint32_t**)BKNI_Malloc ((new_length) * sizeof (uint32_t*));
+		BDBG_ASSERT(new_array);
+		BKNI_Memcpy (
+			(void*)new_array, (void*)s_Pointers,
+			sizeof(uint32_t*) * s_maxPointers);
+		s_maxPointers = new_length;
+		s_Pointers = new_array;
+	}
+	s_Pointers[s_numPointers++] = pointer;
+}
+static void FreePointers (BMEM_Handle hHeap)
+{
+	unsigned int index;
+	for (index = 0 ; index < s_numPointers ; ++index)
+		BMEM_Free (hHeap, (void*)s_Pointers[index]);
+	BKNI_Free ((void*)s_Pointers);
+	s_Pointers = NULL;
+	s_numPointers = 0;
+	s_maxPointers = 0;
+}
 
-uint32_t  g_ulNumMem = BSPLASH_NUM_MEM;
-uint32_t  g_ulNumSurface = BSPLASH_NUM_SURFACE;
-uint32_t  g_ulNumDisplay = BSPLASH_NUM_DISPLAY;
-
-uint32_t *g_pulReg = &g_aulReg[0];
-uint32_t g_ulNumReg = (sizeof(g_aulReg)/(2*sizeof(uint32_t)));
-		
 /**************************
  * This function takes a set of RULs for a given slot (say all the RULS for top
  * field or all for bottom field), copies them into memory, adds a command
@@ -168,6 +113,7 @@ static void InitializeSlot
         /* allocate aligned memory (add 6 more elements for extra entries -- see below) */
         apulAlloced[iRUL] = (uint32_t *) BMEM_AllocAligned(hHeap,
             sizeof(uint32_t) * (iNumEntries + 6), 5, 0);
+		RememberPointer (apulAlloced[iRUL]);
 		BMEM_Heap_ConvertAddressToCached(hHeap, (void *)apulAlloced[iRUL], (void **)&apulCached[iRUL]);
 
         /* copy list into memory */
@@ -213,15 +159,18 @@ static void InitializeSlot
                 BCHP_FIELD_DATA(RDC_desc_0_config, repeat,         1)               |
                 BCHP_FIELD_DATA(RDC_desc_0_config, enable,         1)               |
                 BCHP_FIELD_DATA(RDC_desc_0_config, done,           1);
-			
+
 			/* flush previous RUL: we just appended cmd to it to link the current RUL start addr */
 			BMEM_Heap_FlushCache(hHeap, apulCached[iRUL-1], sizeof(uint32_t)*(iPrvNumEntries+6));
+
+			/* Remember this slot */
+			if (iSlotIndex > s_highSlot) s_highSlot = iSlotIndex;
         }
 
         iRUL++;
         iPrvNumEntries = iNumEntries ;
     }
-	
+
 	/* flush the last RUL */
 	BMEM_Heap_FlushCache(hHeap, apulCached[iRUL-1], sizeof(uint32_t)*(iPrvNumEntries+6));
 
@@ -261,15 +210,19 @@ static void InitializeSlot
 
     BREG_Write32(hRegister, BCHP_RDC_desc_0_addr + ulSlotOffset,
         ulAddrOffset);
+
+	/* Remember this slot */
+	if (iSlotIndex > s_highSlot) s_highSlot = iSlotIndex;
 }
 
-void splash_bvn_init(BREG_Handle hRegister, SplashBufInfo *pSplashBufInfo)
+void splash_bvn_init(
+BREG_Handle hRegister, SplashBufInfo *pSplashBufInfo, SplashData* pSplashData)
 {
     int  ii;
     int  iTriggerIndex;
 	int  iSurIdx;
-	
-    if( 0 == g_ulNumReg )
+
+    if( 0 == pSplashData->nAulReg )
     {
         BDBG_ERR(("\n\n\n" "***************************************************************************"
                   "\n" "Error ... Error ... Error ! " "\n" "Register Dump is empty !!! "
@@ -281,58 +234,103 @@ void splash_bvn_init(BREG_Handle hRegister, SplashBufInfo *pSplashBufInfo)
         return ;
     }
     /* Dumped registers */
-    for(ii=0; ii<(int)(g_ulNumReg); ++ii)
+    for(ii=0 ; ii < pSplashData->nAulReg ; ++ii)
     {
         /* Write dumped register value */
-        BREG_Write32(hRegister, *(g_pulReg + 2*ii), *(g_pulReg + 2*ii+1));
+        BREG_Write32(
+			hRegister,
+			*(pSplashData->pAulReg + 2*ii),
+			*(pSplashData->pAulReg + 2*ii+1));
     }
 
 	/* write our surface addr into RDC scratch registers,
 	 * note that the RUL has been built to pick them up for gfx display */
-	for (ii=0; ii<BSPLASH_NUM_DISPLAY; ii++)
+	for (ii=0; ii<pSplashData->iNumDisplay; ii++)
 	{
-		iSurIdx = g_SplashDisplayInfo[ii].iSurIdx;
-		BREG_Write32(hRegister, g_SplashDisplayInfo[ii].ulRdcScratchReg0,
+		iSurIdx = pSplashData->pDispInfo[ii].iSurIdx;
+		BREG_Write32(hRegister, pSplashData->pDispInfo[ii].ulRdcScratchReg0,
 			pSplashBufInfo->aulSurfaceBufOffset[iSurIdx]);
-		if (g_SplashDisplayInfo[ii].ulRdcScratchReg1)
-			BREG_Write32(hRegister, g_SplashDisplayInfo[ii].ulRdcScratchReg1,
+		if (pSplashData->pDispInfo[ii].ulRdcScratchReg1)
+		{
+			BREG_Write32(
+				hRegister, pSplashData->pDispInfo[ii].ulRdcScratchReg1,
 				pSplashBufInfo->aulSurfaceBufOffset[iSurIdx]);
+		}
 		BDBG_MSG(("** set surface offset 0x%8.8x for display %d\n",pSplashBufInfo->aulSurfaceBufOffset[iSurIdx], ii));
 	}
-		
-    BDBG_MSG(("***** Number of triggers = %d \n", sizeof(g_aTriggerMap)/sizeof(struct stTriggerMap) )) ;
-    for( iTriggerIndex = 0; iTriggerIndex < (int)(sizeof(g_aTriggerMap)/sizeof(struct stTriggerMap)); iTriggerIndex++)
+
+    BDBG_MSG(("***** Number of triggers = %d \n", pSplashData->iNumTrigMap )) ;
+    for( iTriggerIndex = 0 ;
+	     iTriggerIndex < pSplashData->iNumTrigMap ;
+		 ++iTriggerIndex)
     {
-        if(g_aTriggerMap[iTriggerIndex].TriggerHwNum != -1)
+        if(pSplashData->pTrigMap[iTriggerIndex].TriggerHwNum != -1)
         {
             BDBG_MSG(("Slot number %d, Trigger number %d aList%d[]\n",
-                g_aTriggerMap[iTriggerIndex].SlotNum, g_aTriggerMap[iTriggerIndex].TriggerHwNum, iTriggerIndex));
+                pSplashData->pTrigMap[iTriggerIndex].SlotNum,
+				pSplashData->pTrigMap[iTriggerIndex].TriggerHwNum,
+				iTriggerIndex));
             /* Initialize slot for RUL list n */
             InitializeSlot(
                 hRegister,
                 pSplashBufInfo->hRulMem,
-                g_aTriggerMap[iTriggerIndex].SlotNum,
-                g_aTriggerMap[iTriggerIndex].TriggerHwNum,
-                g_aTriggerMap[iTriggerIndex].aListCountArray,
-                g_aTriggerMap[iTriggerIndex].aListArray,
-                g_aTriggerMap[iTriggerIndex].ListCountMaxIndex);
+                pSplashData->pTrigMap[iTriggerIndex].SlotNum,
+                pSplashData->pTrigMap[iTriggerIndex].TriggerHwNum,
+                pSplashData->pTrigMap[iTriggerIndex].aListCountArray,
+                pSplashData->pTrigMap[iTriggerIndex].aListArray,
+                pSplashData->pTrigMap[iTriggerIndex].ListCountMaxIndex);
         }
     }
 
-    for( iTriggerIndex = 0; iTriggerIndex < (int)(sizeof(g_aTriggerMap)/sizeof(struct stTriggerMap)); iTriggerIndex++)
+    for( iTriggerIndex = 0 ;
+	     iTriggerIndex < pSplashData->iNumTrigMap ;
+		 ++iTriggerIndex)
     {
-        if(g_aTriggerMap[iTriggerIndex].TriggerHwNum != -1)
+        if(pSplashData->pTrigMap[iTriggerIndex].TriggerHwNum != -1)
         {
             /* Force Top slot to start engine for each display */
-            if(0 == (g_aTriggerMap[iTriggerIndex].SlotNum%2))
+            if(0 == (pSplashData->pTrigMap[iTriggerIndex].SlotNum%2))
             {
-                uint32_t ulSlotOffset = 4 * g_aTriggerMap[iTriggerIndex].SlotNum * sizeof(uint32_t);
+                uint32_t ulSlotOffset =
+					4 * pSplashData->pTrigMap[iTriggerIndex].SlotNum *
+					sizeof(uint32_t);
 
-                BDBG_MSG(("Writing immediate to %08x", BCHP_RDC_desc_0_immediate+ulSlotOffset));
+                BDBG_MSG(("Writing immediate to %08x",
+					BCHP_RDC_desc_0_immediate+ulSlotOffset));
                 BREG_Write32(hRegister, BCHP_RDC_desc_0_immediate+ulSlotOffset, 1);
             }
         }
     }
+}
+
+void splash_bvn_uninit(BREG_Handle hRegister, SplashBufInfo *pSplashBufInfo)
+{
+	/* Program the register DMA controller to just stop */
+
+	int iSlotIndex;
+	for (iSlotIndex = 0 ; iSlotIndex <= s_highSlot ; ++iSlotIndex)
+	{
+		uint32_t ulSlotOffset = 4 * iSlotIndex * sizeof(uint32_t);
+		uint32_t ulValue =
+			BCHP_FIELD_DATA(RDC_desc_0_config, count,          0)              |
+			BCHP_FIELD_DATA(RDC_desc_0_config, trigger_select, 0)              |
+			#if defined(BCHP_RDC_desc_0_config_reserved0_SHIFT)
+			BCHP_FIELD_DATA(RDC_desc_0_config, reserved0,      0)              |
+			#elif defined(BCHP_RDC_desc_0_config_segmented_SHIFT)
+			BCHP_FIELD_DATA(RDC_desc_0_config, segmented,      0)              |
+			#endif
+			BCHP_FIELD_DATA(RDC_desc_0_config, repeat,         0)              |
+			BCHP_FIELD_DATA(RDC_desc_0_config, enable,         0)              |
+			BCHP_FIELD_DATA(RDC_desc_0_config, done,           1);
+		BREG_Write32(hRegister, BCHP_RDC_desc_0_config + ulSlotOffset,
+			ulValue);
+	}
+
+	/* It takes a non-zero amount of time for the old RULs to stop executing */
+	BKNI_Sleep (500);
+
+	/* Now the RULs can be freed, because RDC is no longer reading them. */
+	FreePointers (pSplashBufInfo->hRulMem);
 }
 
 /* End of File */

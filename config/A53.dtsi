@@ -1,0 +1,67 @@
+/ {
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			device_type = "cpu";
+			enable-method = "brcm,brahma-b53";
+			compatible = "brcm,brahma-b53", "arm,cortex-a53";
+			reg = <0x0>;
+			next-level-cache = <&l2_cache>;
+		};
+
+		cpu@1 {
+			device_type = "cpu";
+			enable-method = "brcm,brahma-b53";
+			compatible = "brcm,brahma-b53", "arm,cortex-a53";
+			reg = <0x01>;
+			next-level-cache = <&l2_cache>;
+		};
+
+		cpu@2 {
+			device_type = "cpu";
+			enable-method = "brcm,brahma-b53";
+			compatible = "brcm,brahma-b53", "arm,cortex-a53";
+			reg = <0x02>;
+			next-level-cache = <&l2_cache>;
+		};
+
+		cpu@3 {
+			device_type = "cpu";
+			enable-method = "brcm,brahma-b53";
+			compatible = "brcm,brahma-b53", "arm,cortex-a53";
+			reg = <0x03>;
+			next-level-cache = <&l2_cache>;
+		};
+
+		l2_cache: cache {
+			compatible = "cache";
+		};
+	};
+
+	/*  Change cpu_suspend and cpu_off methods to start
+	 * with '0x84' instead of '0xC4' if the 32 bit
+	 * address range variant is required.
+	 */
+	psci {
+		compatible	= "arm,psci-0.2", "arm,psci";
+		method		= "smc";
+		cpu_suspend	= <0xC4000001>;
+		cpu_off		= <0x84000002>;
+		cpu_on		= <0xC4000003>;
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = 	<1 13 0xff01>,
+				<1 14 0xff01>,
+				<1 11 0xff01>,
+				<1 10 0xff01>;
+
+		clock-frequency = <27000000>;
+		arm,cpu-registers-not-fw-configured;
+		always-on;
+	};
+
+};

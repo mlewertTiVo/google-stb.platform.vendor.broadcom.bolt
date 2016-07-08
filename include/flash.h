@@ -60,6 +60,9 @@ struct flash_dev {
 	/* ECC step size (e.g., 512, 1024 bytes) */
 	int ecc_step;
 
+	/* OOB sector size, inherited from strap settings (e.g: NAND on CS0) */
+	int oob_sector_size;
+
 	/* Number of partitions */
 	int nparts;
 

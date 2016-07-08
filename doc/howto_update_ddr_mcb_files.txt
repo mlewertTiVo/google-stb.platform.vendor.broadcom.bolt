@@ -3,7 +3,7 @@
 :max-width: 100%
 Using an FAE supplied '.mcb' file for your DDR
 ==============================================
-Broadcom Corporation <support@broadcom.com>
+Broadcom Ltd <support@broadcom.com>
 
 This text applies to the standard BOLT release using
 the 'flexible' configuration where multiple MCB data
@@ -53,17 +53,16 @@ from being included in the family BOLT build.
 
 * Make a new (or update an existing) mcb-\{family}.c
 
+* Rebuild BOLT to pick up the changes.
+
 e.g.
 
 [source,shell]
 ----
-     [user@machine]make ddr_update FAMILY=7364a0 MEMC_REV=B150_F002
-     [user@machine]$ make clean
+     [user@machine]$ make distclean
+     [user@machine]$ make ddr_update FAMILY=7364a0 MEMC_REV=B150_F002
      [user@machine]$ make 7364a0
 ----
-
-* Now rebuild BOLT to pick up the changes.
-
 
 
 Another example (using 7445d0)
@@ -90,6 +89,10 @@ Re-create the mcb-7445d0.c file so BOLT knows about it, then rebuild BOLT:
      [user@machine]$ make ddr_update FAMILY=7445d0 MEMC_REV=B130_F001
      [user@machine]$ make 7445d0
 ----
+
+NOTE: As seen in the previous examples you may need to do a 'make clean'
+or a 'make distclean' before 'make ddr_update' to see a change in the
+specific mcb-$(FAMILY).c file.
 
 
 Dual MEMSYS (alternate MEMSYS)
@@ -216,7 +219,7 @@ MEMC_REV in your chip family config file to point to it.
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

@@ -1,12 +1,10 @@
 # ***************************************************************************
-# *     Copyright (c) 2012-2015, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
-# *
-# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-# * 
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+#
+# THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
 # ***************************************************************************
 
 
@@ -14,7 +12,6 @@ SSBL_S += \
 	ssbl/arch/arm-start.S \
 	ssbl/arch/arm-config.S \
 	ssbl/arch/arm-launch.S \
-	ssbl/arch/arm-setjmp.S \
 	ssbl/arch/arm-eabi-ssbl.S \
 	ssbl/arch/arm-vectors.S \
 	ssbl/arch/ssbl_main.c \
@@ -25,12 +22,12 @@ SSBL_S += \
 	ssbl/main/dtbolt_compile.c \
 
 SSBL_S += \
-	dtc/libfdt/fdt.c \
-	dtc/libfdt/fdt_ro.c \
-	dtc/libfdt/fdt_wip.c \
-	dtc/libfdt/fdt_sw.c \
-	dtc/libfdt/fdt_rw.c \
-	dtc/libfdt/fdt_strerror.c 
+	$(GEN)/dtc/libfdt/fdt.c \
+	$(GEN)/dtc/libfdt/fdt_ro.c \
+	$(GEN)/dtc/libfdt/fdt_wip.c \
+	$(GEN)/dtc/libfdt/fdt_sw.c \
+	$(GEN)/dtc/libfdt/fdt_rw.c \
+	$(GEN)/dtc/libfdt/fdt_strerror.c 
 
 ifeq ($(CFG_ENET),1)
 SSBL_S += \
@@ -88,11 +85,10 @@ endif
 endif
 
 SSBL_S += \
-	gen/$(FAMILY)/rts.c \
+	$(GEN)/$(FAMILY)/rts.c \
 	\
 	ssbl/arch/bcm_devices.c \
 	ssbl/arch/bcm_init_enet.c \
-	ssbl/arch/bcm_init_usb.c \
 	ssbl/arch/bcm_init_flash.c \
 	ssbl/arch/bcm_init_hdmi.c \
 	ssbl/arch/bcm_init_history.c \
@@ -101,7 +97,7 @@ SSBL_S += \
 	\
 	ssbl/arch/board.c \
 	ssbl/arch/arch-$(ARCH).c \
-	gen/$(FAMILY)/board_params.c \
+	$(GEN)/$(FAMILY)/board_params.c \
 	ssbl/arch/board_update.c \
 	ssbl/arch/common_init.c \
 	ssbl/arch/exchandler.c \
@@ -149,6 +145,7 @@ SSBL_S += \
 	ssbl/main/zlibfs.c \
 	ssbl/main/env_subr.c \
 	ssbl/main/nvram_subr.c \
+	ssbl/main/psci.c \
 	ssbl/ui/ui_init.c \
 	ssbl/ui/ui_cmddisp.c \
 	ssbl/ui/ui_command.c \
@@ -183,25 +180,25 @@ endif
 ifeq ($(CFG_ZLIB),1)
 ifeq ($(ZLIB_VER),1.2.8)
 SSBL_S += \
-	zlib-$(ZLIB_VER)/adler32.c \
-	zlib-$(ZLIB_VER)/crc32.c \
-	zlib-$(ZLIB_VER)/infback.c \
-	zlib-$(ZLIB_VER)/inffast.c \
-	zlib-$(ZLIB_VER)/inflate.c \
-	zlib-$(ZLIB_VER)/inftrees.c \
-	zlib-$(ZLIB_VER)/uncompr.c \
-	zlib-$(ZLIB_VER)/zutil.c
+	$(GEN)/zlib-$(ZLIB_VER)/adler32.c \
+	$(GEN)/zlib-$(ZLIB_VER)/crc32.c \
+	$(GEN)/zlib-$(ZLIB_VER)/infback.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inffast.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inflate.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inftrees.c \
+	$(GEN)/zlib-$(ZLIB_VER)/uncompr.c \
+	$(GEN)/zlib-$(ZLIB_VER)/zutil.c
 else
 SSBL_S += \
-	zlib-$(ZLIB_VER)/adler32.c \
-	zlib-$(ZLIB_VER)/infblock.c \
-	zlib-$(ZLIB_VER)/infcodes.c \
-	zlib-$(ZLIB_VER)/inffast.c \
-	zlib-$(ZLIB_VER)/inflate.c \
-	zlib-$(ZLIB_VER)/inftrees.c \
-	zlib-$(ZLIB_VER)/infutil.c \
-	zlib-$(ZLIB_VER)/uncompr.c \
-	zlib-$(ZLIB_VER)/zutil.c
+	$(GEN)/zlib-$(ZLIB_VER)/adler32.c \
+	$(GEN)/zlib-$(ZLIB_VER)/infblock.c \
+	$(GEN)/zlib-$(ZLIB_VER)/infcodes.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inffast.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inflate.c \
+	$(GEN)/zlib-$(ZLIB_VER)/inftrees.c \
+	$(GEN)/zlib-$(ZLIB_VER)/infutil.c \
+	$(GEN)/zlib-$(ZLIB_VER)/uncompr.c \
+	$(GEN)/zlib-$(ZLIB_VER)/zutil.c
 endif
 endif
 
@@ -242,6 +239,10 @@ endif
 ifeq ($(CFG_EMULATION),)
 SSBL_S += \
 	ssbl/arch/supplement-fsbl.c
+endif
+
+ifeq ($(CFG_TRUSTZONE),1)
+include ssbl/trustzone/tz.inc
 endif
 
 $(SSBL_S):

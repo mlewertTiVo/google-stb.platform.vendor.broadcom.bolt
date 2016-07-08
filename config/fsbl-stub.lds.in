@@ -1,0 +1,74 @@
+/***************************************************************************
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ *
+ ***************************************************************************/
+
+/* fsbl-stub.lds.in */
+
+ENTRY(vectors)
+
+SECTIONS {
+	/* ARM exception vectors */
+	.fsbl.vectors @SRAM_ADDR@ :
+	{
+		_fsbl_copy_start = .;
+		@ODIR@/fsbl/fsbl-vectors.o (.fsbl.vectors)
+		. = ALIGN(64);
+	} =@FILLB@
+
+	/* Secure parameter area */
+	.fsbl.init.sec_params @SEC_PARAM_START@ :
+	{
+		/* KEEP() inhibits GC of the section when '--gc-sections' is
+		 * enabled, and the section is unreferenced.
+		 */
+		KEEP(* (.init.sec_params))
+	} =@FILLB@
+
+	.fsbl.stubloader @STUB64_START@ :
+	{
+		* (.stubloader.*)
+		KEEP(* (.stubloader.*))
+		. = . + @STUB64_SIZE@;
+	} =@FILLB@
+
+	.fsbl.init :
+	{
+		* (.init)
+	} =@FILLB@
+
+	.fsbl.init.rodata :
+	{
+		* (.init.rodata)
+	} =@FILLB@
+
+	.fsbl.text :
+	{
+		* (.text*)
+	} =@FILLB@
+
+	.fsbl.rodata :
+	{
+		* (.rodata)
+		* (.rodata.*)
+	} =@FILLB@
+
+	.fsbl.data :
+	{
+		* (.data*)
+		. = ALIGN(16);
+		_fsbl_copy_end = .;
+	} =@FILLB@
+
+	.fsbl.bss :
+	{
+		_fsbl_zero_start = .;
+		* (.bss*)
+		. = ALIGN(16);
+		_fsbl_zero_end = .;
+	} =0x00
+};

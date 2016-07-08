@@ -27,6 +27,11 @@ int (*xprinthook) (const char *str) = NULL;
 #define PRINTF_BUF_SIZE	2048
 #endif
 
+/* Max string length for atox/n number to string functions.
+ * 24 = 20 (-1ULL = 18446744073709551615) + 1 pad (e.g. null) + guard
+ */
+#define ATO_MAX_LEN 24
+
 /**
  * Check if the current output pointer has reached the last byte of the output
  * buffer. (Need to leave room for the terminating byte.)
@@ -59,7 +64,7 @@ static inline int is_buf_full(const char *start, const char *curr, size_t size)
 static int __atox(char *buf, unsigned int num, unsigned int radix, int width,
 		  char pad, const char *pdigits)
 {
-	char buffer[16];
+	char buffer[ATO_MAX_LEN];
 	char *op;
 	int retval;
 
@@ -111,7 +116,7 @@ static int __atox_n(size_t n, char *bufstart, char *buf, unsigned int num,
 		    unsigned int radix, int width, char pad,
 		    const char *pdigits)
 {
-	char buffer[16];
+	char buffer[ATO_MAX_LEN];
 	char *op;
 	int retval, retval2;
 
@@ -164,7 +169,7 @@ static int __atox_n(size_t n, char *bufstart, char *buf, unsigned int num,
 static int __llatox(char *buf, unsigned long long num, unsigned int radix,
 		    int width, char pad, const char *pdigits)
 {
-	char buffer[16];
+	char buffer[ATO_MAX_LEN];
 	char *op;
 	int retval;
 
@@ -228,7 +233,7 @@ static int __llatox_n(size_t n, char *bufstart, char *buf,
 		      unsigned long long num, unsigned int radix,
 		      int width, char pad, const char *pdigits)
 {
-	char buffer[16];
+	char buffer[ATO_MAX_LEN];
 	char *op;
 	int retval, retval2;
 

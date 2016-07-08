@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -40,6 +38,9 @@ static int ui_cmd_info(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_mhl_power(ui_cmdline_t *cmd, int argc, char *argv[]);
 #endif
 static int ui_cmd_time(ui_cmdline_t *cmd,int argc,char *argv[]);
+#ifdef STUB64_START
+static int ui_cmd_psci(ui_cmdline_t *cmd, int argc, char *argv[]);
+#endif
 
 int ui_init_misccmds(void)
 {
@@ -82,6 +83,12 @@ int ui_init_misccmds(void)
 		   "'ms' and 'us'.\n",
 		   "");
 
+#ifdef STUB64_START
+	cmd_addcmd("psci", ui_cmd_psci, NULL,
+		"Call PSCI feature using smc",
+		"PSCI should be present in memory\n",
+		"-r0=*;function id|-r1=*;arg1|-r2=*;arg2|-r3=*;arg3");
+#endif
 	return 0;
 }
 
@@ -164,6 +171,37 @@ static int ui_cmd_loop(ui_cmdline_t *cmd, int argc, char *argv[])
 
 	return res;
 }
+
+#ifdef STUB64_START
+static int ui_cmd_psci(ui_cmdline_t *cmd, int argc, char *argv[])
+{
+	const char *x;
+	unsigned long r0_back, r0, r1 = 0, r2 = 0, r3 = 0;
+
+	/* Only r0 is required, the rest
+	 * depends on the feature requested.
+	 */
+	if (cmd_sw_value(cmd, "-r0", &x))
+		r0 = atoi(x);
+	else
+		return BOLT_ERR_INV_PARAM;
+
+	if (cmd_sw_value(cmd, "-r1", &x))
+		r1 = atoi(x);
+
+	if (cmd_sw_value(cmd, "-r2", &x))
+		r2 = atoi(x);
+
+	if (cmd_sw_value(cmd, "-r3", &x))
+		r3 = atoi(x);
+
+	r0_back = psci(r0, r1, r2, r3);
+
+	xprintf("PSCI result: 0x%lx\n", r0_back);
+
+	return BOLT_OK;
+}
+#endif
 
 static int ui_cmd_console(ui_cmdline_t *cmd, int argc, char *argv[])
 {

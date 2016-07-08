@@ -21,6 +21,7 @@
 #include "avs_bsu.h"
 #include "env_subr.h"
 #include "timer.h"
+#include "board_params.h"
 
 #define BSU_MEMINFOS (NUM_MEMC + 2)
 
@@ -338,6 +339,15 @@ static unsigned long int bsu_strtoul(const char *nptr, char **endptr, int base)
 }
 
 
+static const ssbl_board_params *bsu_board_params(void)
+{
+	struct fsbl_info *inf = board_info();
+
+	if (!inf || (inf->board_idx >= inf->n_boards))
+		return NULL;
+
+	return &board_params[inf->board_idx];
+}
 
 /* ------------------------------------------------------------------------- */
 
@@ -454,7 +464,6 @@ static struct bsu_api bsu_xapi = {
 
 	/* v7 */
 	.xfn_bolt_getdevinfo = bolt_getdevinfo,
-	.xfn_bolt_ioctl = bolt_ioctl,
 	.xfn_bolt_open = bolt_open,
 	.xfn_bolt_close = bolt_close,
 	.xfn_bolt_readblk = bolt_readblk,
@@ -495,6 +504,12 @@ static struct bsu_api bsu_xapi = {
 	.xfn_env_setenv = env_setenv,
 	.xfn_env_getval = env_getval,
 	.xfn_env_save = env_save,
+
+	/* Eth PHY diags (v9) */
+	.xfn_bolt_gethandle = bolt_gethandle,
+	.xfn_bolt_ioctl = bolt_ioctl,
+	.xfn_usleep = bolt_usleep,
+	.xfn_board_params = bsu_board_params,
 };
 
 #define RESERVE_FOR_LINUX 10UL

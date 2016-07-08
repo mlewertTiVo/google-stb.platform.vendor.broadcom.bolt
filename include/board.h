@@ -14,6 +14,7 @@
 
 #include "lib_types.h"
 #include "ssbl-common.h"
+#include "lib_string.h"
 #include "arch_ops.h"
 
 #define get_cpu_freq_mhz() ((uint32_t)(arch_get_cpu_freq_hz() / 1000000))
@@ -60,5 +61,19 @@ struct fsbl_info *board_info(void);
 /* board_update
 */
 int board_check(int force);
+
+/* enet helpers */
+static inline int enet_params_cmp(const enet_params *e,
+				  char *phy_type,
+				  char *mdio_mode,
+				  char *phy_speed,
+				  char *phy_id)
+{
+	return (strcmp(e->phy_type, phy_type) ||
+		(e->mdio_mode && strcmp(e->mdio_mode, mdio_mode)) ||
+		strcmp(e->phy_speed, phy_speed) ||
+		strcmp(e->phy_id, phy_id));
+}
+
 
 #endif

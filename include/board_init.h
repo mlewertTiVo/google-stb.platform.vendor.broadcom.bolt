@@ -68,6 +68,7 @@ extern bolt_driver_t dev_mem;
 /* bsp init functions
 */
 struct usb_controller_list *usb_dt_init(void);
+int usb_board_init(struct usb_controller_list *clist);
 int usb_init(int usbmode);
 int usb_exit(void);
 
@@ -82,8 +83,6 @@ void board_init_hdmi(void);
 
 void board_init_enet(void);
 void enet_exit(void);
-
-int board_init_usb(struct usb_controller_list *clist);
 
 #endif /* __BOARD_INIT_H__ */
 

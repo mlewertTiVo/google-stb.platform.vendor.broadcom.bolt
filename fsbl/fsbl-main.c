@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -185,7 +183,7 @@ void fsbl_main(void)
 	}
 #ifndef CFG_EMULATION
 	bcm3390_hack_early_bus_cfg();
-	bcm7145_hack_early_bus_cfg();
+	orion_hack_early_bus_cfg();
 
 	/* arb_timer / 108x10^6 = timeout in seconds */
 	BDEV_WR(BCHP_SUN_GISB_ARB_TIMER, 0x278d0); /* 1.5 ms */
@@ -249,6 +247,17 @@ void fsbl_main(void)
 	 */
 	set_other_info(&info);
 
+#ifdef STUB64_START
+	/* If we booted in A64 mode then the smc vector has already been
+	 * installed by A64 stub code, else we're in 32 bit 'svc' mode
+	 * rather than non-secure 'svc_ns' mode and have to set up the
+	 * monitor mode smc vector here for 32 bit only operation.
+	 */
+	if (a53_bootmode())
+		info.runflags |= FSBL_RUNFLAG_A64_BOOT;
+	else
+		(void)setup_mvbar(PSCI_BASE);
+#endif
 	/* If MHL is present then get the Amperage of any
 	 * power negotiated by the MPM firmware.
 	 * return value is one of FSBL_RUNFLAG_MHL_BOOT_
@@ -299,7 +308,6 @@ void fsbl_main(void)
 	info.avs_err = avs_err;
 
 	bcm3390_hack_late_bus_cfg();
-	bcm7145_hack_late_bus_cfg();
 
 	if (warm_boot)
 		memsys_warm_restart(b->nddr);

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -89,11 +87,40 @@ fsbl_b_start:
 
 	.global early_cpu_init
 early_cpu_init:
+#ifdef STUB64_START
+	/* If the 'bootmode' offset in A64 stub-start.s
+	 * is non zero then we booted in A64 mode and
+	 * should not attempt to write to L2CTLR or
+	 * else we'll get an exception back to EL3.
+	 *
+	 * This works if we booted from flash: we were
+	 * the first to boot so we're in A32, or in SRAM
+	 * as A64 will copy us, or we will copy ourselves
+	 * there - including the stub code with the default
+	 * bootmode = 0 if we copied ourselves.
+	 */
+
+	/* Running from SRAM? */
+	mov	r0, pc
+	ldr	r3, =_fsbl_copy_start
+	ldr	r2, =0xffff0000
+
+	and	r0, r0, r2
+	and	r1, r3, r2
+	cmp	r0, r1
+	bne	1f	/* no, we're not in SRAM */
+
+	ldr	r0, =(STUB64_START + 4)
+	ldr	r1, [r0]
+	orrs	r1, r1
+	bne	2f	/* non-zero: A64 booted us */
+#endif
+1:
 	@ A2 errata: Dummy write to L2CTLR to propagate modified default
 	@ register settings to L2 consuming logic
 	mrc	p15,1,r2,c9,c0,2
 	mcr	p15,1,r2,c9,c0,2
-
+2:
 	mov	pc, lr
 
 	.global setup_exception_stacks
@@ -111,6 +138,14 @@ setup_exception_stacks:
 	bx		lr
 
 setup_vector_table:
+#ifdef STUB64_START
+	/* restore 'b default_handler @ undefined instruction
+	 * as we consumed that word for armv8.
+	 */
+	ldr	r0, =(SRAM_ADDR + 4)
+	ldr	r1, =#0xea000009 /* b default_handler */
+	str	r1, [r0]
+#endif
 	@ Check ID_PFR if security extensions are supported, which implies
 	@ support for VBAR
 	mrc	p15, 0, r0, c0, c1, 1
@@ -143,11 +178,33 @@ jumpto:
 	movt	r1, #0xffff
 
 	@ r2: address of DT
-	mov	r2, #0x1000
+	mov	r2, #CFG_EMULATION_DTB_BASE
 
 	@ go!
 	mov	pc, r5
 #endif
+
+
+ENTRY_PROC(setup_mvbar)
+#ifdef STUB64_START
+	push		{r1-r2}
+
+	mrs		r1, CPSR		/* CPSR to apply mode mask to */
+	/* Desired stack base */
+	ldr		r2, =(PSCI_BASE + PSCI_SIZE)
+	set_mode_sp	r1, r2, MODE_MON	/* Switch mode */
+	isb
+
+	/* MVBAR setup is valid only if EL3 is AArch32 */
+	mcr		p15, 0, r0, c12, c0, 1
+	isb
+
+	set_cpsr_mode	r1, MODE_SVC		/* Switch mode back */
+	mrc		p15, 0, r0, c12, c0, 1	/* Return current MVBAR */
+	pop		{r1-r2}
+	bx 		lr
+#endif
+END_PROC(setup_mvbar)
 
 	.section .init.rodata
 	.align  4

@@ -1,28 +1,34 @@
 :toc2:
 :toclevels: 4
 :max-width: 100%
-Getting started with BOLT
-=========================
-Broadcom Corporation <support@broadcom.com>
 
+ Getting started with BOLT
+==========================
+Broadcom Ltd <support@broadcom.com>
+
+
+ Introduction
+-------------
 BOLT is a bootloader for Broadcom ARM based products. If you are
 familiar with the CFE bootloader from our previous generation of
 chips then you will be familiar with BOLT as its based on CFE.
 
-BOLT has an first stage bootloader and a second stage one,
+BOLT has a first stage bootloader and a second stage one,
 referred to as FSBL & SSBL respectively. This is identical
 to the way CFE did things. 
 
 The user interface (UI) is in most cases identical to CFE, 
 except where new functionality has been added. 
 
-See 'bolt_commands.txt'for a rundown on the currently
-supported UI commands. 
+See
+link:bolt_commands.html[BOLT commands]
+for a rundown on the currently supported UI commands.
 
 Mostly, these changes are new flags to commands and added
 commands for new areas such as devicetree <<1>>.
- See 'cfe_differences.txt' for the major changes
-in user interface between CFE and BOLT.
+See
+link:cfe_differences.html[CFE differences]
+for the major changes in user interface between CFE and BOLT.
 
 Looking into the code, the functional split
 is very similar but we have taken the opportunity to
@@ -56,12 +62,17 @@ through giant files. It also means its easier
 to add or remove functional areas, depending
 upon the target product.
 
-* Linux ARM generates a 'zImage' files that
-is zipped up with a small bit of decompression
-code prepended. They are not ELF format files
-as we had in CFE. Loading and running Linux 
-is very similar though: 'zimg' rather than
-'elf' is the default for loading.
+* Linux ARM generates a 'zImage' format file that
+consists of a zipped up Linux with a small bit of
+decompression code prepended.
+They are not ELF format files as we had in CFE.
+Loading and running Linux is very similar to CFE,
+though 'zimg' rather than 'elf' is the default for
+the 'load' and 'boot' commands in BOLT.
+
+* Linux ARM64 generates an 'Image' format file.
+BOLT can auto-detect zImage, Image or a gz
+compressed Image.
 
 * There is a lot less assembly (source) code.
 We've tried to do more 'c' code for legibility
@@ -90,8 +101,7 @@ What you need:
 * An x86 based PC running a modern Linux, or CentOS (2.6.18)
 * Broadcom supplied BOLT release package
 * Broadcom supplied GCC ARM cross-compile toolchain
-* Command line tools: md5sum and truncate 
-* Other common Linux tools such as sed, awk etc.
+* Common Linux tools such as sed, awk etc.
 * Perl 5.8.5
 * Patch 2.5.4
 * GNU Make 3.80
@@ -110,7 +120,7 @@ TOOLCHAIN variable or anything else to set up.
 In this example the Broadcom supplied GCC toolchain 
 package is called 'stbgcc-4.8-1.1.tar.bz2'
 and the BOLT source code package is called
-'bolt-v1.10.tgz' The exact names depend upon
+'bolt-v1.19.tgz' The exact names depend upon
 the release you get from us.
 
 First unpack and install the toolchain in
@@ -166,20 +176,28 @@ your development location. In this case we use the
 
 ----
  [user@machine]$mkdir ~/bolt
- [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.10.tgz
- [user@machine]$tar -xzf bolt-v1.10.tgz
+ [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.19.tgz
+ [user@machine]$tar -xzf bolt-v1.19.tgz
 ----
 
 
 You should now have a subdirectory named after the bolt release package name:
 
+WARNING: Check that your unzip or unpacking tool does not substitute Windows(R)
+style line endings for the UNIX(R) style BOLT requires. BOLT will fail to
+build if this happens.
+
 ----
- [user@machine]$cd ~/bolt/bolt-v1.10
+ [user@machine]$cd ~/bolt/bolt-v1.19
 ----
 
 
 Making BOLT
 ~~~~~~~~~~~
+
+WARNING: Please use the 'bash' shell as your environment
+to build BOLT and take care any environment paths or
+variables do not interfere e.g. defining $SYSCC as clang etc.
 
 The BOLT make process is quite simple. The very first time you 
 build BOLT you have to configure the build by specifying the
@@ -187,7 +205,7 @@ family (chip) types available, as shown here by this command:
 
 ----
  [user@machine]$make show
-7145b0 7250b0 7364a0 7366b0 7366c0 74371a0 7439b0 7445d0
+7250b0 7268a0 7271a0 7364a0 7364b0 7366c0 74371a0 7439b0 7445d0 7445e0
 ----
 
 Now select a family (in this example - 7445d0) and build BOLT:
@@ -215,10 +233,10 @@ bolt-$(VERSION)-$(FAMILY)-[ba|bb|xx]-bfw-$(BFW_VER).bin
 [source,shell]
 ----
 ls -l objs/7445d0/bolt-*.bin
-lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.10-7445d0-ba-bfw-2.0.0.bin
-lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.10-7445d0-bb-bfw-2.1.0.bin
--rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.10-7445d0-ba-bfw-2.0.0.bin
--rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.10-7445d0-bb-bfw-2.1.0.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.19-7445d0-ba-bfw-4.1.5.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.19-7445d0-bb-bfw-4.1.5.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.19-7445d0-ba-bfw-4.1.5.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.19-7445d0-bb-bfw-4.1.5.bin
 ----
 
 For brevity we also symlink the longer BOLT binary names
@@ -425,7 +443,7 @@ References
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

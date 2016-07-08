@@ -1,7 +1,5 @@
 ################################################################################
-# Copyright (c) 2013-2014 Broadcom Corporation
-# All Rights Reserved
-# Confidential Property of Broadcom Corporation
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
 # 
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -141,8 +139,11 @@ sub pmux_match($$$$)
 		my $select;
 		foreach (keys %{$rh_pin}) {
 			if (/$select_re/) {
+				::cfg_error("regexp '$select_in' matches "
+					. "multiple selections ($_, $select "
+					. "or more) for $pin")
+					if ($select);
 				$select = $_;
-				last;
 			}
 		}
 		if ($select) {
@@ -469,6 +470,14 @@ sub get_chip_family_id($)
 	return $fam & 0xf0000000 ? $fam >> 16 : $fam >> 8
 }
 
+sub get_chip_family_rev($)
+{
+	my $bchp_defines = shift;
+	my $rev = $bchp_defines->{BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID_chip_family_id_DEFAULT};
+
+	return $rev & 0xff;
+}
+
 sub get_num_serial($)
 {
 	my ($bchp_defines,
@@ -662,6 +671,11 @@ sub get_l2_intc_mapping($)
 		"memc_l2_2_0" => "MEMC2",
 		"memc_l2_2_1" => "MEMC2",
 		"memc_l2_2_2" => "MEMC2",
+		"upg_main_irq" => "UPG_MAIN",
+		"upg_main_aon_irq" => "UPG_MAIN_AON",
+		"upg_bsc_irq" => "UPG_BSC",
+		"upg_bsc_aon_irq" => "UPG_BSC_AON",
+		"upg_spi_aon_irq" => "UPG_SPI",
 	);
 
 	return $l2_irq_subst{$l2_intc};
@@ -736,6 +750,9 @@ sub l2_intc_can_wake($)
 	my %wake_intcs = (
 		"aon_pm_l2" => 1,
 		"irq0_aon" => 1,
+		"upg_main_aon_irq" => 1,
+		"upg_bsc_aon_irq" => 1,
+		"upg_spi_aon_irq" => 1,
 	);
 
 	return exists($wake_intcs{$l2_intc});
@@ -976,7 +993,7 @@ sub get_sf2_num_switch_ports($)
 	return 0;
 }
 
-sub get_num_irq0_l2($$)
+sub get_num_irq_l2($$)
 {
 	my ($bchp_defines, $name) = @_;
 
@@ -999,6 +1016,16 @@ sub get_num_pwm($)
 	return $count;
 }
 
+sub get_num_wlan($)
+{
+	my ($bchp_defines) = @_;
+	my $count = 0;
+
+	$count++ if (defined($bchp_defines->{"BCHP_WLAN_INTF_RGR_BRIDGE_REG_START"}));
+
+	return $count;
+}
+
 #SWBOLT-1715
 sub mcp_wr_pairing_allowed($)
 {
@@ -1011,6 +1038,8 @@ sub mcp_wr_pairing_allowed($)
 	       "7364b0" => "1",
 	       "74371a0" => "1",
 	       "7439b0" => "1",
+	       "7271a0" => "1",
+	       "7268a0" => "1",
         );
 
 	return defined($mcp_wp_allowed_tbl{$family_name}) ? 1 : 0;
@@ -1047,5 +1076,24 @@ sub format_gic_interrupt_cells($$)
 	return @cells;
 }
 
+sub get_moca_hwrev($)
+{
+	my $bchp_defines = shift;
+	my $chip_id = sprintf("%x", get_chip_family_id($bchp_defines));
+	my $chip_rev = sprintf("%x", get_chip_family_rev($bchp_defines));
+	# Empty for now
+	my %chip_tbl = ();
+
+	if (!defined($chip_tbl{$chip_id})) {
+		# 3390A0 has a 0x2003 revision, while newer chips have a 0x2004
+		if ($chip_id eq "3390" and $chip_rev >= "10") {
+			return 0x2004;
+		} else {
+			return 0x2003;
+		}
+	} else {
+		return $chip_tbl{$chip_id};
+	}
+}
 
 1;

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -159,6 +157,25 @@ extern "C" {
 #define EXT_GPHY_CNTRL_GPHY_RESET          (1 <<  5)
 #define EXT_GPHY_CNTRL_GPHY_PHYAD_SHIFT		8
 #define EXT_GPHY_CNTRL_GPHY_PHYAD_MASK		0x1F
+
+/* reg: ext->ext_ephy_ctrl */
+#define EXT_EPHY_CNTRL_EXT_PWR_DOWN_BIAS      (1 <<  0)
+#define EXT_EPHY_CNTRL_EXT_PWR_DOWN_DLL	      (1 <<  1)
+#define EXT_EPHY_CNTRL_DLLBYP_PIN_F	      (1 <<  6)
+#define EXT_EPHY_CNTRL_IDDQ_GLOBAL_PWR	      (1 <<  7)
+#define EXT_EPHY_CNTRL_RESET		      (1 <<  8)
+#define EXT_EPHY_CNTRL_MDC_EX_CLK_DIS_LD      (1 <<  9)
+#define EXT_EPHY_CNTRL_EPHY_TEST_MODE	      (1 << 10)
+#define EXT_EPHY_CNTRL_EPHY_STANDALONE_MODE   (1 << 11)
+#define EXT_EPHY_CNTRL_ENERGY_DET_MASK	      (1 << 12)
+#define EXT_EPHY_CNTRL_ATEST_25MHZ_EN	      (1 << 13)
+#define EXT_EPHY_CNTRL_EPHY_TEST_EN	      (1 << 14)
+#define EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_TX    (1 << 16)
+#define EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_RX    (1 << 17)
+#define EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_SD    (1 << 18)
+#define EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_RD    (1 << 19)
+#define EXT_EPHY_CNTRL_EXT_PWR_DOWN_PHY_EN    (1 << 20)
+#define EXT_EPHY_CNTRL_EPHY_PHYAD	      (0x1f << 26)
 
 /* intrl2_0 register group start */
 /* reg: intrl2_0->cpu_mask_status, others are same */

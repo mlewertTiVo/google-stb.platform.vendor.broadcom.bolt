@@ -1,12 +1,10 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
 #ifndef __DEVTREE_H__
@@ -75,6 +73,11 @@ struct dtb_to_dts_params {
 	int fullpaths;
 };
 
+
+struct dt_boot_mods {
+	int loader_32bit;
+};
+
 /* ------------------------------------------------------------------------- */
 
 void bolt_devtree_prep_builtin_dtb(void);
@@ -106,6 +109,12 @@ int bolt_devtree_test(void *fdt, void *presults, int noise);
 /* Apply BOLT-isms to a dt
 */
 int bolt_devtree_boltset(void *fdt);
+
+/* Apply specific modifications to a dt, even if "dt off" has been done.
+* This api should be called just before a Linux boot. Note: Does _not_
+* apply to a BSU app boot.
+*/
+int bolt_devtree_boltset_boot(void *fdt, struct dt_boot_mods *bm);
 
 
 /* Support functions

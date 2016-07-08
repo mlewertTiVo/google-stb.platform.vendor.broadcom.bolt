@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -58,6 +56,12 @@
 #define BDEV_UNSET_RB(x, y) do { BDEV_UNSET((x), (y)); BDEV_RD(x); } while (0)
 #define BDEV_WR_RB(x, y) do { BDEV_WR((x), (y)); BDEV_RD(x); } while (0)
 
+
+#define BDEV_F_MASK(reg, field)\
+		(BCHP_##reg##_##field##_MASK)
+
+#define BDEV_F_ENUM(reg, field, enum)\
+		(BCHP_##reg##_##field##_##enum << BCHP_##reg##_##field##_SHIFT)
 
 #define BDEV_RD_F(reg, field) \
 	((BDEV_RD(BCHP_##reg) & BCHP_##reg##_##field##_MASK) >> \

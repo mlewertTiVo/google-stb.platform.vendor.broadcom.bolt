@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -26,7 +24,6 @@
 #include "bolt.h"
 
 #include "fileops.h"
-#include "boot.h"
 #include "byteorder.h"
 
 #include "loader.h"
@@ -110,9 +107,9 @@ int ui_init_flashcmds(void)
 );
 #endif
 	cmd_addcmd("rts", ui_cmd_rts, NULL, "list all, or select an rts",
-			"rts [-set N] where N is the number shown when listing rts sets",
+			"rts [-set=N] where N is the number shown when listing rts sets",
 			"-set=*;program and save to flash an rts set|"
-			"-clear;uprogram and unset flash saved rts set (will then use board defaults)"
+			"-clear;unprogram and unset flash saved rts set (will then use board defaults)"
 );
 
 	cmd_addcmd("gisb", ui_cmd_gisb, NULL, "show or set GISB bus timeout",

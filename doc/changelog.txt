@@ -1,0 +1,488 @@
+:toc2:
+:toclevels: 1
+:max-width: 100%
+:numbered:
+
+Release changelog
+=================
+
+ v1.18
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1922[SWBOLT-1922] Upgraded BFW to version 4.1.5 for 7250b0, 7268a0, 7271a0, 7364a0, 7364b0, 7366b0, 7366c0, 7439b0, 7445d0 and 7445e0 chip families. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.18%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.17
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1866[SWBOLT-1866] Added Device Tree node for 7271a0 WLAN. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1916[SWBOLT-1916] Upgraded BFW to version 4.1.4 for 7250b0, 7268a0, 7271a0, 7364a0, 7364b0, 7366b0, 7366c0, 7439b0, 7445d0 and 7445e0 chip families. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.17%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.16
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1871[SWBOLT-1871] Upgraded BFW to version 4.1.3 for 7250b0, 7268a0, 7271a0, 7364a0, 7364b0, 7366c0, 7439b0, 7445d0 and 7445e0 chip families. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.16%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+
+ v1.15
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1895[SWBOLT-1895] Allow regular (no-AON) GPIOs to wake up system from S2. This is incompatible with Linux versions 4.1-1.0 and 3.14-1.13.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1861[SWBOLT-1861] Implemented BOLT extensions for TrustZone loader. Additional code to complete current TZ support in v1.15. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.15%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.14
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1884[SWBOLT-1884] Added clock to USB bdc node in device tree for 7271 and 7268 Linux.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1895[SWBOLT-1895] Allow regular (no-AON) GPIOs to wake up system from S2.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1847[SWBOLT-1847] Changed splash image loading for with updated splash generator since URSR 15.4 and later.  Also compatible with previous URSR versions.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1892[SWBOLT-1892] Enable 7271a0 BDC driver. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1844[SWBOLT-1844] Fixes and improvements to USB 3.0 PHY for all chips. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1861[SWBOLT-1861] Implemented BOLT extensions for TrustZone loader. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1879[SWBOLT-1879] USB 3.0 fixes for 7271a0, 7268a0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1874[SWBOLT-1874] Updated AVS firmware v0.3.2 to use new CPU offsets on 7271a0, 7268a0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1867[SWBOLT-1867] Updated memsys 2.2.0.18 to improve LPDDR4 performance for 7271a0, 7268a0. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.14%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.12
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1636[SWBOLT-1636] Support 7271a0 ^[yellow silver-background]#major#^
+
+New chip.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1803[SWBOLT-1803] Support 7268a0 ^[yellow silver-background]#major#^
+
+New chip.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1858[SWBOLT-1858] Add BFW 4.0.3 to 7250/7364/7366/7439/7445 ^[yellow silver-background]#major#^
+
+Updated BFW for Broadcom and selected customers only.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.12%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.11
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1757[SWBOLT-1757] BOLT's ssbl_main function misbehaves if VERBOSE_DEBUG is not defined ^[yellow silver-background]#major#^
+
+The toolchain may decide to put a functions parameters on the stack instead of
+using registers, and this may cause a crash in the ssbl_main() function as it
+directly changes the stack pointer.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1792[SWBOLT-1792] CLONE - Enable write-pairing for 7439b0 ^[yellow silver-background]#major#^
+
+Improve the memory copy speed for 7439bx chips.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1838[SWBOLT-1838] Remove splashgen generated headers at release package ^[yellow silver-background]#major#^
+
+Customers will now have to always use the Broadcom reference software
+'splashgen' app to generate the correct data for the BOLT splash screen.
+
+This removes the presumption that the splash configuration data ('reg' and 'rdc'
+and header files) were applicable to customer platforms as well as Broadcom
+reference boards.
+
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.11%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.10
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1785[SWBOLT-1785] fsbl does not read NAND flash bad block indicator correctly ^[red silver-background]#blocker#^
+
+* FSBL booting from a NAND device did not correctly read Spare Area Byte 0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1765[SWBOLT-1765] Update Shmoo to v1.2.1.0 ^[yellow silver-background]#major#^
+
+* DDR3: Minor workaround for Read-Enable logic, recommended, but not mandatory.
+* DDR4: Reliability improvements to Read Enable shmoo. Strongly encouraged to take this if you are using Micron parts.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1776[SWBOLT-1776] build error on 7439b0 using dtgen for iicc ^[yellow silver-background]#major#^
+
+* Please take this release if you require Devicetree I2C nodes. A regression caused the 'dt autogen bsc' script command to fail.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1715[SWBOLT-1715] Update write-pairing whitelist ^[yellow silver-background]#major#^
+
+* May improve BOLT and Linux memory copy speed on 3390b0, 7250b0, 7364a0, 7364b0 and 74371a0 chips.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1766[SWBOLT-1766] eMMC driver in FSBL to load BFW from DATA rather than BOOT partition ^[yellow silver-background]#major#^
+
+* Not used in Generic BOLT. May be used in secure BOLT, depending upon security vendor requirements.
+
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.10%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.09
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1736[SWBOLT-1736] audio splash in bolt plays continuously with no option to play once ^[yellow silver-background]#major#^
+
+ Please see the section on splash screen in the porting guide for more information.
+
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.09%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.08
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1695[SWBOLT-1695] Disable SPI NOR flash quad-lane mode due to reboot/flash device dependancy ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1469[SWBOLT-1469] support SPI-NOR 4-lane 81MHz ^[yellow silver-background]#major#^
+
+  If you require SPI quad IO mode please read the included porting guide for important information regarding this feature.
+  If you have BOLT v1.07, please upgrade to v1.08 or switch off quad mode until you need it and can verify its correct operation.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1683[SWBOLT-1683] AVS firmware hangs after over-temp reset ^[yellow silver-background]#major#^
+
+  If you are using AVS fimware v0.3.x then you shall upgrade. For earlier firmwares please contact your FAE.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1692[SWBOLT-1692] Add build-time option for boost profile to 7250b0 ^[yellow silver-background]#major#^
+
+  Adds back the built time option to speed up the 7250b0 cpu to 1.7GHz.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1699[SWBOLT-1699] Update to memsysinitlib v1.2.0.8 for DDR4 ^[yellow silver-background]#major#^
+
+  Fixes a bug that could cause noise during DDR4 Read Enable, which under some conditions could cause shmoo failure.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1697[SWBOLT-1697] assure mapping correct guard page and only valid SRAM range in page table ^[yellow silver-background]#major#^
+
+  Prevents GISB timeouts and crashes when using older versions of FSBL from BOLT 1.00 or earlier.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.08%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.07
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1608[SWBOLT-1608] Splash does not set up reserved area correctly on chips with >1G DRAM in 32-bit space ^[red silver-background]#blocker#^
+
+  This fixes an issue with DDR smaller than the maximum (chip specific) 32-bit DDR physical address size/window.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1337[SWBOLT-1337] Remove obsolete memory and cma-dev DT entries ^[yellow silver-background]#major#^
+
+  This removes the '-cma' option for the 'dt autogen memory' script command.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1618[SWBOLT-1618] When sdio0 is used for eMMC, sdio1 is incorrectly configured if it is SDCARD ^[yellow silver-background]#major#^
+
+  This fixes an issue where the Devicetree properties of sdio0 were erroneously copied to sdio1.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1614[SWBOLT-1614] Coverity Defect ID:88465  RESOURCE_LEAK  Function=ui_cmd_connect()  Product=97445bolt ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1612[SWBOLT-1612] Coverity Defect ID:91846  RESOURCE_LEAK  Function=bdc_probe()  Product=97445bolt ^[yellow silver-background]#major#^
+
+  Coverity fixes.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1640[SWBOLT-1640] Update Shmoo to v1.2.0.0 ^[yellow silver-background]#major#^
+
+  Please take this release for the latest DDR3 and DDR4 support.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1625[SWBOLT-1625] 1.7GHz CPU speed for 7438S and 7439S ^[yellow silver-background]#major#^
+
+  Set the cpu speed to 1.7GHz instead of 1.5GHz for 7439b0 and all its variants.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1631[SWBOLT-1631] DT: Add a 27Mhz fixed-clock for UPG clock domain ^[yellow silver-background]#major#^
+
+  This inserts a 27Mhz clock named upg_fixed into the list of (Devicetree only) clocks. This is a "fixed-clock" device. This node will appear on all chips that have clock trees associated with them. 
+
+link:http://jira.broadcom.com/browse/SWBOLT-1469[SWBOLT-1469] support SPI-NOR 4-lane 81MHz ^[yellow silver-background]#major#^
+
+  Add quad read support to the SPI driver in SSBL.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1622[SWBOLT-1622] Set SCB=277MHz to avoid SAFE_CLK_MODE for 73649 ^[yellow silver-background]#major#^
+
+  This change improves 73649 performance by avoiding having to enter SAFE_CLK_MODE.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1209[SWBOLT-1209] Hardware accelerated SHA256 in Bolt ^[yellow silver-background]#major#^
+
+  Add a 'sha' command to BOLT SSBL.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1489[SWBOLT-1489] Integrate box \#0 RTS for all chips ^[yellow silver-background]#major#^
+
+ Replace all box mode (RTS) files, for all supported chips, with just box mode #0 - for use only by BOLT. Note that the "rts -set=N" command will still pass a (non-zero) box mode to NEXUS (via Linux/Devicetree.)
+
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.07%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.06
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1454[SWBOLT-1454] Configuring power profile based on MHL power capabilities ^[yellow silver-background]#major#^
+
+  Please take this release for 7250b0 based dongle products that utilize MHL to power them.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1561[SWBOLT-1561] USB: Add DT and .cfg support for USB device mode ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1539[SWBOLT-1539] usb device mode support ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1628[SWBOLT-1628] USB: correct USB GISB errors for 74371a0 family ^[yellow silver-background]#major#^
+
+  Please take this release for the (Android targeted) device mode USB drivers and Linux Devicetree suppport on 7439b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1602[SWBOLT-1602] Update memsyslib to v1.1.1.11 for DDR4 ^[yellow silver-background]#major#^
+
+  Please take this release for the latest DDR4 support on 7439b0 7366b0 7366c0 7445d0 and 7445e0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1585[SWBOLT-1585] Enable USB 3.0 SSC on both ports ^[yellow silver-background]#major#^
+
+  Please take this release if you require SSC support in USB.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1577[SWBOLT-1577] Bolt dev_genet.c mac filter issue ^[yellow silver-background]#major#^
+
+  Make IOCTL_ETHER_SETHWADDR for GENET functional.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1600[SWBOLT-1600] RTS: Enable GENET1 in box mode 1 settings ^[yellow silver-background]#major#^
+
+  Fixes GENET_1 access for 7439b0 using box mode 1.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1578[SWBOLT-1578] GPHY: updates to previous IEEE fixes ^[yellow silver-background]#major#^
+
+  Applies to 7364a0 7364b0 7250b0 74371a0 7439b0 7366b0 7366c0 and 7445e0 chip families.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.06%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.05
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1557[SWBOLT-1557] CLONE - First MDIO read/write after power-up may not work ^[red silver-background]#blocker#^
+
+
+link:http://jira.broadcom.com/browse/SWBOLT-1537[SWBOLT-1537] Hold GPHY_RESET for 60 micro seconds ^[yellow silver-background]#major#^
+
+
+link:http://jira.broadcom.com/browse/SWBOLT-1560[SWBOLT-1560] Do not pull-up write-protect pin for SD slots without write-protect feature ^[yellow silver-background]#major#^
+
+
+link:http://jira.broadcom.com/browse/SWBOLT-1568[SWBOLT-1568] GPL exception should be added to usb-brcm-common-init.c ^[yellow silver-background]#major#^
+
+
+link:http://jira.broadcom.com/browse/SWBOLT-1573[SWBOLT-1573] Refresh MCB's ^[yellow silver-background]#major#^
+
+ DDR4 MEMSYS code or MCBs above version v1.1.1.8 (v1.1.1.12) are not backward compatible.
+
+
+link:http://jira.broadcom.com/browse/SWBOLT-1551[SWBOLT-1551] Block box \#0 from being selected ^[yellow silver-background]#major#^
+
+ Box mode #0 is for exclusive use by BOLT and must not be user selectable.
+
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.05%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.04
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1506[SWBOLT-1506] Update device tree / clock trees to use CPU PLL MDIV for CPU freq scaling ^[yellow silver-background]#major#^
+
+ Help Linux to retain CPU clock rate across S3. Please take this release if you experience the system appearing to slow down after S3.
+
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.04%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.03
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1395[SWBOLT-1395] read data mismatch from eMMC flash along with g-zip decompress operation ^[yellow silver-background]#major#^
+
+  Please take this release if you are using the BOLT eMMC driver.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1466[SWBOLT-1466] Add 7364 B0 Support. ^[yellow silver-background]#major#^
+
+  This is the first BOLT release to feature the 7364b0 chip.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1509[SWBOLT-1509] Add support for BCM97252SSFFE ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1420[SWBOLT-1420] Add support for BCM972502DGL_V10 ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.03%22%20ORDER%20BY%20Severity[Here]
+
+
+ v1.02
+------
+
+* Critical bug fixes or feature additions, ordered by reported severity.
+
+** SWBOLT-1471: 7445e0 bringup
+
+  This is the first BOLT release to feature the 7445e0 chip.
+
+** SWBOLT-1289: remove support for 7439a0 
+** SWBOLT-1440: BOLT: remove support for 7145a0 
+
+  The 7439a0 and 7145a0 will not longer be
+ supported in BOLT from this release onwards.
+
+** SWBOLT-1500: update to memsyslib 1.1.1.4
+** SWBOLT-1501: Update DDR4 MCBS for 7250b0,7364a0/b0 and 7439b0 
+
+  You must take this release if you are using DDR4.
+
+** SWBOLT-1511: AVS firmware fails on over-temp reset.
+
+  This fixes an issue on an overtemperature reset
+ where the AVS reports an incorrect fail status. 
+
+  Please take this release if you are using the
+ following chips: 7250b0 7364a0 7366b0 7366c0 74371a0 7439b0 7445d0 7445e0
+
+
+** SWBOLT-1429: [PT UHD] BOLT build error with -fstack-protector-all compile flag 
+
+  Please take this release if you require gcc
+ stack protection/monitoring features in BOLT.
+
+** SWBOLT-1266: Audio at Bootup time (BOLT) 
+
+  Please take this release if you want PCM audio
+ support when SPLASH screen has been enabled.
+  This is for 7439b0 at the moment. Other chips have
+ the infrastructure, but have not yet been verified.
+ See the porting guide for more details.
+
+** SWBOLT-1502: DDR3 was configured for 97366SV_DDR4 
+
+  Please take this release if you have a Broadcom 97366SV
+ reference board with DDR4.
+
+** SWBOLT-1453: Implement RTS for box #13 of 7445 
+
+** SWBOLT-1517: BCM973649C61 board crashes when trying to boot Linux
+
+  Please take this release if you were previously using BOLT v1.01
+ for chips with GENET but no 'eth0' device configured for your board.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.02%22%20ORDER%20BY%20Severity[Here]
+
+
+
+ v1.01
+------
+
+* Critical bug fixes or feature additions, ordered by reported severity.
+
+** SWBOLT-1433: USB: Add USB support in 7439B1
+** SWBOLT-1419: Activate USB on 7439B1 while not on B0
+
+ Please take this release to enable USB for 7439b1 as the
+ previous BOLT release v1.00 disabled it for 7439b0.
+
+** SWBOLT-1479 	Update box #1 RTS for 74371
+
+ Please take this release if you use USB3.0 on 74371a0
+
+** SWBOLT-1451: Instruction RAC should be disabled
+** SWBOLT-1465: Guard Page is in the wrong VA location
+** SWBOLT-1474: GISB timeouts observed in Bolt
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.01%22%20ORDER%20BY%20Severity[Here]
+
+
+
+ v1.00
+------
+
+* Critical bug fixes or feature additions, ordered by reported severity.
+
+** SWBOLT-1042:	NAND performance (prefetch, cache mode, DMA)
+
+ NAND DMA has been switched on by default in this release.
+
+** SWBOLT-1455: NAND write slow after implementation of DMA read
+
+ Please take this release if you require improved NAND write
+performance (from 3MB/s to ~6MB/s.)
+
+** SWBOLT-1408:	Implement RTS for box #6 of 7364 
+** SWBOLT-1425:	Implement RTS for box #6 of 7439 B0 
+** SWBOLT-1434:	Implement box #5 for 7439 B0 
+
+ Please take this release if you use the above NEXUS box modes.
+
+** SWBOLT-1415:	Add support for BCM7366C0 
+
+ This is the first BOLT release to feature the 7366c0 chip.
+
+** SWBOLT-1406: Splash screen on RF Output (74371a0)
+
+ Please note that the above feature is limited to the
+74371a0 at the moment.
+
+** SWBOLT-1422:	Fix NULL mdio_mode handling 
+
+ This fixes the configuration script 'enet' command for where the
+'mdio_mode' has not been specified.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.00%22%20ORDER%20BY%20Severity
+
+
+ Appendix: Copyright Info
+-------------------------
+Copyright (C) 2016, Broadcom.
+All Rights Reserved.
+Confidential Property of Broadcom.

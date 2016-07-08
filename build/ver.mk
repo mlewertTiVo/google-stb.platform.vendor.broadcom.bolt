@@ -1,18 +1,18 @@
 # ***************************************************************************
-# *     Copyright (c) 2012-2013, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
-# *
-# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-# * 
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+#
+# THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
 # ***************************************************************************
 
 BUILDYEAR := $(shell date +"%Y")
 BUILDDATE := $(shell date +"%Y-%m-%d %H:%M:%S")
 BUILDUSER := $(shell whoami)
-BUILDHOST := $(shell hostname)
+BUILDNODE := $(shell uname -n)
+BUILDHOST := $(shell perl -e 'print "$(BUILDNODE)" =~ /([^.]+)\.(.*)/ \
+	? "$$1" : "$(BUILDNODE)"')
 BUILDTAG := $(shell cat $(ROOT)/version 2>/dev/null || \
 		    git describe --dirty 2> /dev/null || \
 		    git rev-parse --short HEAD 2> /dev/null || \

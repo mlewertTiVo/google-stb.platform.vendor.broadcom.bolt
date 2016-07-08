@@ -74,7 +74,6 @@ const char *ui_errstring(int errcode);
 int ui_showerror(int errcode, char *tmplt, ...);
 int ui_showusage(ui_cmdline_t * cmd);
 int ui_docommand(const char *buffer);
-void ui_restart(int);
 int ui_init_cmddisp(void);
 ui_command_t *cmd_readcommand(const char **pptr);
 

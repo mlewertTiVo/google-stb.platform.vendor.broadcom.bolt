@@ -38,6 +38,12 @@ static inline int flsll(long long i)
 	return i ? sizeof(long long) * 8 - __builtin_clzll(i) : 0;
 }
 
+/* bcnt() count number of set bits in a 32-bit value */
+static inline int bcnt(uint32_t n)
+{
+	return __builtin_popcount(n);
+}
+
 /**
  * upper_32_bits - return bits 32-63 of a number
  * @n: the number we're accessing

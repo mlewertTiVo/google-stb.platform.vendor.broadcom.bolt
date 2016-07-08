@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -52,7 +50,7 @@ extern "C" {
 	#define UMAC_HFB_REG_OFFSET         0xfc00
 	#define UMAC_RDMA_REG_OFFSET        0x10000
 	#define UMAC_TDMA_REG_OFFSET        0x11000
-#elif CONFIG_BRCM_GENET_VERSION == 4
+#elif CONFIG_BRCM_GENET_VERSION > 3
 	#define UMAC_TBUF_REG_OFFSET        0x0600
 	#define UMAC_HFB_OFF                0x8000
 	#define UMAC_HFB_REG_OFFSET         0xfc00
@@ -358,6 +356,16 @@ typedef struct SysRegs
 #if CONFIG_BRCM_GENET_VERSION > 1
 	unsigned long rbuf_flush_ctrl;
 	unsigned long tbuf_flush_ctrl;
+#if CONFIG_BRCM_GENET_VERSION == 5
+	unsigned long scb_client_init_state;
+	unsigned long led_cntrl;
+	unsigned long led_link_and_speed_encoding_sel;
+	unsigned long led_link_and_speed_encoding;
+	unsigned long led_serial_cntrl;
+	unsigned long refresh_period_cntrl;
+	unsigned long aggregate_led_cntrl;	
+	unsigned long aggregate_led_blink_rate_cntrl;		
+#endif
 #endif
 }SysRegs;
 
@@ -371,8 +379,13 @@ typedef struct GrBridgeRegs
 
 typedef struct ExtRegs
 {
+#if CONFIG_BRCM_GENET_VERSION == 5
+	unsigned long ext_ephy_ctrl;
+	unsigned long ext_ephy_status;
+#else
 	unsigned long ext_pwr_mgmt;
 	unsigned long ext_emcg_ctrl;
+#endif
 	unsigned long ext_test_ctrl;
 #if CONFIG_BRCM_GENET_VERSION > 1
 	unsigned long rgmii_oob_ctrl;

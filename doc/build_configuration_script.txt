@@ -3,9 +3,9 @@
 :max-width: 100%
 Build configuration script
 ==========================
-Broadcom Corporation <support@broadcom.com>
-v1.32, January 15th 2016:
-Updated for 1.10 release.
+Broadcom Ltd <support@broadcom.com>
+v1.34, June 9th 2016:
+Updated for 1.19 release.
 
 Introduction
 ------------
@@ -873,8 +873,9 @@ in UPG_AON block, the autogen automatically figures the block the master
 belongs to and creates appropriate node.
 
 If you choose to generate a usb memory node, you can also use the
-options '-ipp' and '-ioc'.  If they are not used, the default
-value will be 1.
+options '-ipp' and '-ioc'.  Use 0 for active high, 1 for active low.
+'-ipp' also accepts 2 which allows a board strap signal to control
+the polarity. If they are not used, the default value will be 1.
 
 memory
 ^^^^^^
@@ -1695,28 +1696,20 @@ an ID then the menu is presented.
 ~~~
 Usage:
 
-* dt cull -power <minimal|std> -root <ROOT> -node <NODE>
+* dt cull -power <minimal|std> -root <ROOT> -node <NODE> -prop <PROP>
 * dt mac  -power <minimal|std> -root /      -node <NODE>
 * dt prop -power <minimal|std> -root <ROOT> -node <NODE> -prop <PROP> -string "<STRING>"
 * dt prop -power <minimal|std> -root <ROOT> -node <NODE> -prop <PROP> -int <int>
 
-Note: Apply board specific Devictree actions at runtime.
+Note: These script commands allow selective board specific modification of the
+devicetree as BOLT SSBL starts up, independent of the 'dt bolt' command.
 
 See also: dt autogen
 
-Example:
-----
- dt cull -power minimal -root / -node nexus
- dt prop                -root / -node sata  -prop status -string "disabled"
- dt mac                 -root / -node stb0
-----
-
-This allows board specific selective modification of devicetree nodes
-via the 'dt bolt' command, or before Linux starts.
-
 * <ROOT> and <NODE> are the textual names in the devicetree.
 
-** 'cull' removes devicetree nodes.
+** 'cull' removes a single devicetree property within the specified node
+if the optional '-prop' parameter is present, else it deletes the whole node.
 
 ** 'prop' adds or modifies a devicetree property. Currently, only the string
 type is supported.
@@ -1729,10 +1722,18 @@ incremented to provide a value unique to the platform it is running on.
 * '-power' is optional. It may have no effect if the platform
 (BOLT) FSBL does not report its power state.
 
-Note that if the 'dt bolt' command is run again, a partial path
-or node description will result in the deletion/modification of 
-the next node that matches a partial path with that matching
-(partial) node.
+NOTE: It is recommended to specify the full node and path when using
+these commands as a partial node will match the first that is found.
+
+Example:
+----
+dt cull -power minimal -root / -node nexus
+
+dt mac -root / -node stb0
+
+dt prop -root /rdb -node sata@f045a000 -prop status -string "disabled"
+dt cull -root /rdb -node sata@f045a000 -prop status
+----
 
 
  rtsdefault
@@ -1856,12 +1857,14 @@ Examples:
 /* generate local-mac-address on node pci@0,1 */ 
  pcie -controller 0 -type nominal -bus 0 -slot 1 -mac 1
 ----
-
+----
 /* turn off/on/on a power supply on suspend/resume/boot */ 
  pcie -controller 0 -type nominal -pwr wifi
-
+----
+----
 /* turn off/on/on two power supplies on suspend/resume/boot */ 
  pcie -controller 0 -type nominal -pwr wifi,e1000e
+----
 
 * <N> is the pcie controller number, typically 0 or 1.
 * <T> is thee type; either 'nodevice' for deletion or 'nominal'.
@@ -1870,15 +1873,21 @@ Examples:
       the 'vreg' command.  If it is desired to toggle more than
       one regulator, <V> can be a comma-separated list of 
       voltage regulator names.
+* '-ssc 1' is the spread spectrum enable. It defaults to off if
+not specified.
 
 Note that the command 'dt autogen -node pcie' generates the
 PCIe device information based on the chip family, and the 'pcie'
 command described here modifies or deletes individual PCIe devices on
 a per board basis.
 
+WARNING: Enabling ssc for a PCIe controller that is configured
+instead as a SATA device is not recommended as it may cause a
+Linux boot failure.
+
  usb
 ~~~~
-Usage: usb -controller <N> -type <T> [-ipp 0|1] [-ioc 0|1] [-bdc on|off|dual]
+Usage: usb -controller <N> -type <T> [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual]
 
 Note: Sets the default USB hardware operating mode on a per board basis.
 
@@ -1915,6 +1924,18 @@ Usage: gpio_key -name <NAME> -gpio <NAME_OF_GPIO_CONTROLLER> -pin <GPIO_PIN> -co
 
 Note: Creates device node for the gpio button. You can create multiple gpio buttons.
 
+If Nexus is build with NEXUS_HAS_GPIO=1, the Nexus will take ownership of all GPIO pins.
+When GPIO block is shared between Nexus and Linux, the interrupt driven operations could
+introduce race condition during read-modify-write register access.
+
+It's important to check that Nexus does not try to reconfigure the pins specified by
+<NAME_OF_GPIO_CONTROLLER> and <GPIO_PIN> for any other purposes. The Linux driver which uses
+the generated device node should only poll/read the GPIO pins, such that it will not
+interfere with Nexus operations on other pins in the same GPIO block.
+
+Check the hardware schematics to ensure the correct <NAME_OF_GPIO_CONTROLLER> and <GPIO_PIN>
+are used for a given platform.
+
 See also: dt autogen gpio
 
 * <NAME> is not used in kernel driver, it's better to give a descriptive name based on the usage of gpio pin.
@@ -1936,7 +1957,7 @@ Examples:
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

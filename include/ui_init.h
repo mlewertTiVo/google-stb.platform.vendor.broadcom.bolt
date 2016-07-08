@@ -30,6 +30,7 @@ int ui_init_memtestcmds(void);
 int ui_init_ethertestcmds(void);
 int ui_init_rpmb_cmds(void);
 int ui_init_shacmds(void);
+int ui_init_tz(void);
 
 /* master init function */
 void ui_init(void);

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -345,9 +343,65 @@ static const uint32_t ddr4_1200mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbd
 	0xffffffff,  0x78a7cb4f,	/* -1 */
 }; /* 46 differences */
 
+/* ddr4_1200MHz_32b_dev8Gx16_DDR4-2400U_le.mcb
+*/
+static const uint32_t ddr4_1200mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdata"))) = {
+	0x00000003,  0xbbc16919,	/* 3 */
+	0x00000005,  0x00001702,	/* 5 */
+	0x00000006,  0x00103922,	/* 6 */
+	0x0000000c,  0x000004b0,	/* 12 */
+	0x0000000d,  0x00000001,	/* 13 */
+	0x00000010,  0x00002000,	/* 16 */
+	0x0000001a,  0x00000004,	/* 26 */
+	0x0000001b,  0x00010b20,	/* 27 */
+	0x0000001c,  0x00000001,	/* 28 */
+	0x0000001d,  0x27071212,	/* 29 */
+	0x0000001e,  0x09121012,	/* 30 */
+	0x0000001f,  0x011431a4,	/* 31 */
+	0x00000024,  0x00000940,	/* 36 */
+	0x00000025,  0x00000109,	/* 37 */
+	0x00000026,  0x00000028,	/* 38 */
+	0x00000027,  0x00000220,	/* 39 */
+	0x00000028,  0x00000800,	/* 40 */
+	0x00000029,  0x00000440,	/* 41 */
+	0x0000002a,  0x0000080f,	/* 42 */
+	0x00000035,  0x000001d8,	/* 53 */
+	0x00000037,  0x10080000,	/* 55 */
+	0x00000038,  0x0010102c,	/* 56 */
+	0x00000039,  0x0002d916,	/* 57 */
+	0x0000003a,  0x00001cf1,	/* 58 */
+	0x0000003b,  0x000388c0,	/* 59 */
+	0x0000003c,  0x2f7fffff,	/* 60 */
+	0x0000003d,  0x003f3fff,	/* 61 */
+	0x00000047,  0x00000940,	/* 71 */
+	0x00000048,  0x00000109,	/* 72 */
+	0x00000049,  0x00000028,	/* 73 */
+	0x0000004a,  0x07121227,	/* 74 */
+	0x0000004b,  0x00202409,	/* 75 */
+	0x0000004c,  0x081d1709,	/* 76 */
+	0x0000004d,  0x12301218,	/* 77 */
+	0x0000004e,  0x001a4400,	/* 78 */
+	0x0000004f,  0x03020300,	/* 79 */
+	0x00000050,  0x00231f22,	/* 80 */
+	0x00000053,  0x00006952,	/* 83 */
+	0x00000058,  0x00000003,	/* 88 */
+	0x0000005a,  0x8f800080,	/* 90 */
+	0x0000005d,  0x00000220,	/* 93 */
+	0x0000005e,  0x00000800,	/* 94 */
+	0x0000005f,  0x00000440,	/* 95 */
+	0x00000060,  0x0000080f,	/* 96 */
+	0x00000076,  0x0000006e,	/* 118 */
+	0x0000008c,  0x0000003c,	/* 140 */
+	0x0000008e,  0x0000003c,	/* 142 */
+	0x0000008f,  0xffffffff,	/* 143 */
+	0xffffffff,  0x78b57921,	/* -1 */
+}; /* 48 differences */
+
 static const char tag_ddr4_1200mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbdata"))) = "ddr4";
+static const char tag_ddr4_1200mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdata"))) = "ddr4";
 const struct memsys_info __maybe_unused customshmoo_data[] __attribute__ ((section(".mcbsubtable"))) = {
 	{ NULL, MCB_MAGIC1, MCB_MAGIC2, MCB_MAGIC3, -1, NULL },
 	{ ddr4_1200mhz_32b_dev4Gx16,	1200,	4096,	16, 32,	tag_ddr4_1200mhz_32b_dev4Gx16 },
+	{ ddr4_1200mhz_32b_dev8Gx16,	1200,	8192,	16, 32,	tag_ddr4_1200mhz_32b_dev8Gx16 },
 	{ NULL, 0, 0, 0, 0, NULL },
 };

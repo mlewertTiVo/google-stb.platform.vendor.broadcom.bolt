@@ -54,7 +54,7 @@ typedef void bolt_loader_t;
 #include "net_api.h"
 #include "../ssbl/main/nvram_subr.h"
 #include "avs_bsu.h"
-#include "fsbl-common.h"
+#include "ssbl-common.h"
 #include "loader.h"
 #include "devfuncs.h"
 #endif
@@ -69,7 +69,7 @@ to the line "--- diagnostics sub-api ---"
 - BSU_DIAGS_VERSION is for everything after the line
 " --- diagnostics sub-api --- "
 */
-#define BSU_API_VERSION 8
+#define BSU_API_VERSION 9
 #define BSU_DIAGS_VERSION 3
 
 #define BSU_SIGNATURE 0x62737531
@@ -212,9 +212,6 @@ struct bsu_api {
 
 	/* lib (v7) */
 	int (*xfn_bolt_getdevinfo)(char *name);
-	int (*xfn_bolt_ioctl)(int handle, unsigned int ioctlnum,
-				void *buffer, size_t length, size_t *retlen,
-				bolt_offset_t offset);
 	int (*xfn_bolt_open)(char *name);
 	int (*xfn_bolt_close)(int handle);
 	int (*xfn_bolt_readblk)(int handle, bolt_offset_t offset,
@@ -294,6 +291,17 @@ struct bsu_api {
 	int (*xfn_env_setenv)(const char *name, const char *value, int flags);
 	int (*xfn_env_getval)(const char *name);
 	int (*xfn_env_save)(void);
+
+	/* Eth PHY diags (v9) */
+	int (*xfn_bolt_gethandle)(char *name);
+	int (*xfn_bolt_ioctl)(int handle, unsigned int ioctlnum, void *buffer,
+	      size_t length, size_t *retlen, unsigned long long offset);
+	void (*xfn_usleep)(unsigned int us);
+#ifndef BSU
+	const ssbl_board_params *(*xfn_board_params)(void);
+#else
+	const void *(*xfn_board_params)(void);
+#endif
 };
 
 #endif /* __BSU_API_H__ */

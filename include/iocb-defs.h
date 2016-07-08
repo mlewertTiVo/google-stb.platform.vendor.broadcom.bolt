@@ -48,9 +48,6 @@
 #define BOLT_CPU_CMD_START	1
 #define BOLT_CPU_CMD_STOP	0
 
-#define BOLT_STDHANDLE_CONSOLE	0
-
-
 #define BOLT_DEV_NETWORK	1
 #define BOLT_DEV_DISK		2
 #define BOLT_DEV_FLASH		3

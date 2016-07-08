@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
+ *     Copyright (c) 2012-2016, Broadcom Corporation
  *     All Rights Reserved
  *     Confidential Property of Broadcom Corporation
  *
@@ -30,12 +30,20 @@
 /* AVS */
 #define AVS2_IMAGE_FLASH_OFFSET                 (0x00051000)
 #define AVS1_IMAGE_FLASH_OFFSET                 (0x00131000)
+
+
+#if CFG_ZEUS4_2_1
+#define AVS_PARAMETER_OFFSET                    (0x00004880)
+#define AVS_SIGNATURE_OFFSET                    (0x00004894)
+#define AVS_KEY4_OFFSET                         (0x000049A0)
+#else /* Plain ol' Zeus 4.2 */
 #define AVS_PARAMETER_OFFSET                    (0x00003C00)
 #define AVS_SIGNATURE_OFFSET                    (0x00003C14)
 #define AVS_KEY4_OFFSET                         (0x00003D20)
+#endif
 
 /* MemsysFW */
-#define MEMSYS2_IMAGE_FLASH_OFFSET              (0x00055000)
+#define MEMSYS2_IMAGE_FLASH_OFFSET              (MEMSYS_TEXT_OFFS)
 #define MEMSYS1_IMAGE_FLASH_OFFSET              (0x00135000)
 #define MEMSYS_PARAMETER_OFFSET                 (MEMSYSFW_SIZE)
 #define MEMSYS_SIGNATURE_OFFSET                 (MEMSYSFW_SIZE+0x14)
@@ -80,6 +88,9 @@
 
 #endif
 
+#define BFW_USE_EMMC_DATA_PART                  0x0
+#define BFW_EMMC_DATA_PART_ADDR                 0x4000000
+
 #define BFW_2ND_PART_OFFSET                     (0x20000)
 #define	BFW_LOADFROMDRAM                        0x00
 #define	BFW_2NDTIERKEY                          0x03
@@ -97,6 +108,7 @@
 #define OTP_MICH_ENABLE_BIT                     0x4b
 #define OTP_MEM_SCRAM_ENABLE_BIT                0x12
 #define OTP_HOST_BOOT_CODE_DECRYPT_BIT          0x50
+#define OTP_HOST_BOOT_CODE_DECRYPT_EXT_BIT      0x274
 #define OTP_BSECK_RELOAD_BIT                    0x58
 #define OTP_BSECK_ENABLE_BIT                    0x59
 #define OTP_BSECKPointerInFlash_BIT             0xd
@@ -418,6 +430,7 @@ int      set_image_info(image_info *info);
 
 void     sec_print_bsp_version(void);
 void     sec_print_bsp_debug_info(void);
+void     set_trace(uint32_t val);
 
 #if CFG_ZEUS4_2
 uint32_t sec_memsys_ready(void);

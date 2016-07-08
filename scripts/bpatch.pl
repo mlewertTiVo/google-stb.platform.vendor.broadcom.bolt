@@ -1,18 +1,19 @@
 #!/usr/bin/perl -w
 # ***************************************************************************
-# *     Copyright (c) 2012-2015, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
-# *
-# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-# *
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved
+#
+# THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
 # ***************************************************************************
 
 # Example:
-# ./scripts/bpatch.pl -a 0x000096F0 -p security/7445d0/bbl.bin -i objs/7445d0/bolt.bin -o objs/7445d0/bolt-new.bin
-# ./scripts/patcher.pl -z zeus42 -t bbl -p security/7445d0/bbl.bin -i objs/7445d0/bolt.bin -o objs/7445d0/bolt-new.bin
+# ./scripts/bpatch.pl -a 0x000096F0 -p security/7445d0/bbl.bin \
+#	-i objs/7445d0/bolt.bin -o objs/7445d0/bolt-new.bin
+#
+# ./gen/scripts/patcher.pl -z zeus42 -t bbl -p security/7445d0/bbl.bin \
+#	-i objs/7445d0/bolt.bin -o objs/7445d0/bolt-new.bin
 
 use strict;
 use warnings FATAL=>q(all);

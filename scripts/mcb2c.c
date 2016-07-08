@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -11,9 +9,7 @@
 
 static const char *COPYRIGHT_HEADER =
 "/***************************************************************************\n"
-" *     Copyright (c) 2012-2014, Broadcom Corporation\n"
-" *     All Rights Reserved\n"
-" *     Confidential Property of Broadcom Corporation\n"
+" * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.\n"
 " *\n"
 " *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE\n"
 " *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR\n"
@@ -555,11 +551,11 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-/* filter_reg -- filters only regular files
+/* filter_reg -- filters regular files, and follows symbolic links
  */
 static int filter_reg(const struct dirent *de)
 {
-	if (de->d_type == DT_REG)
+	if (de->d_type == DT_REG || de->d_type == DT_LNK)
 		return 1;
 
 	return 0;

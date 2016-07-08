@@ -3,7 +3,7 @@
 :max-width: 100%
 Making unfeasibly large initrds
 ===============================
-Broadcom Corporation <support@broadcom.com>
+Broadcom Ltd <support@broadcom.com>
 v2.1, August 2015:
 Information added on avoiding initrd overlap with BMEM / CMA.
 
@@ -495,7 +495,7 @@ TIP: For an initrd you may also see a failure to execute the "init" process.
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2014-2015, Broadcom Corporation.
+Copyright (C) 2016, Broadcom Ltd.
 All Rights Reserved.
-Confidential Property of Broadcom Corporation.
+Confidential Property of Broadcom Ltd.
 

@@ -254,8 +254,11 @@ new_format:
 	for (; wordPtr < (uint32_t *)(g_splashFile+SPLASH_FILE_HDR_SIZE);
 				wordPtr += SPLASH_MEDIA_INFO_TYPES) {
 		if (*wordPtr == *tmpBuf)
-			break;
+			goto found;
 	}
+	goto error; /* media format & type not found */
+
+found:
 	wordPtr++;
 	mediaInfo->size = *wordPtr++;
 	mediaInfo->offset = *wordPtr;

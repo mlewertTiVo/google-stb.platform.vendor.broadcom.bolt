@@ -1,7 +1,5 @@
 /***************************************************************************
- *	 Copyright (c) 2012-2015, Broadcom Corporation
- *	 All Rights Reserved
- *	 Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -12,11 +10,29 @@
 #include <common.h>
 
 #include <bchp_common.h>
+#include <bchp_sun_top_ctrl.h>
 #include <bchp_xpt_bus_if.h>
 #include <bchp_xpt_fe.h>
+#if CFG_MEMDMA_MCPB
 #include <bchp_xpt_memdma_mcpb_ch0.h>
 #include <bchp_xpt_memdma_mcpb.h>
+#else
+#include <bchp_xpt_mcpb_ch0.h>
+#include <bchp_xpt_mcpb.h>
+#endif
 #include <bchp_xpt_wdma_regs.h>
+
+/* interrupt support. 3390 is the oddball here */
+#if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM3390B0)
+#define INT_SUPPORTED 0
+#else
+#define INT_SUPPORTED 1
+#endif
+
+#if INT_SUPPORTED
+#include <bchp_xpt_wdma_desc_done_intr_l2.h>
+#include <bchp_xpt_wdma_cpu_intr_aggregator.h>
+#endif
 
 #ifdef BCHP_XPT_WDMA_CH0_REG_START
 #include <bchp_xpt_wdma_ch0.h>
@@ -40,6 +56,7 @@
 /* descriptor flags and shifts */
 #define MCPB_DW2_LAST_DESC		(1 << 0)
 
+#define MCPB_DW4_INT_EN			(1 << 31)
 #define MCPB_DW4_PUSH_PARTIAL_PKT	(1 << 28)
 
 #define MCPB_DW5_ENDIAN_STRAP_INV  (1 << 21)
@@ -49,21 +66,25 @@
 #define MCPB_DW5_SCRAM_INIT        (1 << 16)
 
 #define WDMA_DW3_LAST                  (1 << 0)
+#define WDMA_DW3_INTR_EN               (1 << 1)
 #define WDMA_DW3_END_INVERT            (1 << 2) /* SW7445-96: swap byte */
 
 #define MEMDMA_DRAM_REQ_SIZE	256
 
 #define XPT_MAC_OFFSET		0x14
 
+#if CFG_MEMDMA_MCPB
 #define MCPB_CHx_SPACING(channel) \
 	((BCHP_XPT_MEMDMA_MCPB_CH1_REG_START - \
 	 BCHP_XPT_MEMDMA_MCPB_CH0_REG_START) * (channel))
+#else
+#define MCPB_CHx_SPACING(channel) \
+	((BCHP_XPT_MCPB_CH1_REG_START - \
+	 BCHP_XPT_MCPB_CH0_REG_START) * (channel))
+#endif
 
 #define XPT_CHANNEL_A	0
 #define XPT_CHANNEL_B	1
-
-#define PID_CHANNEL_A	1022
-#define PID_CHANNEL_B	1023
 
 #define XPT_MAC_A	0
 #define XPT_MAC_B	1
@@ -87,10 +108,27 @@ void memdma_init(const struct memdma_initparams *e)
 	efn = e;
 }
 
+static void check_memdma_initparams(void)
+{
+	if (efn == NULL) {
+		puts("XPTDMA: !INIT");
+		while (1)
+			;
+	}
+}
+
 static inline void xpt_set_power(int on)
 {
 #ifdef BCHP_XPT_PMU_FE_SP_PD_MEM_PWR_DN_CTRL
 	uint32_t val = on ? 0 : ~0;
+
+	/* Hard reset XPT. Whatever happens to XPT
+	 * this should recover it from any abuse.
+	 */
+	BDEV_WR_F(SUN_TOP_CTRL_SW_INIT_0_SET, xpt_sw_init, 1);
+	BARRIER();
+	BDEV_WR_F(SUN_TOP_CTRL_SW_INIT_0_CLEAR, xpt_sw_init, 1);
+	BARRIER();
 
 	/* Power on/off everything */
 	BDEV_WR(BCHP_XPT_PMU_FE_SP_PD_MEM_PWR_DN_CTRL, val);
@@ -101,8 +139,13 @@ static inline void xpt_set_power(int on)
 
 static void mcpb_run(int enable, unsigned int channel)
 {
+#if CFG_MEMDMA_MCPB
 	BDEV_WR_RB(BCHP_XPT_MEMDMA_MCPB_RUN_SET_CLEAR,
 			(!!enable << 8) | channel);
+#else
+	BDEV_WR(BCHP_XPT_MCPB_RUN_SET_CLEAR, ((!!enable << 8) | channel));
+
+#endif
 }
 
 static void wdma_run(int enable, unsigned int channel)
@@ -115,14 +158,28 @@ static int mcpb_soft_init(void)
 {
 	int timeout = 1000 * 1000; /* 1 second timeout */
 
+	check_memdma_initparams();
+#if CFG_MEMDMA_MCPB 
 	BDEV_WR(BCHP_XPT_BUS_IF_SUB_MODULE_SOFT_INIT_DO_MEM_INIT,
 			1 << 1); /* MEMDMA */
 	BDEV_WR(BCHP_XPT_BUS_IF_SUB_MODULE_SOFT_INIT_SET,
 			1 << 1); /* MEMDMA */
 
+#else
+	
+	BDEV_WR(BCHP_XPT_BUS_IF_SUB_MODULE_SOFT_INIT_DO_MEM_INIT,
+		1); /* MCPB */
+	BDEV_WR(BCHP_XPT_BUS_IF_SUB_MODULE_SOFT_INIT_SET,
+		1); /* MCPB */
+#endif
 	for (;;) {
+#if CFG_MEMDMA_MCPB 		
 		if (!BDEV_RD_F(XPT_BUS_IF_SUB_MODULE_SOFT_INIT_STATUS,
 					MEMDMA_MCPB_SOFT_INIT_STATUS))
+#else
+		if (!BDEV_RD_F(XPT_BUS_IF_SUB_MODULE_SOFT_INIT_STATUS,
+					XPT_MCPB_SOFT_INIT_STATUS))
+#endif
 			break;
 		if (timeout <= 0)
 			return -1;
@@ -131,14 +188,21 @@ static int mcpb_soft_init(void)
 		efn->udelay(10);
 	}
 
-	BDEV_WR(BCHP_XPT_BUS_IF_SUB_MODULE_SOFT_INIT_CLEAR,
-			1 << 1); /* MEMDMA */
+#if CFG_MEMDMA_MCPB
+	BDEV_WR(BCHP_XPT_BUS_IF_SUB_MODULE_SOFT_INIT_CLEAR, 1 << 1); /* MEMDMA */
+#else
+	BDEV_WR(BCHP_XPT_BUS_IF_SUB_MODULE_SOFT_INIT_CLEAR, 1); /* MCPB */
+#endif
+			
 	return 0;
 }
 
 static void memdma_init_mcpb_channel(unsigned int channel, enum xpt_dma_mode mode)
 {
+	unsigned long packet_len_val;
+	unsigned long dma_buf_ctrl_val;
 	unsigned long offs = MCPB_CHx_SPACING(channel);
+#if CFG_MEMDMA_MCPB	
 	unsigned long parser_ctrl = BCHP_XPT_MEMDMA_MCPB_CH0_SP_PARSER_CTRL
 					+ offs;
 	unsigned long packet_len = BCHP_XPT_MEMDMA_MCPB_CH0_SP_PKT_LEN + offs;
@@ -146,14 +210,26 @@ static void memdma_init_mcpb_channel(unsigned int channel, enum xpt_dma_mode mod
 					+ offs;
 	unsigned long dma_data_ctrl = BCHP_XPT_MEMDMA_MCPB_CH0_DMA_DATA_CONTROL
 					+ offs;
-	unsigned long packet_len_val;
-	unsigned long dma_buf_ctrl_val;
+#else
+	unsigned long parser_ctrl = BCHP_XPT_MCPB_CH0_SP_PARSER_CTRL
+					+ offs;
+	unsigned long packet_len = BCHP_XPT_MCPB_CH0_SP_PKT_LEN + offs;
+	unsigned long dma_buf_ctrl = BCHP_XPT_MCPB_CH0_DMA_BBUFF_CTRL
+					+ offs;
+	unsigned long dma_data_ctrl = BCHP_XPT_MCPB_CH0_DMA_DATA_CONTROL
+					+ offs;
+
+#endif
+
 
 	/* setup for block mode */
 	BDEV_WR(parser_ctrl,
 		(1 << 0) |		/* parser enable */
 		(6 << 1) |		/* block mode */
 		(channel << 6) |	/* band ID */
+#if !CFG_MEMDMA_MCPB
+		(1 << 26) |  /*  MEM DMA PIPE Enable */
+#endif
 		(1 << 14));		/* select playback parser */
 
 	if (mode == XPT_DMA_SHA) {
@@ -171,6 +247,9 @@ static void memdma_init_mcpb_channel(unsigned int channel, enum xpt_dma_mode mod
 	BDEV_WR(packet_len, packet_len_val);
 	BDEV_WR(dma_buf_ctrl, dma_buf_ctrl_val);
 	BDEV_WR(dma_data_ctrl, (MEMDMA_DRAM_REQ_SIZE << 0) |
+#if !CFG_MEMDMA_MCPB
+		(1 << 10) |
+#endif
 		(0 << 11));	/* disable run version match */
 }
 
@@ -182,6 +261,11 @@ static void memdma_init_wdma_channel(unsigned int channel)
 	BDEV_WR_F(XPT_WDMA_REGS_MATCH_RUN_VERSION_CONFIG, CHANNEL_NUM,
 			channel);
 	BDEV_WR_F(XPT_WDMA_REGS_MATCH_RUN_VERSION_CONFIG, CONFIG, 0);
+
+#if !CFG_MEMDMA_MCPB
+	BDEV_WR_F(XPT_WDMA_CH0_DATA_CONTROL, INV_STRAP_ENDIAN_CTRL, 1);  
+#endif
+
 }
 
 static void xpt_init_ctx(unsigned int channel, unsigned int pid_channel)
@@ -200,7 +284,7 @@ static void xpt_init_ctx(unsigned int channel, unsigned int pid_channel)
 }
 
 static void memdma_init_hw(unsigned int channel, int pid,
-				enum xpt_dma_mode mode)
+				enum xpt_dma_mode mode, bool int_enable)
 {
 	mcpb_run(0, channel);
 
@@ -213,12 +297,23 @@ static void memdma_init_hw(unsigned int channel, int pid,
 		memdma_init_wdma_channel(channel);
 
 	xpt_init_ctx(channel, pid);
+
+#if INT_SUPPORTED
+	if (int_enable) {
+		BDEV_WR(BCHP_XPT_WDMA_DESC_DONE_INTR_L2_CPU_MASK_CLEAR,
+			(1 << channel));
+
+		BDEV_WR_F(XPT_WDMA_CPU_INTR_AGGREGATOR_INTR_W0_MASK_CLEAR,
+			DESC_DONE_INTR, 1);
+	}
+#endif
 }
 
 static int __mcpb_init_desc(struct mcpb_dma_desc *desc, dma_addr_t next,
 		dma_addr_t buf, size_t len, int first, int last,
 		unsigned int pid_channel, bool hashmode)
 {
+	check_memdma_initparams();
 	efn->memset(desc, 0, sizeof(*desc));
 
 	/* 5 LSBs must be 0; can only handle 32-bit addresses */
@@ -253,13 +348,17 @@ int mcpb_init_desc(struct mcpb_dma_desc *mcpb, struct dma_region *region)
 }
 
 /* Setup single WDMA descriptor */
-void wdma_init_desc(struct wdma_desc *desc, struct dma_region *region)
+void wdma_init_desc(struct wdma_desc *desc, struct dma_region *region,
+		bool int_enable)
 {
 	desc->buf_hi = upper_32_bits(region->addr);
 	desc->buf_lo = lower_32_bits(region->addr);
 	desc->size = region->len;
 	desc->next_offs = WDMA_DW3_END_INVERT;
 	desc->next_offs |= WDMA_DW3_LAST;
+
+	if (INT_SUPPORTED && int_enable)
+		desc->next_offs |= WDMA_DW3_INTR_EN;
 }
 
 /*
@@ -318,11 +417,12 @@ static int memdma_wait_for_hash(int mac)
 {
 	int timeout = MAX_HASH_WAIT_US;
 
+	check_memdma_initparams();
 	for (;;) {
 		if (hash_is_ready(mac))
 			break;
 		if (timeout <= 0) {
-			puts("error: timeout waiting for MAC");
+			puts("XPTDMA: HASH !RDY");
 			return -1;
 		}
 
@@ -338,7 +438,13 @@ static int memdma_wait_for_hash(int mac)
 
 static void memdma_start(dma_addr_t desc, unsigned int channel)
 {
-	unsigned long reg = BCHP_XPT_MEMDMA_MCPB_CH0_DMA_DESC_CONTROL +
+	unsigned long reg = 
+#if CFG_MEMDMA_MCPB		
+		BCHP_XPT_MEMDMA_MCPB_CH0_DMA_DESC_CONTROL 
+#else
+		BCHP_XPT_MCPB_CH0_DMA_DESC_CONTROL 
+#endif
+		+
 		MCPB_CHx_SPACING(channel);
 
 	BDEV_WR(reg, (uint32_t)desc);
@@ -364,12 +470,12 @@ int memdma_run(dma_addr_t desc1, dma_addr_t desc2, bool dual_channel)
 	if (ret)
 		goto out;
 
-	memdma_init_hw(0, PID_CHANNEL_A, mode);
+	memdma_init_hw(0, PID_CHANNEL_A, mode, false);
 	BARRIER();
 	memdma_start(desc1, XPT_CHANNEL_A);
 
 	if (dual_channel) {
-		memdma_init_hw(1, PID_CHANNEL_B, mode);
+		memdma_init_hw(1, PID_CHANNEL_B, mode, false);
 		BARRIER();
 		memdma_start(desc2, XPT_CHANNEL_B);
 	}
@@ -388,7 +494,8 @@ out:
 	return ret;
 }
 
-static int mem2mem_dma_init(unsigned int channel, int pid_channel)
+static int mem2mem_dma_init(unsigned int channel, int pid_channel,
+		bool int_enable)
 {
 	int ret;
 
@@ -398,16 +505,18 @@ static int mem2mem_dma_init(unsigned int channel, int pid_channel)
 	if (ret)
 		return ret;
 
-	memdma_init_hw(channel, pid_channel, XPT_DMA_SCRAMBLE);
+	memdma_init_hw(channel, pid_channel, XPT_DMA_SCRAMBLE, int_enable);
 
 	return 0;
 }
 
-static int __mem2mem_dma_run(dma_addr_t mcpb, dma_addr_t wdma)
+static int __mem2mem_dma_run(dma_addr_t mcpb, dma_addr_t wdma,
+		bool int_enable)
 {
 	dma_addr_t reg;
 	int timeout = 15 * 1000 * 1000; /* 15 seconds */;
 
+	check_memdma_initparams();
 	wdma_run(0, 0);
 
 	/* CDA must be cleared, since we're waiting */
@@ -423,14 +532,21 @@ static int __mem2mem_dma_run(dma_addr_t mcpb, dma_addr_t wdma)
 
 	memdma_start(mcpb, 0);
 
-	do {
-		reg = BDEV_RD(BCHP_XPT_WDMA_RAMS_COMPLETED_DESC_ADDRESS);
-		if (reg == wdma)
+	if (INT_SUPPORTED && int_enable && (efn->wait_for_int != NULL)) {
+		if (0 == efn->wait_for_int())
 			goto out;
-		efn->udelay(10);
-	} while ((timeout -= 10) > 0);
+		/* else drop down and die() */
+	} else {
+		do {
+			reg = BDEV_RD(
+				BCHP_XPT_WDMA_RAMS_COMPLETED_DESC_ADDRESS);
+			if (reg == wdma)
+				goto out;
+			efn->udelay(10);
+		} while ((timeout -= 10) > 0);
+	}
 
-	efn->die("mem2mem: decryption time out");
+	efn->die("XPTDMA: DMA !DONE");
 
 out:
 	xpt_set_power(0);
@@ -438,16 +554,17 @@ out:
 	return 0;
 }
 
-int mem2mem_dma_run(dma_addr_t mcpb_desc, dma_addr_t wdma_desc, int pid_channel)
+int mem2mem_dma_run(dma_addr_t mcpb_desc, dma_addr_t wdma_desc, int pid_channel,
+		bool int_enable)
 {
 	int ret;
 
 	/* setup and run dma */
-	ret = mem2mem_dma_init(0, pid_channel);
+	ret = mem2mem_dma_init(0, pid_channel, int_enable);
 	if (ret)
 		return ret;
 
-	return __mem2mem_dma_run(mcpb_desc, wdma_desc);
+	return __mem2mem_dma_run(mcpb_desc, wdma_desc, int_enable);
 }
 
 static uint32_t get_hash_idx(int mac_num, int word)
@@ -559,11 +676,12 @@ static int memdma_wait_for_sha(int sha_num)
 {
 	int timeout = MAX_SHA_WAIT_US;
 
+	check_memdma_initparams();
 	for (;;) {
 		if (sha_is_ready(sha_num))
 			break;
 		if (timeout <= 0) {
-			puts("error: timeout waiting for SHA");
+			puts("XPTDMA: SHA !RDY");
 			return -1;
 		}
 		timeout -= 10;
@@ -586,7 +704,7 @@ static int memdma_sha(dma_addr_t desc1, int sha_num)
 	if (ret == 0) {
 		set_up_sha_control(sha_num);
 
-		memdma_init_hw(0, PID_CHANNEL_A, XPT_DMA_SHA);
+		memdma_init_hw(0, PID_CHANNEL_A, XPT_DMA_SHA, false);
 		BARRIER();
 		memdma_start(desc1, XPT_CHANNEL_A);
 
@@ -636,7 +754,7 @@ void xpt_dma_sha(dma_addr_t addr, uint32_t size, int sha_num,
 	clear_d_cache((void *)(uint32_t)addr, size);
 
 	if (memdma_sha((dma_addr_t)(uintptr_t)desc, sha_num))
-		puts("error++++");
+		puts("XPTDMA: SHA ERR!");
 
 	get_sha_result(sha_num, sha);
 }

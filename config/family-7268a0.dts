@@ -1,0 +1,16 @@
+/dts-v1/;
+
+/include/ "family-7268.dtsi"
+/include/ "common.dtsi"
+/include/ "A53.dtsi"
+
+
+/ {
+	model = "Broadcom STB (7268a0)";
+	compatible = "brcm,bcm7268a0", "brcm,brcmstb";
+
+	bcmbt_rfkill {
+		compatible = "brcm,bcmbt-rfkill";
+		brcm,n-reset-gpio = <&upg_gio_aon 6 0>;
+	};
+};

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -22,19 +20,6 @@
 #include <aon_defs.h>
 #include <memsys-if.h>
 
-/*
- * FIXME: Few chips have an updated Memsys API, and most don't define
- * MEMSYS_OPTION_* flags appropriately. Since all chips that support S3 also
- * have an updated Memsys API (as required), let's just mark all non-S3 chips
- * as broken.
- *
- * Once the API is straightened out for all chips, we should use low-power DDR
- * modes even without CFG_PM_S3, as this affects S2 power savings as well. (See
- * SWMEMSYS-1339)
- */
-#if !CFG_PM_S3
-#define BROKEN_MEMSYSLIB_API
-#endif
 
 #define DDR_PHY_STANDBY_CONTROL_OFFS \
 		(BCHP_DDR34_PHY_CONTROL_REGS_0_STANDBY_CONTROL - DDR_PHY(0))
@@ -48,36 +33,20 @@ static struct memsys_info *mcb_subtable = NULL;
 
 /* loadable shmoo code */
 static const struct memsys_interface *gmemsys;
-#ifdef MEMSYS_TOP_API_H__
 static int gloud_shmoo;
-#endif
 
 
 /* ------------------------------------------------------------------------- */
 
 void set_loud_shmoo(void)
 {
-#ifdef MEMSYS_TOP_API_H__
 	gloud_shmoo = 1;
-#else
-	struct memsys_setup_params msp;
-
-	/* If we have a *partial* struct to init then don't do
-	 designated initializers as we could (and did) get
-	 a silent call to memset(). It also uses a tiny bit
-	 less memory BTW. */
-	msp.console = putchar;
-	msp.first = 0;
-
-	gmemsys->setup(&msp);
-#endif /* MEMSYS_TOP_API_H__ */
 	puts(" [shmoo messages on]");
 }
 
 
 static void print_shmoo_version(void)
 {
-#ifdef MEMSYS_TOP_API_H__
 	memsys_version_t v;
 
 	gmemsys->get_version(&v);
@@ -93,23 +62,6 @@ static void print_shmoo_version(void)
 
 	__puts(" V:");
 	__puts(v.ver_str);
-#else
-	int32_t major = 0;
-	int32_t minor = 0;
-	int32_t exp_ver = 0;
-	char   *ver_str = "?";
-
-	gmemsys->get_version(&major, &minor, &exp_ver, &ver_str);
-
-	__puts("SHMOO v");
-	writeint(major);
-	putchar('.');
-	writeint(minor);
-	__puts(" (");
-	writehex(exp_ver);
-	__puts(") ");
-	__puts(ver_str);
-#endif /* MEMSYS_TOP_API_H__ */
 
 #if 0 /* debug */
 	__puts(" EDIS:");
@@ -184,16 +136,10 @@ static int is_valid_mcb(struct memsys_info *mi)
 }
 
 
-#ifdef MEMSYS_TOP_API_H__
 static int wrap_putchar(char c)
 {
 	putchar((int)c);
 	return 0;
-}
-
-static uint32_t wrap_get_time_us(void)
-{
-	return (uint32_t)(get_syscount() & 0x00000000ffffffffULL);
 }
 
 static int wrap_delay_us(uint32_t us)
@@ -227,7 +173,6 @@ static void print_shmoo_error(memsys_error_t *e)
 	}
 	puts("");
 }
-#endif
 
 
 static void do_shmoo(const struct ddr_info *ddr, uint32_t *mcb, bool warm_boot)
@@ -235,25 +180,21 @@ static void do_shmoo(const struct ddr_info *ddr, uint32_t *mcb, bool warm_boot)
 	uint32_t ret;
 	int memc = ddr->which;
 	const struct memsys_params *p = &shmoo_params[memc];
-#ifdef MEMSYS_TOP_API_H__
 	memsys_top_params_t params;
 	memsys_system_callbacks_t cb;
-#else
-	uint32_t options[9];
-#endif
+
 	__puts(" MEMSYS-");
 	putchar('0' + memc);
 	__puts(" @ ");
 	writehex(p->memc_reg_base);
 	putchar(' ');
 
-#ifdef MEMSYS_TOP_API_H__
 	memset(&params, 0, sizeof(params));
 	memset(&cb, 0, sizeof(cb));
 
 	cb.delay_us = wrap_delay_us,
 	cb.putchar = wrap_putchar,
-	cb.get_time_us = wrap_get_time_us,
+	cb.get_time_us = get_time_us,
 
 	params.version = MEMSYS_FW_VERSION;
 	params.edis_info = (EDIS_NPHY) | ((EDIS_OFFS) << 4);
@@ -288,49 +229,6 @@ static void do_shmoo(const struct ddr_info *ddr, uint32_t *mcb, bool warm_boot)
 		sec_memsys_set_status(0); /* bad */
 		/* Does not return */
 	}
-
-#else /* --- old API (!MEMSYS_TOP_API_H__) --- */
-
-	options[0] = p->memc_reg_base;
-	options[1] = p->phy_reg_base;
-	options[2] = p->shim_reg_base;
-	options[3] = p->edis_reg_base;
-	options[4] = (EDIS_NPHY) | ((EDIS_OFFS) << 4);
-
-#ifdef BROKEN_MEMSYSLIB_API
-	options[5] = 0;
-#else
-	options[5] = MEMSYS_OPTION_SAVE_PHY_STATE |
-		     MEMSYS_OPTION_PREP_PHY_FOR_STANDBY |
-		     MEMSYS_OPTION_PHY_LOW_POWER_AT_STANDBY;
-	if (warm_boot)
-		options[5] |= MEMSYS_OPTION_WARM_BOOT;
-#endif
-	options[6] = _MB(ddr->base_mb); /* SHMOO Test Base */
-	options[7] = _KB(128);		/* SHMOO Test Size */
-	options[8] = (uint32_t)(uintptr_t)MEMSYS_STATE_REG_ADDR(memc);
-
-#if 0 /* debug */
-	puts("memsys params:");
-	__puts("[0] "); writehex(options[0]); puts("");
-	__puts("[1] "); writehex(options[1]); puts("");
-	__puts("[2] "); writehex(options[2]); puts("");
-	__puts("[3] "); writehex(options[3]); puts("");
-	__puts("[4] "); writehex(options[4]); puts("");
-	__puts("[5] "); writehex(options[5]); puts("");
-	__puts("[6] "); writehex(options[6]); puts("");
-	__puts("[7] "); writehex(options[7]); puts("");
-	__puts("[8] "); writehex(options[8]); puts("");
-#endif
-	ret = gmemsys->init(mcb, options);
-	if (ret != 0) {
-		__puts("\nMEMSYS ERROR: ");
-		writehex(ret);
-		putchar('\n');
-		sec_memsys_set_status(0); /* bad */
-		/* Does not return */
-	}
-#endif /* MEMSYS_TOP_API_H__ */
 
 	sec_memsys_set_status(1); /* success */
 }
@@ -367,27 +265,14 @@ static void memsys_die(char *s)
 void memsys_load(void)
 {
 	uint32_t *dst = (uint32_t *)MEMSYS_SRAM_ADDR;
-#ifndef MEMSYS_TOP_API_H__
-	struct memsys_setup_params msp = {
-		.console = NULL, /* default to quiet shmoo (!debug messages) */
-		.udt = udelay,
-		.gst = get_syscount,
-		.first = 1,
-	};
-#endif /* ! MEMSYS_TOP_API_H__ */
 
 	gmemsys = (const struct memsys_interface *)dst;
 
 	if (gmemsys->signature != BOARD_MSYS_MAGIC)
-		die("bad ms");
+		memsys_die("bad ms");
 
-#ifdef MEMSYS_TOP_API_H__
 	gloud_shmoo = 0;
 	gmemsys->setup();
-#else
-	gmemsys->setup(&msp);
-#endif /* MEMSYS_TOP_API_H__ */
-
 	print_shmoo_version();
 
 	mcb_table = gmemsys->shmoo_data;

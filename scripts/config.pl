@@ -16,9 +16,7 @@ use BcmDt::Devices;
 my $P = basename $0;
 
 # ***************************************************************************
-# *     Copyright (c) 2012-2015, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
 # *
 # *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -27,11 +25,12 @@ my $P = basename $0;
 # ***************************************************************************
 
 my $debug = 2;
+my $year = (localtime())[5] + 1900;
 
-use constant THIS_VERSION => "1.32";
+use constant THIS_VERSION => "1.34";
 
 my $cheader = "/***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
+ *     Copyright (c) 2012-$year, Broadcom Corporation
  *     All Rights Reserved
  *     Confidential Property of Broadcom Corporation
  *
@@ -43,7 +42,7 @@ my $cheader = "/****************************************************************
 \n";
 
 my $makeheader = "#
-#	 Copyright (c) 2012-2015, Broadcom Corporation
+#	 Copyright (c) 2012-$year, Broadcom Corporation
 #	 All Rights Reserved
 #	 Confidential Property of Broadcom Corporation
 #
@@ -105,11 +104,13 @@ my @configs = (
 	       "INTEL_128J3",
 	       "INTEL_P30",
 	       "INTEL_P33",
+	       "MEMDMA_MCPB",
 	       "MHL",
 	       "MIN_CONSOLE",
 	       "MONITOR_OVERTEMP",
 	       "NAND_FLASH",
 		"SPI_QUAD_MODE",
+		"SPI_ERASE_SIZE",
 	       "NETWORK",
 	       "PM_S3",
 	       "RAW_LDR",
@@ -128,6 +129,7 @@ my @configs = (
 	       "SYSINIT",
 	       "SYSTEMPORT",
                "TCP",
+	       "TRUSTZONE",
 	       "UI",
 	       "UNCACHED",
 	       "USB",
@@ -140,6 +142,7 @@ my @configs = (
 	       "VENDOR_EXTENSIONS",
 	       "ZEUS4_1",
 	       "ZEUS4_2",
+	       "ZEUS4_2_1",
 	       "ZIMG_LDR",
 	       "ZLIB",
 	);
@@ -811,7 +814,10 @@ my %dt_autogen = map {($_,'')}
 	cpu_biu_ctrl hif_cont systemport sf2_switch sun_top_ctrl_general_ctrl
 	sun_top_ctrl_general_ctrl_no_scan thermal_zones cpuclock
 	pinmux padmux aon_pinmux aon_padmux memc_client_info nexus_wakeups rf4ce
-	bsp sdio_syscon irq0_l2 irq0_aon_l2 nexus_irq0 nexus_irq0_aon gpio pwm watchdog/;
+	bsp sdio_syscon irq0_l2 irq0_aon_l2 nexus_irq0 nexus_irq0_aon gpio pwm watchdog
+	upg_main_irq upg_main_aon_irq upg_bsc_irq upg_bsc_aon_irq upg_spi_aon_irq
+	nexus_upg_main_irq nexus_upg_main_aon_irq nexus_upg_bsc_irq
+	nexus_upg_bsc_aon_irq nexus_upg_spi_aon_irq wlan/;
 my $Current = Board->new("");
 my $Family = $Current;
 my $ProcessingState = eStateInNone;
@@ -847,6 +853,8 @@ sub get_bchp_info($) {
 		'bchp_aon_pm_l2.h',
 		'bchp_avs_host_l2.h',
 		'bchp_ddr??_phy_control_regs_?.h',
+		'bchp_ddr??_phy_common_regs_?.h',
+		'bchp_ebi.h',
 		'bchp_shimphy_addr_cntl_?.h',
 		'bchp_nand.h',
 		'bchp_phy_control_regs_?.h',
@@ -863,6 +871,11 @@ sub get_bchp_info($) {
 		'bchp_mc_scbarb_?.h',
 		'bchp_irq0.h',
 		'bchp_irq0_aon.h',
+		'bchp_upg_main_irq.h',
+		'bchp_upg_main_aon_irq.h',
+		'bchp_upg_bsc_irq.h',
+		'bchp_upg_bsc_aon_irq.h',
+		'bchp_upg_spi_aon_irq.h',
 		'bchp_mac.h',
 		'bchp_gio.h',
 		'bchp_gio_aon.h',
@@ -1530,13 +1543,15 @@ sub cmd_pcie($) {
 	cfg_error('bad pcie controller number')
 		if !defined($rh->{$node});
 	cfg_error('option for pcie gen must be 1, 2, or 3')
-		if ($o->{gen} && $o->{gen} !~ /^[123]$/i);
+		if (defined($o->{gen}) && $o->{gen} !~ /^[123]$/i);
 	cfg_error('-mac argument must be 0 or 1')
-		if ($o->{mac} && $o->{mac} !~ /^[01]$/);
+		if (defined($o->{mac}) && $o->{mac} !~ /^[01]$/);
+	cfg_error('-ssc argument must be 0 or 1')
+		if (defined($o->{ssc}) && $o->{ssc} !~ /^[01]$/);
 	cfg_error('-bus argument must be a number')
-		if ($o->{bus} && $o->{bus} !~ /^\d+/);
+		if (defined($o->{bus}) && $o->{bus} !~ /^\d+/);
 	cfg_error('-slot argument must be a number')
-		if ($o->{slot} && $o->{slot} !~ /^\d+/);
+		if (defined($o->{slot}) && $o->{slot} !~ /^\d+/);
 	cfg_error('-mac option implies setting -slot and -bus')
 		if ($o->{mac} && (!defined($o->{slot}) || !defined($o->{bus})));
 
@@ -1615,8 +1630,8 @@ sub cmd_usb_sub($$) {
 
 	cfg_error('bad usb controller number')
 		if !defined($usb_start);
-	cfg_error('option for ipp must be 0 or 1')
-		if (defined($o->{ipp}) && $o->{ipp} !~ /^[01]$/i);
+	cfg_error('option for ipp must be 0 or 1 or 2')
+		if (defined($o->{ipp}) && $o->{ipp} !~ /^[012]$/i);
 	cfg_error('option for ioc must be 0 or 1')
 		if (defined($o->{ioc}) && $o->{ioc} !~ /^[01]$/i);
 	cfg_error('option for bdc must be on, off, or dual')
@@ -2501,6 +2516,15 @@ sub gen_num_sdio($) {
 	return $sdio;
 }
 
+sub gen_num_sata($) {
+	my ($f) = @_;
+	my $rh = ::get_bchp_info($f->{familyname});
+	my $sata = BcmUtils::get_num_sata($rh->{rh_defines});
+	cfg_error("unexpected script problem with get_num_sata(): $sata < 0")
+		if (scalar ($sata) < 0);
+	return $sata;
+}
+
 sub generate_vector_property_arrays() {
 	my $text = "";
 
@@ -2866,7 +2890,7 @@ sub processed_pcie_dma_ranges() {
 			my @ranges;
 			my $chip = $Family->{familyname};
 
-			if ($chip =~ /^(7145|3390)/) {
+			if ($chip =~ /^(3390)/) {
 				if ($num_pcie == 3) {
 					# The first device will get 128MB, the 
 					# other two get 64MB each.
@@ -2879,7 +2903,7 @@ sub processed_pcie_dma_ranges() {
 					@ranges = ($i == 0) ? @r0 : @r1;
 				}
 
-			} elsif ($chip =~ /^(7250|7364|7366|74371|7439|7445)/
+			} elsif ($chip =~ /^(7250|7364|7366|74371|7439|7445|7271|7268)/
 				&& $num_pcie == 1) {
 				# The only device gets the full 512M.
 				@ranges = (@r0, @r1, @r2, @r3);
@@ -3000,7 +3024,7 @@ sub processed_fixed_ddr($) {
 	my $rev = find_cset("MEMC_REV");
 	return
 		if (!defined $rev);
-	my $text = "scripts/mcb2c -a -i " . $b->{familyname} .
+	my $text = $arg_gen_dir . "/scripts/mcb2c -a -i " . $b->{familyname} .
 		" -m " . "shmoo/" . $rev . "/mcb \\\n";
 
 	for my $f (@fixed_ddrs) {
@@ -3434,6 +3458,7 @@ sub processed_config() {
 	$ctext .= "#define NUM_BSC " . gen_num_bsc($Family) . "\n";
 	$ctext .= "#define NUM_SDIO " . gen_num_sdio($Family) . "\n";
 	$ctext .= "#define NUM_ENET " . ($n_genet, $n_switch_ports)[$n_genet < $n_switch_ports] . "\n";
+	$ctext .= "#define NUM_SATA ". gen_num_sata($Family) . "\n";
 	$mtext .="\n# [config]\n";
 	for $c (@cfg) {
 		$mtext .= $c->{name} . ":=" . $c->{value} . "\n";
@@ -3514,10 +3539,22 @@ sub process_dev_tree($)
 	my $num_nand = $dt_autogen{nand} ? BcmUtils::get_num_nand($rh->{rh_defines}) : 0;
 	my $num_sysport = $dt_autogen{systemport} ? BcmUtils::get_num_systemport($rh->{rh_defines}) : 0;
 	my $num_sf2_switch = $dt_autogen{sf2_switch} ? BcmUtils::get_num_sf2_switch($rh->{rh_defines}) : 0;
-	my $num_irq0_l2 = $dt_autogen{irq0_l2} ? BcmUtils::get_num_irq0_l2($rh->{rh_defines}, "irq0") : 0;
-	my $num_irq0_aon_l2 = $dt_autogen{irq0_l2} ? BcmUtils::get_num_irq0_l2($rh->{rh_defines}, "irq0_aon") : 0;
+	my $num_irq0_l2 = $dt_autogen{irq0_l2} ? BcmUtils::get_num_irq_l2($rh->{rh_defines}, "irq0") : 0;
+	my $num_irq0_aon_l2 = $dt_autogen{irq0_l2} ? BcmUtils::get_num_irq_l2($rh->{rh_defines}, "irq0_aon") : 0;
+	my $num_upg_main_irq = $dt_autogen{upg_main_irq} ?
+		BcmUtils::get_num_irq_l2($rh->{rh_defines}, "upg_main_irq") : 0;
+	my $num_upg_main_aon_irq = $dt_autogen{upg_main_aon_irq} ?
+		BcmUtils::get_num_irq_l2($rh->{rh_defines}, "upg_main_aon_irq") : 0;
+	my $num_upg_bsc_irq = $dt_autogen{upg_bsc_irq} ?
+		BcmUtils::get_num_irq_l2($rh->{rh_defines}, "upg_bsc_irq") : 0;
+	my $num_upg_bsc_aon_irq = $dt_autogen{upg_bsc_aon_irq} ?
+		BcmUtils::get_num_irq_l2($rh->{rh_defines}, "upg_bsc_aon_irq") : 0;
+	my $num_upg_spi_aon_irq = $dt_autogen{upg_spi_aon_irq} ?
+		BcmUtils::get_num_irq_l2($rh->{rh_defines}, "upg_spi_aon_irq") : 0;
 	my $num_rf4ce = $dt_autogen{rf4ce} ? BcmUtils::get_num_rf4ce($rh->{rh_defines}) : 0;
 	my $num_pwm = $dt_autogen{pwm} ? BcmUtils::get_num_pwm($rh->{rh_defines}) : 0;
+
+	my $num_wlan = $dt_autogen{wlan} ? BcmUtils::get_num_wlan($rh->{rh_defines}) : 0;
 
 	map { $dt_autogen{$_} ||= {} } keys %dt_autogen;
 
@@ -3537,6 +3574,21 @@ sub process_dev_tree($)
 	BcmDt::Devices::add_nexus_irq0_aon($dt, $rh, $dt_autogen{nexus_irq0_aon})
 		if !empty($dt_autogen{irq0_aon_l2}) && !empty($dt_autogen{nexus_irq0_aon}) &&
 		    $num_irq0_aon_l2;
+	BcmDt::Devices::add_nexus_upg_main_irq($dt, $rh, $dt_autogen{nexus_upg_main_irq})
+		if !empty($dt_autogen{upg_main_irq}) && 
+		    !empty($dt_autogen{nexus_upg_main_irq}) && $num_upg_main_irq;
+	BcmDt::Devices::add_nexus_upg_main_aon_irq($dt, $rh, $dt_autogen{nexus_upg_main_aon_irq})
+		if !empty($dt_autogen{upg_main_aon_irq}) &&
+		    !empty($dt_autogen{nexus_upg_main_aon_irq}) && $num_upg_main_aon_irq;
+	BcmDt::Devices::add_nexus_upg_bsc_irq($dt, $rh, $dt_autogen{nexus_upg_bsc_irq})
+		if !empty($dt_autogen{upg_bsc_irq}) &&
+		    !empty($dt_autogen{nexus_upg_bsc_irq}) && $num_upg_bsc_irq;
+	BcmDt::Devices::add_nexus_upg_bsc_aon_irq($dt, $rh, $dt_autogen{nexus_upg_bsc_aon_irq})
+		if !empty($dt_autogen{upg_bsc_aon_irq}) &&
+		    !empty($dt_autogen{nexus_upg_bsc_aon_irq}) && $num_upg_bsc_aon_irq;
+	BcmDt::Devices::add_nexus_upg_spi_aon_irq($dt, $rh, $dt_autogen{nexus_upg_spi_aon_irq})
+		if !empty($dt_autogen{upg_spi_aon_irq}) &&
+		    !empty($dt_autogen{nexus_upg_spi_aon_irq}) && $num_upg_spi_aon_irq;
 	BcmDt::Devices::add_pcie($dt, $rh, $num_pcie, $dt_autogen{pcie}, $familyname)
 		if ($num_pcie && !empty($dt_autogen{pcie}));
 
@@ -3618,9 +3670,14 @@ sub process_dev_tree($)
 		if ($num_sf2_switch && !empty($dt_autogen{sf2_switch}));
 
 	my $clks_file = "config/clks-" . $family->{familyname} . ".plx";
-	BcmDt::Devices::merge_clocks_file($rh->{rh_defines}, $dt, $clks_file)
-		if -f $clks_file;
-
+	if (-f $clks_file) {
+		BcmDt::Devices::merge_clocks_file($rh->{rh_defines},
+			$dt, $clks_file)
+	} else {
+		print "  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
+		print "  WARNING: no clock tree present\n";
+		print "  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
+	}
 	BcmDt::Devices::add_sun_top_pin_mux_ctrl($rdb, $rh, $dt_autogen{pinmux})
 		if (!empty($dt_autogen{pinmux}));
 	BcmDt::Devices::add_sun_top_pad_mux_ctrl($rdb, $rh, $dt_autogen{padmux})
@@ -3645,6 +3702,21 @@ sub process_dev_tree($)
 	BcmDt::Devices::add_l2_irq0_interrupt($rdb, $rh,
 		$dt_autogen{irq0_aon_l2}, "irq0_aon")
 		if !empty($dt_autogen{irq0_aon_l2}) && $num_irq0_aon_l2;
+	BcmDt::Devices::add_l2_interrupt($rdb, $rh,
+		$dt_autogen{upg_main_irq}, "upg_main_irq")
+		if !empty($dt_autogen{upg_main_irq}) && $num_upg_main_irq;
+	BcmDt::Devices::add_l2_interrupt($rdb, $rh,
+		$dt_autogen{upg_main_aon_irq}, "upg_main_aon_irq")
+		if !empty($dt_autogen{upg_main_aon_irq}) && $num_upg_main_aon_irq;
+	BcmDt::Devices::add_l2_interrupt($rdb, $rh,
+		$dt_autogen{upg_bsc_irq}, "upg_bsc_irq")
+		if !empty($dt_autogen{upg_bsc_irq}) && $num_upg_bsc_irq;
+	BcmDt::Devices::add_l2_interrupt($rdb, $rh,
+		$dt_autogen{upg_bsc_aon_irq}, "upg_bsc_aon_irq")
+		if !empty($dt_autogen{upg_bsc_aon_irq}) && $num_upg_bsc_aon_irq;
+	BcmDt::Devices::add_l2_interrupt($rdb, $rh,
+		$dt_autogen{upg_spi_aon_irq}, "upg_spi_aon_irq")
+		if !empty($dt_autogen{upg_spi_aon_irq}) && $num_upg_spi_aon_irq;
 
 	BcmDt::Devices::add_watchdog($rdb, $rh, $dt_autogen{watchdog}, $clks_file)
 		if (!empty($dt_autogen{watchdog}));
@@ -3659,6 +3731,8 @@ sub process_dev_tree($)
 		if ($num_mspi && !empty($dt_autogen{mspi}));
 	BcmDt::Devices::add_pwm($rdb, $rh, $num_pwm, $dt_autogen{pwm}, -f $clks_file)
 		if (!empty($dt_autogen{pwm}) && $num_pwm);
+	BcmDt::Devices::add_wlan($rdb, $rh, $num_wlan, $dt_autogen{wlan})
+		if (!empty($dt_autogen{wlan}) && $num_wlan);
 
 	BcmDt::Devices::add_cpu_clock($dt, $dt_autogen{cpuclock})
 		if (!empty($dt_autogen{cpuclock}));
@@ -3895,9 +3969,9 @@ sub usage($$)
 	print " -r <rdb include dir>\n";
 	print " -w <working directory> (optional)\n";
 	print " -g <generated files base dir> (optional),";
-	print " defaults to gen/<FAMILY>\n";
+	print " defaults to ./gen\n";
 	print " -D <build object base directory> (optional),";
-	print " defaults to objs/<FAMILY>\n";
+	print " defaults to ./objs\n";
 	print " -b <single board name> (optional)\n";
 	exit(-22); # Invalid argument
 }
