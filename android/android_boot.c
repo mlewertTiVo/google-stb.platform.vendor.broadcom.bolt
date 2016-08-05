@@ -182,7 +182,7 @@ static int gen_bootargs(char *bootargs_buf, const char *cmdline)
 	int bootargs_buflen;
 	char *serialno_propname = "androidboot.serialno";
 	char *hardware_propname = "androidboot.hardware";
-	char *bootreason_propname = "bootreason";
+	char *bootreason_propname = "androidboot.bootreason";
 	int append_serialno = 1; /*default always append serialno property*/
 
 	bootargs_buflen = os_sprintf(bootargs_buf, "%s", cmdline);

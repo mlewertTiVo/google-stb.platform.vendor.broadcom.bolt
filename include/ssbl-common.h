@@ -46,6 +46,15 @@ typedef struct gpio_key_params
 }
 gpio_key_params;
 
+typedef struct bt_rfkill_params
+{
+	const char *name; /* Name of the gpio */
+	const char *gpio; /* Name of the connected GPIO controller i.e. upg_gio or upg_gio_aon */
+	unsigned int pin; /* Pin value of the connected gpio */
+	unsigned int pol; /* Polarity of the connected gpio */
+}
+bt_rfkill_params;
+
 typedef void(fpinmux_t)(void);
 
 
@@ -113,6 +122,7 @@ typedef struct ssbl_board_params
 	moca_params  moca[NUM_MOCA+1];
 	sdio_params  sdio[NUM_SDIO+1];
 	gpio_key_params gpio_key[MAX_GPIO_KEY+1];
+	bt_rfkill_params bt_rfkill_gpio[MAX_BT_RFKILL_GPIO+1];
 	fpinmux_t   *pinmuxfn;
 	const dt_ops_s *dt_ops;
 	struct partition_profile *mapselect;

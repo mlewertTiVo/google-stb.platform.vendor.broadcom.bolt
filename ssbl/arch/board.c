@@ -305,6 +305,16 @@ const gpio_key_params *board_gpio_keys(void)
 	return board_params[inf->board_idx].gpio_key;
 }
 
+const bt_rfkill_params *board_bt_rfkill_gpios(void)
+{
+	struct fsbl_info *inf = board_info();
+
+	if (!inf || (inf->board_idx >= inf->n_boards))
+		return NULL;
+
+	return board_params[inf->board_idx].bt_rfkill_gpio;
+}
+
 const struct ssbl_board_params *board_current_params(void)
 {
 	struct fsbl_info *inf = board_info();

@@ -48,6 +48,7 @@ char               *board_init_current_rts(void);
 int                 board_init_current_rts_boxmode(void);
 const sdio_params  *board_sdio(int sdio);
 const gpio_key_params *board_gpio_keys(void);
+const bt_rfkill_params *board_bt_rfkill_gpios(void);
 
 /* generic access */
 const struct ssbl_board_params *board_current_params(void);

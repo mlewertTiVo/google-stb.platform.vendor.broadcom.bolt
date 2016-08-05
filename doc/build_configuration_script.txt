@@ -331,6 +331,7 @@ Commands that enact a configuration at runtime.
     sdio
     usb
     gpio_key
+    bt_rfkill_gpio
 ----
 
 
@@ -1952,6 +1953,30 @@ Examples:
 ----
   gpio_key -name button_A -gpio upg_gio -pin 93 -code 218
   gpio_key -name button_B -gpio upg_gio -pin 90 -code 529
+----
+
+ bt_rfkill_gpio
+~~~~~~~~~~~~~~~
+
+Usage: bt_rfkill_gpio -name <NAME> -gpio <NAME_OF_GPIO_CONTROLLER> -pin <GPIO_PIN> -pol <POLARITY>
+
+Note: Creates device node for the Bluetooth rfkill gpio. You can have up to 2 GPIOs, one for vreg and another for reset.
+
+Check the hardware schematics to ensure the correct <NAME_OF_GPIO_CONTROLLER> and <GPIO_PIN>
+are used for a given platform.
+
+See also: dt autogen gpio
+
+* <NAME> used by the kernel driver to get the GPIO pin. Must be either "brcm,vreg-gpio" or "brcm,n-reset-gpio".
+* <NAME_OF_GPIO_CONTROLLER> specifies the gpio controller that is connected to the Bluetooth chip, i.e. 'upg_gio' or 'upg_gio_aon'.
+* <GPIO_PIN> specifies the pin number of the gpio on the gpio controller used for the Bluetooth chip.
+* <POL> specifies the default polarity of the gpio pin (1 = HIGH and 0 = LOW).
+
+Examples:
+
+----
+bt_rfkill_gpio -name brcm,vreg-gpio -gpio upg_gio_aon -pin 5 -pol 0
+bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1
 ----
 
 Appendix: Copyright Info

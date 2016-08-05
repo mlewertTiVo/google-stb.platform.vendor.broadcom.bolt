@@ -8,9 +8,4 @@
 / {
 	model = "Broadcom STB (7271a0)";
 	compatible = "brcm,bcm7271a0", "brcm,brcmstb";
-
-	bcmbt_rfkill {
-		compatible = "brcm,bcmbt-rfkill";
-		brcm,n-reset-gpio = <&upg_gio_aon 6 0>;
-	};
 };

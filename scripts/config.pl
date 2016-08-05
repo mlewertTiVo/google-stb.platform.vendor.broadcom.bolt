@@ -562,6 +562,13 @@ sub new($$) {
 	return $s;
 }
 
+package BtRfkillGpio;
+sub new($$) {
+	my ($class, $s) = @_;
+	bless $s, $class;
+	return $s;
+}
+
 package Cache;
 sub new($$) {
 	my $class = shift;
@@ -653,6 +660,7 @@ sub new($$) {
 	$s->{rdb} = "";
 	$s->{rtconfig} = [];
 	$s->{gpio_key} = [];
+	$s->{bt_rfkill_gpio} = [];
 	$s->{rtsbase} = undef;
 	$s->{section} = [];
 	$s->{mapselect} = "";
@@ -688,6 +696,8 @@ sub add($$$) {
 		push @{$s->{pmux}}, $part;
 	} elsif ($item eq 'gpio_key') {
 		push @{$s->{gpio_key}}, $part;
+	} elsif ($item eq 'bt_rfkill_gpio') {
+		push @{$s->{bt_rfkill_gpio}}, $part;
 	} elsif ($item eq 'section') {
 		push @{$s->{section}}, $part;
 	} elsif ($item eq 'nandshape') {
@@ -825,6 +835,7 @@ my $ProcessingState = eStateInNone;
 my $file_has_version = 0;
 my $use_fixed_memsys_alt = 0;
 my $max_gpio_keys = 0;
+my $max_bt_rfkill_gpios = 0;
 
 # family name are keys, values are pin dbase hashrefs
 my %bchp_info;
@@ -1304,6 +1315,23 @@ sub cmd_gpio_key($) {
 	my $n = @{$Current->{gpio_key}};
 	$max_gpio_keys = $n
 		if ($n > $max_gpio_keys);
+}
+
+sub cmd_bt_rfkill_gpio($) {
+	my ($f) = @_;
+	check_in_chip_or_board();
+	shift @$f;
+	my $o = check_opts($f, [qw/name gpio pin pol/], []);
+	cfg_error("bad value for '-gpio'; must be 'upg_gio' or 'upg_gio_aon'")
+		if ($o->{gpio} !~ /^upg_gio(_aon)?$/);
+	cfg_error("bad value for '-pin'; must be a decimal number")
+		if ($o->{pin} !~ /^\d+$/);
+	cfg_error("bad value for '-pol'; must be a decimal number")
+		if ($o->{pol} !~ /^\d+$/);
+	$Current->add('bt_rfkill_gpio', BtRfkillGpio->new($o));
+	my $n = @{$Current->{bt_rfkill_gpio}};
+	$max_bt_rfkill_gpios = $n
+		if ($n > $max_bt_rfkill_gpios);
 }
 
 sub cmd_rtsbase($) {
@@ -1826,6 +1854,7 @@ my %commands = (
 		'rtsbase' =>	\&cmd_rtsbase,
 		'rtsconfig' =>	\&cmd_rtsconfig,
 		'gpio_key' =>	\&cmd_gpio_key,
+		'bt_rfkill_gpio' => \&cmd_bt_rfkill_gpio,
 		'rtsdefault' =>	\&cmd_rtsdefault,
 		'section' =>	\&cmd_section,
 		'sdio' =>	\&cmd_sdio,
@@ -2180,6 +2209,23 @@ sub check_gpio_key_nulls($) {
     return $m;
 };
 
+sub check_bt_rfkill_gpio_nulls($) {
+    my ($m) = @_;
+    if (!$m->{name}) { $m->{name} = "-"; }
+    if (!$m->{gpio}) { $m->{gpio} = "-"; }
+    if (scalar $m->{pin} < 0) { $m->{pin} = -1; }
+    if (scalar $m->{pol} < 0) { $m->{code} = -1; }
+
+    foreach (qw/name gpio/) {
+        if ( $m->{$_} =~ /^-$/ ) {
+            $m->{$_} = "NULL";
+        } else {
+            $m->{$_} =  '"' . $m->{$_} . '"';
+        }
+    }
+    return $m;
+};
+
 sub check_moca_nulls($) {
 	my ($m) = @_;
 	if (!$m->{enet_node}) { $m->{enet_node} = "-"; }
@@ -2276,6 +2322,24 @@ sub gen_gpio_key($) {
 		$text .= "\t\t\t\t.gpio  = " . $m->{gpio} . ",\n";
 		$text .= "\t\t\t\t.pin  = " . $m->{pin} . ",\n";
 		$text .= "\t\t\t\t.code = " .  $m->{code} . ",\n";
+		$text .= "\t\t\t},\n";
+		$index++;
+	}
+
+	return $text . "\t\t\t{ NULL, NULL, -1, -1}\n\t\t},\n";
+}
+
+sub gen_bt_rfkill_gpio($) {
+	my ($rfkill_gpio) = @_;
+	my $text = "\t\t.bt_rfkill_gpio = {\n";
+	my $index = 0;
+	for my $m (@$rfkill_gpio) {
+		$m = check_bt_rfkill_gpio_nulls($m);
+		$text .= "\t\t\t\{\n";
+		$text .= "\t\t\t\t.name = " . $m->{name} . ",\n";
+		$text .= "\t\t\t\t.gpio  = " . $m->{gpio} . ",\n";
+		$text .= "\t\t\t\t.pin  = " . $m->{pin} . ",\n";
+		$text .= "\t\t\t\t.pol = " .  $m->{pol} . ",\n";
 		$text .= "\t\t\t},\n";
 		$index++;
 	}
@@ -3071,6 +3135,7 @@ sub processed_board_params() {
 		$text .= gen_enet($b->{enet});
 		$text .= gen_moca($b->{moca});
 		$text .= gen_gpio_key($b->{gpio_key});
+		$text .= gen_bt_rfkill_gpio($b->{bt_rfkill_gpio});
 		$text .= gen_pinmux_fn($b->{board});
 		$text .= gen_dt_ops_ptr($b->{board});
 		$text .= gen_flash_map_selection($b->{mapselect});
@@ -3110,6 +3175,7 @@ sub processed_makefile_cvars($) {
 	$text .= "#define MAX_DDR " . $maxddr . "\n";
 	$text .= "#define MAX_BOARDS " . $nb . "\n";
 	$text .= "#define MAX_GPIO_KEY " . $max_gpio_keys . "\n";
+	$text .= "#define MAX_BT_RFKILL_GPIO " . $max_bt_rfkill_gpios . "\n";
 	$text .= "#define CFG_CMD_LEVEL " . $b->{cmdlevel} . "\n";
 	if (defined $b->{dts}) {
 		if ($b->{dts}->{loadaddr}) {

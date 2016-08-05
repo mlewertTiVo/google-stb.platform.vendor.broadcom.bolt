@@ -1566,6 +1566,53 @@ static int bolt_populate_gpio_key(void *fdt)
 	return 0;
 }
 
+static int bolt_populate_bt_rfkill(void *fdt)
+{
+	int rc = 0;
+	int property[3];
+	int bt_rfkill, phandle, root_node;
+	const char *rfkill_node = "bcmbt_rfkill";
+
+	const bt_rfkill_params *m = board_bt_rfkill_gpios();
+
+	if (!m || !m->name || !m->gpio)
+		return rc;
+
+	root_node = bolt_devtree_node_from_path(fdt, DT_RDB_DEVNODE_BASE_PATH);
+	if (root_node < 0)
+		return root_node;
+
+	(void)bolt_devtree_delnode_at(fdt, rfkill_node, root_node);
+
+	rc = bolt_devtree_addnode_at(fdt, rfkill_node, root_node,
+				&bt_rfkill);
+	if (rc < 0)
+		return rc;
+
+	rc = bolt_dt_addprop_str(fdt, bt_rfkill,
+				"compatible", "brcm,bcmbt-rfkill");
+	if (rc)
+		return rc;
+
+	/* Generate GPIO properties */
+	while (m->name && m->gpio) {
+		phandle = bolt_devtree_phandle_from_alias(fdt, m->gpio);
+
+		property[0] = cpu_to_fdt32(phandle);
+		property[1] = cpu_to_fdt32(m->pin);
+		property[2] = cpu_to_fdt32(m->pol);
+
+		rc = bolt_devtree_at_node_addprop(fdt, bt_rfkill,
+					m->name, property, 3 * sizeof(int));
+		if (rc)
+			return rc;
+
+		m++;
+	}
+
+	return 0;
+}
+
 static int bolt_populate_enet(void *fdt)
 {
 	int rc = 0;
@@ -2359,6 +2406,10 @@ int bolt_devtree_boltset(void *fdt)
 		goto out;
 
 	rc = bolt_populate_gpio_key(fdt);
+	if (rc)
+		goto out;
+
+	rc = bolt_populate_bt_rfkill(fdt);
 	if (rc)
 		goto out;
 
