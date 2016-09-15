@@ -31,6 +31,8 @@
 
 /* Register index into AON_SYSTEM_DATA_RAM. */
 #define AON_REG_ANDROID_RESTART_CAUSE   9
+#define AON_REG_ANDROID_RESTART_TIME    10
+#define AON_REG_ANDROID_RESTART_TIME_N  11
 
 
 /* BOLT environment variable names for Android recovery/boot images */
@@ -553,12 +555,23 @@ static void wktmr_adjust(void)
 {
 	volatile uint32_t *counter = (volatile uint32_t *)
 		REG_ADDR(BCHP_WKTMR_REG_START + BCHP_WKTMR_COUNTER_REG_OFFSET);
+	uint32_t restart_time = AON_REG(AON_REG_ANDROID_RESTART_TIME);
+	uint32_t restart_time_n = AON_REG(AON_REG_ANDROID_RESTART_TIME_N);
 
 	/* Do not adjust if WKTMR further in time than the default time */
 	if (*counter < DEFAULT_ANDROID_DATE_UTC_SEC) {
-		os_printf("Setting WKTMR to %u sec (UTC)\n",
-			DEFAULT_ANDROID_DATE_UTC_SEC);
-		*counter = DEFAULT_ANDROID_DATE_UTC_SEC;
+		/* If time of reboot is saved, add it to current wktmr counter
+		 * to get the current time. */
+		if ((restart_time == ~restart_time_n) &&
+			(restart_time > DEFAULT_ANDROID_DATE_UTC_SEC)) {
+			os_printf("Setting WKTMR ahead by %u sec (UTC)\n",
+				restart_time);
+			*counter += restart_time;
+		} else {
+			os_printf("Setting WKTMR to %u sec (UTC)\n",
+				DEFAULT_ANDROID_DATE_UTC_SEC);
+			*counter = DEFAULT_ANDROID_DATE_UTC_SEC;
+		}
 	}
 }
 #endif
