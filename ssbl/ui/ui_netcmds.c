@@ -63,7 +63,7 @@ extern int ui_init_tcpcmds(void);
 static int ui_cmd_ephy_config(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_mii_read_write(ui_cmdline_t *cmd, int argc, char *argv[]);
 
-#if CFG_SYSTEMPORT || CFG_RUNNER
+#if CFG_SYSTEMPORT
 extern void sf2_port_isolate_setup(const enet_params *e, unsigned int port_mask);
 static int ui_cmd_switch_config(ui_cmdline_t *cmd, int argc, char *argv[]);
 #endif
@@ -191,7 +191,7 @@ int ui_init_netcmds(void)
 		   "on a given MDIO bus (use show devices to discover the bus).\n",
 		   "mii [read|write] [device] [phy] [reg] [value]",
 		   "");
-#if CFG_SYSTEMPORT || CFG_RUNNER
+#if CFG_SYSTEMPORT
 	cmd_addcmd("switchcfg",
 		   ui_cmd_switch_config,
 		   NULL,
@@ -200,7 +200,7 @@ int ui_init_netcmds(void)
 		   "-port=*;specifies the port number|"
 		   "-isolate_mask=*;specifies the bitmask to include/exclude ports from\n"
 		   "use 0 to reset to include Port + CPU port.");
-#endif /* CFG_SYSTEMPORT || CFG_RUNNER */
+#endif /* CFG_SYSTEMPORT */
 #endif /* CFG_ENET */
 
 #endif /* CFG_NETWORK */
@@ -956,7 +956,7 @@ static int ui_cmd_ephy_config(ui_cmdline_t *cmd, int argc, char *argv[])
 	int choice = 0;
 	unsigned int choice_array[(NUM_ENET + 1)][ARRAY_SIZE(phy_options)];
 
-	if ((CFG_SYSTEMPORT) || (CFG_RUNNER))
+	if (CFG_SYSTEMPORT)
 		return BOLT_ERR_INV_COMMAND;
 
 	if (cmd_sw_value(cmd, "-i", &x))
@@ -1127,7 +1127,7 @@ static int ui_cmd_mii_read_write(ui_cmdline_t *cmd, int argc, char *argv[])
 	return 0;
 }
 
-#if CFG_SYSTEMPORT || CFG_RUNNER
+#if CFG_SYSTEMPORT
 static int ui_cmd_switch_config(ui_cmdline_t *cmd, int argc, char *argv[])
 {
 	enet_params e;
@@ -1157,7 +1157,7 @@ static int ui_cmd_switch_config(ui_cmdline_t *cmd, int argc, char *argv[])
 	return 0;
 
 }
-#endif /* CFG_SYSTEMPORT || CFG_RUNNER */
+#endif /* CFG_SYSTEMPORT */
 #endif /* CFG_ENET */
 
 #endif /* CFG_NETWORK */

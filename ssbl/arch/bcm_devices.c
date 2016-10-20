@@ -52,7 +52,9 @@ void board_device_init(void)
 #if CFG_GENET && CFG_ENET
 	board_init_enet();
 #endif
+#if CFG_SATA
 	board_init_sata();
+#endif
 
 	/* Moved RTS setup here as the splash screen start has relocated
 	to before board_final_init() but after board_device_init() and
@@ -90,7 +92,7 @@ void board_final_init(void)
 	fdt = params.dt_address;
 	bolt_board_specific_mods(fdt);
 
-#if (CFG_SYSTEMPORT || CFG_RUNNER) && CFG_ENET
+#if CFG_SYSTEMPORT && CFG_ENET
 	board_init_enet();
 #endif
 #if CFG_USB
@@ -135,6 +137,9 @@ void board_init_post_splash(void)
     ********************************************************************* */
 void board_final_exit(unsigned long *start_address)
 {
+#if CFG_SATA
+	sata_exit();
+#endif
 #if CFG_USB
 	usb_exit();
 #endif

@@ -130,6 +130,15 @@ enum {
 /* NAND INTFC status bits */
 #define NAND_STATUS_FAIL	0x01
 
+/*
+ * ONFI CRC-16 defines
+ * see: http://www.onfi.org/~/media/onfi/specs/onfi_2_0_gold.pdf?la=en
+ */
+#define ONFI_CRC16_INIT	0x4F4E
+#define ONFI_CRC16_POLYNOM	0x8005
+#define ONFI_CRC16_HIBIT	0x8000
+#define ONFI_CRC16_LEN		254
+#define ONFI_MAX_PARAM_PAGES	3
 
 /***********************************************************************
  * Flash DMA
@@ -404,6 +413,28 @@ struct onfi_ecc_block {
 	le16 block_endurance;
 	uint8_t reserved[2];
 };
+
+/*
+ * ONFI CRC-16 function as per ONFI spec
+ * see: http://www.onfi.org/~/media/onfi/specs/onfi_2_0_gold.pdf?la=en
+ */
+static uint16_t onfi_crc16(uint8_t const *buf, size_t len)
+{
+	int i;
+	uint16_t crc = ONFI_CRC16_INIT;
+
+	while (len--) {
+		crc ^= *buf++ << 8;
+		for (i = 0; i < 8; i++) {
+			if (crc & ONFI_CRC16_HIBIT)
+				crc = (crc << 1) ^ ONFI_CRC16_POLYNOM;
+			else
+				crc = (crc << 1) ^ 0;
+		}
+	}
+
+	return crc;
+}
 
 /*
  * Read an ONFI parameter page (standard or extended) into a buffer
@@ -1768,6 +1799,7 @@ static int nand_do_probe(struct nand_dev *softc)
 	struct nand_probe_info *info = &softc->info;
 	unsigned int i;
 	int min_ecc_bits = 0, ecc_codeword = 0, codeword_shift;
+	uint16_t crc;
 
 	/* Disable direct addressing + XOR for all NAND CS */
 	BDEV_UNSET(BCHP_NAND_CS_NAND_SELECT, 0xff);
@@ -1782,7 +1814,20 @@ static int nand_do_probe(struct nand_dev *softc)
 		struct onfi_params params;
 
 		/* Read ONFI parameter page */
-		onfi_parameter_read(info, (uint32_t *)&params, 0, sizeof(params));
+		for (i = 0; i < ONFI_MAX_PARAM_PAGES; i++) {
+			onfi_parameter_read(info, (uint32_t *)&params,
+					   i * sizeof(params), sizeof(params));
+			crc = onfi_crc16((uint8_t *)&params, ONFI_CRC16_LEN);
+			if (crc == le16_to_cpu(params.crc))
+				break;
+		}
+
+		if (i == ONFI_MAX_PARAM_PAGES) {
+			err_msg("CS%d: NAND: ONFI parameter page bad CRC",
+				info->cs);
+			return -1;
+		}
+
 		if (strncmp(params.onfi, "ONFI", 4)) {
 			err_msg("CS%d: NAND: invalid ONFI parameter page", info->cs);
 			return -1;

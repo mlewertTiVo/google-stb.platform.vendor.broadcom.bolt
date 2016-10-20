@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -22,6 +20,8 @@
 
 #include "net_ebuf.h"
 #include "net_ether.h"
+
+#include <stdbool.h>
 
 /**********************************************************************
   *  Constants
@@ -346,6 +346,26 @@ int eth_setloopback(ether_info_t *eth, int loop)
 	return bolt_ioctl(eth->eth_devhandle, IOCTL_ETHER_SETLOOPBACK,
 			 &loop, sizeof(loop), NULL, 0);
 
+}
+
+/**********************************************************************
+  *  eth_getlinkstatus(eth,linkstatus)
+  *
+  *  Get the current status for the Ethernet link
+  *
+  *  Input parameters:
+  *     eth - ethernet context
+  *     linkstatus - pointer to int to receive the status of link
+  *
+  *  Return value:
+  *     true if linkstatus is valid
+  *     false otherwise
+  **********************************************************************/
+bool eth_getlinkstatus(ether_info_t *eth, int *linkstatus)
+{
+	const int res = bolt_ioctl(eth->eth_devhandle, IOCTL_ETHER_GETLINK,
+		linkstatus, sizeof(*linkstatus), NULL, 0);
+	return (res == 0);
 }
 
 /**********************************************************************

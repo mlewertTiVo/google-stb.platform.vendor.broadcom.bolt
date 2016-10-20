@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,19 +7,21 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_printf.h"
-#include "lib_malloc.h"
-
-#include "timer.h"
-#include "iocb.h"
-#include "devfuncs.h"
-#include "ioctl.h"
-#include "error.h"
-
-#include "net_mdio.h"
 #include "mii.h"
+#include "net_ether.h"
+#include "net_mdio.h"
+
+#include "devfuncs.h"
+#include "env_subr.h"
+#include "error.h"
+#include "iocb.h"
+#include "ioctl.h"
+#include "timer.h"
+
+#include "lib_malloc.h"
+#include "lib_printf.h"
+#include "lib_string.h"
+#include "lib_types.h"
 
 static mdio_info_t *mdio_busses[NUM_ENET + 1];
 static unsigned int mdio_bus_cnt;
@@ -121,6 +121,53 @@ int mdio_write(mdio_info_t *mdio, int addr, uint16_t regnum, uint16_t data)
 		(unsigned char *)&xfer, sizeof(xfer));
 }
 
+/* mdio_get_linkstatus -- checks whether the link of the specified PHY is up
+ *
+ * The link status bit of BMSR is checked to determine whether it is up.
+ *
+ * Parameter:
+ *  mdio [in] pointer to MDIO device context
+ *
+ * Returns:
+ *  1 if link status bit is set
+ *  0 if link status bit is not set
+ *  -1 if link status is not known
+ */
+int mdio_get_linkstatus(mdio_info_t *mdio, int addr)
+{
+	uint16_t bmsr;
+
+	if (mdio == NULL || addr >= PHY_MAX_ADDR)
+		return -1;
+
+	/* dummy read to get latched value so that the current value
+	 * can be obtained at the next read
+	 * LINKSTAT is one of them, from 22.2.4.2.12 of IEEE 802.3-2012
+	 */
+	bmsr = mdio_read(mdio, addr, MII_BMSR);
+
+	bmsr = mdio_read(mdio, addr, MII_BMSR);
+
+	if (bmsr & BMSR_LINKSTAT)
+		return 1;
+
+	/* if auto-negotiation has ever been done, LINKSTAT should be correct */
+	if (bmsr & BMSR_ANCOMPLETE)
+		return 0;
+
+	/* timer has already expired, or no timer has ever been set */
+	if (!mdio->is_timer_aneg)
+		return 0;
+
+	if (TIMER_EXPIRED(mdio->timer_aneg)) {
+		mdio->is_timer_aneg = false;
+		return 0;
+	}
+
+	/* timer is valid and still going on, too early to say no link */
+	return -1;
+}
+
 uint32_t mdio_get_phy_id(mdio_info_t *mdio, int addr)
 {
 	int res;
@@ -142,6 +189,29 @@ uint32_t mdio_get_phy_id(mdio_info_t *mdio, int addr)
 	phy_id |= res;
 
 	return phy_id;
+}
+
+/* mdio_get_timeout_autoneg -- timeout on auto-negotiation in seconds
+ *
+ * Returns:
+ *  ETH_ANEG_TIMEOUT if the same name environment variable is not defined
+ *  integer value of ETH_ANEG_TIMEOUT (environment variable), otherwise
+ */
+unsigned int mdio_get_timeout_autoneg(void)
+{
+	char *env_aneg_timeout = env_getenv("ETH_ANEG_TIMEOUT");
+	unsigned int aneg_timeout = ETH_ANEG_TIMEOUT;
+
+	if (env_aneg_timeout != NULL)
+		aneg_timeout = lib_atoi(env_aneg_timeout);
+
+	if (aneg_timeout != ETH_ANEG_TIMEOUT) {
+		xprintf("MDIO: auto-negotiation timeout %d, "
+			"default %d seconds\n",
+			aneg_timeout, ETH_ANEG_TIMEOUT);
+	}
+
+	return aneg_timeout;
 }
 
 int mdio_phy_find_first(mdio_info_t *mdio, int skip_addr)
@@ -212,7 +282,7 @@ int mdio_phy_reset(mdio_info_t *mdio, int addr)
 		bolt_usleep(10);
 	} while (timeout-- > 0);
 
-	return 0;
+	return BOLT_ERR_TIMEOUT;
 }
 
 /* mii_get_config: Return the current MII configuration
@@ -269,27 +339,34 @@ mdio_config mdio_get_config(mdio_info_t *mdio, int addr)
  */
 mdio_config mdio_auto_configure(mdio_info_t *mdio, int addr)
 {
-	int to = 3000;
 	uint16_t data;
-	mdio_config config = 0;
+	unsigned int aneg_timeout;
+
+	aneg_timeout = mdio_get_timeout_autoneg();
 
 	/* enable and restart autonegotiation */
 	data = mdio_read(mdio, addr, MII_BMCR);
 	data |= (BMCR_RESTARTAN | BMCR_ANENABLE);
 	mdio_write(mdio, addr, MII_BMCR, data);
+	if (aneg_timeout != 0)
+		TIMER_SET(mdio->timer_aneg, aneg_timeout*BOLT_HZ);
 
+	mdio->is_timer_aneg = true; /* auto-negotiation is in progress */
 	/* wait for it to finish */
-	for (; to; --to) {
-		bolt_usleep(1000);
-		/* one dummy read, needed to latch some MII phys */
-		data = mdio_read(mdio, addr, MII_BMSR);
+	while (1) {
 		data = mdio_read(mdio, addr, MII_BMSR);
 		if (data & BMSR_ANCOMPLETE)
 			break;
+
+		if (aneg_timeout != 0) {
+			if (TIMER_EXPIRED(mdio->timer_aneg)) {
+				mdio->is_timer_aneg = false;
+				return 0;
+			}
+		}
+		POLL();
 	}
+	mdio->is_timer_aneg = false; /* auto-negotiation has completed */
 
-	if (to)
-		config = mdio_get_config(mdio, addr);
-
-	return config;
+	return mdio_get_config(mdio, addr);
 }

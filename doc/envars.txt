@@ -450,6 +450,43 @@ Could not activate device eth0: Error
 *** command status = -1
 ----
 
+ ETH_ANEG_TIMEOUT
+~~~~~~~
+If defined, it overrides the default timeout value, 8 (eight) seconds, on
+auto-negotiation. Further, if the overridden value is differet from
+the default 8 seconds, informative message is printed out.
+
+Getting a DHCP address will time out after around 8 seconds (or, any
+overridden timeout value) if network cable is not plugged in. If no DHCP
+replies while network connection is okay, timing out from the DHCP request
+happens much later.
+
+Auto-negotiation should complete less than 4 seconds in most cases, sometimes
+even much shorter than that. But, it can be extended depending on various
+reasons, including the link partner. Careful consideration is required when
+reducing the timeout.
+
+Defining 0 (zero) removes timeout, meaning endless auto-negotiation attempts.
+
+Please note that it has not effect on USB-Ethernet dongles at the moment.
+It has effect only on GENET and SYSTEMPORT based Ethernet ports.
+Whether your interested Ethernet port is based on GENET or SYSTEMPORT can be
+checked via the "show devices" command on the BOLT command prompt.
+
+The following example checks whether ETH_ANEG_TIMEOUT can affect eth0, and
+sets the auto-negotiation timeout to 10 (ten) seconds before sending out
+DHCP request for eth0.
+
+.Example
+----
+BOLT> show devices
+...
+BOLT> setenv ETH_ANEG_TIMEOUT 10
+*** command status = 0
+BOLT> ifconfig eth0 -auto
+...
+----
+
  NET_*
 ~~~~~~
 
@@ -965,6 +1002,22 @@ NOTE: The values have to be comma separated with no spaces between them.
 ----
 BOLT> setenv -p USBETH 0x0423,0x000c,0x02,0x06
 ----
+
+ USBETH_TRACE
+~~~~~~~~~~~~~
+Enable trace debug of the USB Ethernet driver. Set to any value to enable.
+
+.Enable trace for a device already plugged in
+----
+BOLT> usb exit
+BOLT> setenv USBETH_TRACE x
+BOLT> usb init
+BOLT> ifconfig eth1 -auto
+----
+
+NOTE: This envar has to be set before a USB Ethernet device has been
+enumerated, i.e. plugged in, or the USB stack brought up (see the
+'usb init' and 'usb exit' BOLT commands).
 
  EHCIOFF
 ~~~~~~~

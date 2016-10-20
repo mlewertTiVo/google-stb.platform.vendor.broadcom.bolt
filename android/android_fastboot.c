@@ -167,6 +167,7 @@ unsigned int fastboot_flash_get_ptn_count(void)
 /* TODO: This limit comes from USB device driver DMA pool size
  * We might need to re-tune it for eMMC */
 #define DATA_MAX_SIZE (BYTES_PER_LBA * 192)
+#define FILL_MAX_SIZE 4
 
 /* Write sparse image to flash device */
 static int fastboot_flash_write_sparse_image(const char *devname,
@@ -259,9 +260,39 @@ static int fastboot_flash_write_sparse_image(const char *devname,
 				byte_cnt -= amtcopy;
 				poll_task();
 			}
-		
+
 			if (byte_cnt) {
 				/* perform block write to the destination device */
+				amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, byte_cnt);
+				if (amtcopy != byte_cnt) {
+					os_printf("Failed to write image. Remaining chunk: %d\n", remaining_chunks);
+					res = BOLT_ERR_IOERR;
+					goto exit;
+				}
+			}
+			/* restore curr_write_offset for writing next chunk */
+			curr_write_offset = curr_write_offset_org;
+			break;
+		case CHUNK_TYPE_FILL:
+			byte_cnt = (c_header->chunk_sz * s_header->blk_sz);
+			curr_read_ptr = ((unsigned char *)c_header) + s_header->chunk_hdr_sz;
+			/* save a copy of the original curr_write_offset as we
+			 * need it to compute the offset for next chunk */
+			curr_write_offset_org = curr_write_offset;
+
+			while (byte_cnt >= FILL_MAX_SIZE)
+			{
+				amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, FILL_MAX_SIZE);
+				if (amtcopy != FILL_MAX_SIZE) {
+					os_printf("Failed to fill image. Remaining chunk: %d\n", remaining_chunks);
+					res = BOLT_ERR_IOERR;
+					goto exit;
+				}
+				curr_write_offset += amtcopy;
+				byte_cnt -= amtcopy;
+				poll_task();
+			}
+			if (byte_cnt) {
 				amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, byte_cnt);
 				if (amtcopy != byte_cnt) {
 					os_printf("Failed to write image. Remaining chunk: %d\n", remaining_chunks);

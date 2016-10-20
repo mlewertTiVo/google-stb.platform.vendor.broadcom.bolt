@@ -54,7 +54,6 @@ struct psci_cfg {
 	unsigned int nr_cluster;
 	unsigned int all_cpus; /* save a mul */
 	unsigned int debug;
-	unsigned int bootonce;
 	unsigned int locked_sticky;
 	unsigned int rac_master;
 	struct per_cpu *cpu;
@@ -97,7 +96,9 @@ void reboot(void);
 unsigned int cpu_is_on(unsigned int cpu);
 
 /* asm */
-void smp_on(void);
+void __smp_on(uint64_t x0, uint64_t x1);
+#define	smp_on() __smp_on(0, 0)
+
 void __noreturn smp_off_unlock(volatile uint32_t *lock);
 uint64_t get_mpidr(void);
 void cpu_init32(void);
@@ -116,7 +117,7 @@ unsigned long disable_all_caches_and_mmu(void);
 
 void rac_flush(void);
 uint32_t rac_disable_and_flush(void);
-void rac_enable(uint32_t rac_cfg0);
+int rac_enable(uint32_t rac_cfg0);
 int rac_is_enabled(void);
 
 /* smm-psci */

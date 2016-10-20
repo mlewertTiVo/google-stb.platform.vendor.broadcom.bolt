@@ -21,6 +21,7 @@
 #include <initdata.h>
 #include <lib_types.h>
 #include "mmap-dram.h" /* gen/${family}/ */
+#include "ssbl-sec.h"
 
 /* The stack and heap must be SECTION (1MiB) aligned and
 sized in multiples of it for us to reliably mark *only*
@@ -293,7 +294,15 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 #if (CFG_CMD_LEVEL >= 5)
 	struct board_nvm_info *s = &(_fsbl_info->saved_board);
 #endif
+
+#ifdef SECURE_BOOT
+	ssbl_main_sec();
+#endif
+
 	puts("SSBL");
+
+	if (CFG_ZEUS4_2)
+		sec_enable_debug_ports();
 
 	puts("PINMUX");
 	board_pinmux();

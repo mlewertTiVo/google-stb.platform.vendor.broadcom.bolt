@@ -332,10 +332,6 @@ ENTRY_PROC(init_counters)
 
 	/* ---------------------------- */
 
-	/* Reset/Initialize the counter-timer Virtual Offset register
-	 */
-	msr cntvoff_el2, xzr
-
 	/* MIDR_EL1: Main ID Reg -> Virtualization Processor ID Reg
 	 * MPIDR_EL1: Multiprocessor Affinity Reg -> Virtualization MP ID Reg
 	 */
@@ -451,13 +447,15 @@ ENTRY_PROC(cpu_init64)
 END_PROC(cpu_init64)
 
 
+/* x7: HCR_EL2 value to set
+ */
 ENTRY_PROC(hypervisor_off)
 	/* Architectural Feature Access Control Register
 	 *  [FPEN] bits [21:20] = b11 = no traps,
 	 *  don't trap FP, SIMD (FPEN) or trace (TTA)
 	 */
-	mov	x7, #CPACR_FPEN_MASK
-	msr	cpacr_el1, x7
+	mov	x8, #CPACR_FPEN_MASK
+	msr	cpacr_el1, x8
 
 	/* Hypervisor Configuration Register
 	 * If HCR_EL2.TSC = SCR_EL3.SMD = 0, execution of an SMC
@@ -469,8 +467,7 @@ ENTRY_PROC(hypervisor_off)
 	 * is determined by the Execution state described in the current
 	 *  process state when executing at EL0, i.e. match SCR_RW.
 	 */
-	mov	x8, #0
-	msr	hcr_el2, x8
+	msr	hcr_el2, x7
 
 	/* SCTLR_EL2, System Control Register (EL2)
 	 * aka HSCTLR in A32 mode.
@@ -708,8 +705,7 @@ ENTRY_PROC(cpu_boot64)
 END_PROC(cpu_boot64)
 
 
-ENTRY_PROC(smp_on)
-	xpush2	 x0,  x1
+ENTRY_PROC(__smp_on)
 	check_is_orion	x0, x1, 1f
 
 	/* ACTLR_EL3 / ACTLR (S) */
@@ -735,11 +731,9 @@ ENTRY_PROC(smp_on)
 	orr     x0, x0, #CPUECTLR_EL1_SMPEN	/* enable SMP bit */
 	msr     S3_1_C15_C2_1, x0
 1:
-	xpop2	 x0,  x1
 	barrier
-
 	ret
-END_PROC(smp_on)
+END_PROC(__smp_on)
 
 
 /* This is a tidied up disassemby of

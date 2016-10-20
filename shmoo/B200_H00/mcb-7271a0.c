@@ -18,10 +18,10 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x0132a6ef,	/* 0 */
 	0x00000000,	/* 1 */
 	0x00000000,	/* 2 */
-	0xffa05ee4,	/* 3 */
+	0xffa06518,	/* 3 */
 	0x00000002,	/* 4 */
-	0x00001702,	/* 5 */
-	0x002037ff,	/* 6 */
+	0x00001902,	/* 5 */
+	0x00203b0a,	/* 6 */
 	0x007271a0,	/* 7 */
 	0x0000b200,	/* 8 */
 	0x00004800,	/* 9 */
@@ -31,7 +31,7 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x000001b0,	/* 13 */
 	0x00000000,	/* 14 */
 	0x00000535,	/* 15 */
-	0x001451d2,	/* 16 */
+	0x001437d0,	/* 16 */
 	0x00000008,	/* 17 */
 	0x00000004,	/* 18 */
 	0x00000001,	/* 19 */
@@ -58,9 +58,9 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x55010012,	/* 40 */
 	0x10080000,	/* 41 */
 	0x00101031,	/* 42 */
-	0x000522d0,	/* 43 */
-	0x00000000,	/* 44 */
-	0x00000000,	/* 45 */
+	0x000130b8,	/* 43 */
+	0x00002021,	/* 44 */
+	0x0003ed00,	/* 45 */
 	0x03200320,	/* 46 */
 	0x03200320,	/* 47 */
 	0x03200320,	/* 48 */
@@ -77,7 +77,7 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x00000000,	/* 59 */
 	0x00000000,	/* 60 */
 	0x00000000,	/* 61 */
-	0x0206fa23,	/* 62 */
+	0x0206fa43,	/* 62 */
 	0x800180f0,	/* 63 */
 	0x00000000,	/* 64 */
 	0x00001458,	/* 65 */
@@ -108,7 +108,7 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x00204f22,	/* 90 */
 	0x2e171d10,	/* 91 */
 	0x00000011,	/* 92 */
-	0x00000003,	/* 93 */
+	0x00000004,	/* 93 */
 	0x00695000,	/* 94 */
 	0x00000005,	/* 95 */
 	0x03030303,	/* 96 */
@@ -130,7 +130,7 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x01010101,	/* 112 */
 	0x01010101,	/* 113 */
 	0x00000001,	/* 114 */
-	0x00000000,	/* 115 */
+	0x00000001,	/* 115 */
 	0x01000101,	/* 116 */
 	0x00000404,	/* 117 */
 	0x0100016f,	/* 118 */
@@ -172,23 +172,25 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 /* 7271A0_1333MHz_32b_dev8Gx16_LPDDR4-2667_le.mcb
 */
 static const uint32_t mcb_1333mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0xffffffff,  0x007364b7,	/* -1 */
+	0xffffffff,  0x0073711f,	/* -1 */
 }; /* 0 difference */
 
 /* 7271A0_1600MHz_32b_dev8Gx16_LPDDR4-3200_le.mcb
 */
 static const uint32_t mcb_1600mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0x4a5e0a4d,	/* 3 */
-	0x00000006,  0x001037ff,	/* 6 */
+	0x00000003,  0x4a8e10b7,	/* 3 */
+	0x00000006,  0x00303b0a,	/* 6 */
 	0x0000000f,  0x00000640,	/* 15 */
-	0x00000010,  0x001863bf,	/* 16 */
+	0x00000010,  0x00184487,	/* 16 */
 	0x00000018,  0x00001a1c,	/* 24 */
 	0x00000019,  0x00001a1c,	/* 25 */
 	0x0000001d,  0x00216d5c,	/* 29 */
 	0x00000022,  0x00216d5c,	/* 34 */
 	0x00000027,  0x00000218,	/* 39 */
-	0x0000002a,  0x0010103b,	/* 42 */
-	0x0000002b,  0x00033333,	/* 43 */
+	0x0000002a,  0x0010103a,	/* 42 */
+	0x0000002b,  0x000e76c8,	/* 43 */
+	0x0000002c,  0x00002691,	/* 44 */
+	0x0000002d,  0x0004b650,	/* 45 */
 	0x0000003f,  0x80018120,	/* 63 */
 	0x00000041,  0x00001868,	/* 65 */
 	0x00000042,  0xa0008120,	/* 66 */
@@ -215,16 +217,16 @@ static const uint32_t mcb_1600mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbda
 	0x00000086,  0x1419018c,	/* 134 */
 	0x00000087,  0x02df0430,	/* 135 */
 	0x00000088,  0x00001868,	/* 136 */
-	0xffffffff,  0x95eebb89,	/* -1 */
-}; /* 37 differences */
+	0xffffffff,  0x964ec85d,	/* -1 */
+}; /* 39 differences */
 
 /* 7271A0_800MHz_32b_dev8Gx16_LPDDR4-1600_le.mcb
 */
 static const uint32_t mcb_800mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0x45c5f594,	/* 3 */
-	0x00000006,  0x004037ff,	/* 6 */
+	0x00000003,  0x4595fb51,	/* 3 */
+	0x00000006,  0x00103b0a,	/* 6 */
 	0x0000000f,  0x00000320,	/* 15 */
-	0x00000010,  0x000c31df,	/* 16 */
+	0x00000010,  0x000c2243,	/* 16 */
 	0x00000018,  0x00000c0e,	/* 24 */
 	0x00000019,  0x00000c0e,	/* 25 */
 	0x0000001d,  0x0021522c,	/* 29 */
@@ -232,7 +234,9 @@ static const uint32_t mcb_800mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdat
 	0x00000027,  0x00000220,	/* 39 */
 	0x00000029,  0x10000000,	/* 41 */
 	0x0000002a,  0x0010101d,	/* 42 */
-	0x0000002b,  0x00099999,	/* 43 */
+	0x0000002b,  0x00073b64,	/* 43 */
+	0x0000002c,  0x00001341,	/* 44 */
+	0x0000002d,  0x00025b20,	/* 45 */
 	0x0000003f,  0x80018090,	/* 63 */
 	0x00000041,  0x00000c34,	/* 65 */
 	0x00000042,  0xa0008090,	/* 66 */
@@ -259,8 +263,8 @@ static const uint32_t mcb_800mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdat
 	0x00000086,  0x0a0c80c6,	/* 134 */
 	0x00000087,  0x01710418,	/* 135 */
 	0x00000088,  0x00000c34,	/* 136 */
-	0xffffffff,  0x8cbe9217,	/* -1 */
-}; /* 38 differences */
+	0xffffffff,  0x8c5e9d91,	/* -1 */
+}; /* 40 differences */
 
 const struct memsys_info __maybe_unused shmoo_data[] __attribute__ ((section(".mcbtable"))) = {
 	{ NULL, MCB_MAGIC1, MCB_MAGIC2, MCB_MAGIC3, -1, NULL },

@@ -8,45 +8,49 @@ Release notes
 Broadcom Ltd <support@broadcom.com>
 
 
- Bolt SQA Release v1.19, 17th June 2016
----------------------------------------
+ Bolt SQA Release v1.21, 23rd September 2016
+--------------------------------------------
 
 ....
-	o Supported chip families: 7250b0 7364a0 7364b0 7366b0 7366c0 74371a0 7439b0 7445d0 7445e0 7271a0 7268a0
+	o Supported chip families: 7250b0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0 7271a0 7268a0 7260a0
 	o Toolchain: stbgcc-4.8-1.1
 
 	o AVS version: v0.3.2.x
-		o 7250b0 7364a0 7364b0 7366b0 7445d0 7439b0 7366c0 7445e0
+		o 7250b0 7364a0 7364b0 7445d0 7439b0 7366c0 7445e0
 	o AVS version: v0.3.3.x
-		o 74371a0
-	o AVS version: v0.3.4.d
+		o 74371a0 7364c0
+	o AVS version: v0.3.7.x
 		o 7271a0 7268a0
+	o AVS version: v0.3.9.x
+		o 7260a0
 	o AVS Pending PVT testing:
-		o 7271a0 7268a0
+		o 7260a0
 
 	o SHMOO versions:
 		o DDR3
-			o 7364a0:  2.1.0.0
-			o 7364b0:  2.1.0.0
-			o 7366b0:  2.1.0.0
-			o 7445d0:  2.1.0.0
-			o 7250b0:  2.1.0.0
+			o 7364a0:  2.1.1.0
+			o 7364b0:  2.1.1.0
+			o 7364c0:  2.1.1.0
+			o 7445d0:  2.1.1.0
+			o 7250b0:  2.1.1.0
 			o 74371a0: 1.0.0.6
-			o 7439b0:  2.1.0.0
-			o 7366c0:  2.1.0.0
-			o 7445e0:  2.1.0.0
+			o 7439b0:  2.1.1.0
+			o 7366c0:  2.1.1.0
+			o 7445e0:  2.1.1.0
+			o 7260a0:  3.1.0.2
 		o DDR4
-			o 7445d0:  2.1.0.0
-			o 7445e0:  2.1.0.0
-			o 7366b0:  2.1.0.0
-			o 7366c0:  2.1.0.0
-			o 7250b0:  2.1.0.0
-			o 7364a0:  2.1.0.0
-			o 7364b0:  2.1.0.0
-			o 7439b0:  2.1.0.0
+			o 7445d0:  2.1.1.0
+			o 7445e0:  2.1.1.0
+			o 7366c0:  2.1.1.0
+			o 7250b0:  2.1.1.0
+			o 7364a0:  2.1.1.0
+			o 7364b0:  2.1.1.0
+			o 7364c0:  2.1.1.0
+			o 7439b0:  2.1.1.0
+			o 7260a0:  3.1.0.2
 		o LPDDR4
-			o 7271a0:  2.2.0.18
-			o 7268a0:  2.2.0.18
+			o 7271a0:  2.2.0.28
+			o 7268a0:  2.2.0.28
 ....
 
 
@@ -58,7 +62,7 @@ Broadcom Ltd <support@broadcom.com>
 * 7439b0 build supports corrected OTP 7439b1 and later.
  ** 7439b0 chips and uncorrected OTP 7439b1 will [red]#no longer# be supported going forward.
 
-* 7366c0 build supports 7366b0
+* 7366c0 build [red]#no longer# supports 7366b0
 
 * 7445d0 build supports 7445d1
 
@@ -185,42 +189,58 @@ arm-linux-ld: error: no memory region specified for loadable section `.bss'
 
 ''''
 
- Upgrade to v1.19 criteria
+ Upgrade to v1.21 criteria
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-link:http://jira.broadcom.com/browse/SWBOLT-1893[SWBOLT-1893] AVS update to set the CPU offset voltage before adding margins and applying limits. ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2013[SWBOLT-2013] AVS now dynamically detects remote oscillators that have been powered down. Currently for 7260a0 only.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1907[SWBOLT-1907] Add Devicetree support for the new Linux spi-nor + spi master driver.
+link:http://jira.broadcom.com/browse/SWBOLT-1563[SWBOLT-1563] Ability to generate Device Tree offline.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1886[SWBOLT-1886] Add a board strap option for USB IPP setting to the 'usb' configuration script command.
+link:http://jira.broadcom.com/browse/SWBOLT-1976[SWBOLT-1976] Add Devicetree support for the new Linux spi-nor + spi master driver.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1743[SWBOLT-1743] Add documentation about the Device Tree generation process.
+link:http://jira.broadcom.com/browse/SWBOLT-1962[SWBOLT-1962] Added BCM97364SFFDR4 board.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1919[SWBOLT-1919] Added generic-ohci, generic-ehci and generic-xhci to end of "compatible" property for the ohci, ehci and xhci nodes in device tree.
+link:http://jira.broadcom.com/browse/SWBOLT-1881[SWBOLT-1881] Added provisional support for the 7260a0. Note that this version of BOLT should not be used for 7260a0 productization. ^[yellow silver-background]#major#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-1897[SWBOLT-1897] Added support for BCM97268DV.
+link:http://jira.broadcom.com/browse/SWBOLT-1961[SWBOLT-1961] Added support for 7364c0. ^[yellow silver-background]#major#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-1899[SWBOLT-1899] Existing board configurations may fail to build, which is intended with this change. The build failure should be resolved with a stricter PINMUX function name(s). ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2004[SWBOLT-2004] Added support for BCM972604DV.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1904[SWBOLT-1904] Fix unorrectable read errors when reading an erased NAND page.
+link:http://jira.broadcom.com/browse/SWBOLT-2003[SWBOLT-2003] Added support for BCM972604USFF.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1906[SWBOLT-1906] Release notes for older BOLT versions have been added to doc/changelog.txt.
+link:http://jira.broadcom.com/browse/SWBOLT-1985[SWBOLT-1985] Fix BOLT to allow temperatures below 0 Celsius in the over-temperature monitor.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1911[SWBOLT-1911] Support for BCM97268USFF4L and BCM97268USFFA4L has been added.
+link:http://jira.broadcom.com/browse/SWBOLT-1992[SWBOLT-1992] Improved Shmoo stability with Hynix AFR DDR4 for BCM7250, BCM7364, BCM7366, BCM7439 and BCM7445. All users of prior DDR4 versions should update to this version. ^[red silver-background]#blocker#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-1912[SWBOLT-1912] Support for BCM97268VMS has been added.
+link:http://jira.broadcom.com/browse/SWBOLT-1883[SWBOLT-1883] Improvement to EPHY per Ethernet QA specifications for 7271a0, 7268a0.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1913[SWBOLT-1913] Support for BCM97445S_EXT24 has been added.
+link:http://jira.broadcom.com/browse/SWBOLT-1986[SWBOLT-1986] New AVS firmware v0.3.9.x to allow 6 more mailbox registers to be accessible by the host CPU on 7271/7268, for DVFS purposes. ^[yellow silver-background]#major#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-1914[SWBOLT-1914] Support for REV09 (4GB of memory) of BCM97252SGW has been added.
+link:http://jira.broadcom.com/browse/SWBOLT-1946[SWBOLT-1946] Prevent BOLT hanging when SATA cable is removed after disk accesses.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1825[SWBOLT-1825] The GEN and ODIR make variables in BOLT can now be specified on the make command line to select non-default directory locations.
+link:http://jira.broadcom.com/browse/SWBOLT-1997[SWBOLT-1997] Remove the 'auto-cmd12' property from the sdhci Devicetree node if it is used for eMMC to prevent interrupt timeouts in Linux when accessing the RPMB partition.
 
-link:http://jira.broadcom.com/browse/SWBOLT-1909[SWBOLT-1909] With large 64 bit numbers xprintf might crash due to a stack based buffer overflow.
+link:http://jira.broadcom.com/browse/SWBOLT-1811[SWBOLT-1811] Report the baseline DDR clock speed and ratio to target speed in the BOLT 'info' command. This can be used to obtain the spread spectrum percentage, though not any clock derating that may be present.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1990[SWBOLT-1990] SSBL NAND flash driver robustness update to poll and crc check up to all three ONFI parameter pages. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1977[SWBOLT-1977] Support for BCM97204SV has been added. BCM972604SV can host BCM72603.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1971[SWBOLT-1971] Support for BCM97250CD2_V10 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2002[SWBOLT-2002] Support for BCM972604C, BCM972604D and BCM972604T have been added. The boards can host BCM972603.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2008[SWBOLT-2008] Support for BCM97260USFF has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1993[SWBOLT-1993] Support for BCM97271_4L has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2005[SWBOLT-2005] The BCM4366 Wi-Fi device on the BCM97449SCWM is powered up via couple of voltage regulators controlled by two GPIO lines: gpio_097 and gpio_098. Add the configuration of voltage regulation to the board config so that the Wi-Fi device can be enumerated in Linux.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2009[SWBOLT-2009] Use 1% DDR Spread Spectrum Clock MCBs for 7271a0 and 7268a0.
 
  Broadcom FAE access
 ~~~~~~~~~~~~~~~~~~~~
-http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.19%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.21%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
 
 
  Documentation

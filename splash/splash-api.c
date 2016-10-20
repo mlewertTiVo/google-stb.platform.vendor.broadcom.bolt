@@ -176,9 +176,12 @@ void splash_api_start(void)
 					SplashMediaFormat_ePcm, mem);
 		if ((mediaInfo)  && (mediaInfo->buf)) {
 			xprintf("SPLASH: start audio\n");
-			splash_audio_script_run(mediaInfo->size,
-				   (unsigned int)mediaInfo->buf,
-					SPLASH_AUDIO_REPEAT_COUNT);
+			if (splash_audio_script_run(mediaInfo->size,
+					(unsigned int)mediaInfo->buf,
+					SPLASH_AUDIO_REPEAT_COUNT, pSplashData)) {
+				err_msg("SPLASH: Unsupported display format.");
+				return;
+			}
 		} else
 			xprintf("SPLASH: audio not present\n");
 	}

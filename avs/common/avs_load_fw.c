@@ -14,6 +14,7 @@
 #include "../fsbl/fsbl.h" /* load_from_flash & docsis_booted */
 #include "../fsbl/fsbl-clock.h"
 #include "../fsbl/fsbl-pm.h"
+#include "../fsbl/fsbl-emmc.h"
 
 #include "bchp_common.h"
 #include "bchp_sun_top_ctrl.h"
@@ -49,20 +50,14 @@
 #define CHECK_AVS_RESET		0
 #endif
 
-#ifndef ENABLE_AVS_LOCK
-/* enable this to lock access to the AVS firmware sections.
- * This should be enabled (by default) after firmware is started. */
-#define ENABLE_AVS_LOCK		0
-#endif
-
 #ifndef ENABLE_TEST_PROMPTS
 /* These let me dynamically over-ride some run-time parameters. */
 #define ENABLE_TEST_PROMPTS	0
 #endif
 
 #ifndef TIME_PROCESS
-#define TIME_PROCESS		0
 /* count (and display) the time it takes to process the AVS */
+#define TIME_PROCESS		0
 #endif
 
 #if AVS_DEBUG_STARTUP
@@ -93,19 +88,6 @@
 		avs_print_string(s); \
 		avs_print_val(x); \
 	} while (0)
-
-/* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
-
-/* This will ensure that the AVS CPU is not running before we try to load new
- * firmware */
-static void avs_reset_cpu(void)
-{
-	BDEV_WR_F(AVS_CPU_CTRL_CTRL, AVS_RST, 1);
-#if defined(CONFIG_BCM7268A0) || defined(CONFIG_BCM7271A0)
-	/* FIXME: delay seems be required only for 7268a0 and 7271a0 */
-	avs_sleep(10);
-#endif
-}
 
 /* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
 
@@ -188,7 +170,7 @@ static int avs_get_int_number(char *prompt, int the_default)
 }
 
 /* this is debug code and will be optimized out when debug not enabled */
-static void avs_ask_margins(at_initialization *params)
+static void avs_ask_margins(struct at_initialization *params)
 {
 	if (ask_y_or_n("Use modified margins", false))
 		return;
@@ -197,19 +179,14 @@ static void avs_ask_margins(at_initialization *params)
 	    avs_get_int_number("Vmargin Low", params->margin_low);
 	params->margin_high =
 	    avs_get_int_number("Vmargin High", params->margin_high);
-	/* avs_print_string("using low =");
-	   avs_print_val(params->margin_low); */
-	/* avs_print_string("using high=");
-	   avs_print_val(params->margin_high); */
-
-#if (BCHP_CHIP == 7271) || (BCHP_CHIP == 7268)
+#ifdef DVFS_SUPPPORT
 	params->cpu_offset =
 	    avs_get_int_number("CPU voltage offset", params->cpu_offset);
 #endif
 }
 
 /* this is debug code and will be optimized out when debug not enabled */
-static void avs_ask_limits(at_initialization *params)
+static void avs_ask_limits(struct at_initialization *params)
 {
 	if (ask_y_or_n("Use modified limits", false))
 		return;
@@ -218,10 +195,14 @@ static void avs_ask_limits(at_initialization *params)
 	    avs_get_int_number("Minimum voltage", params->min_voltage);
 	params->max_voltage =
 	    avs_get_int_number("Maximum voltage", params->max_voltage);
-	/* avs_print_string("using min=");
-	   avs_print_val(params->min_voltage); */
-	/* avs_print_string("using max=");
-	   avs_print_val(params->max_voltage); */
+#ifdef DVFS_SUPPPORT
+	params->min_dvfs_voltage =
+	    avs_get_int_number("Minimum DVFS voltage",
+				params->min_dvfs_voltage);
+	params->slope_adj_factor =
+	    avs_get_int_number("Slope adj factor (125=1.25)",
+				params->slope_adj_factor);
+#endif
 }
 
 #if (BCHP_CHIP==7445) || defined(CONFIG_BCM7439B0)
@@ -231,20 +212,13 @@ static void avs_ask_limits(at_initialization *params)
 #define DEFAULT_VMARGIN_LOW  50     /* default low margin in mV */
 #define DEFAULT_VMARGIN_HIGH 100    /* default high margin in mV */
 
-#elif (BCHP_CHIP == 3390)
-/* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=30mV VmarginH=50mV */
-#define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
-#define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
-#define DEFAULT_VMARGIN_LOW  30     /* default low margin in mV */
-#define DEFAULT_VMARGIN_HIGH 50     /* default high margin in mV */
-
-#elif (BCHP_CHIP == 7271)
+#elif (BCHP_CHIP == 7260)
 /* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
 #define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
 #define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
-#define DEFAULT_VMARGIN_LOW  20     /* default low margin in mV */
-#define DEFAULT_VMARGIN_HIGH 20     /* default high margin in mV */
-#define DEFAULT_CPU_OFFSET   150    /* default stb to cpu margin in mV*/
+#define DEFAULT_VMARGIN_LOW  120    /* default low margin in mV */
+#define DEFAULT_VMARGIN_HIGH 120    /* default high margin in mV */
+#define DEFAULT_CPU_OFFSET   40     /* default stb to cpu margin in mV*/
 
 #elif (BCHP_CHIP == 7268)
 /* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
@@ -254,13 +228,35 @@ static void avs_ask_limits(at_initialization *params)
 #define DEFAULT_VMARGIN_HIGH 20     /* default high margin in mV */
 #define DEFAULT_CPU_OFFSET   150    /* default stb to cpu margin in mV*/
 
+#elif (BCHP_CHIP == 7271)
+/* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
+#define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
+#define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
+#define DEFAULT_VMARGIN_LOW  20     /* default low margin in mV */
+#define DEFAULT_VMARGIN_HIGH 20     /* default high margin in mV */
+#define DEFAULT_CPU_OFFSET   150    /* default stb to cpu margin in mV*/
+
+#else
+
+#ifdef DVFS_SUPPORT
+/* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
+#define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
+#define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
+#define DEFAULT_VMARGIN_LOW  20     /* default low margin in mV */
+#define DEFAULT_VMARGIN_HIGH 20     /* default high margin in mV */
+#define DEFAULT_CPU_OFFSET   150    /* default stb to cpu margin in mV*/
 #else
 /* single core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=30mV VmarginH=50mV */
 #define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
 #define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
 #define DEFAULT_VMARGIN_LOW  30     /* default low margin in mV */
 #define DEFAULT_VMARGIN_HIGH 50     /* default high margin in mV */
+#endif /* DVFS_SUPPORT */
+
 #endif
+
+/* single voltage domain margin correction in mV */
+#define SINGLE_DOMAIN_MARGIN_CORRECTION (75 - DEFAULT_VMARGIN_LOW)
 
 #define DEFAULT_POLLING_DELAY 1000	/* once a second */
 #define DEFAULT_EXTRA_DELAY  0	/* extra delay needed by this voltage regulator
@@ -268,7 +264,7 @@ static void avs_ask_limits(at_initialization *params)
 
 /* These setup the defaults to be over-ridden before calling the
  * avs_start_firmware function */
-static void avs_get_default_params(at_initialization *params)
+static void avs_get_default_params(struct at_initialization *params)
 {
 	memset(params, 0, sizeof(*params));
 
@@ -280,20 +276,14 @@ static void avs_get_default_params(at_initialization *params)
 	params->max_voltage = DEFAULT_MAX_VOLTAGE;
 	params->extra_delay = DEFAULT_EXTRA_DELAY;
 	params->polling_delay = DEFAULT_POLLING_DELAY;
-#if (BCHP_CHIP == 7271) || (BCHP_CHIP == 7268)
+
+#ifdef DVFS_SUPPPORT
 	params->cpu_offset = DEFAULT_CPU_OFFSET;
+#define DEFAULT_DVFS_VOLTAGE 900
+	params->min_dvfs_voltage = DEFAULT_DVFS_VOLTAGE;
+#define DEFAULT_SCALING_FACTOR 150 /* 1.5 times */
+	params->slope_adj_factor = DEFAULT_SCALING_FACTOR;
 #endif
-
-#if (BCHP_CHIP == 3390)
-#if CFG_BATTERY_BACKUP
-	params->bbu_used = true;	/* using battery backup */
-	params->bbm_flag = !!fsbl_booted_on_battery();
-#else
-	params->bbu_used = false;	/* not using battery backup */
-	params->bbm_flag = false;	/* not in battery backup mode */
-#endif
-#endif
-
 	/* Let firmware know if this is a warm boot due to S3 resume */
 	if (fsbl_ack_warm_boot()) {
 		puts("AVS resuming S3...\n");
@@ -308,13 +298,24 @@ static void avs_get_default_params(at_initialization *params)
 	params->chip_id = BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
 	params->product_id = BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID);
 
-#if (BCHP_CHIP != 7271) && (BCHP_CHIP != 7268)
+#ifndef DVFS_SUPPPORT
 	/* Special case: some parts run at 1.7GHz and need extra margin.
 	 * Use this for anything greater than 1.503GHz */
 	if (get_cpu_freq_mhz() > 1503)
 	{
 		params->margin_low  = 50; /* extra low margin of 50mV */
 		params->margin_high = 100; /* extra high margin of 100mV */
+	}
+#endif
+
+#if defined(AVS_DUAL_DOMAINS)
+	/* set for boards with single regulator */
+	struct board_type *b = get_tmp_board();
+
+	if (!b || AVS_DOMAINS(b->avs) == 1) {
+		params->single_domain = true;
+		params->margin_low  += SINGLE_DOMAIN_MARGIN_CORRECTION;
+		params->margin_high += SINGLE_DOMAIN_MARGIN_CORRECTION;
 	}
 #endif
 
@@ -336,60 +337,11 @@ static void avs_get_default_params(at_initialization *params)
 #define START_MAX_COUNT 5000 /* max # of loops we'll wait for AVS to start */
 static bool did_we_resume;
 
-#if CFG_BATTERY_BACKUP
-
-/* When starting up due to a AC restored situation the AVS FW is still
- * running.  Tell the already running firmware that we're back */
-static int avs_resume_operation(void)
-{
-	int i;
-	int complete = AVS_TIMEOUT;
-	uint32_t data;
-
-	BDEV_WR(BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE + 4, 0);
-	BDEV_WR(BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE, CMD_EXIT_BBM);
-
-	for (i = 0; i < START_MAX_COUNT; i++) {
-		data = BDEV_RD(BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE + 4);
-		if (data == RSP_SUCCESS) {
-			complete = AVS_SUCCESS;
-			break;
-		}
-		avs_sleep(1000);
-	}
-
-	return complete;
-}
-
-/* If we're here as a result of a AC power restored and we were running
- * on battery backup then AVS firmware has already been loaded and
- * started and is waiting for a command to resume operations.  Send
- * the command instead of start-up process. Note: remember that we
- * resumed so that we don't try resetting, loading, or starting the
- * firmware later (as its already running). */
-static int avs_resume_firmware(void)
-{
-	int result = AVS_FAILURE;
-
-	if (fsbl_docsis_booted(0, 0)) {
-		if (AVS_DEBUG_STARTUP)
-			avs_print_string("Resuming from BBM...\n");
-		result = avs_resume_operation();
-		if (result == AVS_SUCCESS) {
-			if (AVS_DEBUG_STARTUP)
-				avs_print_string("Resume successful...\n");
-			did_we_resume = true;
-		}
-	}
-
-	return result;
-}
-
-#endif /* CFG_BATTERY_BACKUP */
 
 /* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
 
 #define AVS_RESERVED_SPACE 256 /* this area is reserved for over-temp restore */
+#define AVS_PARAM_SIZE     0x400
 
 static int load_code(void)
 {
@@ -415,21 +367,40 @@ static int load_code(void)
 	bytes = round_up(code_length);
 	if (AVS_DEBUG_STARTUP)
 		avs_print_string("Loading code...\n");
+#if (AVS_USE_EMMC_DATA_PART == 1)
+	/* read the code, data, and security params to the temporary buffer */
+	if (emmc_read_fsbl(AVS_SRAM_ADDR,
+		bytes+round_up(data_length)+AVS_PARAM_SIZE,
+		AVS_EMMC_DATA_PART_ADDR, false) != 0)
+		die("AVS code load from eMMC failed");
+	/* copy the code to AVS PROG_ARRAY */
+	memcpy(((void*)BCHP_PHYSICAL_OFFSET+
+		BCHP_AVS_CPU_PROG_MEM_WORDi_ARRAY_BASE),
+		(void*)MEMSYS_SRAM_ADDR, bytes); 
+#else
 	if (load_from_flash_ext((uint32_t *)(BCHP_PHYSICAL_OFFSET+
 		BCHP_AVS_CPU_PROG_MEM_WORDi_ARRAY_BASE), flash_offs,
 		bytes, &info.flash) < 0)
 		die("AVS code load failed");
+#endif
 
 	flash_offs += bytes;
 
 	bytes = round_up(data_length);
 	if (AVS_DEBUG_STARTUP)
 		avs_print_string("Loading data...\n");
+#if (AVS_USE_EMMC_DATA_PART == 1)
+	/* copy the data to AVS DATA_ARRAY */
+	memcpy(((void*)BCHP_PHYSICAL_OFFSET+
+		BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE),
+		(void*)(MEMSYS_SRAM_ADDR+round_up(code_length)), bytes); 
+#else
 	if (load_from_flash_ext(
 		(uint32_t *)(BCHP_PHYSICAL_OFFSET+
 		BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE), flash_offs,
 		bytes, &info.flash) < 0)
 		die("AVS data load failed");
+#endif
 
 	return AVS_LOADED;
 }
@@ -437,21 +408,25 @@ static int load_code(void)
 /* This loads the firmware (code and data) into the AVS CPU memory */
 static int avs_load_firmware(void)
 {
-	avs_reset_cpu();	/* we may need to reset it just in case it was
-				 * in hung status */
+	/* We may need to reset it just in case it was in hung status */
+	BDEV_WR_F(AVS_CPU_CTRL_CTRL, AVS_RST, 1);
+
+	/* The ARC CPU needs time (200ns) to complete the reset
+	 * before it can be accessed again */
+	avs_sleep(1);
 
 	/* Initialize the processor (setting this lets us read the core
 	 * registers from the host side) */
 	BDEV_WR_F(AVS_CPU_CTRL_CTRL, HOSTIF_SEL, 1);
 
-	return load_code();	/* load the code into the AVS SRAM memoory */
+	return load_code(); /* load the code into the AVS SRAM memoory */
 }
 
 /* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
 
 /* This passes the initialization parameters to the firmware */
 /* This can either be done at firmware load or before start */
-static void load_init_parameters(at_initialization *params)
+static void load_init_parameters(struct at_initialization *params)
 {
 	unsigned i;
 	uint32_t *p = (uint32_t *)params;
@@ -462,7 +437,7 @@ static void load_init_parameters(at_initialization *params)
 }
 
 /* The AVS CPU needs to be started after its loaded */
-static void avs_start_firmware(at_initialization *params)
+static void avs_start_firmware(struct at_initialization *params)
 {
 	avs_sleep(1000);
 
@@ -497,7 +472,7 @@ static void avs_print_this(const char *header, unsigned value)
  * SSBL */
 static void avs_dump_results(void)
 {
-	at_runtime results;
+	struct at_runtime results;
 	uint32_t *p = (uint32_t *)&results;
 	unsigned i, revision;
 
@@ -515,14 +490,14 @@ static void avs_dump_results(void)
 	avs_print_this(" PV=", results.PV0);
 	avs_print_this(" MV=", results.MV0);
 #if defined(AVS_DUAL_MONITORS) || defined(AVS_DUAL_DOMAINS)
-#if (BCHP_CHIP == 3390)
-	avs_print_this("DCD: Current voltage=", results.voltage1);
-#else
-	avs_print_this("CPU: Current voltage=", results.voltage1);
-#endif
-	avs_print_this(" temperature=", results.temperature1);
-	avs_print_this(" PV=", results.PV1);
-	avs_print_this(" MV=", results.MV1);
+	struct board_type *b = get_tmp_board();
+
+	if (!b || AVS_DOMAINS(b->avs) == 2) {
+		avs_print_this("CPU: Current voltage=", results.voltage1);
+		avs_print_this(" temperature=", results.temperature1);
+		avs_print_this(" PV=", results.PV1);
+		avs_print_this(" MV=", results.MV1);
+	}
 #endif
 
 	avs_print_string_val("AVS FW rev=", revision);
@@ -648,15 +623,6 @@ static bool did_I_cause_the_last_reset(void)
 	return result;
 }
 
-/* Once locked the code and data memories are inaccessible from host until a
- * reset */
-static void avs_lock_avs_cpu(void)
-{
-	BDEV_WR(BCHP_AVS_CPU_CTRL_ACCESS_LOCK, 7);	/* lock everything */
-	/* After executing this, you can no longer access the ICCM data or DCCM
-	 * after word 16 */
-}
-
 static void __maybe_unused avs_time_process_report(char *msg, unsigned was)
 {
 	unsigned time = get_time_diff(was);
@@ -707,11 +673,6 @@ int avs_common_load(void)
 	if (TIME_PROCESS)
 		time = get_time_diff(0);
 
-#if CFG_BATTERY_BACKUP
-	/* Check to see if we need to resume from an AC Lost situation */
-	result = avs_resume_firmware();
-#endif
-
 	/* If we failed to resume OR we're cold booting, then load firmware */
 	if (result != AVS_SUCCESS) {
 		result = avs_load_firmware();
@@ -732,7 +693,7 @@ int avs_common_load(void)
 int avs_common_start(void)
 {
 	unsigned __maybe_unused time;
-	at_initialization params;
+	struct at_initialization params;
 	int result = AVS_FAILURE;
 
 	/* If we resumed operation instead of reloading new code
@@ -765,9 +726,6 @@ int avs_common_start(void)
 	if (1 && ENABLE_TEST_PROMPTS)
 		ask_y_or_n("Continue", true);
 
-	if (ENABLE_AVS_LOCK && result == AVS_SUCCESS)
-		avs_lock_avs_cpu();
-
 	if (TIME_PROCESS)
 		avs_time_process_report("start time=", time);
 
@@ -791,7 +749,7 @@ void avs_warm_start(void)
  * test if not zero) */
 unsigned int avs_firmware_revision(void)
 {
-	at_runtime results;
+	struct at_runtime results;
 	uint32_t *p = (uint32_t *)&results;
 	unsigned i;
 	for (i = 0; i < sizeof(results) / sizeof(p); i++)

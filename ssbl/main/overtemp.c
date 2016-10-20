@@ -210,7 +210,7 @@ void bolt_overtemp_init(void)
 
 	/* Check if this AVS feature is functional. */
 	rc = avs_get_data(&voltage, &temperature, &fw_running);
-	if (rc || (voltage == 0) || (temperature <= 0)) {
+	if (rc || (voltage == 0)) {
 		warn_msg("AVS: temperature will not be monitored");
 		return;
 	}

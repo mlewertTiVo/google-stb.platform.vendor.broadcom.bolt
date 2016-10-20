@@ -48,5 +48,8 @@ enum {
 
 void arch_set_cpu_clk_ratio(int ratio);
 
+int memsys_ssbl_ddr_info(uint32_t idx, uint32_t *clock, uint32_t *phy_width,
+			   uint32_t *dev_size, uint32_t *dev_width);
+
 #endif /* __ASSEMBLER__ */
 #endif /*__ARCH_OPS_H__  */

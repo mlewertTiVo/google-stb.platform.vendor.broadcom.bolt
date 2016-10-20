@@ -43,7 +43,7 @@ struct board_type  *board_thisboard(void);
 uint32_t            board_totaldram( void ); /* in Mb */
 struct ddr_info    *board_find_ddr(struct board_type *b, uint32_t idx);
 dt_ops_s           *board_dt_ops(void);
-power_det_e         board_powermode();
+const struct dvfs_params *board_dvfs(void);
 char               *board_init_current_rts(void);
 int                 board_init_current_rts_boxmode(void);
 const sdio_params  *board_sdio(int sdio);

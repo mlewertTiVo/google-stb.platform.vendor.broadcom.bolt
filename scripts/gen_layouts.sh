@@ -44,7 +44,7 @@ fi
 function find_section() {
  while read -r line
  do
-  IFS=' ' read -ra ARR <<< "$line"
+  IFS=$' \t' read -ra ARR <<< "$line"
   if [[ "${ARR[0]}" == "section" ]]; then
    if [[ "${ARR[2]}" == $2 ]]; then
     LC_SEC=$(echo $2 | tr '[:upper:]' '[:lower:]')
@@ -82,9 +82,9 @@ do
  find_section $f "BOARDS" $Z
  find_section $f "AVS" $Z
  find_section $f "SSBL" $Z
- find_section $f "BFW1" $Z
- find_section $f "AVS1" $Z
- find_section $f "MEMSYS1" $Z
+ find_section $f "FIRST_BFW" $Z
+ find_section $f "FIRST_AVS" $Z
+ find_section $f "FIRST_MEMSYS" $Z
 done
 echo ");"
 

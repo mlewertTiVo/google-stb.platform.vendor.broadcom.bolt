@@ -31,6 +31,8 @@
 
 /* Register index into AON_SYSTEM_DATA_RAM. */
 #define AON_REG_ANDROID_RESTART_CAUSE   9
+#define AON_REG_ANDROID_RESTART_TIME    10
+#define AON_REG_ANDROID_RESTART_TIME_N  11
 
 
 /* BOLT environment variable names for Android recovery/boot images */
@@ -166,8 +168,9 @@ char *get_hardware_name()
 /*  *********************************************************************
     *  gen_bootargs(bootargs_buf,cmdline)
     *
-    *  Generate bootargs for kernel and append additional arguments as
-    *  required by Android
+    *  Generate bootargs for kernel/android:
+	 *     - append additional arguments if applicable.
+	 *     - create and populate '/firmware/android/xxx' device-tree nodes.
     *
     *  Input parameters:
     *  	   bootargs_buf - pointer to the buffer for holding bootargs
@@ -179,11 +182,15 @@ char *get_hardware_name()
     ********************************************************************* */
 static int gen_bootargs(char *bootargs_buf, const char *cmdline)
 {
-	int bootargs_buflen;
+	int bootargs_buflen = 0;
 	char *serialno_propname = "androidboot.serialno";
-	char *hardware_propname = "androidboot.hardware";
-	char *bootreason_propname = "androidboot.bootreason";
 	int append_serialno = 1; /*default always append serialno property*/
+	char dt_add_cmd[BOOT_ARGS_SIZE+64];
+
+	os_sprintf(dt_add_cmd, "dt add node / firmware");
+	bolt_docommands(dt_add_cmd);
+	os_sprintf(dt_add_cmd, "dt add node /firmware android");
+	bolt_docommands(dt_add_cmd);
 
 	bootargs_buflen = os_sprintf(bootargs_buf, "%s", cmdline);
 
@@ -194,23 +201,20 @@ static int gen_bootargs(char *bootargs_buf, const char *cmdline)
 			serialno_propname);
 		append_serialno = 0;
 	}
-
 	if (append_serialno) {
 		if (get_serial_no()) {
-			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
-					" %s=%s", serialno_propname, get_serial_no());
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android serialno s '%s'", get_serial_no());
+			bolt_docommands(dt_add_cmd);
 		} else {
-			os_printf("No valid BOARD_SERIAL env-var to create androidboot.serialno\n");
+			os_printf("No valid BOARD_SERIAL env-var to setup 'serialno'\n");
 		}
 	}
 
-	/* Always append "androidboot.hardware" property */
-	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
-				" %s=%s", hardware_propname, get_hardware_name());
+	os_sprintf(dt_add_cmd, "dt add prop /firmware/android hardware s '%s'", get_hardware_name());
+	bolt_docommands(dt_add_cmd);
 
-	/* Always append "bootreason" property to indicate the system reboot reason */
-	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
-				" %s=%s", bootreason_propname, aon_reset_string());
+	os_sprintf(dt_add_cmd, "dt add prop /firmware/android bootreason s '%s'", aon_reset_string());
+	bolt_docommands(dt_add_cmd);
 
 	return bootargs_buflen;
 }
@@ -561,12 +565,23 @@ static void wktmr_adjust(void)
 {
 	volatile uint32_t *counter = (volatile uint32_t *)
 		REG_ADDR(BCHP_WKTMR_REG_START + BCHP_WKTMR_COUNTER_REG_OFFSET);
+	uint32_t restart_time = AON_REG(AON_REG_ANDROID_RESTART_TIME);
+	uint32_t restart_time_n = AON_REG(AON_REG_ANDROID_RESTART_TIME_N);
 
 	/* Do not adjust if WKTMR further in time than the default time */
 	if (*counter < DEFAULT_ANDROID_DATE_UTC_SEC) {
-		os_printf("Setting WKTMR to %u sec (UTC)\n",
-			DEFAULT_ANDROID_DATE_UTC_SEC);
-		*counter = DEFAULT_ANDROID_DATE_UTC_SEC;
+		/* If time of reboot is saved, add it to current wktmr counter
+		 * to get the current time. */
+		if ((restart_time == ~restart_time_n) &&
+			(restart_time > DEFAULT_ANDROID_DATE_UTC_SEC)) {
+			os_printf("Setting WKTMR ahead by %u sec (UTC)\n",
+				restart_time);
+			*counter += restart_time;
+		} else {
+			os_printf("Setting WKTMR to %u sec (UTC)\n",
+				DEFAULT_ANDROID_DATE_UTC_SEC);
+			*counter = DEFAULT_ANDROID_DATE_UTC_SEC;
+		}
 	}
 }
 #endif

@@ -33,7 +33,6 @@
 #include "um_ahci.h"
 #include "fifo.h"
 #include "mem_pool.h"
-#include "config.h"
 
 #if ((BSP_CFG_SATA_SPEED_ALLOWED > 3) || \
 	(BSP_CFG_SATA_SPEED_ALLOWED < 0))
@@ -42,12 +41,12 @@
 
 /* Data */
 
-static ahci_rx_fises_t     *rx_fises[NUM_PORTS];
-static ahci_cmd_list_hdr_t *cmd_list_hdrs[NUM_PORTS];
-static ahci_cmd_tbl_t      *cmd_tbls[NUM_PORTS];
-static uint64_t            rx_fises_pa[NUM_PORTS];
-static uint64_t            cmd_list_hdrs_pa[NUM_PORTS][NUM_CMD_LIST_HDRS];
-static uint64_t            cmd_tbls_pa[NUM_PORTS][NUM_CMD_LIST_HDRS];
+static ahci_rx_fises_t     *rx_fises[MAX_SATA_PHY_PORTS];
+static ahci_cmd_list_hdr_t *cmd_list_hdrs[MAX_SATA_PHY_PORTS];
+static ahci_cmd_tbl_t      *cmd_tbls[MAX_SATA_PHY_PORTS];
+static uint64_t            rx_fises_pa[MAX_SATA_PHY_PORTS];
+static uint64_t cmd_list_hdrs_pa[MAX_SATA_PHY_PORTS][NUM_CMD_LIST_HDRS];
+static uint64_t cmd_tbls_pa[MAX_SATA_PHY_PORTS][NUM_CMD_LIST_HDRS];
 static sata_cdb_t          *tag_to_cdb[NUM_TAGS];
 static cdb_pool_t          __cdb_pool;
 static cdb_pool_t          *cdb_pool = &__cdb_pool;
@@ -78,7 +77,7 @@ static uint32_t __r32(void *addr)
 {
 	uint32_t val = *((volatile uint32_t *)addr);
 #if (PRINT_REG_ACCESSES)
-	func_printf("%xh => %08xh\n", VIRT_TO_PHYS((uint32_t)addr), val);
+	func_printf("%p => %08xh\n", addr, val);
 #endif
 	return val;
 }
@@ -89,8 +88,7 @@ static uint32_t __r32(void *addr)
 static void __w32(void *addr, uint32_t val)
 {
 #if (PRINT_REG_ACCESSES)
-	func_printf("%xh <= %08xh\n", (uint32_t)addr - g_base + 0xf0458000,
-			val);
+	func_printf("%p <= %08xh\n", addr, val);
 #endif
 	barrier();
 	*((volatile uint32_t *)addr) = val;
@@ -483,6 +481,8 @@ static int port_phy_init(sata_dev_t *dev, int port, int power_up)
 	pxsctl_scr2_scontrol_t scontrol;
 	pxserr_scr1_serror_t   serror;
 	pxcmd_cmd_n_stat_t     pxcmd;
+	pxssts_scr0_sstatus_t  sstatus;
+	int timeout = (3 * 1000) / 20; /* 3 seconds */
 
 	dbg_printf("Initializing PHY for port %d\n", port);
 
@@ -517,10 +517,25 @@ static int port_phy_init(sata_dev_t *dev, int port, int power_up)
 	pxcmd.bits.spin_up = 1;
 	__w32(&pr->cmd_and_stat, pxcmd.all);
 
-	usleep(MS_TO_TICKS(5));
-
 	/* Ensure COMINIT is cleared before touching status */
 	barrier();
+
+	while (--timeout) {
+		dmb();
+		sstatus.all = __r32(&pr->sstatus);
+		if (sstatus.bits.det == SCR2_DET_DEVICE_AND_COMM_OK)
+			break;
+		msleep(20);
+	}
+
+	if (sstatus.bits.det != SCR2_DET_DEVICE_AND_COMM_OK) {
+		err_printf("Spin up fail. No disk?\n");
+		dbg_printf("SUD: det:%d spd:%d ipm:%d)\n",
+			sstatus.bits.det,
+			sstatus.bits.spd,
+			sstatus.bits.ipm);
+		return ERR_NO_DRIVE;
+	}
 
 	/* Assert DET */
 	scontrol.all = __r32(&pr->scontrol);
@@ -550,21 +565,29 @@ static void sata_test_setup(sata_dev_t *dev)
 {
 	uint32_t base          = dev->reg_base;
 	uint32_t *top_bus_ctrl = (uint32_t *)(base + SATA_TOP_CTRL_BUS_CTRL);
-	uint32_t reg_value;
+	uint32_t pctrl, reg_value;
+	int i;
 
 	/* must write this before writing to IMPL reg */
 	reg_value = __r32(top_bus_ctrl);
 	reg_value |= 0x00010000;
 	__w32(top_bus_ctrl, reg_value);
 
-	/* Set correct port num and disable port multiplier support for now */
-	/* masked # of port implementation */
+	/* Disable port multiplier support for now. */
 	reg_value = __r32((uint32_t *)(base + SATA_AHCI_GHC_HBA_CAP));
-	reg_value = (reg_value & 0xfffdffe0) | 1;
+	reg_value &= 0xfffdffff; /* Bit 17: Support_Port_Multiplier */
 	__w32((uint32_t *)(base + SATA_AHCI_GHC_HBA_CAP), reg_value);
 
-	/* Write ports implemented */
-	__w32((uint32_t *)(base + SATA_AHCI_GHC_PORTS_IMPLEMENTED), 3);
+	pctrl = (uint32_t)dev->hba_regs + SATA_FIRST_PORT_CTRL;
+
+	for (i = 0; i < MAX_SATA_PHY_PORTS; i++) {
+		/* Adjust timeout to allow PLL sufficient time to lock
+		 * while waking up from slumber mode.
+		 */
+		__w32((uint32_t *)SATA_PORT_PCTRL6(pctrl), 0xff1003fc);
+
+		pctrl += SATA_NEXT_PORT_CTRL_OFFSET;
+	}
 
 	/* Must clear after use */
 	reg_value = __r32(top_bus_ctrl);
@@ -697,23 +720,28 @@ static void handle_port_irq(sata_dev_t *sata_dev, int port)
 		sata_dev->non_q_barrier[port] = 0;
 }
 
-static void *task_irqpoll(void *arg)
-{
 #if defined(__SINGLE_THREADED)
+static int task_irqpoll(void *arg)
+{
 	const int  is_single_threaded = 1;
 #else
+static void *task_irqpoll(void *arg)
+{
 	const int  is_single_threaded = 0;
 #endif
 	sata_dev_t *sata_dev = (sata_dev_t *)arg;
-	int        irq_num        = 0;
-	int        prev_irq_num;
+	int irq_num = 0, prev_irq_num, inner_timeout;
 
 #if (DEBUG)
 	if (!is_single_threaded)
 		dbg_printf("Start %s\n", __func__);
 #endif
-
 	for (;;) {
+
+		if (is_single_threaded) {
+			dbg_printf("Outer POLL %s\n", __func__);
+		}
+
 		if (!is_single_threaded) {
 			prev_irq_num = irq_num;
 			irq_num = sata_dev->irq_wait();
@@ -725,9 +753,16 @@ static void *task_irqpoll(void *arg)
 			}
 		}
 
+		/* Command (drive response) within 5 seconds. */
+		inner_timeout = 5000;
+
 		for (;;) {
 			int      port;
 			uint32_t is = __r32(&sata_dev->hba_regs->is);
+
+			if (is_single_threaded) {
+				dbg_printf("Inner POLL %s\n", __func__);
+			}
 
 			if (is) {
 				for_each_port(port) {
@@ -752,6 +787,19 @@ static void *task_irqpoll(void *arg)
 				if (!cmds_outstanding)
 					break;
 			}
+
+			if (is_single_threaded) {
+				if (0 >= inner_timeout--) {
+					dbg_printf("Inner POLL TIMEOUT!%s\n",
+						__func__);
+#if defined(__SINGLE_THREADED)
+					return ERR_TIMEOUT;
+#else
+					break;
+#endif
+				}
+				msleep(1);
+			}
 		}
 
 		if (is_single_threaded)
@@ -767,7 +815,11 @@ static void *task_irqpoll(void *arg)
 		thr_exit(NULL);
 	}
 
+#if defined(__SINGLE_THREADED)
+	return 0;
+#else
 	return NULL;
+#endif
 }
 
 static int task_irqpoll_init(sata_dev_t *dev)
@@ -1097,7 +1149,10 @@ int um_ahci_core_init(const um_ahci_cfg_t *cfg)
 	hba_reset(dev);
 
 	/* The ports_implemented field is offset-by-1 */
-	if ((dev->hba_regs->cap.bits.num_of_ports + 1) != NUM_PORTS) {
+	if ((dev->hba_regs->cap.bits.num_of_ports + 1) != MAX_SATA_PHY_PORTS) {
+		err_msg("Port mismatch: %u != %u",
+			dev->hba_regs->cap.bits.num_of_ports + 1,
+			MAX_SATA_PHY_PORTS);
 		status = ERR_PORT_MISMATCH;
 		goto done;
 	}
@@ -1172,8 +1227,10 @@ int um_ahci_core_init(const um_ahci_cfg_t *cfg)
 			(unsigned int)VIRT_TO_PHYS(dev->hba_regs), (unsigned int)dev->hba_regs);
 	printf("| Port 0             | %#08x | %#08x |\n",
 			(unsigned int)VIRT_TO_PHYS(dev->port_regs[0]), (unsigned int)dev->port_regs[0]);
+#if MAX_SATA_PHY_PORTS > 1
 	printf("| Port 1             | %#08x | %#08x |\n",
 			(unsigned int)VIRT_TO_PHYS(dev->port_regs[1]), (unsigned int)dev->port_regs[1]);
+#endif
 	printf("| Pool               | %#08llx | %#08x |\n",
 			(unsigned long long)mem_pool_info.pa, (unsigned int)mem_pool_info.va);
 	printf("+----------------------------------------------+\n");
@@ -1276,8 +1333,7 @@ int sata_cmd_issue(sata_cdb_t *cdb)
 		fifo_push(&cdb_fifo, cdb->cdb_idx);
 #if defined(__SINGLE_THREADED)
 		task_cdb_exec(cdb->dev);
-		/* TODO: Need a status check */
-		task_irqpoll(cdb->dev);
+		status = task_irqpoll(cdb->dev);
 #endif
 	}
 

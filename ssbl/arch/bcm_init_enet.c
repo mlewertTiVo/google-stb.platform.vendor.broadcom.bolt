@@ -86,20 +86,6 @@ static void board_mii_cfg(unsigned int hint)
 		BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_NO_SCAN_0,
 				rgmii_1_pad_sel, pad_sel_val);
 #endif
-
-#ifdef CONFIG_BCM3390A0 /* SWBOLT-1684 */
-	{
-		struct fsbl_info *inf = board_info();
-
-		/* For BCM93390VMS52S only. */
-		if (inf && (inf->bid == 0x50)) {
-			BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_NO_SCAN_0,
-				rgmii_1_pad_modehv, 0);
-			BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_NO_SCAN_0,
-				rgmii_1_pad_amp_en, 1);
-		}
-	}
-#endif /* CONFIG_BCM3390A0 */
 }
 #endif /* CFG_ENET */
 
@@ -178,22 +164,6 @@ static void board_exit_systemport(void)
 #define board_ll_exit_enet board_exit_systemport
 #endif /* CFG_SYSTEMPORT */
 
-#if CFG_RUNNER && CFG_ENET
-static void board_init_runner(void)
-{
-	board_mii_cfg(0);
-
-	bolt_add_device(&runnerdrv, 0, 0, (int *)0);
-}
-
-static void board_exit_runner(void)
-{
-}
-
-#define board_ll_init_enet board_init_runner
-#define board_ll_exit_enet board_exit_runner
-
-#endif
 
 #if CFG_ENET
 void board_init_enet(void)

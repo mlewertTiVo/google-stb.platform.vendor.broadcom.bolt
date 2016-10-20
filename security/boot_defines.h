@@ -32,16 +32,6 @@
 #define AVS1_IMAGE_FLASH_OFFSET                 (0x00131000)
 
 
-#if CFG_ZEUS4_2_1
-#define AVS_PARAMETER_OFFSET                    (0x00004880)
-#define AVS_SIGNATURE_OFFSET                    (0x00004894)
-#define AVS_KEY4_OFFSET                         (0x000049A0)
-#else /* Plain ol' Zeus 4.2 */
-#define AVS_PARAMETER_OFFSET                    (0x00003C00)
-#define AVS_SIGNATURE_OFFSET                    (0x00003C14)
-#define AVS_KEY4_OFFSET                         (0x00003D20)
-#endif
-
 /* MemsysFW */
 #define MEMSYS2_IMAGE_FLASH_OFFSET              (MEMSYS_TEXT_OFFS)
 #define MEMSYS1_IMAGE_FLASH_OFFSET              (0x00135000)
@@ -63,9 +53,6 @@
 
 /* AVS */
 #define AVS2_IMAGE_FLASH_OFFSET                 (0x00051000)
-#define AVS_PARAMETER_OFFSET                    (0x00003C00)
-#define AVS_SIGNATURE_OFFSET                    (0x00003C10)
-#define AVS_KEY4_OFFSET                         (0x00003D10)
 
 #else
 
@@ -89,7 +76,11 @@
 #endif
 
 #define BFW_USE_EMMC_DATA_PART                  0x0
+#define AVS_USE_EMMC_DATA_PART                  0x0
+#define MEMSYS_USE_EMMC_DATA_PART               0x0
 #define BFW_EMMC_DATA_PART_ADDR                 0x4000000
+#define AVS_EMMC_DATA_PART_ADDR                 0x4100000
+#define MEMSYS_EMMC_DATA_PART_ADDR              0x4200000
 
 #define BFW_2ND_PART_OFFSET                     (0x20000)
 #define	BFW_LOADFROMDRAM                        0x00
@@ -234,6 +225,12 @@
 
 #define BOOT_BSP_RESET_MASK                     0xC0000000
 #define BOOT_BSP_RESET_FLAG                     0x80000000
+
+/* Rescue Loader */
+#define RESCUE_LOADER_PART_OFFSET               0x0006C000
+#define RESCUE_LOADER_SIZE                      0x00090000
+#define RESCUE_LOADER_PART                      0x00000000
+#define RESCUE_LOADER_CTRL                      0x00000800
 
 #define TRACE_VALID_MARKER          0x712A0000
 

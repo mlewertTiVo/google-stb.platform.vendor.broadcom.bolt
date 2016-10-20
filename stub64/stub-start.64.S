@@ -14,6 +14,7 @@
 #include "aarch64/armv8-regs.h"
 #include "aarch64/armv8-macros.h"
 #include <config.h>
+#include <bchp_hif_cpubiuctrl.h>
 
 .section .init
 .align   4
@@ -154,6 +155,13 @@ bootmode:
 	 *  disable all monitor debug
 	 */
 	msr	mdscr_el1, xzr
+
+#if defined(CONFIG_BCM7260A0)
+	/* limit0: RBUS 0x0_FFD0_0000..0x0_FFFF_FFFF */
+	ldr	x0, =(0xd0000000+BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT0)
+	ldr	w1, =0x00ffd000
+	str	w1, [x0, #0]
+#endif
 
 	bl	gic_secure_init
 

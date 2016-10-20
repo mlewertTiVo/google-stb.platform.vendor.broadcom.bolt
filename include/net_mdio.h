@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -12,7 +10,10 @@
 #ifndef __NET_MDIO_H__
 #define __NET_MDIO_H__
 
-#include "lib_types.h"
+#include <lib_types.h>
+#include <timer.h>
+
+#include <stdbool.h>
 
 #define PHY_MAX_ADDR		32
 #define PHY_BCAST_ADDR		0
@@ -28,6 +29,8 @@ typedef struct mdio_info_s {
 	int devhandle;
 	uint32_t phy_id;
 	char devname[8]; /* 8 (eight) for "mdio0", "mdio1", and so on */
+	bool is_timer_aneg; /* auto-neg is in progress if true */
+	bolt_timer_t timer_aneg;
 } mdio_info_t;
 
 typedef enum phy_speed {
@@ -84,7 +87,9 @@ int mdio_read(mdio_info_t * mdio, int addr, uint16_t regnum);
 int mdio_write(mdio_info_t * mdio, int addr, uint16_t regnum, uint16_t data);
 
 /* Library functions used by Ethernet/MDIO bus drivers */
+int mdio_get_linkstatus(mdio_info_t * mdio, int addr);
 uint32_t mdio_get_phy_id(mdio_info_t * mdio, int addr);
+unsigned int mdio_get_timeout_autoneg(void);
 int mdio_phy_find_first(mdio_info_t * mdio, int skip_addr);
 void mdio_set_advert(mdio_info_t * mdio, int addr, phy_speed_t speed);
 int mdio_phy_reset(mdio_info_t * mdio, int addr);

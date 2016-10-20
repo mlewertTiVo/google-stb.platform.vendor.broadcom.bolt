@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -85,6 +83,7 @@ static int dns_dolookup(int s, uint8_t *server, char *hostname,
 	uint16_t nar;
 	uint8_t tmpb;
 	int expired;
+	int res;
 
 	/* Use the current time for our request ID
 	 */
@@ -125,7 +124,11 @@ static int dns_dolookup(int s, uint8_t *server, char *hostname,
 	/* Send the request to the name server
 	 */
 
-	udp_send(s, buf, server);
+	res = udp_send(s, buf, server);
+	if (res < 0) {
+		udp_free(buf);
+		return res;
+	}
 
 	/* Set a timer for the response
 	 */

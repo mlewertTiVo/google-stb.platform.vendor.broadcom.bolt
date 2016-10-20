@@ -11,10 +11,12 @@
 #ifndef _FSBL_EMMC_H
 #define _FSBL_EMMC_H
 
+#include <stdbool.h>
 #include <lib_types.h>
 
-int emmc_read_bfw(uint32_t dma_addr,
+int emmc_read_fsbl(uint32_t dma_addr,
 		  uint32_t bfw_size,
-		  uint32_t emmc_addr);
+		  uint32_t emmc_addr,
+		  bool     dma_used);
 
 #endif /* _FSBL_EMMC_H */

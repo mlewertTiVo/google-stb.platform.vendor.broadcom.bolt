@@ -21,9 +21,11 @@ CFG			:= $(firstword $(filter %.cfg, $(SAVED_CFG) config/family-$(FAMILY).cfg))
 DTC_COMMIT		:= g448faa43
 ZLIB_VER		:= 1.2.8
 SCRIPT_ENG		:= scripts/config.pl
-SCRIPT_MODULES		:= scripts/BcmDt/Devices.pm \
-			   scripts/DevTree.pm \
-			   scripts/BcmUtils.pm
+SCRIPT_MODULES		:= scripts/BcmDt/Board.pm \
+			   scripts/BcmDt/Devices.pm \
+			   scripts/BcmSdio.pm \
+			   scripts/BcmUtils.pm \
+			   scripts/DevTree.pm
 DATE_FILE		:= $(GEN)/$(FAMILY)/build_date.c
 ODIR			:= objs/$(FAMILY)
 TMPDIR			:= /tmp
@@ -108,7 +110,8 @@ CFG_GEN_FILES := $(addprefix $(GEN)/$(FAMILY)/, \
 	rts.c \
 	board_params.h \
 	) \
-	$(DTS)
+	$(DTS) \
+	$(BOARD_DTS)
 
 # These are all of the files read by $(SCRIPT_ENG)
 CFG_DEPS := $(shell scripts/get_cfg_deps.pl $(CFG) 2>/dev/null)
@@ -127,7 +130,8 @@ $(CFG_GEN_FILES) $(GEN)/.family: $(CFG_GEN_FILES_DEPS) include/$(FAMILY)/*.*
 	$(Q)echo "  CFG.PL  $(CFG)"
 	$(Q)echo "  FAMILY  $(FAMILY)"
 	$(Q)echo "  ================================"
-	$(Q)$(SCRIPT_ENG) -f $(FAMILY) -c $(CFG) -r include/$(FAMILY) -D $(ODIR) $(CFG_SINGLE_BOARD) -g $(GEN)
+	$(Q)$(SCRIPT_ENG) -f $(FAMILY) -c $(CFG) -r include/$(FAMILY) \
+		-m include/$(FAMILY) -D $(ODIR) $(CFG_SINGLE_BOARD) -g $(GEN)
 	$(Q)cp $(GEN)/$(FAMILY)/family $(GEN)/.family
 	$(Q)echo -n $(CFG) > $(GEN)/.config
 

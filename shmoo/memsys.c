@@ -25,7 +25,13 @@
   - for bringup it can be hard wired.
   - no shmooing or memsysinit for FSBL only emulation.
 */
+#if defined(CFG_FULL_EMULATION) || defined(CFG_EMULATION)
+void memsys_init_all(int x) {
+
+}
+#else
 extern void memsys_init_all(int x);
+#endif
 
 
 void memsys_load(void)

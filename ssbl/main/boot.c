@@ -7,6 +7,7 @@
  *
  ***************************************************************************/
 
+#include <aon_defs.h>
 #include <arch_ops.h>
 #include <bootblock.h>
 #include <bolt.h>
@@ -200,27 +201,14 @@ int bolt_go(bolt_loadargs_t *la)
 	 * after re-constructing page table
 	 */
 #ifdef STUB64_START
-	if (!(la->la_flags & LOADFLG_DIRECT_CALL)) {
-		if (la->la_flags & LOADFLG_APP64) {
-			xprintf("64 bit PSCI boot...\n");
-			bolt_start64(la->la_entrypt, 0xffffffff,
-					(unsigned int)p.dt_address, 0);
-		} else {
-			xprintf("32 bit PSCI boot...\n");
-			bolt_start32(la->la_entrypt, 0xffffffff,
-					(unsigned int)p.dt_address, 0);
-		}
-		/* In the remote event a non-BSU app saved
-		 * BOLT state for a return.
-		 */
-		return BOLT_OK;
-	} else
+	if (!(la->la_flags & LOADFLG_DIRECT_CALL))
+		return psci_boot(la->la_flags, la->la_entrypt, p.dt_address);
 #endif
-	{
-		xprintf("32 bit boot...\n");
-		bolt_start(la->la_entrypt, 0xffffffff,
-			(unsigned int)p.dt_address, 0);
-	}
+	bolt_set_aon_bootmode(0); /* Used for S3 to say how we first booted. */
+	xprintf("32 bit direct boot...\n");
+	bolt_start(la->la_entrypt, 0xffffffff,
+		(unsigned int)p.dt_address, 0);
+
 	/* In the remote event a non-BSU app saved
 	 * BOLT state for a return.
 	 */
@@ -450,4 +438,24 @@ out:
 #endif
 
 	return res;
+}
+
+/**********************************************************************
+  *  bolt_set_aon_bootmode(flags)
+  *
+  *  Set bits to communicate over an S3 power-save cycle.
+  *  Note: Linux may further modify the saved contents and not
+  *  all bits set here are preserved.
+  *
+  *  Input parameters:
+  *	 flags - Bits to set. See include/aon_defs.h for the
+  *		      complete S3_FLAG_* enumerated list.
+  *
+  *  Return value:
+  *	 nothing
+  ***********************************************************************/
+void bolt_set_aon_bootmode(unsigned long flags)
+{
+	AON_REG(AON_REG_MAGIC_FLAGS) = flags;
+	dmb();
 }

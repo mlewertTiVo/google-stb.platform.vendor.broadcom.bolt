@@ -20,9 +20,16 @@
 #include <aon_defs.h>
 #include <memsys-if.h>
 
+#if defined(BCHP_DDR34_PHY_CONTROL_REGS_A_0_REG_START) /* LPDDR4 */
+#define DDR_PHY_STANDBY_CONTROL_OFFS_A \
+		(BCHP_DDR34_PHY_CONTROL_REGS_A_0_STANDBY_CONTROL - DDR_PHY(0))
 
+#define DDR_PHY_STANDBY_CONTROL_OFFS_B \
+		(BCHP_DDR34_PHY_CONTROL_REGS_B_0_STANDBY_CONTROL - DDR_PHY(0))
+#else
 #define DDR_PHY_STANDBY_CONTROL_OFFS \
 		(BCHP_DDR34_PHY_CONTROL_REGS_0_STANDBY_CONTROL - DDR_PHY(0))
+#endif
 
 #define ADDROF(base, offset) \
 	((void *)((uint32_t)base + ((uint32_t)offset)))
@@ -336,6 +343,58 @@ void shmoo_load(void)
 
 /* ------------------------------------------------------------------------- */
 #if CFG_PM_S3
+
+#if defined(BCHP_DDR34_PHY_CONTROL_REGS_A_0_REG_START) /* LPDDR4 */
+
+static void warm_restart_channel(physaddr_t stdby_cntl)
+{
+	uint32_t tmp;
+
+	/*
+	 * PHY S3 Exit Sequence
+	 * --------------------
+	 * step 2: CONFIGURE RST_N / CKE levels.  Write these fields atomically
+	 */
+
+	/* CKE = 0, RST_N = 1 */
+	tmp = BDEV_RD(stdby_cntl);
+	tmp &= ~BCHP_DDR34_PHY_CONTROL_REGS_A_0_STANDBY_CONTROL_CKE_MASK;
+	tmp |= BCHP_DDR34_PHY_CONTROL_REGS_A_0_STANDBY_CONTROL_RST_N_MASK;
+	BDEV_WR(stdby_cntl, tmp);
+
+	/* step 3: wait 10 us */
+	udelay(10);
+	BARRIER();
+
+	/* step 4: FORCE RST_N / CKE levels. */
+	tmp = BDEV_RD(stdby_cntl);
+	tmp |=
+	BCHP_DDR34_PHY_CONTROL_REGS_A_0_STANDBY_CONTROL_FORCE_CKE_RST_N_MASK;
+	BDEV_WR(stdby_cntl, tmp);
+	BARRIER();
+}
+
+static void warm_restart_memc(int memc)
+{
+	const struct memsys_params *p = &shmoo_params[memc];
+
+	/*
+	 * PHY S3 Exit Sequence
+	 * --------------------
+	 * step 1: Configure S3 powerdown exit PHY pin sequence
+	 */
+	BDEV_WR_F(SHIMPHY_ADDR_CNTL_0_DDR_PAD_CNTRL, S3_PWRDWN_SEQ, 3);
+	BDEV_WR_F(DDR34_PHY_COMMON_REGS_0_PLL_CONFIG, ENABLE_EXT_CTRL, 1);
+	BDEV_WR_F(SHIMPHY_ADDR_CNTL_0_DFI_CONTROL,
+			PHY_PLL_CTRL_RDB_OVERRIDE, 0);
+	BARRIER(); /* Fully complete before moving on. */
+
+	warm_restart_channel(p->phy_reg_base + DDR_PHY_STANDBY_CONTROL_OFFS_A);
+	warm_restart_channel(p->phy_reg_base + DDR_PHY_STANDBY_CONTROL_OFFS_B);
+}
+
+#else
+
 static void warm_restart_memc(int memc)
 {
 	uint32_t tmp;
@@ -351,7 +410,7 @@ static void warm_restart_memc(int memc)
 	tmp |= BCHP_DDR34_PHY_CONTROL_REGS_0_STANDBY_CONTROL_RST_N_MASK;
 	BDEV_WR(stdby_cntl, tmp);
 
-	/* Delay 10 us */
+	/* Delay 1000 us */
 	sleep_ms(1);
 
 	/* Force the RST_N / CKE levels */
@@ -362,6 +421,8 @@ static void warm_restart_memc(int memc)
 
 	BDEV_WR(stdby_cntl, tmp);
 }
+
+#endif
 
 void memsys_warm_restart(int num_memc)
 {

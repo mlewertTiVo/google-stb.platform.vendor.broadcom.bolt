@@ -16,6 +16,42 @@ use File::Basename;
 my $P = basename $::0;
 our $Debug = 0;
 
+my $year = (localtime())[5] + 1900;
+my $cheader = "/***************************************************************************
+ *     Copyright (c) 2012-$year, Broadcom
+ *     All Rights Reserved
+ *     Confidential Property of Broadcom
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ *
+ ***************************************************************************/
+\n";
+
+my $makeheader = "#
+#	 Copyright (c) 2012-$year, Broadcom
+#	 All Rights Reserved
+#	 Confidential Property of Broadcom
+#
+#  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+#  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+#  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
+#\n";
+
+sub create_copyright_header($)
+{
+	my $type = shift;
+	my $string = "";
+
+	if ($type =~ /[h c]/) {
+		return ($cheader);
+	}
+	elsif ($type =~ /mk/) {
+		return ($makeheader);
+	}
+}
 
 ########################################################################
 # FUNCTION:
@@ -371,10 +407,11 @@ sub grok_defines_from_c_incl_files
 	return ($rh, $ra);
 }
 
-sub grok_memc_client_names
+sub grok_memc_client_names($$)
 {
 	my @memc_client_defines;
-	my @file_patterns = @_;
+	my ($fp, $chip_arch) = @_;
+	my @file_patterns = @{$fp};
 	my @files;
 	my $f;
 
@@ -431,11 +468,54 @@ sub grok_memc_client_names
 		close ($fh);
 	}
 
-	die "Missing BCHP client names" if scalar(@memc_client_defines) == 0;
+	die "Missing BCHP client names" if scalar(@memc_client_defines) == 0 &&
+		$chip_arch ne "MIPS";
 
 	return \@memc_client_defines;
 }
 
+########################################################################
+# FUNCTION:
+#   bigint_to_two_hexint
+#
+# DESCRIPTION:
+#   Takes a Math::Bigint object number and split it in two 32-bits
+#   pairs (hi and lo)
+#
+# PARAMS:
+#   $bigint ... the large number to split
+#
+# RETURNS:
+#   $hi, $lo ... a two entry array containing the high 32-bits part of the
+#   number and the low 32-bits part of the number
+########################################################################
+sub bigint_to_two_hexint($) {
+	my $bigint = Math::BigInt->new(shift);
+	my $lo = $bigint & 0xffffffff;
+	$lo = $lo->as_hex();
+	my $hi = $bigint->brsft(32)->as_hex();
+	return ($hi, $lo);
+}
+
+########################################################################
+# FUNCTION:
+#   bigint_is_power_of_two
+#
+# DESCRIPTION:
+#   Takes a Math::Bigint object number and return if it is a power of
+#   two
+#
+# PARAMS:
+#   $x ... the large number to evaluate for power of two
+#
+# RETURNS:
+#   true if the number is a power of two, false otherwise
+########################################################################
+sub bigint_is_power_of_two($)
+{
+	my $x = Math::BigInt->new(shift);
+	return (($x != 0) && (($x & (~$x + 1)) == $x));
+}
 
 ########################################################################
 # FUNCTION:
@@ -491,14 +571,9 @@ sub get_num_serial($)
 sub get_num_bsc($)
 {
 	my $bchp_defines = shift;
-	my $count = 0;
-	my $tmp;
-	do {
-	        my $letter = chr(65 + $count);
-		$tmp = sprintf('BCHP_BSC%s_REG_START', $letter);
-		$count++ if $bchp_defines->{$tmp};
-	} while ($bchp_defines->{$tmp});
-	return $count;
+	my @a = sort grep { /^BCHP_BSC[A-Z]_REG_START$/ }
+		keys %${bchp_defines};
+	return scalar(@a);
 }
 
 sub get_num_usb($)
@@ -545,31 +620,38 @@ sub get_num_sata_phy($$)
 {
 	my ($bchp_defines, $sata) = @_;
 	my $count = 0;
-	my ($tmp0, $tmp1);
+	my ($tmp0, $tmp1, $tmp2);
 	do {
 		$tmp0 = sprintf("${sata}_PORT%d_PCB_REG_START", $count);
 		$count++ if $bchp_defines->{$tmp0};
 		$tmp1 = sprintf("BCHP_PORT%d_SATA3_PCB_REG_START", $count);
 		$count++ if $bchp_defines->{$tmp1};
 	} while ($bchp_defines->{$tmp0} or $bchp_defines->{$tmp1});
+
+	return $count if ($count);
+
+	# Legacy platforms did not have PCB registers available in RDB, but
+	# they were there anyway, let's just use the PORTi_CTRL
+	do {
+		$tmp0 = sprintf("BCHP_SATA_PORT%d_CTRL_REG_START", $count);
+		$count++ if $bchp_defines->{$tmp0};
+	} while ($bchp_defines->{$tmp0});
+
 	return $count;
 }
 
-
-sub get_num_sdio($)
+sub get_num_sata_phy_ctl($)
 {
 	my $bchp_defines = shift;
-	my $count = 0;
-	my $n = 0;
+	my $c = 0;
 	my $tmp;
 	do {
-		$tmp = sprintf('BCHP_SDIO_%d_HOST_REG_START', $n);
-		$count++ if $bchp_defines->{$tmp};
-		$n++;
-	} while ($bchp_defines->{$tmp} || ($n < 3));
-	return $count;
+		#Starting offset for these registers is 1, not 0.
+		$tmp = sprintf('BCHP_SATA_TOP_CTRL_PHY_CTRL_%d', $c + 1);
+		$c++ if $bchp_defines->{$tmp};
+	} while ($bchp_defines->{$tmp});
+	return $c;
 }
-
 
 sub get_num_pcie($)
 {
@@ -580,6 +662,10 @@ sub get_num_pcie($)
 		$tmp = sprintf('BCHP_PCIE_%d_RC_CFG_TYPE1_REG_START', $count);
 		$count++ if $bchp_defines->{$tmp};
 	} while ($bchp_defines->{$tmp});
+
+	# 40nm chips only had on PCIE RC
+	$count++ if defined($bchp_defines->{BCHP_PCIE_RC_CFG_TYPE1_REG_START});
+
 	return $count;
 }
 
@@ -630,6 +716,13 @@ sub get_num_sun_l2($)
 	return defined($bchp_defines->{BCHP_SUN_L2_REG_START}) ? 1 : 0;
 }
 
+sub get_num_hif_spi_l2($)
+{
+	my $bchp_defines = shift;
+	return defined($bchp_defines->{BCHP_HIF_SPI_INTR2_REG_START}) ? 1 : 0;
+}
+
+
 sub get_num_gisb_arb($)
 {
 	my $bchp_defines = shift;
@@ -654,12 +747,19 @@ sub get_num_avs_host_l2($)
 	return defined($bchp_defines->{BCHP_AVS_HOST_L2_REG_START}) ? 1 : 0;
 }
 
+sub get_num_avs_cpu($)
+{
+	my $bchp_defines = shift;
+	return defined($bchp_defines->{BCHP_AVS_CPU_DATA_MEM_REG_START}) ? 1 : 0;
+}
+
 sub get_l2_intc_mapping($)
 {
 	my $l2_intc = shift;
 	my %l2_irq_subst = (
 		"sun_l2" => "SYS",
 		"hif_intr2" => "HIF",
+		"hif_spi_intr2" => "HIF_SPI",
 		"aon_pm_l2" => "SYS_PM",
 		"avs_host_l2" => "AVS",
 		"memc_l2_0_0" => "MEMC0",
@@ -718,14 +818,18 @@ sub gen_irq0_int_mapping($)
 {
 	my $bchp_defs = shift;
 
-	my $n = get_num_bsc($bchp_defs);
-	my @a = split //, substr("abcdefghij", 0, $n);
+	# Just brute force, since some chips may have unpopulated BSC
+	# controllers that create a hole (e.g: 7250 has no BSCB)
+	my @a = split //, substr("abcdefghij", 0, 10);
 	foreach (@a) {
 		my $iic = 'BCHP_IRQ0_IRQEN_iic' . $_ . '_irqen_MASK';
 		if ($bchp_defs->{$iic}) {
 			$irq_int_mapping{irq0}->{"iic${_}"} = 'UPG_BSC';
-		} else {
-			 $irq_int_mapping{irq0_aon}->{"iic${_}"} = 'UPG_BSC_AON';
+		}
+
+		$iic = 'BCHP_IRQ0_AON_IRQEN_iic' . $_ . '_irqen_MASK';
+		if ($bchp_defs->{$iic}) {
+			$irq_int_mapping{irq0_aon}->{"iic${_}"} = 'UPG_BSC_AON';
 		}
 	}
 }
@@ -1031,15 +1135,16 @@ sub mcp_wr_pairing_allowed($)
 {
 	my $family_name = shift;
 	my %mcp_wp_allowed_tbl = (
-	       "7445e0" => "1",
-	       "3390b0" => "1",
 	       "7250b0" => "1",
+	       "7260a0" => "1",
+	       "7268a0" => "1",
+	       "7271a0" => "1",
 	       "7364a0" => "1",
 	       "7364b0" => "1",
+	       "7364c0" => "1",
 	       "74371a0" => "1",
 	       "7439b0" => "1",
-	       "7271a0" => "1",
-	       "7268a0" => "1",
+	       "7445e0" => "1",
         );
 
 	return defined($mcp_wp_allowed_tbl{$family_name}) ? 1 : 0;
@@ -1081,19 +1186,36 @@ sub get_moca_hwrev($)
 	my $bchp_defines = shift;
 	my $chip_id = sprintf("%x", get_chip_family_id($bchp_defines));
 	my $chip_rev = sprintf("%x", get_chip_family_rev($bchp_defines));
-	# Empty for now
-	my %chip_tbl = ();
+	my %chip_tbl = (
+		"7425" => 0x2001,
+		"7429" => 0x2002,
+		"7435" => 0x2002,
+	);
 
-	if (!defined($chip_tbl{$chip_id})) {
-		# 3390A0 has a 0x2003 revision, while newer chips have a 0x2004
-		if ($chip_id eq "3390" and $chip_rev >= "10") {
-			return 0x2004;
-		} else {
-			return 0x2003;
-		}
-	} else {
-		return $chip_tbl{$chip_id};
-	}
+	return 0x2003
+		if (!defined($chip_tbl{$chip_id}));
+
+	return $chip_tbl{$chip_id};
+}
+
+sub validate_mips_interrupt_cells($)
+{
+}
+
+sub format_mips_interrupt_cells($$)
+{
+	my ($flags, $irq) = @_;
+	my @cells;
+
+	push @cells, $irq;
+
+	return @cells;
+}
+
+sub get_arch($)
+{
+	my $bchp_defines = shift;
+	return defined($bchp_defines->{BCHP_BOOTSRAM_TM_REG_START}) ? "ARM" : "MIPS";
 }
 
 1;

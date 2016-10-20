@@ -137,6 +137,11 @@ endif
 ifeq ($(ZEUS_REVOCATION),1)
 ZEUS_VER:=$(ZEUS_VER)revoc
 endif
+
+ifneq ($(STUB64_START),)
+ZEUS_VER:=$(ZEUS_VER)stub
+endif
+
 # ----------------------------------
 
 ifneq ($(CSTRICT),$(USTRICT))
@@ -309,11 +314,19 @@ $(ODIR)/avs_fw.o: $(AVS_FW_S)
 SSBL_DEPS:=$(SSBL_O) $(ODIR)/ssbl.lds $(CA_LIB) $(CA_LIB_EXT) $(LIBGCC)
 SSBL_DEPS+= $(ODIR)/config_dtb.o $(ODIR)/build_date.o
 
+# Have a rule for this or else make thinks they are intermediary build
+# products and nukes the .dtb and .dtb.o files. Could use .SECONDARY
+# but that works out not so well.
+BOARD_DTB=$(patsubst $(GEN)/$(FAMILY)/%.dts,$(ODIR)/%.dtb,$(BOARD_DTS))
+all_board_dtbs: $(BOARD_DTB)
+
 ifneq ($(STUB64_START),)
  SSBL_DEPS += $(ODIR)/ssbl-smm64.o $(ODIR)/ssbl-psci32.o
 #Explicit dependency (for ordering) between unrelated build targets
 $(ODIR)/bolt.bin: $(ODIR)/stub.64.bin
 endif
+
+SSBL_DEPS+= $(patsubst %.dtb,%.dtb.o,$(BOARD_DTB))
 
 $(ODIR)/ssbl.o: $(SSBL_DEPS)
 	$(call pretty_print,LD,$@)
@@ -337,6 +350,15 @@ $(ODIR)/config.dtb: $(DTS)
 $(ODIR)/config_dtb.o: $(ODIR)/config.dtb
 	$(Q)$(call pretty_print,OBJCOPY,$@)
 	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $< $@
+
+$(ODIR)/%.dtb: $(GEN)/$(FAMILY)/%.dts
+	$(Q)$(call pretty_print,DTB,$@)
+	$(Q)$(GEN)/dtc/dtc -Idts -Odtb -o $@ -i . -d $@.d $<
+
+$(ODIR)/%.dtb.o: $(ODIR)/%.dtb
+	$(Q)$(call pretty_print,OBJCOPY,$@)
+	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $< $@
+
 
 ################################################################################
 # convert aarch64 System Management Mode to a blob for SSBL.
@@ -406,15 +428,23 @@ FINAL_PRODUCTS := $(ODIR)/bolt.bin $(ODIR)/fsbl.bin $(ODIR)/ssbl.bin $(ODIR)/mem
 include security/postmake.mk
 -include security/secpatch.mk
 
+ifeq ($(V),1)
+DEBUG_POSTPATCH:=-d
+else
+DEBUG_POSTPATCH:=
+endif
+
 ifeq ($(SECPATCH),1)
 postpatch: secpatch
 else
 postpatch: $(GEN)/scripts/patcher.pl $(FINAL_PRODUCTS)
 	$(call pretty_print,EXEC,$@)
 	$(call stubpatch)
-	$(Q)$(ROOT)/scripts/postpatch.pl -D $(ODIR) -o -z $(ZEUS_VER) \
-           -p $(SEC_PFX) -l $(SEC_BBL) -w $(SEC_BFW) \
-	   -f $(FAMILY) -v $(BUILDTAG) -s -T $(GEN)/scripts/patcher.pl
+	$(Q)echo $(EXTRA_DEFINES) > $(GEN)/$(FAMILY)/.common_flags
+	$(Q)$(ROOT)/scripts/postpatch.pl -D $(ODIR) -G $(GEN)/$(FAMILY) -o -z $(ZEUS_VER) \
+		$(DEBUG_POSTPATCH) \
+		-p $(SEC_PFX) -l $(SEC_BBL) -w $(SEC_BFW) \
+		-f $(FAMILY) -v $(BUILDTAG) -s -T $(GEN)/scripts/patcher.pl
 endif
 
 ################################################################################

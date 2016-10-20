@@ -29,7 +29,12 @@ else
 endif
 
 ifeq ($(CFG_NOSHMOO),1)
- FSBL_S += shmoo/memsys.c shmoo/memsys-$(FAMILY).c
+ FSBL_S += shmoo/memsys.c
+ ifneq ($(CFG_EMULATION),1)
+  ifneq ($(CFG_FULL_EMULATION),1)
+   FSBL_S += shmoo/memsys-$(FAMILY).c
+  endif
+ endif
 endif
 
 SHMOO_S += shmoo/shmoo_board.c

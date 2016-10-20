@@ -48,9 +48,6 @@ extern char *eth0_phyintf;
 #if CFG_SYSTEMPORT
 extern bolt_driver_t sysportdrv;
 #endif
-#if CFG_RUNNER
-extern bolt_driver_t runnerdrv;
-#endif
 #if CFG_SATA
 extern bolt_driver_t satadrv;
 #endif
@@ -77,6 +74,7 @@ void board_init_rts_show(int show_only_selected);
 int board_init_rts_update(int rts_id);
 
 void board_init_sata(void);
+void sata_exit(void);
 
 void board_init_flash(void);
 void board_init_hdmi(void);

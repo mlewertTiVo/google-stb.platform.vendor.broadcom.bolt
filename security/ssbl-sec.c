@@ -10,8 +10,7 @@
 #include "bchp_bsp_glb_control.h"
 #include "bchp_bsp_cmdbuf.h"
 
-#include "common.h"
-#include "timer.h"
+#include "arch_ops.h"
 
 #include "../fsbl/fsbl.h"
 #include "boot_defines.h"
@@ -27,42 +26,66 @@
 #define CMD_OUTBUFFER2		(3 * 384) /* 0x480 */
 #define OTP_SECURE_BOOT_BIT	0x4a
 #define BSP_VER_STRLEN		10
+#define BSP_TIMEOUT_MS		10 /* milliseconds */
 
 
-static char bsp[BSP_VER_STRLEN];
+#define SEC_CHECK_FOR(reg, field)\
+		wait_rdb_reg_bits_set(BCHP_##reg,\
+			BCHP_##reg##_##field##_MASK, BSP_TIMEOUT_MS)
+
+#define sec_check_for_IRDY2()\
+	SEC_CHECK_FOR(BSP_GLB_CONTROL_GLB_IRDY, CMD_IDRY2)
+
+#define sec_check_for_OLOAD2()\
+	SEC_CHECK_FOR(BSP_GLB_CONTROL_GLB_OLOAD2, CMD_OLOAD2)
+
+#define sec_check_for_IRDY1()\
+	SEC_CHECK_FOR(BSP_GLB_CONTROL_GLB_IRDY, CMD_IDRY1)
+
+#define sec_check_for_OLOAD1()\
+	SEC_CHECK_FOR(BSP_GLB_CONTROL_GLB_OLOAD1, CMD_OLOAD1)
+
+
 static uint32_t bsp_version;
 
 
-static int __maybe_unused sec_check_for_IRDY2(void)
+/*
+ * return the number of timer ticks that occur
+ * in a given number of milliseconds.
+ */
+static uint64_t __maybe_unused ticks_per_ms(unsigned int milliseconds)
 {
-	uint32_t ready;
-	int to = 10;
-
-	while (--to) {
-		ready = BDEV_RD_F(BSP_GLB_CONTROL_GLB_IRDY, CMD_IDRY2);
-		if (ready)
-			break;
-		bolt_msleep(1);
-	}
-
-	return (ready) ? BOLT_OK : BOLT_ERR_TIMEOUT;
+	return (uint64_t)((arch_get_timer_freq_hz() / 1000) * milliseconds);
 }
 
-static int __maybe_unused sec_check_for_OLOAD2(void)
-{
-	uint32_t oload;
-	int to = 10;
 
-	while (--to) {
-		oload = BDEV_RD_F(BSP_GLB_CONTROL_GLB_OLOAD2, CMD_OLOAD2);
-		if (oload)
+/*
+ * Note: The timeout is intended for use very early on in SSBL before
+ * the timer infrastructure is up and running. It can be used after that
+ * as well, but should be used sparingly as it does not do POLL() or
+ * keep the current time value refreshed.
+ */
+static int __maybe_unused wait_rdb_reg_bits_set(uint32_t reg,
+				uint32_t bitmask, unsigned int timeout_ms)
+{
+	uint32_t val;
+	uint64_t baseline, duration, elapsed;
+
+	val = BDEV_RD(reg) & bitmask;
+
+	duration = ticks_per_ms(timeout_ms);
+	baseline = arch_getticks64();
+
+	while (0 == val) {
+		elapsed = arch_getticks64() - baseline;
+		if (elapsed > duration)
 			break;
-		bolt_msleep(1);
+		dmb();
+		val = BDEV_RD(reg) & bitmask;
 	}
 
-	return (oload) ? BOLT_OK : BOLT_ERR_TIMEOUT;
+	return (val) ? BOLT_OK : BOLT_ERR_TIMEOUT;
 }
-
 
 static int __maybe_unused sec_do_bsp_cmd_prologue(void)
 {
@@ -92,8 +115,7 @@ static int __maybe_unused sec_do_bsp_cmd_epilogue(void)
 const char *sec_get_bsp_version(void)
 {
 #ifndef CFG_FULL_EMULATION
-	if (bsp_version)
-		return bsp;
+	static char bsp[BSP_VER_STRLEN];
 
 	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_OUTBUFFER2) = 0;
 	BARRIER();
@@ -116,10 +138,11 @@ const char *sec_get_bsp_version(void)
 		(bsp_version >> BSP_S_FW_MAJOR_VERSION_SHIFT) & 0x3F,
 		(bsp_version >> BSP_S_FW_MINOR_VERSION_SHIFT) & 0x3F,
 		(bsp_version >> BSP_S_FW_SUB_MINOR_VERSION_SHIFT) & 0x0F);
-#endif
 	return (bsp_version) ? bsp : NULL;
+#else
+	return NULL;
+#endif
 }
-
 
 int sec_get_random_num(uint32_t *dest, int num)
 {
@@ -157,4 +180,47 @@ int sec_get_random_num(uint32_t *dest, int num)
 	memcpy(dest, param, sizeof(uint32_t) * num);
 
 	return BOLT_OK;
+}
+
+uint32_t sec_enable_debug_ports()
+{
+	uint32_t status;
+	uint32_t bfw_major_version;
+	const char *s = sec_get_bsp_version();
+
+	if (!s) {
+		puts("SEC: Can't get BFW version!");
+		return BOLT_ERR;
+	}
+
+	bfw_major_version = (bsp_version >>
+		BSP_S_FW_MAJOR_VERSION_SHIFT) & 0xf;
+
+	/* Enable debug is supported with BFW 4.x or later */
+	if (bfw_major_version < 4)
+		return BOLT_ERR;
+
+	sec_check_for_IRDY1();
+
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE) = 0x10;
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+4) = 0xdb;
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+8) = 0xabcdef00;
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+12) = 0xBE55AA41;
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+16) = 0x789A0004;
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+20) = 0x1057A675;
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+24) = 0x0;  /* maybe not needed */
+
+	REG(BCHP_BSP_GLB_CONTROL_GLB_ILOAD1) = 0x1;
+
+	sec_check_for_OLOAD1();
+
+	REG(BCHP_BSP_GLB_CONTROL_GLB_HOST_INTR_STATUS) = 0x00;
+	REG(BCHP_BSP_GLB_CONTROL_GLB_OLOAD1) = 0x00;
+
+	__puts("SEC: jtag debug status: ");
+	status = REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE + 0x194);
+	writehex(status);
+	puts("");
+
+	return (status);
 }

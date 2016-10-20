@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,35 +8,35 @@
  ***************************************************************************/
 #if CFG_SYSTEMPORT
 
-#include "lib_types.h"
-#include "lib_malloc.h"
-#include "lib_string.h"
-#include "lib_printf.h"
-#include "lib_hexdump.h"
-
-#include "iocb.h"
-#include "ioctl.h"
-#include "device.h"
-#include "devfuncs.h"
-#include "mii.h"
-#include "error.h"
-#include "common.h"
-
-#include "bsp_config.h"
 #include "dev_systemport.h"
-#include "timer.h"
-#include "macutils.h"
-#include "ui_command.h"
-#include "env_subr.h"
+
+#include "board.h"
+#include "bsp_config.h"
+#include "common.h"
 #include "dev_bcmethsw.h"
 #include "dev_sf2.h"
-#include "board.h"
-#include "net_ebuf.h"
-#include "net_mdio.h"
-
-#include "libfdt_env.h"
-#include "fdt.h"
+#include "devfuncs.h"
+#include "device.h"
 #include "devtree.h"
+#include "env_subr.h"
+#include "error.h"
+#include "fdt.h"
+#include "iocb.h"
+#include "ioctl.h"
+#include "libfdt_env.h"
+#include "macutils.h"
+#include "mii.h"
+#include "net_ebuf.h"
+#include "net_ether.h"
+#include "net_mdio.h"
+#include "timer.h"
+#include "ui_command.h"
+
+#include "lib_hexdump.h"
+#include "lib_malloc.h"
+#include "lib_printf.h"
+#include "lib_string.h"
+#include "lib_types.h"
 
 #define PFX	"SYSTEMPORT: "
 
@@ -569,7 +567,12 @@ static int sysport_ether_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		break;
 
 	case IOCTL_ETHER_GETLINK:
-		rc = 1;
+		if (buffer->buf_length != sizeof(int)) {
+			rc = -1;
+			break;
+		}
+		*((int *)buffer->buf_ptr) =
+			mdio_get_linkstatus(softc->mdio, softc->mdio->phy_id);
 		break;
 
 	default:
@@ -672,6 +675,9 @@ static void sysport_ether_init(bolt_driver_t *drv, int instance)
 {
 	sysport_softc *softc;
 	char desc[100], *envmac;
+	unsigned int aneg_timeout;
+
+	aneg_timeout = mdio_get_timeout_autoneg();
 
 	softc = KUMALLOC(sizeof(*softc), 0);
 	if (!softc) {
@@ -696,7 +702,14 @@ static void sysport_ether_init(bolt_driver_t *drv, int instance)
 	bolt_attach(drv, softc, NULL, desc);
 
 	/* Initialize the switch MDIO bus for early access */
-	bcm_sf2_mdio_init();
+	softc->mdio = bcm_sf2_mdio_init();
+	/* auto-negotiation has started, set a timer on how long we wait */
+	if (aneg_timeout == 0) {
+		softc->mdio->is_timer_aneg = false;
+	} else {
+		TIMER_SET(softc->mdio->timer_aneg, aneg_timeout*BOLT_HZ);
+		softc->mdio->is_timer_aneg = true;
+	}
 }
 
 static void sysport_ether_probe(bolt_driver_t *drv, unsigned long probe_a,

@@ -7,6 +7,10 @@
 #
 # ***************************************************************************
 
+# Certain chip specific emulation environments require
+# images to be endian swapped.
+SWAPCHIPS:=
+
 ifeq ($(BOOT_START_ADDRESS),)
 	$(error include build/emul.mk only after gen/$$(FAMILY)/include.mk)
 endif
@@ -49,16 +53,16 @@ endif
 
 define EMUSWP
 $(1): $(2)
-ifeq ($(FAMILY),3390a0)
-	$$(call pretty_print,"ASIS",$$@)
-	$$(Q)perl -e 'undef $$$$/; $$$$x=<STDIN>."\0\0\0"; \
-		print pack("N*", unpack("N*",$$$$x));' \
-		< $$< \
-		> $$@
-else
+ifeq ($(filter $(FAMILY), $(SWAPCHIPS)), $(FAMILY))
 	$$(call pretty_print,"SWAP",$$@)
 	$$(Q)perl -e 'undef $$$$/; $$$$x=<STDIN>."\0\0\0"; \
 		print pack("N*", unpack("V*",$$$$x));' \
+		< $$< \
+		> $$@
+else
+	$$(call pretty_print,"ASIS",$$@)
+	$$(Q)perl -e 'undef $$$$/; $$$$x=<STDIN>."\0\0\0"; \
+		print pack("N*", unpack("N*",$$$$x));' \
 		< $$< \
 		> $$@
 endif

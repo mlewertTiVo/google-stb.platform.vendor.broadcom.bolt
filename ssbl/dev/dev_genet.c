@@ -85,6 +85,7 @@ ETH0_PHYADDR: optional
 #define DMA_MAX_BURST_LENGTH	0x10
 #define ENET_BUF_SIZE		2048
 #define NUMRXBDS		64
+#define NUMTXBDS		1
 
 /* misc. configuration */
 #define DMA_FC_THRESH_LO	5
@@ -116,6 +117,8 @@ typedef struct genet_softc {
 	int instance;
 	int switch_detected;
 	mdio_info_t *mdio;
+	uint32_t timeout_txdma;
+
 } genet_softc;
 
 static genet_softc *genet_softcs[NUM_GENET + 1];
@@ -238,6 +241,15 @@ static void genet_read_mac_address(genet_softc * softc, uint8_t * addr)
 	memcpy(addr, softc->macaddr, 6);
 }
 
+static void genet_disable_dma(genet_softc * softc)
+{
+	softc->txDma->tdma_ctrl = 0;
+	softc->rxDma->rdma_ctrl = 0;
+	softc->umac->tx_flush = 1;
+	bolt_usleep(10);
+	softc->umac->tx_flush = 0;
+}
+
 static void reset_umac(volatile uniMacRegs *umac)
 {
 	/* disable MAC while updating its registers */
@@ -302,12 +314,14 @@ static void genet_ether_write_mac_address(struct genet_softc *softc)
  * Init Functions
  * ********************************* */
 
-static void init_umac(genet_softc * softc)
+static int init_umac(genet_softc * softc)
 {
 	volatile uniMacRegs *umac;
 	volatile intrl2Regs *intrl2;
 	mdio_config eMiiConfig;
 	int speed = 10;
+	int retval;
+
 	umac = softc->umac;;
 	intrl2 = softc->intrl2_0;
 
@@ -318,7 +332,9 @@ static void init_umac(genet_softc * softc)
 
 	reset_umac(umac);
 	if (strcmp(softc->phyintf, "INT") == 0) {
-		mdio_phy_reset(softc->mdio, softc->phyaddr);
+		retval = mdio_phy_reset(softc->mdio, softc->phyaddr);
+		if (retval != 0)
+			return retval;
 		mii_set_mdio_clock(softc->mdio, softc->phyaddr);
 		mdio_set_advert(softc->mdio, softc->phyaddr, softc->physpeed);
 		ephy_workaround(softc);
@@ -352,9 +368,12 @@ static void init_umac(genet_softc * softc)
 		 */
 		eMiiConfig = mdio_auto_configure(softc->mdio, softc->phyaddr);
 		if (! (eMiiConfig & MDIO_AUTONEG)) {
+			const bool is_link_up =
+				(mdio_get_linkstatus(softc->mdio,
+					softc->phyaddr) == 1);
+
 			xprintf("Auto-negotiation timed-out%s\n",
-				((intrl2->cpu_stat & UMAC_IRQ_LINK_DOWN) ?
-					"...check cable/connection" : ""));
+				is_link_up ? "" : "...check cable/connection");
 		}
 		umac->cmd &= ~(CMD_SPEED_MASK << CMD_SPEED_SHIFT);
 		if (eMiiConfig & MDIO_1000MBIT) {
@@ -391,6 +410,8 @@ static void init_umac(genet_softc * softc)
 	/* Enable rx/tx engine.*/
 	umac->cmd &= ~CMD_PROMISC;
 	umac->cmd |= CMD_TX_EN | CMD_RX_EN;
+
+	return 0;
 }
 
 static void init_edma(genet_softc * softc)
@@ -424,9 +445,9 @@ static void init_edma(genet_softc * softc)
 	tdma->tdma_producer_index = 0;
 	tdma->tdma_consumer_index = 0;
 	tdma->tdma_ring_buf_size =
-		(TOTAL_DESC << DMA_RING_SIZE_SHIFT) | ENET_BUF_SIZE;
+		(NUMTXBDS << DMA_RING_SIZE_SHIFT) | ENET_BUF_SIZE;
 	tdma->tdma_start_addr = 0;
-	tdma->tdma_end_addr = NUM_DESC_PER_BD - 1;
+	tdma->tdma_end_addr = NUM_DESC_PER_BD * NUMTXBDS - 1;
 	tdma->tdma_mbuf_done_threshold = 0;
 	/* Disable rate control for now */
 	tdma->tdma_flow_period = 0;
@@ -827,9 +848,11 @@ static void genet_ether_init(bolt_driver_t * drv, int instance)
 		}
 	}
 
-
 	/* turn off UniMAC pause frames generation */
 	softc->umac->pause_ctrl = 0;
+
+	/* 5 milliseconds */
+	softc->timeout_txdma = get_clocks_per_usec() * 5000;
 }
 
 static void genet_ether_probe(bolt_driver_t * drv, unsigned long probe_a,
@@ -860,7 +883,12 @@ static void genet_mdio_probe(bolt_driver_t * drv, unsigned long probe_a,
 
 static int genet_ether_open(bolt_devctx_t * ctx)
 {
-	genet_softc * softc = (genet_softc *) ctx->dev_softc;
+	genet_softc *softc;
+	int retval;
+
+	if (ctx == NULL)
+		return BOLT_ERR_INV_PARAM;
+	softc = (genet_softc *) ctx->dev_softc;
 
 	if (softc->ext_switch && softc->switch_detected == 0)
 		return BOLT_ERR_IOERR;
@@ -868,13 +896,16 @@ static int genet_ether_open(bolt_devctx_t * ctx)
 	if ((Enet_debug = env_getval("ETH_DBG")) < 0)
 		Enet_debug = 0;
 
+	retval = init_umac(softc);
+	if (retval != 0)
+		return retval;
+
 	genet_write_mac_address(softc, softc->macaddr, 1);
+	genet_disable_dma(softc);
 
 	init_buffers(softc);
 
 	init_edma(softc);
-
-	init_umac(softc);
 
 	softc->rxDma->rdma_ctrl =
 		(1 << (DMA_RING_DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN);
@@ -1016,6 +1047,8 @@ static int genet_ether_write(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 	volatile DmaDesc * CurrentBDPtr;
 	unsigned int p_index = 0, c_index = 0;
 	volatile tDmaRingRegs *tdma;
+	uint32_t start_time;
+	uint32_t elapsed;
 
 	if (ctx == NULL) {
 		xprintf("GENET: No context\n");
@@ -1051,7 +1084,8 @@ static int genet_ether_write(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 	}
 
 	if (p_index != c_index) {
-		xprintf("GENET: Transmit DMA operation in progress.\n");
+		xprintf("GENET: p_index=%d c_index=%d TX DMA in progress\n",
+			p_index, c_index);
 		return -1;
 	}
 
@@ -1072,10 +1106,22 @@ static int genet_ether_write(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 	/* Enable DMA for this packet */
 	softc->txDma->tDmaRings[DMA_RING_DESC_INDEX].tdma_producer_index += 1;
 
-	do {
+	start_time = arch_getticks();
+	while (1) {
 		p_index = DMA_PRODUCER_INDEX_MASK & tdma->tdma_producer_index;
 		c_index = DMA_CONSUMER_INDEX_MASK & tdma->tdma_consumer_index;
-	} while (p_index != c_index);
+		if (p_index == c_index)
+			break;
+
+		elapsed = arch_getticks() - start_time;
+		if (elapsed > softc->timeout_txdma) {
+			xprintf("GENET: p_index=%d c_index=%d TX DMA timeout\n",
+				p_index, c_index);
+			return BOLT_ERR_IOERR;
+		}
+
+		POLL(); /* give net_poll() chance to consume RX */
+	}
 
 	return 0;
 }
@@ -1201,8 +1247,13 @@ static int genet_ether_ioctl(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 			retval = 0;
 			break;
 		case IOCTL_ETHER_GETLINK:
-			xprintf("GENET: GETLINK not implemented.\n");
-			retval = -1;
+			if (buffer->buf_length != sizeof(int)) {
+				retval = -1;
+				break;
+			}
+			*((int *)buffer->buf_ptr) =
+				mdio_get_linkstatus(softc->mdio, softc->phyaddr);
+			retval = 0;
 			break;
 		case IOCTL_ETHER_GETLOOPBACK:
 			*((int *)buffer) = softc->loopmode;
@@ -1369,16 +1420,11 @@ static int genet_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 {
 	genet_softc *softc = ctx->dev_softc;
 	int retval = 0;
+	struct ether_phy_info *phy_info;
 
 	switch ((int)buffer->buf_ioctlcmd) {
 	case IOCTL_ETHER_SET_PHY_DEFCONFIG:
 		ephy_workaround(softc);
-		break;
-
-	case IOCTL_ETHER_GET_PHY_REGBASE:
-		*(unsigned long **)(buffer->buf_ptr) =
-			(unsigned long *)&softc->ext->ext_gphy_ctrl;
-		buffer->buf_retlen = sizeof(unsigned long *);
 		break;
 
 	case IOCTL_ETHER_GET_PORT_PHYID:
@@ -1396,6 +1442,19 @@ static int genet_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		}
 		*(int *)(buffer->buf_ptr) = (int)softc->mdio->phy_id;
 		buffer->buf_retlen = sizeof(int);
+	break;
+
+	case IOCTL_ETHER_GET_PHY_INFO:
+		phy_info = (struct ether_phy_info *)buffer->buf_ptr;
+#if CONFIG_BRCM_GENET_VERSION == 5
+		phy_info->type = ETH_EPHY;
+		phy_info->phyaddr = (unsigned long *)&softc->ext->ext_ephy_ctrl;
+#else
+		phy_info->type = ETH_GPHY;
+		phy_info->phyaddr = (unsigned long *)&softc->ext->ext_gphy_ctrl;
+#endif
+		phy_info->version = CONFIG_BRCM_GENET_VERSION;
+		buffer->buf_retlen = sizeof(struct ether_phy_info);
 	break;
 
 	default:
@@ -1523,35 +1582,6 @@ static void ephy_workaround(genet_softc * softc)
 
 	/* apply the GPHY workaround for our chip */
 	bcm_gphy_workaround(softc->mdio, &phy_id, 1);
-
-	/* workarounds are only needed for 100Mbps PHYs */
-	if (softc->physpeed == 1000)
-		return;
-
-	/* SWLINUX-2480: We would return here if we supported GENET v1,
-	 * but we don't, so we won't.
-	*/
-
-	/* set shadow mode 2 */
-	mdio_set_clr_bits(softc->mdio, phy_id, 0x1f, 0x0004, 0x0004);
-	/*
-	 * Workaround for SWLINUX-2281: explicitly reset IDDQ_CLKBIAS
-	 * in the Shadow 2 regset, due to power sequencing issues.
-	 */
-	/* set iddq_clkbias */
-	mdio_write(softc->mdio, phy_id, 0x14, 0x0F00);
-	bolt_usleep(10);
-	/* reset iddq_clkbias */
-	mdio_write(softc->mdio, phy_id, 0x14, 0x0C00);
-
-	/*
-	 * Workaround for SWLINUX-2056: fix timing issue between the
-	 * ephy digital and the ephy analog blocks.  This clock
-	 * inversion will inherently fix any setup and hold issue.
-	 */
-	mdio_write(softc->mdio, phy_id, 0x13, 0x7555);
-	/* reset shadow mode 2 */
-	mdio_set_clr_bits(softc->mdio, phy_id, 0x1f, 0x0004, 0);
 }
 
 /*

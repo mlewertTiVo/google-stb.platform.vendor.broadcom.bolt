@@ -94,13 +94,6 @@ uint64_t arch_get_cpu_vco_hz(void)
 	regval = BDEV_RD(BCHP_CLKGEN_PLL_CPU_PLL_DIV_4K);
 	ndiv = (regval & BCHP_CLKGEN_PLL_CPU_PLL_DIV_4K_NDIV_INT_MASK) >>
 	                 BCHP_CLKGEN_PLL_CPU_PLL_DIV_4K_NDIV_INT_SHIFT;
-#elif defined(BCHP_CLKGEN_PLL_CPU_CORE_PLL_CHANNEL_CTRL_CH_0)
-	/* 3390 */
-	regval = BDEV_RD(BCHP_CLKGEN_PLL_CPU_CORE_PLL_DIV);
-	pdiv = (regval & BCHP_CLKGEN_PLL_CPU_CORE_PLL_DIV_PDIV_MASK) >>
-		BCHP_CLKGEN_PLL_CPU_CORE_PLL_DIV_PDIV_SHIFT;
-	ndiv = (regval & BCHP_CLKGEN_PLL_CPU_CORE_PLL_DIV_NDIV_INT_MASK) >>
-		BCHP_CLKGEN_PLL_CPU_CORE_PLL_DIV_NDIV_INT_SHIFT;
 #elif defined(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0)
 	regval = BDEV_RD(BCHP_CLKGEN_PLL_CPU_PLL_DIV);
 	pdiv = (regval & BCHP_CLKGEN_PLL_CPU_PLL_DIV_PDIV_MASK) >>
@@ -127,11 +120,8 @@ uint64_t arch_get_cpu_vco_hz(void)
 static unsigned int arch_get_cpu_mdiv(void)
 {
 #if defined(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0_4K)
-	/* 7271a0, 7268a0 */
+	/* 7271a0, 7268a0, 7260a0 */
 	return BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0_4K, MDIV_CH0);
-#elif defined(BCHP_CLKGEN_PLL_CPU_CORE_PLL_CHANNEL_CTRL_CH_0)
-	/* 3390 */
-	return BDEV_RD_F(CLKGEN_PLL_CPU_CORE_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0);
 #else
 	return BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0);
 #endif
@@ -216,15 +206,7 @@ uint64_t arch_get_scb_freq_hz(void)
 	mdiv = BDEV_RD_F(CLKGEN_PLL_SCB_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0);
 #else
 	/* SCB shares SYS0 PLL with others */
-#if defined(CONFIG_BCM3390)
-	/* not just SYS0 PLL, specifically prefixed with DOCSIS_PLL */
-	regval = BDEV_RD(BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_DIV);
-	pdiv = (regval & BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_DIV_PDIV_MASK) >>
-		BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_DIV_PDIV_SHIFT;
-	ndiv = (regval & BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_DIV_NDIV_INT_MASK) >>
-		BCHP_CLKGEN_DOCSIS_PLL_SYS0_PLL_DIV_NDIV_INT_SHIFT;
-	mdiv = BDEV_RD_F(CLKGEN_DOCSIS_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3, MDIV_CH3);
-#elif defined(CONFIG_BCM7439B0)
+#if defined(CONFIG_BCM7439B0)
 	/* channel#1 */
 	regval = BDEV_RD(BCHP_CLKGEN_PLL_SYS0_PLL_DIV);
 	pdiv = (regval & BCHP_CLKGEN_PLL_SYS0_PLL_DIV_PDIV_MASK) >>
@@ -233,6 +215,7 @@ uint64_t arch_get_scb_freq_hz(void)
 		BCHP_CLKGEN_PLL_SYS0_PLL_DIV_NDIV_INT_SHIFT;
 	mdiv = BDEV_RD_F(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1, MDIV_CH1);
 #elif defined(CONFIG_BCM7250B0) || \
+	defined(CONFIG_BCM7260A0) || \
 	defined(CONFIG_BCM7364) || \
 	defined(CONFIG_BCM7366) || \
 	defined(CONFIG_BCM74371A0)|| \
@@ -591,10 +574,11 @@ void arch_dump_registers(struct arm_regs *regs)
 
 /* HW7439-655. Verify against e.g. HW7366-587
 before adding newer chips listed there. */
-#if	defined(CONFIG_BCM7439B0) || \
-	defined(CONFIG_BCM7366C0) || \
+#if	defined(CONFIG_BCM7260A0) || \
+	defined(CONFIG_BCM7268A0) || \
 	defined(CONFIG_BCM7271A0) || \
-	defined(CONFIG_BCM7268A0)
+	defined(CONFIG_BCM7366C0) || \
+	defined(CONFIG_BCM7439B0)
 #define HW7445_1480 0
 #else
 #define HW7445_1480 1
@@ -839,14 +823,7 @@ static void set_cpu_ratio(int new_ratio)
   **********************************************************************/
 void arch_set_cpu_clk_ratio(int ratio)
 {
-	if (HW7445_1480
-#if defined(CONFIG_BCM7366C0)
-		/* For the moment, any 7366c0 build has to
-		be compatible with 7366b0. */
-		|| ((BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID) &
-		CHIPID_MAJOR_REV_MASK) == 0x10)
-#endif
-			) {
+	if (HW7445_1480) {
 		set_cpu_ratio(ratio);
 		return;
 	}

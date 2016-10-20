@@ -56,6 +56,36 @@ extern void *__per_cpu_info[];
 static struct psci_cfg * const config = (struct psci_cfg *)__config_info;
 
 static unsigned int inilock = INILOCK_UNLOCKED;
+static unsigned int booted = 0;
+
+
+static void exit_psci(uint32_t r0)
+{
+	if (booted) {
+		/* Return to non-secure mode before we
+		 * exit PSCI to Linux. BOLT requires
+		 * secure mode or else it will hang,
+		 * so we wait until after Linux is up
+		 * (cold boot or S3 resume) before doing
+		 * this.
+		 */
+		uint32_t scr = -1;
+
+		__asm__ __volatile__ (
+			"mrc	p15, 0, %0, c1, c1, 0\n"
+			"isb\n"
+			"orr	%0, %0, #1\n"
+			"mcr	p15, 0, %0, c1, c1, 0\n"
+			"dsb\n"
+			"isb\n"
+			: /* no outputs */
+			: "r" (scr)
+			: "memory"
+		);
+	}
+
+	eret32(r0);
+}
 
 
 /* At the moment we support just affinity levels 0 & 1
@@ -189,7 +219,7 @@ void psci_init(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3)
 	if (config->debug)
 		dump_cpu_states(me);
 out:
-	eret32(rc);
+	exit_psci(rc);
 }
 
 
@@ -262,21 +292,40 @@ static void late_cpu_init(void)
 	__asm__ __volatile__("mcr p15, 0, %0, c1, c0, 2" : : "r" (tmp));
 }
 
-/* cpu_init_secondary (asm) -> per_cpu_start -> cpu_boot_secondary (asm) */
+/* cpu_init (asm) -> per_cpu_start -> exec32 (asm) */
 void __noreturn per_cpu_start(uint32_t per_cpu_stacktop)
 {
 	int me = get_cpu_idx(get_mpidr());
 
 	/* smp: caches must be off before we leave or join */
 	disable_all_caches_and_mmu();
+
+	/*
+	 * POWER STATE COORDINATION INTERFACE (PSCI)
+	 * Document number: ARM DEN 0022C
+	 *
+	 * 5.6 CPU_ON
+	 *
+	 *  5.6.3 Implementation responsibilities: Cache management
+	 *
+	 *   For CPU_ON, the PSCI implementation must:
+	 *
+	 *    => Perform invalidation of caches on boot,
+	 *       unless this invalidation is automatically
+	 *       performed by the hardware.
+	 *
+	 *    =>  Manage coherency.
+	 */
+	invalidate_icache();
+	invalidate_dcache(UPTO_L1);
+	/*
+	 * Now we can allow cache events to filter down
+	 * and not worry about the RAC getting confused.
+	 */
 	smp_on();
 
 	_LOCK(me);
 
-	if (rac_master()) {
-		invalidate_icache();
-		invalidate_dcache(UPTO_L1);
-	}
 	icache_enable(1); /* At MON only */
 
 	late_cpu_init();
@@ -287,11 +336,15 @@ void __noreturn per_cpu_start(uint32_t per_cpu_stacktop)
 		msg_cpu("GO", me);
 		__puts("@ ");
 		writehex(config->cpu[me].entry_point_address);
+		__puts(" fdt: ");
+		writehex(config->cpu[me].fdt);
 		puts("");
 	}
 
-	exec32(config->cpu[me].entry_point_address, 0 /* fdt */,
-		&config->cpu[me].lock, 1 /* a secondary cpu */);
+	exec32(config->cpu[me].entry_point_address,
+		config->cpu[me].fdt,
+		&config->cpu[me].lock,
+		(me != 0) /* secondary cpu? (is not CPU #0) */);
 
 	backstop("EXEC_RTN!", me);
 }
@@ -329,7 +382,7 @@ static uint32_t do_cpu_on(int me, uint32_t target_id,
 		return PSCI_ERR_INTERNAL_FAILURE;
 	}
 
-	set_cpu_boot_addr(other, (uint32_t)cpu_init_secondary);
+	set_cpu_boot_addr(other, (uint32_t)cpu_init);
 
 	config->cpu[other].state = CPU_PEND_ON;
 
@@ -600,16 +653,18 @@ static int boot_linux(uint32_t linux_entry, uint32_t fdt, int me)
 		puts("");
 	}
 
-	/* Only allow once */
-	if (config->bootonce)
-		return PSCI_ERR_DENIED;
+	config->cpu[me].entry_point_address = linux_entry;
+	config->cpu[me].fdt = fdt;
+	booted = 1;
 
-	config->bootonce = 0x49435350; /* ascii 'PSCI', little endian */
-	clean_invalidate_dcache(UPTO_POU);
+	_UNLOCK(me);
 
-	exec32(linux_entry, fdt, &(config->cpu[me].lock), 0);
+	/* Make sure we are all done here */
+	BARRIER();
 
-	/* Should not return here after exec32() */
+	cpu_init();
+
+	/* Should not return here */
 	return PSCI_ERR_INTERNAL_FAILURE;
 }
 
@@ -762,5 +817,5 @@ void psci_decode(uint32_t r0, uint32_t r1, uint32_t r2,	uint32_t r3)
 	if (!config->locked_sticky)
 		_UNLOCK(me);
 out:
-	eret32(rc);
+	exit_psci(rc);
 }

@@ -11,6 +11,7 @@
 #include "bchp_common.h"
 #include "bchp_bsp_glb_control.h"
 #include "bchp_bsp_cmdbuf.h"
+#include "psci.h"
 
 #define ERR_GLITCH_TRACE_CHECK 15
 #define S3_TRACE_VALUE	0x712A0006
@@ -279,6 +280,62 @@ ENTRY_PROC(anti_glitch_c)
 	blx		r2
 END_PROC(anti_glitch_c)
 
+
+#if defined(STUB64_START) && CFG_PM_S3
+@ psci(glitch_psci_bootmode, glitch_addr, 0, 0)
+@ handle_boot_err(ERR_GLITCH_TRACE_CHECK);
+@
+ENTRY_PROC(boot_via_psci)
+	isb	sy
+	dsb	sy
+	mov		r1, r2
+	smc		#0
+	isb
+	@ guard against returning from psci.
+	mov		r0,	#ERR_GLITCH_TRACE_CHECK
+	blx		r3
+END_PROC(boot_via_psci)
+
+
+@ if (glitch_psci_bootmode == OEM_FUNC_EXEC32)
+@	boot_via_psci()
+@ else if (glitch_psci_bootmode == OEM_FUNC_EXEC64)
+@	boot_via_psci()
+@ else
+@	handle_boot_err(ERR_GLITCH_TRACE_CHECK);
+@
+ENTRY_PROC(possible_psci_boot)
+	ldr		r9,	=OEM_FUNC_EXEC32
+	cmp		r0, r9
+	beq		boot_via_psci
+	ldr		r9,	=OEM_FUNC_EXEC64
+	cmp		r0, r9
+	beq		boot_via_psci
+	@ nope, now we error out.
+	mov		r0,	#ERR_GLITCH_TRACE_CHECK
+	blx		r3
+END_PROC(possible_psci_boot)
+
+
+@ if (glitch_psci_bootmode != (uint32_t)die)
+@	possible_psci_boot()
+@ else
+@	return;
+@
+ENTRY_PROC(test_for_psci_boot)
+	ldr		r9,	=glitch_psci_bootmode
+	ldr		r0,	[r9]
+	ldr		r1,	=die
+	cmp		r1, r0
+	bne		possible_psci_boot
+	bx		lr
+	@ backstop, error out.
+	mov		r0,	#ERR_GLITCH_TRACE_CHECK
+	blx		r3
+END_PROC(test_for_psci_boot)
+#endif
+
+
 @ glitch_entry = (void *) (glitch_addr << 1);
 @ glitch_entry();
 @ handle_boot_err()
@@ -289,6 +346,9 @@ ENTRY_PROC(anti_glitch_d)
 	mov		r2, r2, LSL #1
 	ldr		r3,	=handle_boot_err
 
+#if defined(STUB64_START) && CFG_PM_S3
+	bl		test_for_psci_boot
+#endif
 	@ call linux_entry()
 	blx		r2
 	mov		r0,	#ERR_GLITCH_TRACE_CHECK
@@ -326,6 +386,26 @@ trace_ok:
 	blx		r2
 END_PROC(anti_glitch_e)
 #endif
+
+ENTRY_PROC(loop_forever)
+	@ clear SRAM from start of sram to pc
+	ldr		r1,	=SRAM_ADDR	@0xffe0_0000
+	mov		r2, 	pc
+	mov		r3, 	#0
+	sram_memset	clear1a, r1, r2, r3
+
+	@clear return_from_check_return_val to end of SRAM
+	ldr		r1, =return_from_check_return_val
+
+	@ A15:0xffe1_0000, A53:0xffe2_0000
+	ldr		r2, =(SRAM_ADDR + SRAM_LEN)
+	mov  		r3, #0
+	sram_memset	clear1b, r1, r2, r3
+
+loop:	mov		r1, #0
+	b		loop
+
+END_PROC(loop_forever)
 
 @ r1: addr of register to set
 @ r4: value to set

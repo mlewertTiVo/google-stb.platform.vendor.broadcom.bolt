@@ -15,6 +15,7 @@ SSBL_S += \
 	ssbl/arch/arm-eabi-ssbl.S \
 	ssbl/arch/arm-vectors.S \
 	ssbl/arch/ssbl_main.c \
+	ssbl/arch/memsys_ssbl.c \
 	ssbl/main/zimage.c \
 	ssbl/main/devtree.c \
 	ssbl/main/dtshow.c \
@@ -29,6 +30,17 @@ SSBL_S += \
 	$(GEN)/dtc/libfdt/fdt_rw.c \
 	$(GEN)/dtc/libfdt/fdt_strerror.c 
 
+ifeq ($(SECURE_BOOT),y)
+SSBL_S += \
+	ssbl/arch/ssbl_main_sec.c \
+	ssbl/ui/ui_secureload.c \
+	security/bsp_utils.c \
+	security/mem_auth_new.c \
+	security/decrypt_ssbl.c \
+	security/xpt_dma.c \
+	security/verify_kernel.c
+endif
+
 ifeq ($(CFG_ENET),1)
 SSBL_S += \
 	ssbl/dev/dev_bcmethsw.c \
@@ -38,12 +50,6 @@ endif
 ifeq ($(CFG_GENET),1)
 SSBL_S += \
 	ssbl/dev/dev_genet.c
-endif
-
-ifeq ($(CFG_RUNNER),1)
-SSBL_S += \
-	ssbl/dev/dev_sf2.c \
-	ssbl/dev/dev_runner.c
 endif
 
 ifeq ($(CFG_SYSTEMPORT),1)

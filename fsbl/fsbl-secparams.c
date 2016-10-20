@@ -12,7 +12,7 @@
 #include "fsbl.h"
 
 
-#if defined(SECURE_BOOT) && defined(ZEUS_REVOCATION)
+#if USE_FIRST_IMAGES
 #define FIRST_IMAGE_ENABLE 0x80000000
 #else
 #define FIRST_IMAGE_ENABLE 0
@@ -22,7 +22,7 @@
 __attribute__ ((section(".init.sec_params")))
 uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 #if CFG_ZEUS4_2
-#ifndef ZEUS_REVOCATION /* BOLT v1.07 or earlier */
+#if (USE_FIRST_IMAGES == 0)
 	/* Zeus 4.2 BSECK-SHMOO integration document v1.12, sec 2.3, page 9 */
 	[0x00] = 0x00008aa0,
 	[0x01] = 0x00000000,
@@ -86,7 +86,7 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x3d] = 0x00000000,
 	[0x3e] = 0x00000000,
 	[0x3f] = 0x00000000,
-#else /* we're using ZEUS_REVOCATION */
+#else /* USE_FIRST_IMAGES */
 	/* Zeus 4.2 BSECK-SHMOO integration document v1.12, sec 2.3, page 9 */
 	[0x00] = 0x00008aa0,
 	[0x01] = 0x00000000,
@@ -98,24 +98,24 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x0d] = SECONDIMAGE_PART_SIZE>>10,
 	[0x0e] = SECONDIMAGE_PART_OFFS,
 	[0x0f] = AVS_TEXT_OFFS-SECONDIMAGE_PART_OFFS,
-	[0x10] = 0x00003000,
-	[0x11] = 0x00000B00, /* last 256 bytes is reservered */
+	[0x10] = AVS_CODE_SIZE,
+	[0x11] = AVS_DATA_SIZE, /* last 256 bytes is reservered */
 	[0x12] = SECONDIMAGE_PART_SIZE>>10,
 	[0x13] = SECONDIMAGE_PART_OFFS,
 	[0x14] = MEMSYS_TEXT_OFFS-SECONDIMAGE_PART_OFFS, /* 0x90 */
 	[0x15] = MEMSYS_SIZE,
 	[0x16] = SECONDIMAGE_PART_SIZE>>10,
 	[0x17] = FIRSTIMAGE_PART_OFFS,
-	[0x18] = BFW1_TEXT_OFFS-FIRSTIMAGE_PART_OFFS, /*A0 */
+	[0x18] = FIRST_BFW_TEXT_OFFS-FIRSTIMAGE_PART_OFFS, /*A0 */
 	[0x19] = FIRST_IMAGE_ENABLE | (FIRSTIMAGE_PART_SIZE>>10),
 	[0x1a] = FIRSTIMAGE_PART_OFFS,
-	[0x1b] = AVS1_TEXT_OFFS-FIRSTIMAGE_PART_OFFS,
-	[0x1c] = 0x00003000, /* B0 */
-	[0x1d] = 0x00000B00,
+	[0x1b] = FIRST_AVS_TEXT_OFFS-FIRSTIMAGE_PART_OFFS,
+	[0x1c] = AVS_CODE_SIZE, /* B0 */
+	[0x1d] = AVS_DATA_SIZE,
 	[0x1e] = FIRST_IMAGE_ENABLE | (FIRSTIMAGE_PART_SIZE>>10),
 	[0x1f] = FIRSTIMAGE_PART_OFFS,
-	[0x20] = MEMSYS1_TEXT_OFFS-FIRSTIMAGE_PART_OFFS, /* C0 */
-	[0x21] = MEMSYS1_SIZE,
+	[0x20] = FIRST_MEMSYS_TEXT_OFFS-FIRSTIMAGE_PART_OFFS, /* C0 */
+	[0x21] = FIRST_MEMSYS_SIZE,
 	[0x22] = FIRST_IMAGE_ENABLE | (FIRSTIMAGE_PART_SIZE>>10),
 	[0x23] = 0x00000000,
 	[0x24] = SSBL_TEXT_OFFS, /* D0 */
@@ -146,7 +146,7 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x3d] = 0x00000000,
 	[0x3e] = 0x00000000,
 	[0x3f] = 0x00000000,
-#endif /* ZEUS_REVOCATION */
+#endif /* USE_FIRST_IMAGES */
 #elif CFG_ZEUS4_1	/* 0x400 */
 	[0x00] = 0x0000e780, /* 0xc80-0xf3ff */
 	[0x01] = 0x00000000,

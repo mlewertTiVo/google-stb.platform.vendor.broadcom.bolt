@@ -12,8 +12,7 @@
 	.arm
 
 @ WARNING: For Zeus 4.2 do not add any more code or data here
-@ as we are one word away from the 64 byte/16 ins limit, or
-@ right at the limit WRT 3390a0 & 3390b0.
+@ as we are one word away from the 64 byte/16 ins limit.
 
 
 /* armv8 branch instruction.
@@ -61,9 +60,3 @@ reset_handler:
 	b	fsbl_b_start
 default_handler:
 	b	default_handler
-
-#if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM3390B0)
-	@ word offset to the bootrom data area
-	. = vectors + 0x38
-	.word 0x140 / 4
-#endif

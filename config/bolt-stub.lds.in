@@ -12,14 +12,14 @@
 MEMORY {
 	fsbl	: ORIGIN = @FSBL_TEXT_ADDR@,	LENGTH = @FSBL_SIZE@
 	bbl		: ORIGIN = @BBL_TEXT_ADDR@,	LENGTH = @BBL_SIZE@
-	bfw		: ORIGIN = @BFW_TEXT_ADDR@,	LENGTH = @BFW_SIZE@
-	avs_fw	: ORIGIN = @AVS_TEXT_ADDR@,	LENGTH = @AVS_SIZE@
-	memsys	: ORIGIN = @MEMSYS_TEXT_ADDR@,	LENGTH = @MEMSYS_SIZE@
-	memsys_alt	: ORIGIN = @MEMSYS_ALT_TEXT_ADDR@,	LENGTH = @MEMSYS_ALT_SIZE@
 	shmoo	: ORIGIN = @SHMOO_TEXT_ADDR@,	LENGTH = @SHMOO_SIZE@
 	boards	: ORIGIN = @BOARDS_TEXT_ADDR@,	LENGTH = @BOARDS_SIZE@
 	gap		: ORIGIN = @GAP_TEXT_ADDR@,	LENGTH = @GAP_SIZE@
 	ssbl	: ORIGIN = @SSBL_RAM_ADDR@,	LENGTH = @SSBL_SIZE@
+
+	bfw		: ORIGIN = @BFW_TEXT_ADDR@,	LENGTH = @BFW_SIZE@
+	avs_fw	: ORIGIN = @AVS_TEXT_ADDR@,	LENGTH = @AVS_SIZE@
+	memsys	: ORIGIN = @MEMSYS_TEXT_ADDR@,	LENGTH = @MEMSYS_SIZE@
 }
 
 SECTIONS {
@@ -41,23 +41,9 @@ SECTIONS {
 		* (.bbl.data);
 	} >bbl
 
-	.bfw : AT(@BFW_TEXT_ADDR@) {
-		* (.bfw.data);
-	} >bfw
-
 	.avs_fw : AT(@AVS_TEXT_ADDR@) {
 		* (.data);
 	} >avs_fw
-
-	.memsys : AT(@MEMSYS_TEXT_ADDR@) {
-		* (.memsys.init.rodata);
-		* (.memsys.init*);
-		* (.memsys.text);
-		* (.memsys.data);
-		. = @MEMSYS_MCB_OFFSET@;
-		* (.memsys.mcbdata);
-		* (.memsys.mcb);
-	} >memsys
 
 	.shmoo : AT(@SHMOO_TEXT_ADDR@) {
 		* (.shmoo.board);
@@ -96,4 +82,31 @@ SECTIONS {
 	. = ALIGN(4);
 	__exidx_end = .;
 	PROVIDE(__exidx_end = __exidx_end);
+
+	/* Keep the u32 end of SSBL image marker.
+	 * This ensures the SSBL binary stays the
+	 * same SSBL_SIZE instead of smaller.
+	 */
+	.end : AT(@SSBL_TEXT_ADDR@ + (@SSBL_SIZE@ - 4))
+	{
+		KEEP(* (.ssbl.end));
+	} > ssbl
+
+	.bfw : AT(@BFW_TEXT_ADDR@) {
+		* (.bfw.data);
+	} >bfw
+
+	.avs_fw : AT(@AVS_TEXT_ADDR@) {
+		* (.data);
+	} >avs_fw
+
+	.memsys : AT(@MEMSYS_TEXT_ADDR@) {
+		* (.memsys.init.rodata);
+		* (.memsys.init*);
+		* (.memsys.text);
+		* (.memsys.data);
+		. = @MEMSYS_MCB_OFFSET@;
+		* (.memsys.mcbdata);
+		* (.memsys.mcb);
+	} >memsys
 }

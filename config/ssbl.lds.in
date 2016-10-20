@@ -56,4 +56,15 @@ SECTIONS {
 	.ARM.exidx : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
 
 	_end = .;
+
+	/*
+	 * Place a u32 marker "BOLT SSBL" in leet
+	 * speak (little endian) at the end of SSBL.
+	 * This is our anchor to keep SSBL the same
+	 * final size when we get linked into the
+	 * final bolt.bin.
+	 */
+	.ssbl.end : {
+		LONG(0xb15517b0)
+	}
 };

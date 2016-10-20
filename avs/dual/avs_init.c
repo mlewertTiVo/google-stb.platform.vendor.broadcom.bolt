@@ -891,16 +891,8 @@ static void _avs_init(unsigned extra_delay, bool quiet)
 	bool __maybe_unused over_temp;
 	unsigned __maybe_unused time;
 
-#if CFG_BATTERY_BACKUP
-	/* If docsis is booted then AVS firmware is still running.
-	 * In this case we're not to touch it.
-	 */
-	if (!fsbl_docsis_booted(0, 0))
-#endif /* CFG_BATTERY_BACKUP */
-	{
-		reset_avs_CPU();
-		zero_data_memory();
-	}
+	reset_avs_CPU();
+	zero_data_memory();
 
 	over_temp = avs_check_temp_reset(0);
 
@@ -939,14 +931,6 @@ void avs_class_init(void)
 
 	if (ASK_VOLTAGE)
 		ask_voltage();
-
-#if CFG_BATTERY_BACKUP
-	if (fsbl_docsis_booted(0, 0)) {
-		avs_print_string("Resuming from BBM...");
-		avs_print_cr_lf();
-		return;
-	}
-#endif
 
 	/* Its possible that AVS could be disabled on this part. */
 	/* If its disabled then we can't access any of the AVS registers --

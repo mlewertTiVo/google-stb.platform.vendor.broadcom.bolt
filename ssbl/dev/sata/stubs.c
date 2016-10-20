@@ -86,6 +86,17 @@ WEAK void usleep(unsigned long t)
 #endif
 }
 
+WEAK void msleep(unsigned long t)
+{
+#if defined(_BOLT_)
+	if (t > INT_MAX)
+		t = INT_MAX;
+	bolt_msleep((int)t);
+#else
+	t = t;
+#endif
+}
+
 WEAK void __assert(int x)
 {
 	x = x;

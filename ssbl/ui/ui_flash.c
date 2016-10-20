@@ -667,7 +667,7 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[])
 	for (i = 0; i < inf->n_boards; i++) {
 		c = b[i].name;
 		xprintf("%c)\t%s %s %s%s\n", board_idx_to_char(i),
-			(b[i].avs ? "AVS  " : "noavs"),
+			(AVS_ENABLE(b[i].avs) ? "AVS  " : "noavs"),
 			c,
 			(i == inf->board_idx) ? "*" : " ",
 			(i == inf->saved_board.board_idx) ? "S" : " ");
@@ -693,6 +693,34 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[])
 	}
 	xprintf(" AVS %s, load/run status: %x\n", s, inf->avs_err);
 
+#if defined(DVFS_SUPPPORT)
+	{
+		const struct dvfs_params *dvfs = board_dvfs();
+		char *ds;
+
+		b = board_thisboard();
+		xprintf(" AVS domains: %d\n", AVS_DOMAINS(b->avs));
+
+		switch (dvfs->mode) {
+		case avs_mode_e:
+			ds = "avs";
+			break;
+		case dfs_mode_e:
+			ds = "dfs";
+			break;
+		case dvfs_mode_e:
+			ds = "dvfs";
+			break;
+		default:
+			ds = "?";
+			break;
+		}
+
+		xprintf(" DVFS mode: %s (%d), ", ds, dvfs->mode);
+		xprintf(" pmap: %d, ", dvfs->pmap);
+		xprintf(" pstate: %d\n", dvfs->pstate);
+	}
+#endif
 	if (CFG_MONITOR_OVERTEMP)
 		xprintf(" Overtemp park check %sabled\n",
 			(inf->saved_board.hardflags &

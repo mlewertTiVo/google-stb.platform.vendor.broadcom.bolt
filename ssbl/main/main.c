@@ -627,6 +627,9 @@ void bolt_main(int a, int b)
 	 */
 	avs_ssbl_init();
 
+#if defined(DVFS_SUPPPORT)
+	dvfs_init_board_pmap();
+#endif
 	board_device_init();
 #if (CFG_CMD_LEVEL >= 5)
 	bolt_config_info(1);

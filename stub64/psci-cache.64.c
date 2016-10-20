@@ -51,11 +51,28 @@ static void __rac_flush(void)
 	} while (v & BCHP_HIF_CPUBIUCTRL_RAC_FLUSH_REG_FLUSH_RAC_MASK);
 }
 
+static void __rac_enable(uint32_t rac_cfg0)
+{
+	rdb_write(BCHP_HIF_CPUBIUCTRL_RAC_CONFIG0_REG, rac_cfg0);
+	BARRIER64();
+}
+
 
 void rac_flush(void)
 {
-	if (rac_is_enabled())
+	if (rac_master() && rac_is_enabled())
 		__rac_flush();
+}
+
+
+int rac_enable(uint32_t rac_cfg0)
+{
+	if (!rac_master())
+		return PSCI_ERR_DENIED;
+
+	__rac_enable(rac_cfg0);
+
+	return PSCI_SUCCESS;
 }
 
 
@@ -63,20 +80,16 @@ uint32_t rac_disable_and_flush(void)
 {
 	uint32_t v;
 
+	if (!rac_master())
+		return 0;
+
 	v = rdb_read(BCHP_HIF_CPUBIUCTRL_RAC_CONFIG0_REG);
 	if (v) {
-		rac_enable(0);
+		__rac_enable(0);
 		__rac_flush();
 	}
 
 	return v;
-}
-
-
-void rac_enable(uint32_t rac_cfg0)
-{
-	rdb_write(BCHP_HIF_CPUBIUCTRL_RAC_CONFIG0_REG, rac_cfg0);
-	BARRIER64();
 }
 
 

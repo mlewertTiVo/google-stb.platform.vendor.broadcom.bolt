@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -864,6 +862,34 @@ int icmp_ping(uint8_t *dest, int seq, int len)
 /**********************************************************************
   *  INIT/CONFIG FUNCTIONS
   **********************************************************************/
+
+/**********************************************************************
+  *  net_getlinkstatus()
+  *
+  *  Return a parameter from the current IP configuration.  This is
+  *  the main call to set the IP address, netmask, gateway,
+  *  name server, host name, etc.
+  *
+  *  Input parameters:
+  *    param - parameter number (see net_api.h)
+  *
+  *  Return value:
+  *    1 if link is up
+  *    0 if link is down
+  *    -1 if link status checking is not supported
+  **********************************************************************/
+int net_getlinkstatus(void)
+{
+	int linkstatus;
+
+	if (!netctx)
+		return 0;
+
+	if (eth_getlinkstatus(netctx->ethinfo, &linkstatus))
+		return linkstatus;
+
+	return -1;
+}
 
 /**********************************************************************
   *  net_getparam(param)

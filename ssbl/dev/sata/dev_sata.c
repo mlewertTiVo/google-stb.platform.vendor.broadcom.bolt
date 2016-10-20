@@ -19,6 +19,7 @@
 #include "devfuncs.h"
 #include "error.h"
 #include "common.h"
+#include "config.h"
 #include "bsp_config.h"
 #include "bchp_common.h"
 #include "dev_sata.h"
@@ -135,7 +136,6 @@ static void irq_en(int n)
 	n = n;
 }
 
-#define MAX_PHY_CTRL_PORTS			2
 #define SATA_TOP_CTRL_REG_LENGTH		0x24
 #define SATA_TOP_CTRL_PHY_CTRL_OFS		0xc
 #define SATA_TOP_CTRL_PHY_CTRL_LEN		0x8
@@ -154,14 +154,19 @@ static int dev_sata_init_phy(sata_softc *ctx)
 	 */
 	const uint32_t top_ctrl = BCHP_PHYSICAL_OFFSET +
 		BCHP_SATA_TOP_CTRL_REG_START;
-	const uint32_t port_to_phy_ctrl_ofs[MAX_PHY_CTRL_PORTS] = {
+	const uint32_t port_to_phy_ctrl_ofs[NUM_SATA_PHY_CTL] = {
 		SATA_TOP_CTRL_PHY_CTRL_OFS + (0 * SATA_TOP_CTRL_PHY_CTRL_LEN),
+#if NUM_SATA_PHY_CTL > 1
 		SATA_TOP_CTRL_PHY_CTRL_OFS + (1 * SATA_TOP_CTRL_PHY_CTRL_LEN),
+#endif
+#if NUM_SATA_PHY_CTL > 2
+#error Need to specify another port ctrl register set.
+#endif
 	};
 	int port;
 	uint32_t reg;
 
-	for (port = 0; port < MAX_PHY_CTRL_PORTS; port++) {
+	for (port = 0; port < NUM_SATA_PHY_CTL; port++) {
 		uint32_t p;
 
 		/* clear PHY_DEFAULT_POWER_STATE */

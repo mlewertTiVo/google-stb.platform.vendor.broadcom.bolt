@@ -25,8 +25,13 @@
 #define DLL_REG 0x00
 
 #define DLH_REG 0x04
+#define IER_REG 0x04
+
+#define IIR_REG 0x08
 #define FCR_REG 0x08
+
 #define LCR_REG 0x0c
+#define MCR_REG 0x10
 #define LSR_REG 0x14
 
 #define LSR_DR		BIT(0)

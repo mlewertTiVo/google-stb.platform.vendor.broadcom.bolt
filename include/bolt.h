@@ -89,4 +89,8 @@ void bolt_launch32(unsigned long ept, unsigned long param1,
 unsigned long psci(unsigned long r0, unsigned long r1,
 		unsigned long r2, unsigned long r3);
 
+int psci_boot(unsigned int la_flags, long la_entrypt, void *dt_address);
+
+void bolt_set_aon_bootmode(unsigned long flags);
+
 #endif /* __BOLT_H__ */

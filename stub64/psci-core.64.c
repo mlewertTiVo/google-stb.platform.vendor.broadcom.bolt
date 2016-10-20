@@ -242,12 +242,17 @@ static inline int is_aarch32_smc_exception(void)
 static void late_cpu_init(void)
 {
 	uint32_t cntfreq;
+	uint64_t tmp = 0ULL;
 
 	cntfreq = rdb_read(BCHP_CNTControlBase_CNTFID0);
 	BARRIER64(); /* This must complete before setting cntfrq_el0 */
 
 	__asm__ __volatile__("msr cntfrq_el0, %0\n"
 		: : "r" (cntfreq) : "memory");
+
+	__asm__ __volatile__("msr cntvoff_el2, %0\n"
+		: : "r" (tmp) : "memory");
+
 	BARRIER64();
 }
 
@@ -258,14 +263,33 @@ static int __noreturn per_cpu_common_init(uint64_t per_cpu_stacktop, int is_64)
 
 	/* smp: caches must be off before we leave or join */
 	(void)disable_all_caches_and_mmu();
+
+	/*
+	 * POWER STATE COORDINATION INTERFACE (PSCI)
+	 * Document number: ARM DEN 0022C
+	 *
+	 * 5.6 CPU_ON
+	 *
+	 *  5.6.3 Implementation responsibilities: Cache management
+	 *
+	 *   For CPU_ON, the PSCI implementation must:
+	 *
+	 *    => Perform invalidation of caches on boot,
+	 *       unless this invalidation is automatically
+	 *       performed by the hardware.
+	 *
+	 *    =>  Manage coherency.
+	 */
+	invalidate_icache();
+	invalidate_dcache(UPTO_L1);
+	/*
+	 * Now we can allow cache events to filter down
+	 * and not worry about the RAC getting confused.
+	 */
 	smp_on();
 
 	_LOCK(me);
 
-	if (rac_master()) {
-		invalidate_icache();
-		invalidate_dcache(UPTO_L1);
-	}
 	icache_enable(1); /* At EL3 only */
 
 	late_cpu_init();
@@ -478,8 +502,7 @@ static void __noreturn bakery_release_pend_off(int me)
 	 */
 	config->locked_sticky = 0;
 
-	if (rac_master())
-		rac_flush();
+	rac_flush();
 
 	smp_off_unlock(&config->cpu[me].lock);
 
@@ -609,6 +632,8 @@ static uint32_t do_cpu_suspend(int me, uint64_t power_state,
 static int boot_linux(uint64_t fn, uint64_t fdt,
 			uint64_t linux_entry, uint64_t x4)
 {
+	int me = get_cpu_idx(get_mpidr());
+
 	if (config->debug) {
 		__puts("PSCI: DTB @ ");
 		writehex64(fdt);
@@ -617,12 +642,15 @@ static int boot_linux(uint64_t fn, uint64_t fdt,
 		puts("");
 	}
 
-	/* Only allow once */
-	if (config->bootonce)
-		return PSCI_ERR_DENIED;
+	/* smp: caches must be off before we leave or join */
+	(void)disable_all_caches_and_mmu();
+	invalidate_icache();
+	invalidate_dcache(UPTO_L1);
+	smp_on();
+	late_cpu_init();
 
-	config->bootonce = 0x49435350; /* ascii 'PSCI', little endian */
-	clean_invalidate_dcache(UPTO_POU);
+	_UNLOCK(me);
+	BARRIER64(); /* Make sure we are all done here */
 
 	/* https://www.kernel.org/doc/Documentation/arm64/booting.txt
 	 * We can keep i-cache and SMP coherency on.
@@ -673,15 +701,11 @@ void psci_decode(uint64_t x0, uint64_t x1, uint64_t x2,	uint64_t x3,
 
 	/* OEM */
 	case OEM_PSCI_RAC_DISABLE:
-		if (rac_master())
-			rc = rac_disable_and_flush();
+		rc = rac_disable_and_flush();
 		break;
 
 	case OEM_PSCI_RAC_ENABLE:
-		if (rac_master()) {
-			rac_enable(x1);
-			rc = PSCI_SUCCESS;
-		}
+		rc = rac_enable(x1);
 		break;
 
 	case OEM_FUNC_EXEC64:

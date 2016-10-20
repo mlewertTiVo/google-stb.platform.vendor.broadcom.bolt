@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -13,6 +11,7 @@
 #define _BCMSF2_H_
 
 #include <bchp_switch_core.h>
+#include <net_mdio.h>
 
 /* Translation between the old and new RDB defines */
 #ifndef BCHP_SWITCH_CORE_STS_OVERRIDE_GMIIP_Port_0
@@ -63,7 +62,7 @@
 
 
 void bcm_sf2_init(void);
-void bcm_sf2_mdio_init(void);
+mdio_info_t *bcm_sf2_mdio_init(void);
 void bcm_sf2_exit(void);
 
 #endif /* _BCMSF2_H */

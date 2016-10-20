@@ -97,7 +97,7 @@
 #define SCTLR_WXN	(1 << 19) /* 1=regions with wr perms are forced to XN */
 #define SCTLR_UWXN	(1 << 20) /* 1=regions with unprivilaged wr perms are forced to XN @ EL1 */
 #define SCTLR_21RES0	(1 << 21) /* reserved */
-#define SCTLR_22RES0	(1 << 22) /* reserved */
+#define SCTLR_22RES1	(1 << 22) /* reserved */
 #define SCTLR_23RES1	(1 << 23) /* reserved */
 #define SCTLR_24RES0	(1 << 24) /* reserved */
 #define SCTLR_EE	(1 << 25) /* 0=exception endian is little */
@@ -108,9 +108,9 @@
 #define SCTLR_TE	(1 << 30) /* 0=exceptions are taken in A32, 1=T32 */
 #define SCTLR_31RES30	(1 << 31) /* RES0 */
 
-#define SCTLR_RES1_BITS (SCTLR_3RES1 | SCTLR_4RES1 | SCTLR_11RES1 | SCTLR_23RES1)
+#define SCTLR_RES1_BITS (SCTLR_3RES1 | SCTLR_4RES1 | SCTLR_11RES1 | SCTLR_22RES1 | SCTLR_23RES1)
 
-#define HCPTR_0RES1	(0x1ff << 0) /* reserved */
+#define HCPTR_0RES1	(0x3ff << 0) /* reserved */
 #define HCPTR_TCP10	(1 << 10) /* 1=trap valid NS access to CP<n> to Hyp mode */
 #define HCPTR_TCP11	(1 << 11) /* 1=trap valid NS access to CP<n> to Hyp mode */
 #define HCPTR_12RES1	(3 << 12) /* reserved */

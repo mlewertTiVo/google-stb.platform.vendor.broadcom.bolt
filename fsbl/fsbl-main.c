@@ -29,29 +29,6 @@
 #include <chipid.h>
 #include <ddr.h>
 
-#if CFG_BATTERY_BACKUP
-#include "sysmailbox.h"
-static __maybe_unused int setup_boot_on_battery_or_ac_restored(
-	struct fsbl_info *info)
-{
-	/* setup for boot on battery or AC restored */
-	int bypass_shmoo = fsbl_C1_check(info);
-
-	/* after fsbl_C1_check() we now know the powerstate. */
-	inform_ecm(BCHP_MBOX_CPUC_DATA3_STB_RUN_STATE_bootloader,
-		   (info->powerdet == POWER_DET_STD) ?
-		   BCHP_MBOX_CPUC_DATA3_STB_POWER_STATE_high_power :
-		   BCHP_MBOX_CPUC_DATA3_STB_POWER_STATE_low_power);
-	return bypass_shmoo;
-}
-#else
-static __maybe_unused int setup_boot_on_battery_or_ac_restored(
-	struct fsbl_info *info)
-{
-	return 0;
-}
-#endif
-
 
 #ifdef CFG_EMULATION
 extern void jumpto(uint32_t address);
@@ -139,6 +116,26 @@ static void fsbl_setup_mmu(struct board_type *b)
 }
 #endif
 
+/* Decide whether to boot Rescue Loader or not */
+int rescue_loader_needed(void)
+{
+	/* OEM must implement this function */
+	return 0;
+}
+
+/* Change SSBL parameters to select Rescue Loader instead */
+void select_rescue_loader(void)
+{
+	/* Overwrite SSBL parameters */
+	*((uint32_t *)(SRAM_ADDR + PARAM_SSBL_PART_OFFSET)) = RESCUE_LOADER_PART_OFFSET;
+	*((uint32_t *)(SRAM_ADDR + PARAM_SSBL_SIZE)) = RESCUE_LOADER_SIZE;
+	*((uint32_t *)(SRAM_ADDR + PARAM_SSBL_CTRL)) = RESCUE_LOADER_CTRL;
+	*((uint32_t *)(SRAM_ADDR + PARAM_SSBL_PART)) = RESCUE_LOADER_PART;
+
+	/* OEM may want to set some status in AON to indicate that the
+	Rescue Loader will be run */
+}
+
 void fsbl_main(void)
 {
 #ifndef CFG_EMULATION
@@ -147,7 +144,6 @@ void fsbl_main(void)
 	struct board_nvm_info *pnvm;
 	struct board_type *b;
 	physaddr_t b_ddr;
-	int bypass_shmoo = 0;
 	int do_shmoo_menu, hf;
 	uint32_t restore_val;
 	int en_avs_thresh;
@@ -181,10 +177,10 @@ void fsbl_main(void)
 				BCHP_AON_CTRL_SYSTEM_DATA_RAMi_ARRAY_END; ++i)
 				AON_REG(i) = 0;
 	}
-#ifndef CFG_EMULATION
-	bcm3390_hack_early_bus_cfg();
+
 	orion_hack_early_bus_cfg();
 
+#ifndef CFG_EMULATION
 	/* arb_timer / 108x10^6 = timeout in seconds */
 	BDEV_WR(BCHP_SUN_GISB_ARB_TIMER, 0x278d0); /* 1.5 ms */
 	BDEV_WR(BCHP_SUN_GISB_ARB_REQ_MASK, 0);
@@ -205,7 +201,6 @@ void fsbl_main(void)
 #if !CFG_ZEUS4_2
 	sec_bfw_load(warm_boot);
 #endif
-	bypass_shmoo = setup_boot_on_battery_or_ac_restored(&info);
 
 #ifndef SECURE_BOOT
 	if (!bypass_avs)
@@ -290,8 +285,6 @@ void fsbl_main(void)
 	/* must be called before shmoo because SCB has to be full frequency */
 	adjust_clocks(b, mhl_power);
 
-	bcm7366b0_mii_rx_err_cfg();
-
 #ifndef SECURE_BOOT
 	if (!bypass_avs)
 #endif
@@ -301,13 +294,11 @@ void fsbl_main(void)
 				FSBL_HARDFLAG_AVS_MASK;
 
 			avs_err = avs_start(((hf == FSBL_HARDFLAG_AVS_BOARD) &&
-					     b->avs) ||
+					     AVS_ENABLE(b->avs)) ||
 					     (hf == FSBL_HARDFLAG_AVS_ON));
 		}
 
 	info.avs_err = avs_err;
-
-	bcm3390_hack_late_bus_cfg();
 
 	if (warm_boot)
 		memsys_warm_restart(b->nddr);
@@ -322,10 +313,7 @@ void fsbl_main(void)
 		ddr = find_ddr(i);
 		__puts(": ");
 		if (ddr) {
-			if (bypass_shmoo)
-				__puts("bypass ");
-			else
-				shmoo_set(ddr, warm_boot);
+			shmoo_set(ddr, warm_boot);
 			puts("OK");
 		} else {
 			puts("-");
@@ -395,6 +383,10 @@ void fsbl_main(void)
 	/* finally overwite the loaded 'info' with
 	our local, possibly modified, copy. */
 	memcpy(p, &info, sizeof(info));
+
+	/* Boot Rescue Loader or not */
+	if (rescue_loader_needed())
+		select_rescue_loader();
 
 	/*
 	 * This function executes the FSBL epilogue and jumps to the SSBL.

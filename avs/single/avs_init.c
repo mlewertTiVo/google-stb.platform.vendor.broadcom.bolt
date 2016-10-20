@@ -90,6 +90,9 @@
 static void reset_avs_cpu(void)
 {
 	BDEV_WR_F(AVS_CPU_CTRL_CTRL, AVS_RST, 1);
+	/* the ARC CPU needs time (200ns) to complete the reset
+	 * before it can be accessed again */
+	avs_sleep(1);
 }
 
 /* Make sure no "left-over" data in data memory space */

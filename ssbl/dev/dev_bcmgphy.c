@@ -98,8 +98,7 @@ void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
  * HW7439-663 for GPHY revs. E0, F0 and G0 */
 #elif defined(CONFIG_BCM7364) || defined(CONFIG_BCM7250B0) || \
 	defined(CONFIG_BCM74371A0) || defined(CONFIG_BCM7439B0) || \
-	defined(CONFIG_BCM7366B0) || defined(CONFIG_BCM7366C0) || \
-	defined(CONFIG_BCM7445E0)
+	defined(CONFIG_BCM7366C0) || defined(CONFIG_BCM7445E0)
 void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 {
 	int i;
@@ -134,48 +133,31 @@ void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 		r_rc_cal_reset(mdio, phy[i]);
 	}
 }
-#elif defined(CONFIG_BCM3390A0)
-/* Workaround based on HW3390-481 */
+#elif defined(CONFIG_BCM7260A0) || \
+	defined(CONFIG_BCM7268A0) || \
+	defined(CONFIG_BCM7271)
+/* Workaround based on HWBCM7268-85 and HW7271-242 */
 void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 {
 	int i;
 
-	/* reset PHY */
-	for (i = 0; i < cnt; i++)
-		mdio_phy_reset(mdio, phy[i]);
-
-	/* CORE_BASE1E */
-	/* force trim to overwrite and set I_ext trim to 0000 */
-	mdio_write(mdio, phy[0], 0x001e, 0x0010);
-
 	for (i = 0; i < cnt; i++) {
-		/* AFE_RXCONFIG_1 */
-		/* Provide more margin for INL/DNL measurement on ATE */
-		mii_write_misc(mdio, phy[i], 0x38, 1, 0x9B2F);
+		/* set shadow mode 2 */
+		mdio_set_clr_bits(mdio, phy[i], 0x1f, 0x0004, 0x0000);
 
-		/* AFE_TX_CONFIG */
-		/* Set 1000BT Cfeed=011 for to improve rise/fall time */
-		mii_write_misc(mdio, phy[i], 0x39, 0, 0x431);
+		/* Set current trim values INT_trim = -1, Ext_trim =0 */
+		mdio_write(mdio, phy[i], 0x1A, 0x3BE0);
 
-		/* AFE_VDAC_ICTRL_0 */
-		/* Set Iq=1101 instead of 0111 for improving AB symmetry */
-		mii_write_misc(mdio, phy[i], 0x39, 1, 0xA7DA);
+		/* Cal reset */
+		mdio_write(mdio, phy[i], 0xE, 0x23);
+		mdio_set_clr_bits(mdio, phy[i], 0xF, 0x0006, 0x0000);
 
-		/* AFE_HPF_TRIM_OTHERS
-		 * Set 100Tx/10BT to -4.5% swing & Set rCal offset for
-		 * HT=0 code */
-		mii_write_misc(mdio, phy[i], 0x3A, 0, 0xE3);
+		/* Cal reset disable */
+		mdio_write(mdio, phy[i], 0xE, 0x23);
+		mdio_set_clr_bits(mdio, phy[i], 0xF, 0x0000, 0x0006);
 
-		/* DSP_TAP10 */
-		/* Adjust I_int bias current trim (+0% swing, +0 tick) */
-		mii_write_misc(mdio, phy[i], 0xA, 0, 0x11B);
+		/* reset shadow mode 2 */
+		mdio_set_clr_bits(mdio, phy[i], 0x1f, 0x0000, 0x0004);
 	}
-
-	/* Reset R_CAL/RC_CAL engine */
-	r_rc_cal_reset(mdio, phy[0]);
-}
-#elif defined(CONFIG_BCM7271A0) || defined(CONFIG_BCM7268A0)
-void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
-{
 }
 #endif

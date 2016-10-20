@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -14,6 +12,37 @@
 #include "board_params.h"
 #include <bchp_sun_top_ctrl.h>
 #include <ddr.h>
+
+
+/*
+ * No floating point in BOLT so we have to scale. The
+ * values are in MHz so plenty of room (0..21474).
+ */
+#define SIGNIFICANCE	1000
+#define PERCENT_SIGNIFICANCE (100 * SIGNIFICANCE)
+
+static void board_print_ddr_ssc(int which, uint32_t divisor)
+{
+	uint32_t ratio, dividend;
+
+	if (memsys_ssbl_ddr_info(which, &dividend, NULL, NULL, NULL))
+		return;
+
+	/* Can't do rational ratios with infinities. */
+	if ((0 == dividend) || (0 == divisor))
+		return;
+
+	ratio = (dividend * PERCENT_SIGNIFICANCE) / (divisor * 100);
+
+	xprintf("DDR%d Actual frequency: %dMHz, ", which, dividend);
+
+	/*
+	 * NOTE: If you change SIGNIFICANCE then you *must* match it to the
+	 * significant places i.e. "%03u" in the xprintf line below.
+	 */
+	xprintf("ratio %u.%03u\n",
+		ratio / SIGNIFICANCE , ratio % SIGNIFICANCE);
+}
 
 
 /*  *********************************************************************
@@ -52,6 +81,7 @@ void board_printinfo(void)
 				xprintf("%dM", ddr->ddr_size);
 			else {
 				uint32_t ddr_size = ddr->ddr_size / 1024;
+
 				if (ddr_size < 1024)
 					xprintf("%dG", ddr_size);
 				else {
@@ -68,6 +98,20 @@ void board_printinfo(void)
 			env_setenv(name, value,
 				ENV_FLG_BUILTIN | ENV_FLG_READONLY);
 		}
+
+		/*
+		 * Spin round the DDRs again, this time reporting the
+		 * actual frequency and a ratio between it and the
+		 * nominal. We could do this in the previous loop
+		 * but could be hitting line widths of > 100 chars.
+		 */
+		for (i = 0; i < b->nddr; i++) {
+			ddr = &(b->ddr[i]);
+			if (!ddr)
+				continue;
+			board_print_ddr_ssc(ddr->which, ddr->ddr_clock);
+		}
+
 	}
 	xprintf("  Total memory: %dMB\n", board_totaldram());
 
@@ -190,6 +234,15 @@ struct partition_profile *board_flash_partition_table(void)
 	return board_params[inf->board_idx].mapselect;
 }
 
+const struct dvfs_params *board_dvfs(void)
+{
+	struct fsbl_info *inf = board_info();
+
+	if (!inf || (inf->board_idx >= inf->n_boards))
+		return NULL;
+
+	return &(board_params[inf->board_idx].dvfs);
+}
 
 const char *board_name(void)
 {
@@ -259,6 +312,7 @@ const sdio_params *board_sdio(int sdio)
 	struct fsbl_info *inf = board_info();
 	const sdio_params *s;
 	int i;
+
 	if (!inf || (inf->board_idx >= inf->n_boards)
 		|| (sdio >= NUM_SDIO) || (sdio < 0))
 		return NULL;
@@ -342,29 +396,25 @@ dt_ops_s *board_dt_ops(void)
 }
 
 
-/* TODO: get the real mode we are starting in,
-e.g. ac power, battery etc. for SWBOLT-285
-*/
-power_det_e board_powermode(void)
-{
-#if CFG_BATTERY_BACKUP
-	struct fsbl_info *inf = board_info();
-	if (inf)
-		return inf->powerdet;
-#endif
-	return POWER_DET_NA;
-}
-
-
 void board_pinmux(void)
 {
 	struct fsbl_info *inf = board_info();
+	const struct reg_update *extra_mux;
 
 	if (!inf || (inf->board_idx >= inf->n_boards))
 		return;
 
 	if (board_params[inf->board_idx].pinmuxfn)
 		board_params[inf->board_idx].pinmuxfn();
+
+	/* certain chips require extra pinmux depending on selected SDIO pins */
+	extra_mux = &board_params[inf->board_idx].sdio_pinsel;
+	if (extra_mux->reg != 0) {
+		unsigned long regval = BDEV_RD(extra_mux->reg);
+
+		regval = (regval & ~extra_mux->mask) | extra_mux->val;
+		BDEV_WR(extra_mux->reg, regval);
+	}
 }
 
 

@@ -1,7 +1,5 @@
 /***************************************************************************
- *	 Copyright (c) 2012-2015, Broadcom Corporation
- *	 All Rights Reserved
- *	 Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -18,6 +16,7 @@
 #include "../common/xpt_dma.h"
 #include "boot_defines.h"
 #include "bchp_hif_top_ctrl.h"
+#include "psci.h"
 
 /* we're assuming the PA:VA mapping is a 1:1 identity function in FSBL */
 static inline dma_addr_t va_to_pa(void *p)
@@ -245,6 +244,25 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 	return 0;
 }
 
+
+#ifdef STUB64_START
+uint32_t psci_bootmode(uint32_t flags)
+{
+	if (flags & S3_FLAG_PSCI_BOOT) {
+		__puts("PSCI");
+		if (flags & S3_FLAG_BOOTED64) {
+			puts("64");
+			return OEM_FUNC_EXEC64;
+		} else {
+			puts("32");
+			return OEM_FUNC_EXEC32;
+		}
+	}
+	puts("JMP");
+	return 0;
+}
+#endif
+
 void fsbl_finish_warm_boot(uint32_t restore_val)
 {
 	struct brcmstb_s3_params *params;
@@ -252,6 +270,8 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 	uint32_t flags;
 	extern uint32_t glitch_addr, glitch_trace;
 	const struct memdma_initparams e = {die, udelay, memset, NULL};
+	extern uint32_t __maybe_unused glitch_psci_bootmode;
+	uint32_t __maybe_unused psci_fn;
 
 	/*
 	 * FIXME: once BFW stops making assumptions about AON_REG(0), we can
@@ -288,26 +308,38 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 
 	__puts("OS reentry @ ");
 	writehex(params->reentry);
-	puts("");
-
 #ifndef SECURE_BOOT
 	if (!fsbl_pm_mem_verify(flags)) {
+		__puts(" !verif ");
+
 		/*
 		 * Without memory verification, we also skip the anti-glitch
-		 * checks and jump straight to the OS re-entry point
+		 * checks and jump (or psci call) straight to the OS re-entry
+		 * point.
 		 */
+#ifdef STUB64_START
+		psci_fn = psci_bootmode(flags);
+		if (psci_fn) {
+			psci(psci_fn, params->reentry, 0, 0);
+			die("ret PSCI!"); /* Unexpected return. */
+		}
+#endif
 		void (*reentry)();
 
 		reentry = (void (*)())(uintptr_t)params->reentry;
 		(*reentry)();
-		/* Should not return */
+		die("ret JMP!"); /* Unexpected return. */
 	}
 #endif
-
 	if ((uintptr_t)anti_glitch_e > (uintptr_t)anti_glitch_d) {
 		glitch_addr = (uint32_t)params->reentry / 2;
 		glitch_trace = BDEV_RD(BCHP_HIF_TOP_CTRL_SCRATCH);
 
+#ifdef STUB64_START
+		psci_fn = psci_bootmode(flags);
+		if (psci_fn)
+			glitch_psci_bootmode = psci_fn;
+#endif
 		anti_glitch_e();
 	}
 	handle_boot_err(ERR_GLITCH_TRACE_CHECK);

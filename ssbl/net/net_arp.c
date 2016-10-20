@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -54,6 +52,7 @@ static int arp_tx_query(ip_info_t *ipi, uint8_t *destaddr)
 {
 	ebuf_t *buf;
 	uint8_t hwaddr[ENET_ADDR_LEN];
+	int res;
 
 	/* Get a buffer.
 	 */
@@ -79,10 +78,10 @@ static int arp_tx_query(ip_info_t *ipi, uint8_t *destaddr)
 	/* Transmit the packet
 	 */
 
-	eth_send(buf, (uint8_t *) eth_broadcast);
+	res = eth_send(buf, (uint8_t *) eth_broadcast);
 	eth_free(buf);
 
-	return 0;
+	return res;
 }
 
 /**********************************************************************
@@ -198,6 +197,7 @@ uint8_t *_arp_lookup(ip_info_t *ipi, uint8_t *destip)
 int _arp_lookup_and_send(ip_info_t *ipi, ebuf_t *buf, uint8_t *dest)
 {
 	arpentry_t *ae;
+	int res = 0;
 
 	ae = arp_find_entry(ipi, dest);
 
@@ -220,7 +220,7 @@ int _arp_lookup_and_send(ip_info_t *ipi, ebuf_t *buf, uint8_t *dest)
 			if (!ae->ae_permanent)
 				ae->ae_timer = ARP_KEEP_TIMER;
 
-			eth_send(buf, ae->ae_ethaddr);
+			res = eth_send(buf, ae->ae_ethaddr);
 			eth_free(buf);
 		} else {
 			if (q_count(&(ae->ae_txqueue)) < ARP_TXWAIT_MAX) {
@@ -232,7 +232,7 @@ int _arp_lookup_and_send(ip_info_t *ipi, ebuf_t *buf, uint8_t *dest)
 		}
 	}
 
-	return 0;
+	return res;
 }
 
 /**********************************************************************
@@ -369,6 +369,7 @@ static int arp_rx_query(ip_info_t *ipi, uint8_t *srcaddr,
 			uint8_t *targethw, uint8_t *targetip)
 {
 	ebuf_t *txbuf;
+	int res;
 
 	/* Allocate a packet and form the reply
 	 */
@@ -389,10 +390,10 @@ static int arp_rx_query(ip_info_t *ipi, uint8_t *srcaddr,
 	ebuf_append_bytes(txbuf, targethw, ENET_ADDR_LEN);
 	ebuf_append_bytes(txbuf, targetip, IP_ADDR_LEN);
 
-	eth_send(txbuf, srcaddr);
+	res = eth_send(txbuf, srcaddr);
 	eth_free(txbuf);
 
-	return 0;
+	return res;
 }
 
 /**********************************************************************

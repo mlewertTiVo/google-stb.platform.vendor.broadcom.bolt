@@ -83,6 +83,19 @@ typedef struct nvram_info_s {
 	int nvram_eraseflg;	/* true if we need to erase first */
 } nvram_info_t;
 
+enum ether_phy_type {
+	ETH_PHY_NA,
+	ETH_EPHY,
+	ETH_GPHY,
+	ETH_SF2,
+};
+
+struct ether_phy_info {
+	enum ether_phy_type type;
+	unsigned long *phyaddr;
+	int version;
+};
+
 /*  *********************************************************************
     *  Ethernet stuff
     ********************************************************************* */
@@ -98,10 +111,11 @@ typedef struct nvram_info_s {
 #define IOCTL_ETHER_SETSTROBESIG 10	/* set strobe signal (int) */
 
 /* Added for ephytest */
-#define IOCTL_ETHER_GET_PHY_REGBASE	11 /* Get PHY registers base address */
+#define IOCTL_ETHER_GET_PHY_REGBASE	11 /* Depricated */
 #define IOCTL_ETHER_GET_PORT_PHYID	12 /* Get the PHY ID for a given port */
 #define IOCTL_ETHER_GET_MDIO_PHYID	13 /* Get the PHY ID for the mdio */
 #define IOCTL_ETHER_SET_PHY_DEFCONFIG	14 /* Apply default phy workarounds */
+#define IOCTL_ETHER_GET_PHY_INFO	15
 
 #define ETHER_LOOPBACK_OFF	0	/* no loopback */
 #define ETHER_LOOPBACK_MAC_INT	1	/* MAC Internal loopback */

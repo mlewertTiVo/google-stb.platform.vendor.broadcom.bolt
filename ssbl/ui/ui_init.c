@@ -74,4 +74,7 @@ void ui_init(void)
 #if CFG_TRUSTZONE
 	ui_init_tz();
 #endif
+#ifdef SECURE_BOOT
+	ui_init_secureloadcmds();
+#endif
 }

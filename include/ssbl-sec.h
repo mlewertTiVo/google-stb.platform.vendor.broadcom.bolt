@@ -18,5 +18,7 @@
 
 const char *sec_get_bsp_version(void);
 int sec_get_random_num(uint32_t *dest, int num);
+uint32_t sec_enable_debug_ports(void);
+void ssbl_main_sec(void);
 
 #endif /* __SSBL_SEC_H__ */

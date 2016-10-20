@@ -34,6 +34,7 @@
 #define __UM_AHCI_H__
 
 #include "os.h"
+#include "config.h"
 
 #if !defined(__NONOS)
 #include <stdio.h>
@@ -60,7 +61,6 @@
 #define SECS_TO_TICKS(x)		((x) * 1000000)
 #define MS_TO_TICKS(x)			((x) * 1000)
 #define TIMEOUT_TICKS_5S		SECS_TO_TICKS(5)
-#define NUM_PORTS			(2)
 #if defined(__SINGLE_THREADED)
 # define NUM_TAGS			(1)
 #else
@@ -76,6 +76,10 @@
 #define SATA_TOP_CTRL_BUS_CTRL		(0x44)
 #define SATA_AHCI_GHC_HBA_CAP		(0x2000)
 #define SATA_AHCI_GHC_PORTS_IMPLEMENTED	(0x200c)
+
+#define SATA_FIRST_PORT_CTRL		(0x700) /* offset from SATA_AHCI_GHC */
+#define SATA_NEXT_PORT_CTRL_OFFSET	(0x80)
+#define SATA_PORT_PCTRL6(base)		(base + 0x18)
 
 /*  *********************************************************************
     * Utility macros
@@ -105,7 +109,7 @@
 	for ((tag) = 0; (tag) < NUM_TAGS; (tag)++)
 
 #define for_each_port(port) \
-	for ((port) = 0; (port) < NUM_PORTS; (port)++)
+	for ((port) = 0; (port) < MAX_SATA_PHY_PORTS; (port)++)
 
 #define for_each_bd(bd_curr, bd_head) \
 	for ((bd_curr) = (bd_head); (bd_curr) != NULL; bd_curr = bd_curr->next)
@@ -643,11 +647,11 @@ typedef struct {
 	mutex_t             mtx;
 	uint32_t            reg_base;
 	ahci_hba_ghc_regs_t *hba_regs;
-	ahci_port_regs_t    *port_regs[NUM_PORTS];
-	void                *phy_regs[NUM_PORTS];
-	uint32_t            tags_allocated[NUM_PORTS];
-	uint32_t            tags_started[NUM_PORTS];
-	int                 non_q_barrier[NUM_PORTS];
+	ahci_port_regs_t    *port_regs[MAX_SATA_PHY_PORTS];
+	void                *phy_regs[MAX_SATA_PHY_PORTS];
+	uint32_t            tags_allocated[MAX_SATA_PHY_PORTS];
+	uint32_t            tags_started[MAX_SATA_PHY_PORTS];
+	int                 non_q_barrier[MAX_SATA_PHY_PORTS];
 	struct {
 		uint32_t is_ready : 1;
 		uint32_t rsvd0    : 31;

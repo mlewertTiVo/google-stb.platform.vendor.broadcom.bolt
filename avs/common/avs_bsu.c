@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -15,6 +13,7 @@
 ***************************************************************************/
 
 #include "avs_bsu.h"
+#include "board.h"
 
 #if !defined(ENABLE_AVS_INIT)
 
@@ -125,7 +124,7 @@ void avs_do_reset_on_overtemp(int en)
 /* The AVS FW stores current data in the first part of its shared memory.
  * This reads the current data into the supplied memory.
  */
-static void get_avs_fw_results(at_runtime *results)
+static void get_avs_fw_results(struct at_runtime *results)
 {
 	uint32_t *p = (uint32_t *)results;
 	unsigned i;
@@ -144,7 +143,7 @@ int avs_get_data(unsigned int *voltage,
 		     signed int *temperature,
 		     bool *firmware_running)
 {
-	at_runtime results;
+	struct at_runtime results;
 	unsigned int t_voltage;
 	signed int t_temperature;
 	bool t_fw_running = true; /* assume its running */
@@ -209,14 +208,14 @@ unsigned fraction(signed f) { if (f<0) f=-f; return (unsigned)(f - f/1000*1000);
  */
 void avs_info_print(void)
 {
-        unsigned voltage=1;
-        signed temperature=2;
-        bool firmware_running=false;
+	unsigned voltage = 1;
+	signed temperature = 2;
+	bool firmware_running = false;
 
 	avs_get_data(&voltage, &temperature, &firmware_running);
 
 	if (firmware_running) {
-		at_runtime results;
+		struct at_runtime results;
 		unsigned revision;
 
 		get_avs_fw_results(&results);
@@ -237,18 +236,21 @@ void avs_info_print(void)
 			(revision >> 0 & 0xFF)
 		);
 #if defined(AVS_DUAL_MONITORS) || defined(AVS_DUAL_DOMAINS)
-#if (BCHP_CHIP == 3390)
-		xprintf("AVS: DCD: V=%d.%03dV, T=%c%d.%03dC, PV=%d.%03dV, MV=%d.%03dV\n",
-#else
-		xprintf("AVS: CPU: V=%d.%03dV, T=%c%d.%03dC, PV=%d.%03dV, MV=%d.%03dV\n",
-#endif
-			mantissa(results.voltage1), fraction(results.voltage1),
-			sign(results.temperature1),
-			mantissa(results.temperature1),
-			fraction(results.temperature1),
-			mantissa(results.PV1), fraction(results.PV1),
-			mantissa(results.MV1), fraction(results.MV1)
-		);
+		struct board_type *b = board_thisboard();
+
+		if (!b || (AVS_DOMAINS(b->avs) == 2)) {
+			xprintf("AVS: %s: V=%d.%03dV, T=%c%d.%03dC, "
+				"PV=%d.%03dV, MV=%d.%03dV\n",
+				"CPU",
+				mantissa(results.voltage1),
+				fraction(results.voltage1),
+				sign(results.temperature1),
+				mantissa(results.temperature1),
+				fraction(results.temperature1),
+				mantissa(results.PV1), fraction(results.PV1),
+				mantissa(results.MV1), fraction(results.MV1)
+			);
+		}
 #endif
 	}
 	else

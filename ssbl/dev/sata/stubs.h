@@ -49,6 +49,7 @@ extern void *malloc(size_t);
 extern void *memset(void *, int, size_t);
 #endif
 extern void usleep(unsigned long);
+extern void msleep(unsigned long);
 extern FILE *stderr;
 
 #define SATA_MDIO_REG_SPACE_SIZE	  0x1000

@@ -233,21 +233,21 @@ Booting an SREC image
 
 [source,shell]
 ----
-[user]$arm-linux-objcopy -I binary -O srec --adjust-vma=0x8000 vmlinuz-initrd-7366b0 /tftpboot/vmlinuz-initrd-7366b0.srec
+[user]$arm-linux-objcopy -I binary -O srec --adjust-vma=0x8000 vmlinuz-initrd-7366c0 /tftpboot/vmlinuz-initrd-7366c0.srec
 
-[user]$ srec_info /tftpboot/vmlinuz-initrd-7366b0.srec
+[user]$ srec_info /tftpboot/vmlinuz-initrd-7366c0.srec
 Format: Motorola S-Record
-Header: "vmlinuz-initrd-7366b0.srec"
+Header: "vmlinuz-initrd-7366c0.srec"
 Execution Start Address: 00008000
 Data:   008000 - 65F9BF
 ----
 
 ----
-BOLT> ifconfig eth0 -auto; boot -srec 192.168.0.42:vmlinuz-initrd-7366b0.srec
+BOLT> ifconfig eth0 -auto; boot -srec 192.168.0.42:vmlinuz-initrd-7366c0.srec
 100 Mbps Full-Duplex
 Device eth0:  hwaddr 00-10-18-00-D3-05, ipaddr 192.168.0.40, mask 255.255.255.0
         gateway 192.168.0.42, nameserver not set
-Loader:srec Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7366b0.srec Options:(null)
+Loader:srec Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7366c0.srec Options:(null)
 ...
 ...
 415645 lines
@@ -265,48 +265,48 @@ Passing Linux command line args
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ----
-BOLT> boot 192.168.0.42:vmlinuz-initrd-7366b0 'parts="blah" nosmp donkey="kong"'
+BOLT> boot 192.168.0.42:vmlinuz-initrd-7366c0 'parts="blah" nosmp donkey="kong"'
 ...
 # cat /proc/cmdline
 parts="blah" nosmp donkey="kong"
 ----
 
 ----
-BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "parts='blah' nosmp donkey='kong'"
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366c0 "parts='blah' nosmp donkey='kong'"
 ...
 # cat /proc/cmdline
 parts='blah' nosmp donkey='kong'
 ----
 
 ----
-BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 'parts='blah' nosmp donkey='kong''
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366c0 'parts='blah' nosmp donkey='kong''
 # cat /proc/cmdline
 parts=blah nosmp donkey=kong
 ----
 
 ----
-BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "parts="blah" nosmp donkey="kong""
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366c0 "parts="blah" nosmp donkey="kong""
 # cat /proc/cmdline
 parts=blah nosmp donkey=kong
 ----
 
 ----
 BOLT> setenv ARG "parts='blah' nosmp donkey='kong'"
-BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "$ARG"
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366c0 "$ARG"
 # cat /proc/cmdline
 parts='blah' nosmp donkey='kong'
 ----
 
 ----
 BOLT> setenv ARG 'parts="blah" nosmp donkey="kong"'
-BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "$ARG"
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366c0 "$ARG"
 # cat /proc/cmdline
 parts=blah nosmp donkey=kong
 ----
 
 ----
 BOLT> setenv ARG 'parts=\"blah\" nosmp donkey=\"kong\"'
-BOLT> boot  192.168.0.42:vmlinuz-initrd-7366b0 "$ARG"
+BOLT> boot  192.168.0.42:vmlinuz-initrd-7366c0 "$ARG"
 # cat /proc/cmdline
 parts="blah" nosmp donkey="kong"
 ----

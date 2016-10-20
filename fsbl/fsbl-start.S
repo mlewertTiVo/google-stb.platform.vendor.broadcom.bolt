@@ -187,24 +187,23 @@ jumpto:
 
 ENTRY_PROC(setup_mvbar)
 #ifdef STUB64_START
-	push		{r1-r2}
-
-	mrs		r1, CPSR		/* CPSR to apply mode mask to */
-	/* Desired stack base */
-	ldr		r2, =(PSCI_BASE + PSCI_SIZE)
-	set_mode_sp	r1, r2, MODE_MON	/* Switch mode */
+	/*
+	 * Write MVBAR. EL1(S), EL3(NS) or EL3(S)
+	 * Setup is valid only if EL3 is AArch32.
+	 */
+	mcr	p15, 0, r0, c12, c0, 1
 	isb
-
-	/* MVBAR setup is valid only if EL3 is AArch32 */
-	mcr		p15, 0, r0, c12, c0, 1
-	isb
-
-	set_cpsr_mode	r1, MODE_SVC		/* Switch mode back */
-	mrc		p15, 0, r0, c12, c0, 1	/* Return current MVBAR */
-	pop		{r1-r2}
-	bx 		lr
+	bx	lr
 #endif
 END_PROC(setup_mvbar)
+
+ENTRY_PROC(psci)
+#ifdef STUB64_START
+	smc	#0 /* do the PSCI call */
+	isb
+#endif
+	bx	lr
+END_PROC(psci)
 
 	.section .init.rodata
 	.align  4

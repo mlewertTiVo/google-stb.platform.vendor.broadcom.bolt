@@ -7,13 +7,15 @@
  *
  ***************************************************************************/
 
+#include <aon_defs.h>
 #include "lib_types.h"
 #include "lib_printf.h"
-#include "timer.h"
 #include "bolt.h"
 #include "psci.h"
 #include "arch_ops.h"
 #include "board.h"
+#include "error.h"
+#include "loader.h"
 
 
 void bolt_psci_init(void)
@@ -47,3 +49,23 @@ void bolt_psci_init(void)
 
 #endif /* STUB64_START */
 }
+
+
+int psci_boot(unsigned int la_flags, long la_entrypt, void *dt_address)
+{
+#ifdef STUB64_START
+	if (la_flags & LOADFLG_APP64) {
+		bolt_set_aon_bootmode(S3_FLAG_PSCI_BOOT | S3_FLAG_BOOTED64);
+		xprintf("64 bit PSCI boot...\n");
+		bolt_start64(la_entrypt, 0xffffffff,
+				(unsigned int)dt_address, 0);
+	} else {
+		bolt_set_aon_bootmode(S3_FLAG_PSCI_BOOT);
+		xprintf("32 bit PSCI boot...\n");
+		bolt_start32(la_entrypt, 0xffffffff,
+				(unsigned int)dt_address, 0);
+	}
+#endif
+	return BOLT_OK;
+}
+

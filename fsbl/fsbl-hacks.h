@@ -13,24 +13,10 @@
 #include <lib_types.h>
 #include "fsbl.h"
 
-#if defined(CONFIG_BCM3390A0) || defined (CONFIG_BCM3390B0)
-void bcm3390_hack_early_bus_cfg(void);
-void bcm3390_hack_late_bus_cfg(void);
-#else
-static inline void bcm3390_hack_early_bus_cfg(void) { }
-static inline void bcm3390_hack_late_bus_cfg(void) { }
-#endif
-
-#if defined(CONFIG_BCM7268A0) || defined(CONFIG_BCM7271A0)
+#if defined(CONFIG_BCM7260) || defined(CONFIG_BCM7268) || defined(CONFIG_BCM7271)
 void orion_hack_early_bus_cfg(void);
 #else
 static inline void orion_hack_early_bus_cfg(void) { }
-#endif
-
-#if defined(CONFIG_BCM7366B0) || defined(CONFIG_BCM7366C0)
-void bcm7366b0_mii_rx_err_cfg(void);
-#else
-static inline void bcm7366b0_mii_rx_err_cfg(void) { }
 #endif
 
 void hack_power_down_cpus(void);

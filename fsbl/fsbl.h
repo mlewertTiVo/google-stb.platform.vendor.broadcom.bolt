@@ -42,6 +42,7 @@
 #define SHMOO_SRAM_ADDR (MEMSYS_SRAM_ADDR + MEMSYS_SIZE)
 #endif
 #endif /* STUB64_START */
+#define AVS_SRAM_ADDR   (MEMSYS_SRAM_ADDR)
 
 /* architecture specific
 */
@@ -132,20 +133,6 @@ void writehex(uint32_t val);
 char *itoa(int n);
 #define writeint(n) __puts(itoa(n))
 
-/* pwr
-*/
-#if CFG_BATTERY_BACKUP
-int fsbl_docsis_booted(uint32_t *aon_reset_history, uint32_t *pm_ctrl);
-int fsbl_booted_on_battery(void);
-int fsbl_C1_check(struct fsbl_info *info);
-void inform_ecm(uint32_t rstate, uint32_t pstate);
-/* Return true if booted on battery because of "dying gasp" situation. */
-static inline int fsbl_dying_gasp(void)
-{
-	return (fsbl_docsis_booted(0, 0) && !fsbl_booted_on_battery());
-}
-#endif
-
 
 /* shmoo + saved board, memsys.
 */
@@ -210,6 +197,8 @@ void anti_glitch_c(void);
 void anti_glitch_d(void);
 void anti_glitch_e(void);
 #endif
+void __noreturn loop_forever(void);
+
 
 /* i2c
 */

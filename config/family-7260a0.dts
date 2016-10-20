@@ -1,0 +1,11 @@
+/dts-v1/;
+
+/include/ "family-7260.dtsi"
+/include/ "common.dtsi"
+/include/ "A53.dtsi"
+
+
+/ {
+	model = "Broadcom STB (7260a0)";
+	compatible = "brcm,bcm7260a0", "brcm,brcmstb";
+};

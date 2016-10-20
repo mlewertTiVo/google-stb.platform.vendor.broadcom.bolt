@@ -38,12 +38,34 @@ void uart_init(unsigned long base)
 
 	uart_base = BVIRTADDR(base);
 
+	/* SWBOLT-1848: Even if the UART is only used by
+	 * Linux and not BOLT we should fully flush it after
+	 * any kind of reset to prevent the possibility of
+	 * IIR.IID being "character timeout indication",
+	 * which the Linux 8250 driver can't handle.
+	 */
+
+	/* Disable interrupts. */
+	DEV_WR(uart_base + IER_REG, 0x00);
+	dmb();
+
+	/* Flush & disable FIFO. */
+	DEV_WR(uart_base + FCR_REG, 0x06);
+
+	/* Read to clear status. */
+	(void)DEV_RD(uart_base + LSR_REG);
+	(void)DEV_RD(uart_base + RBR_REG);
+	(void)DEV_RD(uart_base + IIR_REG);
+
+	/* Set Baud rate. */
 	DEV_WR(uart_base + LCR_REG, 0x83);
 	DEV_WR(uart_base + DLL_REG, div & 0xff);
 	DEV_WR(uart_base + DLH_REG, div >> 8);
 	DEV_WR_RB(uart_base + LCR_REG, 0x03);
+	dmb();
 
-	DEV_WR(uart_base + FCR_REG, 0x07);
+	/* enable FIFO. */
+	DEV_WR(uart_base + FCR_REG, 0x01);
 }
 
 

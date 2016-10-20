@@ -243,7 +243,7 @@ static int bolt_populate_nand(void *fdt, struct flash_dev *flash)
 /* ------------------------------------------------------------------------- */
 /* SPI, nor efi.
 */
-static int bolt_populate_spi(void *fdt, struct flash_dev *flash)
+static int bolt_populate_spi(void *fdt, struct flash_dev *flash, char *node_name)
 {
 	int rc = 0;
 	int sat, at;
@@ -251,12 +251,22 @@ static int bolt_populate_spi(void *fdt, struct flash_dev *flash)
 
 	/* /params
 	*/
+	if (!node_name)
+		xsprintf(node, DT_RDB_DEVNODE_BASE_PATH"/spi@%x",
+			 BREG_PA(HIF_MSPI));
 
-	xsprintf(node, DT_RDB_DEVNODE_BASE_PATH"/spi@%x",
-			BREG_PA(HIF_MSPI));
+	xsprintf(node, DT_RDB_DEVNODE_BASE_PATH"/%s@%x",
+		 node_name, BREG_PA(HIF_MSPI));
+
+	/*
+	 * If the (dt autogen) node does not exist then
+	 * instead of failing 'dt bolt' we return with
+	 * no error. After this checkpoint we must return
+	 * an error for any further failures.
+	 */
 	at = bolt_devtree_node_from_path(fdt, node);
 	if (at < 0)
-		return at;
+		return 0; /* No such node */
 
 	/* remove the "status" property to indicate this controller
 	 * is operational
@@ -293,7 +303,6 @@ static int bolt_populate_spi(void *fdt, struct flash_dev *flash)
 	if (rc)
 		return rc;
 #endif
-
 	rc = bolt_dt_addprop_u32(fdt, sat, "reg", flash->cs);
 	if (rc)
 		return rc;
@@ -374,7 +383,10 @@ static int bolt_populate_flash(void *fdt)
 			ret = bolt_populate_nand(fdt, flash);
 			break;
 		case FLASH_TYPE_SPI:
-			ret = bolt_populate_spi(fdt, flash);
+			ret = bolt_populate_spi(fdt, flash, "qspi");
+			if (ret)
+				break;
+			ret = bolt_populate_spi(fdt, flash, "spi");
 			break;
 		case FLASH_TYPE_NOR:
 			ret = bolt_populate_nor(fdt, flash);
@@ -1167,9 +1179,6 @@ static int bolt_populate_moca(void *fdt, uint8_t *macaddr)
 
 	bolt_add_macaddr_prop(fdt, 0, moca_node, macaddr);
 
-	data = BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID) + 0xa0;
-	bolt_dt_addprop_u32(fdt, moca_node, "chip-id", data);
-
 	/* Set the MoCA AVS RMON properties by reading back values
           calibrated by fsbl */
 #ifdef BCHP_AVS_TOP_CTRL_OTP_STATUS_STB
@@ -1936,7 +1945,6 @@ void bolt_board_specific_mods(void *fdt)
 {
 	dt_ops_s *ops = board_dt_ops();
 	dt_ops_s *cull = ops;
-	power_det_e powerdet = board_powermode();
 	int __maybe_unused err = 0, parent, child;
 
 	if (!ops) {
@@ -2072,10 +2080,7 @@ void bolt_board_specific_mods(void *fdt)
 	a hanging property in a node that should have been 100% removed.
 	*/
 	while (cull->path != NULL) { /* path is REQUIRED */
-		if ((cull->op == DT_OP_CULL) &&
-				((cull->powerdet == POWER_DET_NA) ||
-				(cull->powerdet == powerdet))) {
-
+		if (cull->op == DT_OP_CULL) {
 			parent = bolt_devtree_node_from_path(fdt, cull->path);
 			if (parent >= 0) {
 				if (cull->prop) {
@@ -2195,7 +2200,7 @@ static int bolt_populate_sdhci(void __maybe_unused *fdt)
 		return FDT_ERR_NOTFOUND;
 
 	for (x = 0; x < ARRAY_SIZE(regs); x++) {
-		int sdhci;
+		int sdhci, use_cmd_12 = 0;
 		/*
 		 * If the DT entry for this controller doesn't exist
 		 * just skip it.
@@ -2225,6 +2230,7 @@ static int bolt_populate_sdhci(void __maybe_unused *fdt)
 			non_removable = 1;
 			break;
 		default:
+			use_cmd_12 = 1; /* not eMMC */
 			width = 0;
 			non_removable = 0;
 			break;
@@ -2240,11 +2246,40 @@ static int bolt_populate_sdhci(void __maybe_unused *fdt)
 			if (rc)
 				break;
 		}
+		if (use_cmd_12) {
+			rc = bolt_dt_addprop_bool(fdt, sdhci,
+				"sdhci,auto-cmd12");
+			if (rc)
+				break;
+		}
 		if (!params->uhs) {
 			rc = bolt_dt_addprop_bool(fdt, sdhci, "no-1-8-v");
 			if (rc)
 				break;
+		} else {
+			/*
+			 * Later kernels depend on these props to enable UHS
+			 * For eMMC, enable HS200
+			 * For SD, enable DDR50 and SDR50
+			 */
+			if (non_removable) {
+				rc = bolt_dt_addprop_bool(fdt, sdhci,
+							"mmc-hs200-1_8v");
+				if (rc)
+					break;
+			} else {
+				rc = bolt_dt_addprop_bool(fdt, sdhci,
+							"sd-uhs-ddr50");
+				if (rc)
+					break;
+				rc = bolt_dt_addprop_bool(fdt, sdhci,
+							"sd-uhs-sdr50");
+				if (rc)
+					break;
+			}
 		}
+
+
 		rc = sdio_handle_driver_strength(fdt, sdhci,
 						params->host_driver_strength,
 						"host-driver-strength");

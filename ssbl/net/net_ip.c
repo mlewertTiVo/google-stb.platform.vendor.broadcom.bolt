@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -129,6 +127,7 @@ int _ip_send(ip_info_t *ipi, ebuf_t *buf, uint8_t *destaddr, uint8_t proto)
 	uint8_t maskdest[IP_ADDR_LEN];
 	int pktlen;
 	uint8_t *ptr;
+	int res = 0;
 
 	/* Move to the beginning of the IP hdeader */
 
@@ -168,9 +167,9 @@ int _ip_send(ip_info_t *ipi, ebuf_t *buf, uint8_t *destaddr, uint8_t proto)
 	 */
 
 	if (ip_addrisbcast(destaddr)) {
-		eth_send(buf, (uint8_t *) eth_broadcast);
+		res = eth_send(buf, (uint8_t *) eth_broadcast);
 		eth_free(buf);
-		return 0;
+		return res;
 	}
 
 	/* If the mask has not been set, don't try to

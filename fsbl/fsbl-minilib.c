@@ -76,8 +76,7 @@ void __noreturn die(char *msg)
 {
 	__puts("FATAL ERROR: ");
 	puts(msg);
-	while (1)
-		;
+	loop_forever();
 }
 
 void __puts(const char *s)

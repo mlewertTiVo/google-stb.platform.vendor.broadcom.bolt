@@ -11,7 +11,7 @@
  #define __SPLASH_API_H__
 
 #include <stdint.h>
- 
+#include "splash_script_load.h"
 /* API that faces toward BOLT
 */
 struct splash_rgb {
@@ -25,7 +25,7 @@ void splash_api_info(void);
 void splash_api_start(void);
 int  splash_glue_getmem(uint32_t memc, uint32_t *memtop, uint32_t *memlowest);
 int  splash_audio_script_run(unsigned int size, unsigned int address,
-	uint32_t repeatcount);
+	uint32_t repeatcount, SplashData *splashData);
 
 void *splash_api_get_imgbuff(int idx);
 void splash_api_replace_bmp(uint8_t *bmp, struct splash_rgb *rgb);

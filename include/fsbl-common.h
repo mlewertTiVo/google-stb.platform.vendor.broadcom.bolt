@@ -62,6 +62,8 @@ struct memsys_params {
 	unsigned long edis_reg_base;
 };
 
+#define AVS_ENABLE(avs) (avs >> 4)
+#define AVS_DOMAINS(avs) (avs & 0xf)
 
 /*
 name:	Unambiguous name that maps directly to
@@ -85,7 +87,7 @@ struct board_type {
 	const char name[NAMELEN];
 	uint32_t prid; /* Product ID from CFG file */
 	uint8_t bid; /* I2C board id */
-	uint8_t avs;
+	uint8_t avs; /* Packed value. Refer to AVS_ENABLE and AVS_DOMAINS */
 	uint8_t memsys;
 	uint8_t nddr;
 	struct	ddr_info ddr[MAX_DDR];
@@ -192,17 +194,6 @@ static inline unsigned int is_board_char(int board)
 		((board >= 'A') && (board <= 'Z'));
 }
 
-/* pass on to ssbl any detected power operating mode,
-as an enum  - as we may later expand on this.
-*/
-typedef enum power_det_e {
-	POWER_DET_NA = 0,	/* marker */
-	POWER_DET_STD,		/* normal functionality, a.c., full power */
-	POWER_DET_MINIMAL	/* minimal functionality, battery, low power */
-}
-power_det_e;
-
-
 /* Allocated: 0x0000000f
 	bit [0]: Indicate if the current board has been runtime
 		detected, only applicable for a CFG_BOARD_ID build.
@@ -252,9 +243,6 @@ struct fsbl_info {
 	int nand_chip_idx;
 	uint32_t pte;
 	int avs_err;
-#if CFG_BATTERY_BACKUP
-	power_det_e powerdet;
-#endif
 #if CFG_BOARD_ID
 	uint8_t bid;
 #endif

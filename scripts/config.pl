@@ -9,9 +9,11 @@ use Text::ParseWords;
 use Getopt::Std;
 use lib dirname(File::Spec->rel2abs(__FILE__));
 
+use BcmSdio;
 use BcmUtils;
 use DevTree;
 use BcmDt::Devices;
+use BcmDt::Board;
 
 my $P = basename $0;
 
@@ -25,32 +27,8 @@ my $P = basename $0;
 # ***************************************************************************
 
 my $debug = 2;
-my $year = (localtime())[5] + 1900;
 
-use constant THIS_VERSION => "1.34";
-
-my $cheader = "/***************************************************************************
- *     Copyright (c) 2012-$year, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
- *
- *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
- *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
- *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- *
- ***************************************************************************/
-\n";
-
-my $makeheader = "#
-#	 Copyright (c) 2012-$year, Broadcom Corporation
-#	 All Rights Reserved
-#	 Confidential Property of Broadcom Corporation
-#
-#  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-#  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-#  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-#
-#\n";
+use constant THIS_VERSION => "1.36";
 
 my $_genmarker = " AUTOMATICALLY GENERATED - DO NOT EDIT ";
 
@@ -83,7 +61,6 @@ my $pinmux_header_files = "
 my @configs = (
 	       "ALIGN_SIZE",
 	       "AMD_SPANSION",
-	       "BATTERY_BACKUP",
 	       "BOARD_ID",
 	       "BSU",
 	       "CMA_DEF_ALIGN",
@@ -115,7 +92,6 @@ my @configs = (
 	       "PM_S3",
 	       "RAW_LDR",
 	       "RUNFROMKSEG0",
-	       "RUNNER",
 	       "SATA",
 	       "SERIAL_BAUD_RATE",
 	       "SPLASH",
@@ -156,6 +132,7 @@ my $arg_family = undef;
 my $arg_config_file = undef;
 my $arg_gen_dir = undef;
 my $arg_rdb_dir = undef;
+my $arg_memc_client_dir = undef;
 my $arg_working_dir = undef;
 my $arg_odir = undef;
 my $arg_single_board = undef;
@@ -446,6 +423,21 @@ sub new($$) {
 	return $s;
 }
 
+package Avs;
+sub new($$) {
+	my ($class, $s) = @_;
+	$s->{domains} = 2 if !defined($s->{domains});
+	bless $s, $class;
+	return $s;
+}
+
+package Dvfs;
+sub new($$) {
+	my ($class, $s) = @_;
+	bless $s, $class;
+	return $s;
+}
+
 package Ddr;
 sub new($$) {
 	my ($class, $s) = @_;
@@ -517,7 +509,11 @@ sub output($$) {
 	return $text;
 }
 
-
+sub get_pins($$) {
+	my ($s, $fsbl) = @_;
+	return () if (($fsbl && !$s->{fsbl}) || (!$fsbl && $s->{fsbl}));
+	return @{$s->{ra_pins}};
+}
 
 package Enet;
 sub new($$) {
@@ -595,13 +591,6 @@ sub new($$) {
 	return $s;
 }
 
-package Sdio;
-sub new($$) {
-	my ($class, $s) = @_;
-	bless $s, $class;
-	return $s;
-}
-
 package Dts;
 sub new($$$) {
 	my ($class, $s) = (shift, {});
@@ -635,8 +624,10 @@ package Board;
 use Storable qw/freeze thaw dclone/;
 sub new($$) {
 	my ($class, $s) = (shift, {});
-	$s->{avs} = 1;
+	$s->{avs} = [];
+	$s->{dvfs} = [];
 	$s->{sdio} = [];
+	$s->{sdio_pinsel} = undef;
 	$s->{board_id} = undef;
 	$s->{board} = "";
 	$s->{rtsdefault} = 1;
@@ -700,6 +691,24 @@ sub add($$$) {
 		push @{$s->{bt_rfkill_gpio}}, $part;
 	} elsif ($item eq 'section') {
 		push @{$s->{section}}, $part;
+	} elsif ($item eq 'avs') {
+		for $r (@{$s->{avs}}) {
+			if (defined($r->{domains})) {
+				$found = $r = $part;
+				last;
+			}
+		}
+		push @{$s->{avs}}, $part
+			if (!$found);
+	} elsif ($item eq 'dvfs') {
+		for $r (@{$s->{dvfs}}) {
+			if (defined($r->{mode})) {
+				$found = $r = $part;
+				last;
+			}
+		}
+		push @{$s->{dvfs}}, $part
+			if (!$found);
 	} elsif ($item eq 'nandshape') {
 		push @{$s->{nandshape}}, $part;
 	} elsif ($item eq 'ddr') {
@@ -819,15 +828,17 @@ my %chips = ();
 my @flashmaps = ();
 my @fixed_ddrs = ();
 my %dt_autogen = map {($_,'')}
-	qw/bolt genet serial bsc usb sdio sata memory pcie moca clocks sun_l2 gisb_arb hif_l2
-	aon_pm_l2 avs_host_l2 waketimer avs_tmon sram aon_ctrl memcs mspi spi nand sun_top_ctrl
-	cpu_biu_ctrl hif_cont systemport sf2_switch sun_top_ctrl_general_ctrl
-	sun_top_ctrl_general_ctrl_no_scan thermal_zones cpuclock
-	pinmux padmux aon_pinmux aon_padmux memc_client_info nexus_wakeups rf4ce
-	bsp sdio_syscon irq0_l2 irq0_aon_l2 nexus_irq0 nexus_irq0_aon gpio pwm watchdog
-	upg_main_irq upg_main_aon_irq upg_bsc_irq upg_bsc_aon_irq upg_spi_aon_irq
-	nexus_upg_main_irq nexus_upg_main_aon_irq nexus_upg_bsc_irq
-	nexus_upg_bsc_aon_irq nexus_upg_spi_aon_irq wlan/;
+	qw/bolt genet serial bsc usb sdio sata memory pcie moca clocks
+	sun_l2 gisb_arb hif_l2 hif_spi_l2 aon_pm_l2 avs_host_l2 avs_cpu waketimer
+	avs_tmon sram aon_ctrl memcs mspi spi qspi nand sun_top_ctrl cpu_biu_ctrl
+	hif_cont systemport sf2_switch sun_top_ctrl_general_ctrl
+	sun_top_ctrl_general_ctrl_no_scan thermal_zones cpuclock pinmux
+	padmux aon_pinmux aon_padmux memc_client_info nexus_wakeups rf4ce
+	bsp sdio_syscon irq0_l2 irq0_aon_l2 nexus_irq0 nexus_irq0_aon gpio
+	pwm watchdog upg_main_irq upg_main_aon_irq upg_bsc_irq
+	upg_bsc_aon_irq upg_spi_aon_irq nexus_upg_main_irq
+	nexus_upg_main_aon_irq nexus_upg_bsc_irq nexus_upg_bsc_aon_irq
+	nexus_upg_spi_aon_irq wlan/;
 my $Current = Board->new("");
 my $Family = $Current;
 my $ProcessingState = eStateInNone;
@@ -860,6 +871,7 @@ sub get_bchp_info($) {
 		'bchp_hif_cpubiuctrl.h',
 		'bchp_sun_l2.h',
 		'bchp_hif_intr2.h',
+		'bchp_hif_spi_intr2.h',
 		'bchp_sun_gisb_arb.h',
 		'bchp_aon_pm_l2.h',
 		'bchp_avs_host_l2.h',
@@ -867,8 +879,10 @@ sub get_bchp_info($) {
 		'bchp_ddr??_phy_common_regs_?.h',
 		'bchp_ebi.h',
 		'bchp_shimphy_addr_cntl_?.h',
+		'bchp_memc_ddr23_shim_addr_cntl_?.h',
 		'bchp_nand.h',
 		'bchp_phy_control_regs_?.h',
+		'bchp_sata_top_ctrl.h',
 		'bchp_systemport_topctrl.h',
 		'bchp_systemport_tdma.h',
 		'bchp_switch_acb.h',
@@ -901,31 +915,42 @@ sub get_bchp_info($) {
 		= BcmUtils::grok_defines_from_c_incl_files( @incs );
 
 	@incs = (
-		'bchp_memc_clients.txt',
+		'bchp_memc_clients*.txt',
 		);
 
-	@incs = map { "$arg_rdb_dir/$_" } @incs;
+	@incs = map { "$arg_memc_client_dir/$_" } @incs;
 
-	my @memc_client_defines = BcmUtils::grok_memc_client_names( @incs );
+	my $chip_arch = BcmUtils::get_arch($rh_defines);
+
+	my @memc_client_defines = BcmUtils::grok_memc_client_names(\@incs, $chip_arch);
 
 	my $rh_pmux
 		= BcmUtils::grok_bchp_for_pin_mux($ra_defines);
 
+	my %l1_intc_props;
+	my $offset;
+	if ($chip_arch eq "MIPS") {
+		$l1_intc_props{name} = "intc";
+		$l1_intc_props{num_cells} = "1";
+		$l1_intc_props{chk_func} = \&BcmUtils::validate_mips_interrupt_cells;
+		$l1_intc_props{fmt_func} = \&BcmUtils::format_mips_interrupt_cells;
+		$offset = 0;
+	} else {
+		$l1_intc_props{name} = "intc";
+		$l1_intc_props{num_cells} = "3";
+		$l1_intc_props{chk_func} = \&BcmUtils::validate_gic_interrupt_cells;
+		$l1_intc_props{fmt_func} = \&BcmUtils::format_gic_interrupt_cells;
+		$offset = $rh_defines->{BCHP_PHYSICAL_OFFSET};
+	}
+
 	my %h = (
-		phys_offset => $rh_defines->{BCHP_PHYSICAL_OFFSET},
+		phys_offset => $offset,
 		rh_defines => $rh_defines,
 		ra_defines => $ra_defines,
 		memc_client_defines => @memc_client_defines,
 		rh_pmux => $rh_pmux,
-		# For now, we just assume the system uses an ARM GIC (intc
-		# phandle), but this can change later when we support other
-		# kinds of architectures (e.g: MIPS's 7038 L1)
-		l1_intc_props => {
-			"name" => "intc",
-			"num_cells" => "3",
-			"chk_func" => \&BcmUtils::validate_gic_interrupt_cells,
-			"fmt_func" => \&BcmUtils::format_gic_interrupt_cells,
-		}
+		chip_arch => $chip_arch,
+		l1_intc_props => \%l1_intc_props
 	);
 	$bchp_info{$family} = \%h;
 	return \%h;
@@ -1376,7 +1401,8 @@ sub quoted_null_check($) {
 sub subcmd_dt_ops {
 	my ($cmd, $f, $b) = @_;
 	check_in_chip_or_board();
-	my $o = check_opts($f, [qw/root node/], [qw/power mac prop string int bool vec addnode/]);
+	my $o = check_opts($f, [qw/root node/],
+		[qw/mac prop string int bool vec addnode/]);
 	my $r = DTops->new($o);
 	$r->{command} = $cmd;
 	$r->{root} = quoted_null_check($r->{root});
@@ -1473,7 +1499,43 @@ sub cmd_avs($) {
 	check_family_onwards();
 	cfg_error("missing avs rvalue!")
 		if !defined $f->[1];
-	$Current->{avs} = $f->[1];
+
+	shift @$f; # remove 'avs' command word
+
+	my $enable = shift @$f;# drop 'enable/disable'.
+	cfg_error("Incorrect avs rvalue. Only enable/disable supported.")
+		if(($enable ne "enable") && ($enable ne "disable"));
+
+	my $o = check_opts($f, [qw//], [qw/domains/]); # returns a hash
+	cfg_error("option for domains must be 1 or 2")
+		if (defined($o->{domains}) && $o->{domains} !~ /^[1 2]$/i);
+
+	if($enable eq "enable"){
+		$o->{$enable} = 1;
+	}
+	elsif($enable eq "disable"){
+		$o->{$enable} = 0;
+	}
+
+	$Current->add('avs', Avs->new($o));
+}
+
+sub cmd_dvfs($) {
+	   my ($f) = @_;
+
+	   my $cmd = join(' ', @$f);
+
+	   shift @$f; # drop 'dvfs'
+	   my $o = check_opts($f, [qw/mode pmap pstate/], []);
+
+	   cfg_error("option for mode must be avs, dfs, dvs or dvfs")
+		if (defined($o->{mode}) && $o->{mode} !~ /^avs|dfs|dvfs$/i);
+	   cfg_error("option for pmap must be 0, 1, 2, 3 or 4")
+		if (defined($o->{pmap}) && $o->{pmap} !~ /^[0-4]$/i);
+	   cfg_error("option for pstate must be 0, 1, 2, 3 or 4")
+		if (defined($o->{pstate}) && $o->{pstate} !~ /^[0-4]$/i);
+
+	   $Current->add('dvfs', Dvfs->new($o));
 }
 
 sub cmd_sdio($) {
@@ -1483,7 +1545,7 @@ sub cmd_sdio($) {
 	my $o = check_opts($f, [qw/controller type/],
 			   [qw/uhs host_driver_strength host_hs_driver_strength
 			   card_driver_strength/]);
-	$Current->add('sdio', Sdio->new($o));
+	$Current->add('sdio', BcmSdio->new($o));
 }
 
 sub annotate_vreg_name($)
@@ -1568,6 +1630,9 @@ sub cmd_pcie($) {
 	my $rh = ::get_bchp_info($Family->{familyname});
 	$rh = $rh->{rh_defines};
 	my $node = sprintf('BCHP_PCIE_%d_RC_CFG_TYPE1_REG_START', $o->{controller});
+	if (!defined($rh->{$node})) {
+		$node = 'BCHP_PCIE_RC_CFG_TYPE1_REG_START';
+	}
 	cfg_error('bad pcie controller number')
 		if !defined($rh->{$node});
 	cfg_error('option for pcie gen must be 1, 2, or 3')
@@ -1829,6 +1894,7 @@ my %headings = (
 
 my %commands = (
 		'avs' =>	\&cmd_avs,
+		'dvfs' =>   \&cmd_dvfs,
 		'bid' =>	\&cmd_board_id,
 		'bsc' =>	\&cmd_bsc,
 		'cmdlevel' =>	\&cmd_cmdlevel,
@@ -1926,7 +1992,7 @@ sub show_boards() {
 		for my $d (@{$b->{ddr}}) {
 			print "    ddr: #" . $d->{n} . "\t";
 			print $d->{size_mb} . "\t" . $d->{base_mb} . "\t";
-			print $d->{freq_mhz} . "\t" . $d->{width} . "\t"
+			print $d->{clk} . "\t" . $d->{width} . "\t"
 				. $d->{mbits_per_chip} . "\n\n";
 		}
 	}
@@ -2135,7 +2201,7 @@ sub gen_ddr($) {
 		}
 		$text .= " },\n";
 	}
-	$text .= "\t\t\t\t},\n";
+	$text .= "\t\t\t\t\t},\n";
 	return $text;
 }
 
@@ -2436,19 +2502,39 @@ sub gen_numddr($) {
 }
 
 sub gen_avs($) {
-	my ($b) = @_;
-	my $text = "\t\t.avs = ";
-	if ($b->{avs} eq "enable") {
-		$text .= "1";
-	} elsif ($b->{avs} eq "disable") {
-		$text .= "0";
-	} elsif ($b->{avs} eq "1") {
-		$text .= "1 /* unspecified in config script, using default */";
-	} else {
-		cfg_error("wrong avs rvalue!");
+	my ($avs) = @_;
+	my $text = "\t\t.avs\t=\t";
+	my $value = 0;
+
+	for my $b (@$avs) {
+		if($b->{enable}) {
+			$value = ((0x1 << 4) | $b->{domains});
+		}
+		else {
+			$value = $b->{domains};
+		}
+		$text .= "$value,\n";
 	}
-	$text .= ",\n\t";
 	return $text;
+}
+
+sub gen_dvfs($) {
+	my ($dvfs) = @_;
+	my $text = "\t\t.dvfs = {\n";
+	my $flag = 0;
+
+	for my $m (@$dvfs) {
+		$text .= "\t\t\t.mode = " . $m->{mode} . "_mode_e,\n";
+		$text .= "\t\t\t.pmap = " . $m->{pmap} . ",\n";
+		$text .= "\t\t\t.pstate  = " . $m->{pstate} . ",\n";
+		$flag = 1;
+	}
+	if($flag == 0){
+	    $text .= "\t\t\t.mode = "."max_mode_e,\n";
+	    $text .= "\t\t\t.pmap = "."2,\n";
+	    $text .= "\t\t\t.pstate  = "."0,\n";
+	}
+	return $text . "\t\t},\n";
 }
 
 sub gen_pinmux_fn($) {
@@ -2466,44 +2552,6 @@ sub gen_dt_ops_ptr($) {
 sub gen_flash_map_selection($) {
 	my $m = shift;
 	return "\t\t.mapselect = partition_profile_" . $m . ",\n";
-}
-
-sub gen_sdio($) {
-	my ($sdio) = @_;
-	my $text = "\t\t.sdio = {\n";
-	for my $s (@$sdio) {
-		$text .= "\t\t\t{ ";
-		$text .= $s->{controller} . ", ";
-		$text .= "SDIO_TYPE_" . uc($s->{type}) . ", ";
-		if ($s->{uhs}) {
-		    $text .= "1";
-		} else {
-		    $text .= "0";
-		}
-		$text .= ", ";
-		if ($s->{host_driver_strength}) {
-		    $text .= "SDIO_DRIVER_STRENGTH_" .
-			$s->{host_driver_strength};
-		} else {
-		    $text .= "SDIO_DRIVER_STRENGTH_UNDEFINED";
-		}
-		$text .= ", ";
-		if ($s->{host_hs_driver_strength}) {
-		    $text .= "SDIO_DRIVER_STRENGTH_" .
-			$s->{host_hs_driver_strength};
-		} else {
-		    $text .= "SDIO_DRIVER_STRENGTH_UNDEFINED";
-		}
-		$text .= ", ";
-		if ($s->{card_driver_strength}) {
-		    $text .= "SDIO_DRIVER_STRENGTH_" .
-			$s->{card_driver_strength};
-		} else {
-		    $text .= "SDIO_DRIVER_STRENGTH_UNDEFINED";
-		}
-		$text .= " },\n";
-	}
-	return $text . "\t\t\t{ -1, -1, -1, -1, -1, -1 }\n\t\t},\n";
 }
 
 sub gen_nandchip($) {
@@ -2570,23 +2618,44 @@ sub gen_num_bsc($) {
 	return $bsc;
 }
 
-
-sub gen_num_sdio($) {
-	my ($f) = @_;
-	my $rh = ::get_bchp_info($f->{familyname});
-	my $sdio = BcmUtils::get_num_sdio($rh->{rh_defines});
-	cfg_error("unexpected script problem with get_num_sdio(): $sdio < 0")
-		if (scalar ($sdio) < 0);
-	return $sdio;
-}
-
 sub gen_num_sata($) {
 	my ($f) = @_;
 	my $rh = ::get_bchp_info($f->{familyname});
-	my $sata = BcmUtils::get_num_sata($rh->{rh_defines});
+	my $sata = scalar BcmUtils::get_num_sata($rh->{rh_defines});
 	cfg_error("unexpected script problem with get_num_sata(): $sata < 0")
-		if (scalar ($sata) < 0);
+		if ($sata < 0);
 	return $sata;
+}
+
+sub gen_max_sata_phy_ports($) {
+	my ($f) = @_;
+	my $rh = ::get_bchp_info($f->{familyname});
+	my $n_sata = gen_num_sata($f);
+	my $max_phy_ports = 0;
+
+	for (my $i = 0; $i < $n_sata; $i++) {
+		my $n_phy_ports =
+			BcmUtils::get_num_sata_phy($rh->{rh_defines}, $i);
+		$max_phy_ports = $n_phy_ports
+			if ($n_phy_ports > $max_phy_ports);
+	}
+	return $max_phy_ports;
+}
+
+sub gen_num_sata_phy_ctl($) {
+	my ($f) = @_;
+	my $rh = ::get_bchp_info($f->{familyname});
+	my $phy_ctls = BcmUtils::get_num_sata_phy_ctl($rh->{rh_defines});
+
+	# Policy: We expect 2 registers per phy interface control, else
+	# no control is present.
+	return 0
+		if ($phy_ctls == 0);
+
+	cfg_error("Unexpected: An odd number of phy interface ctl registers!")
+		if ($phy_ctls & 0x1) and $rh->{chip_arch} ne "MIPS";
+
+	return $phy_ctls / 2;
 }
 
 sub generate_vector_property_arrays() {
@@ -2623,7 +2692,7 @@ sub generate_vector_property_arrays() {
 			$text .= $count % 4 ? "\n" : "";
 			$text .= "};\n\n";
 			# replace array ref with name of variable.
-			$c->{vec} = '&' . $var_name . '[0]';
+			$c->{text_vec} = '&' . $var_name . '[0]';
 			# use the int field to indicate array size.
 			$c->{int} = $n;
 		}
@@ -2650,9 +2719,9 @@ sub gen_dt_ops($) {
 		} elsif ($c->{string}) {
 			$sval = '"' . $c->{string} . '"';
 			$c->{command} ="S" . $c->{command};
-		} elsif (defined $c->{vec}) {
+		} elsif (defined $c->{text_vec}) {
 			$c->{command} ="V" . $c->{command};
-			$vval = $c->{vec};
+			$vval = $c->{text_vec};
 			# we use ival to indicate vector size.
 			$ival = $c->{int};
 		} elsif (defined $c->{int}) {
@@ -2667,10 +2736,6 @@ sub gen_dt_ops($) {
 
 		$text .= "\n\t\t{DT_OP_" . uc($c->{command}) . ", ";
 
-		$c->{power} = "NA"
-			if (!$c->{power});
-
-		$text .= "POWER_DET_" . uc($c->{power}) . ", ";
 		$text .= $c->{root} . ", ";
 		$text .= $c->{node} . ", ";
 		$text .= $c->{prop} . ", ";
@@ -2686,7 +2751,7 @@ sub gen_dt_ops($) {
 
 sub gen_memsys($) {
 	my ($b) = @_;
-	my $text = "\t.memsys = ";
+	my $text = "\t\t.memsys = ";
 
 	# SINGLE_BOARD
 	# Override to always tell the FSBL to use MEMSYS rather than MEMSYS_ALT
@@ -2714,20 +2779,6 @@ sub processed_flash_maps() {
 		$t .= gen_flash_map($f);
 	}
 	return $t;
-}
-
-sub bigint_to_two_hexint($) {
-	my $bigint = Math::BigInt->new(shift);
-	my $lo = $bigint & 0xffffffff;
-	$lo = $lo->as_hex();
-	my $hi = $bigint->brsft(32)->as_hex();
-	return ($hi, $lo);
-}
-
-sub bigint_is_power_of_two($)
-{
-	my $x = Math::BigInt->new(shift);
-	return (($x != 0) && (($x & (~$x + 1)) == $x));
 }
 
 sub debug_pcie_dma_ranges($$)
@@ -2769,8 +2820,14 @@ sub processed_pcie_dma_ranges() {
 
 	my @pcie_nodes;
 	for (my $i = 0; $i < $num_pcie; $i++) {
-		my ($beg, $size) = BcmDt::Devices::get_reg_range_from_regexp(
+		my ($beg, $size);
+	        if ($num_pcie > 1) {
+			($beg, $size) = BcmDt::Devices::get_reg_range_from_regexp(
 			$rh, "^BCHP_PCIE_${i}");
+		} else {
+			($beg, $size) = BcmDt::Devices::get_reg_range_from_regexp(
+			$rh, "^BCHP_PCIE_(?!DMA)");
+		}
 		die if !$beg;
 		$pcie_nodes[$i] = sprintf("pcie\@%x", $beg);
 	}
@@ -2859,20 +2916,20 @@ sub processed_pcie_dma_ranges() {
 					$m_ext->{size_bytes});
 
 				# Calculate the first range.
-				@sys_addr = bigint_to_two_hexint(
+				@sys_addr = BcmUtils::bigint_to_two_hexint(
 					Math::BigInt->new($m->{to_bytes}));
-				@pcie_addr = bigint_to_two_hexint($pcie_offset);
-				@size = bigint_to_two_hexint($map_size);
+				@pcie_addr = BcmUtils::bigint_to_two_hexint($pcie_offset);
+				@size = BcmUtils::bigint_to_two_hexint($map_size);
 				# Push the first range.
 				push @dma_ranges, ($pci_region_info, @pcie_addr,
 					@sys_addr, @size);
 
 				# Calculate the second range.
-				@pcie_addr = bigint_to_two_hexint(
+				@pcie_addr = BcmUtils::bigint_to_two_hexint(
 					$pcie_offset + $map_size);
-				@sys_addr = bigint_to_two_hexint(
+				@sys_addr = BcmUtils::bigint_to_two_hexint(
 					Math::BigInt->new($m_ext->{to_bytes}));
-				@size = bigint_to_two_hexint(
+				@size = BcmUtils::bigint_to_two_hexint(
 					$ddr_size - $map_size);
 				# Push the second range.
 				push @dma_ranges, ($pci_region_info,
@@ -2897,13 +2954,13 @@ sub processed_pcie_dma_ranges() {
 					# from sys_mem to pcie space.
 					my $delta = $m_next_to - $m_to;
 					die 'cannot maintain identity map!'
-						if (!bigint_is_power_of_two($delta));
+						if (!BcmUtils::bigint_is_power_of_two($delta));
 					$pcie_scb_size = $delta;
 				}
 				# Calculate the first and only range for this ddr.
-				@sys_addr = bigint_to_two_hexint($m_to);
-				@pcie_addr = bigint_to_two_hexint($pcie_offset);
-				@size = bigint_to_two_hexint($ddr_size);
+				@sys_addr = BcmUtils::bigint_to_two_hexint($m_to);
+				@pcie_addr = BcmUtils::bigint_to_two_hexint($pcie_offset);
+				@size = BcmUtils::bigint_to_two_hexint($ddr_size);
 				# Push the first and only range for this ddr.
 				push @dma_ranges, ($pci_region_info,
 					@pcie_addr, @sys_addr, @size);
@@ -2954,20 +3011,7 @@ sub processed_pcie_dma_ranges() {
 			my @ranges;
 			my $chip = $Family->{familyname};
 
-			if ($chip =~ /^(3390)/) {
-				if ($num_pcie == 3) {
-					# The first device will get 128MB, the 
-					# other two get 64MB each.
-					my @rx = BcmDt::Devices::subdivide_pcie_range(0, 2, @r1);
-					my @ry = BcmDt::Devices::subdivide_pcie_range(1, 2, @r1);
-					@ranges = ($i == 0)
-						? @r0 : ($i == 1) ? @rx : @ry;
-				} else {
-					# Each device gets 128M
-					@ranges = ($i == 0) ? @r0 : @r1;
-				}
-
-			} elsif ($chip =~ /^(7250|7364|7366|74371|7439|7445|7271|7268)/
+			if ($chip =~ /^(7250|7260|7268|7271|7364|7366|74371|7439|7445)/
 				&& $num_pcie == 1) {
 				# The only device gets the full 512M.
 				@ranges = (@r0, @r1, @r2, @r3);
@@ -2987,7 +3031,7 @@ sub processed_pcie_dma_ranges() {
 				for (my $j = $start; $j >= 0; $j-= 7) {
 					my $tmp = Math::BigInt->new($ranges[$j+2]);
 					$tmp += $delta;
-					my ($hi, $lo) = bigint_to_two_hexint($tmp);
+					my ($hi, $lo) = BcmUtils::bigint_to_two_hexint($tmp);
 					splice(@ranges, $j+1, 2, ($hi, $lo));
 				}
 			}
@@ -3031,8 +3075,9 @@ sub processed_dt_ops() {
 
 	for my $b (get_valid_boards()) {
 		$text .= "static const __maybe_unused dt_ops_s " . $b->{board} . "_dt_ops[] = ";
-		$text .= "{" . gen_dt_ops($b->{dt_ops})
-			. "{DT_OP_NONE, POWER_DET_NA, NULL, NULL, NULL, NULL, 0, NULL}\n};\n\n";
+		$text .= "{" . gen_dt_ops($b->{dt_ops});
+		$text .=  "{DT_OP_NONE, NULL, NULL, NULL, NULL, 0, NULL}";
+		$text .=  "\n};\n\n";
 	}
 	$text .= "\n";
 	return $text;
@@ -3048,7 +3093,7 @@ sub processed_board_types() {
 		$text .= gen_board_prid($b);
 		$text .= gen_numddr($b);
 		$text .= gen_ddr($b->{ddr});
-		$text .= gen_avs($b);
+		$text .= gen_avs($b->{avs});
 		$text .= gen_memsys($b);
 		$text .= "},\n";
 	}
@@ -3134,12 +3179,14 @@ sub processed_board_params() {
 		$text .= gen_rtsdefault($b->{rtsdefault});
 		$text .= gen_enet($b->{enet});
 		$text .= gen_moca($b->{moca});
+		$text .= gen_dvfs($b->{dvfs});
 		$text .= gen_gpio_key($b->{gpio_key});
 		$text .= gen_bt_rfkill_gpio($b->{bt_rfkill_gpio});
 		$text .= gen_pinmux_fn($b->{board});
 		$text .= gen_dt_ops_ptr($b->{board});
 		$text .= gen_flash_map_selection($b->{mapselect});
-		$text .= gen_sdio($b->{sdio});
+		$text .= BcmSdio::gen_sdio($b->{sdio});
+		$text .= BcmSdio::gen_sdio_pinsel($b->{sdio_pinsel});
 		$text .= "\n\t}, /* " . $b->{board} . " */\n";
 	}
 	$text .= "};\n";
@@ -3151,6 +3198,37 @@ sub processed_board_params_header() {
 		. $genprefix . "board_params[];\n";
 
 	return "extern " . $text . "\n";
+}
+
+sub process_board_dev_trees($$) {
+	my ($D, $Family) = @_;
+	my $text = "";
+	my $dts_list = "";
+	my $last = scalar(get_valid_boards());
+	my $nb = 0;
+
+	for my $b (get_valid_boards()) {
+		$nb++;
+		# Reset after each pass
+		$text = "";
+		$text .= BcmDt::Board::gen_board_dts_header($b->{board}, $Family);
+		$text .= BcmDt::Board::gen_memory_dts($b->{ddr}, $b->{drammap});
+		$text .= BcmDt::Board::gen_cpu_dts($b->{cset});
+		$text .= BcmDt::Board::gen_enet_dts($b->{enet});
+		$text .= BcmDt::Board::gen_moca_dts($b->{moca});
+		$text .= BcmDt::Board::gen_gpio_key_dts($b->{gpio_key});
+		$text .= BcmDt::Board::gen_sdio_dts($b->{sdio});
+		$text .= BcmDt::Board::gen_memc_dts($b->{ddr});
+		$text .= BcmDt::Board::gen_dt_ops_dts($b->{dt_ops});
+
+		# Clean out old board, if it exists.
+		unlink "$D/$b->{board}.dts";
+
+		append_textfile("$D/$b->{board}.dts", $text);
+		$dts_list .= "$D/$b->{board}.dts " . ($nb eq $last ? "" : "\\") . "\n";
+	}
+
+	append_textfile("$D/include.mk", "BOARD_DTS:=" . $dts_list . "\n\n");
 }
 
 sub processed_makefile_vars() {
@@ -3522,9 +3600,13 @@ sub processed_config() {
 	$ctext .= "#define NUM_SWITCH_PHY " . gen_num_switch_phy($Family) . "\n";
 	$ctext .= "#define NUM_MOCA " . gen_num_moca($Family) . "\n";
 	$ctext .= "#define NUM_BSC " . gen_num_bsc($Family) . "\n";
-	$ctext .= "#define NUM_SDIO " . gen_num_sdio($Family) . "\n";
+	$ctext .= "#define NUM_SDIO " . BcmSdio::get_num($Family) . "\n";
 	$ctext .= "#define NUM_ENET " . ($n_genet, $n_switch_ports)[$n_genet < $n_switch_ports] . "\n";
 	$ctext .= "#define NUM_SATA ". gen_num_sata($Family) . "\n";
+	$ctext .= "#define MAX_SATA_PHY_PORTS " .
+					gen_max_sata_phy_ports($Family) . "\n";
+	$ctext .= "#define NUM_SATA_PHY_CTL ".
+					gen_num_sata_phy_ctl($Family) . "\n";
 	$mtext .="\n# [config]\n";
 	for $c (@cfg) {
 		$mtext .= $c->{name} . ":=" . $c->{value} . "\n";
@@ -3556,11 +3638,18 @@ sub get_sram_range()
 	return (hex(find_cfgvar("SRAM_ADDR")), hex(find_cfgvar("SRAM_LEN")));
 }
 
-sub create_rdb_parent_node()
+sub create_rdb_parent_node($)
 {
+	my ($rh) = @_;
+	my $ranges = '';
+	if ($rh->{chip_arch} eq "MIPS") {
+		$ranges = "ranges = <0x0 0x10000000 0x01000000>;\n";
+	} else {
+		$ranges = "ranges = <0x00000000 0x00 0x00000000 0xffffffff>;\n";
+	}
 	my $rdb_str = "rdb\n{\n#address-cells = <1>;\n#size-cells = <1>;\n";
 	$rdb_str .= "compatible = \"simple-bus\";\n";
-	$rdb_str .= "ranges = <0x00000000 0x00 0x00000000 0xffffffff>;\n";
+	$rdb_str .= $ranges;
 	$rdb_str .= "};\n";
 	return DevTree::node->new($rdb_str);
 }
@@ -3578,29 +3667,31 @@ sub process_dev_tree($)
 	my $dst = $Family->{dts}->{filename_dtx};
 	my $familyname = $Family->{familyname};
 	my $dt = DevTree::dts->new_from_str("/dts-v1/;\n/ {\n};\n");
-	my $rdb = create_rdb_parent_node();
 	my $chip_cpupll_frequency = find_cpupll_frequency();
-	my @sram = get_sram_range();
 
 	my $rh = get_bchp_info($familyname);
+	my $rdb = create_rdb_parent_node($rh);
 	BcmUtils::gen_irq0_int_mapping($rh->{rh_defines});
 	my $num_serial = $dt_autogen{serial} ? BcmUtils::get_num_serial($rh->{rh_defines}) : 0;
 	my $num_bsc = $dt_autogen{bsc} ? BcmUtils::get_num_bsc($rh->{rh_defines}) : 0;
 	my $num_usb = $dt_autogen{usb} ? BcmUtils::get_num_usb($rh->{rh_defines}) : 0;
 	my $num_genet = $dt_autogen{genet} ? BcmUtils::get_num_genet($rh->{rh_defines}) : 0;
 	my $num_sata = $dt_autogen{sata} ? BcmUtils::get_num_sata($rh->{rh_defines}) : 0;
-	my $num_sdio = $dt_autogen{sdio} ? BcmUtils::get_num_sdio($rh->{rh_defines}) : 0;
+	my $num_sdio = $dt_autogen{sdio} ? BcmSdio::get_num($family) : 0;
 	my $num_pcie = $dt_autogen{pcie} ? BcmUtils::get_num_pcie($rh->{rh_defines}) : 0;
 	my $num_moca = $dt_autogen{moca} ? BcmUtils::get_num_moca($rh->{rh_defines}) : 0;
 	my $num_sun_l2 = $dt_autogen{sun_l2} ? BcmUtils::get_num_sun_l2($rh->{rh_defines}) : 0;
 	my $num_gisb_arb = $dt_autogen{gisb_arb} ? BcmUtils::get_num_gisb_arb($rh->{rh_defines}) : 0;
 	my $num_hif_l2 = $dt_autogen{hif_l2} ? BcmUtils::get_num_sun_l2($rh->{rh_defines}) : 0;
+	my $num_hif_spi_l2 = $dt_autogen{hif_spi_l2} ? BcmUtils::get_num_hif_spi_l2($rh->{rh_defines}) : 0;
 	my $num_aon_pm_l2 = $dt_autogen{aon_pm_l2} ? BcmUtils::get_num_aon_pm_l2($rh->{rh_defines}) : 0;
 	my $num_avs_host_l2 = $dt_autogen{avs_host_l2} ? BcmUtils::get_num_avs_host_l2($rh->{rh_defines}) : 0;
+	my $num_avs_cpu = $dt_autogen{avs_cpu} ? BcmUtils::get_num_avs_cpu($rh->{rh_defines}) : 0;
 	my $num_waketimer = $dt_autogen{waketimer} ? BcmUtils::get_num_waketimer($rh->{rh_defines}) : 0;
 	my $num_avs_tmon = $dt_autogen{avs_tmon} ? BcmUtils::get_num_avs_tmon($rh->{rh_defines}) : 0;
 	my $num_memcs = $dt_autogen{memcs} ? BcmUtils::get_num_memc($rh->{rh_defines}) : 0;
 	my $num_spi = $dt_autogen{spi} ? BcmUtils::get_num_spi($rh->{rh_defines}) : 0;
+	my $num_qspi = $dt_autogen{qspi} ? BcmUtils::get_num_spi($rh->{rh_defines}) : 0;
 	my $num_mspi = $dt_autogen{mspi} ? BcmUtils::get_num_mspi($rh->{rh_defines}) : 0;
 	my $num_nand = $dt_autogen{nand} ? BcmUtils::get_num_nand($rh->{rh_defines}) : 0;
 	my $num_sysport = $dt_autogen{systemport} ? BcmUtils::get_num_systemport($rh->{rh_defines}) : 0;
@@ -3627,10 +3718,7 @@ sub process_dev_tree($)
 	# These device nodes belong at the root of the DT
 	BcmDt::Devices::add_memory($dt, $rh, 1, $dt_autogen{memory})
 		if (!empty($dt_autogen{memory}));
-	BcmDt::Devices::add_bolt($dt, $rh);
-	BcmDt::Devices::add_gic($dt, $rh, 1);
 	BcmDt::Devices::add_reboot($dt, $rh);
-	BcmDt::Devices::add_smpboot($dt, $rh);
 	BcmDt::Devices::add_pmu($dt, $rh) if (!empty($dt_autogen{pmu}));
 	BcmDt::Devices::add_nexus_wakeups($dt, $rh, $dt_autogen{nexus_wakeups})
 		if !empty($dt_autogen{nexus_wakeups});
@@ -3660,6 +3748,7 @@ sub process_dev_tree($)
 
 	# This set of the device nodes should be subnodes of the RDB parent node
 	$dt->add_node($rdb);
+	BcmDt::Devices::add_periph_intc($rdb, $rh) if ($rh->{chip_arch} eq "MIPS");
 	BcmDt::Devices::add_serial($rdb, $rh, $num_serial, $dt_autogen{serial}, get_config_val("SERIAL_BAUD_RATE"))
 		if ($num_serial && !empty($dt_autogen{serial}));
 
@@ -3691,6 +3780,8 @@ sub process_dev_tree($)
 		if ($num_sun_l2 && !empty($dt_autogen{sun_l2}));
 	BcmDt::Devices::add_l2_interrupt($rdb, $rh, $dt_autogen{hif_l2}, "hif_intr2")
 		if ($num_hif_l2);
+	BcmDt::Devices::add_l2_interrupt($rdb, $rh, $dt_autogen{hif_spi_l2}, "hif_spi_intr2")
+		if ($num_hif_spi_l2);
 	BcmDt::Devices::add_l2_interrupt($rdb, $rh, $dt_autogen{aon_pm_l2}, "aon_pm_l2")
 		if ($num_aon_pm_l2 && !empty($dt_autogen{aon_pm_l2}));
 	BcmDt::Devices::add_l2_interrupt($rdb, $rh, $dt_autogen{avs_host_l2}, "avs_host_l2")
@@ -3701,6 +3792,8 @@ sub process_dev_tree($)
 	} else {
 		die "$P: GISB ARB needs a L2 interrupt controller\n";
 	}
+	BcmDt::Devices::add_avs_cpu($rdb, $rh)
+		if ($num_avs_cpu && !empty($dt_autogen{avs_cpu}));
 	BcmDt::Devices::add_waketimer($rdb, $rh, $dt_autogen{waketimer},
 		"aon_pm_l2")
 		if ($num_waketimer && !empty($dt_autogen{waketimer}));
@@ -3709,12 +3802,13 @@ sub process_dev_tree($)
 		if ($num_avs_tmon && !empty($dt_autogen{avs_tmon}));
 	BcmDt::Devices::add_thermal_zones($dt, $rh, $dt_autogen{thermal_zones})
 		if ($num_avs_tmon && !empty($dt_autogen{thermal_zones}));
-	BcmDt::Devices::add_sram($rdb, $sram[0], $sram[1], $dt_autogen{sram});
 	BcmDt::Devices::add_aon_ctrl($rdb, $rh, $dt_autogen{aon_ctrl});
 	BcmDt::Devices::add_memcs($rdb, $rh, $num_memcs, $dt_autogen{memcs})
 		if ($num_memcs && !empty($dt_autogen{memcs}));
 	BcmDt::Devices::add_spi($rdb, $rh, $dt_autogen{spi})
 		if ($num_spi && !empty($dt_autogen{spi}));
+	BcmDt::Devices::add_qspi($rdb, $rh, "hif_spi_intr2", $dt_autogen{qspi})
+		if ($num_qspi && !empty($dt_autogen{qspi}));
 
 	my $u = get_config_val("FLASH_DMA");
 	my $flash_dma = $u && uc($u) eq "ON";
@@ -3726,8 +3820,6 @@ sub process_dev_tree($)
 		if ($num_rf4ce && !empty($dt_autogen{rf4ce}));
 
 	BcmDt::Devices::add_sun_top_ctrl($rdb, $rh);
-	BcmDt::Devices::add_cpu_biu_ctrl($rdb, $rh, $family->{familyname});
-	BcmDt::Devices::add_hif_cont($rdb, $rh);
 
 	BcmDt::Devices::add_systemport($rdb, $rh, $dt_autogen{systemport},
 		"aon_pm_l2")
@@ -3802,6 +3894,17 @@ sub process_dev_tree($)
 
 	BcmDt::Devices::add_cpu_clock($dt, $dt_autogen{cpuclock})
 		if (!empty($dt_autogen{cpuclock}));
+
+	# Generate these nodes if not on MIPS arch
+	if ($rh->{chip_arch} ne "MIPS") {
+		my @sram = get_sram_range();
+		BcmDt::Devices::add_bolt($dt, $rh);
+		BcmDt::Devices::add_gic($dt, $rh, 1);
+		BcmDt::Devices::add_smpboot($dt, $rh);
+		BcmDt::Devices::add_sram($rdb, $sram[0], $sram[1], $dt_autogen{sram});
+		BcmDt::Devices::add_cpu_biu_ctrl($rdb, $rh, $family->{familyname});
+		BcmDt::Devices::add_hif_cont($rdb, $rh);
+	}
 
 	BcmDt::Devices::final_write_all_rdb_syscon_references($dt);
 
@@ -4033,6 +4136,7 @@ sub usage($$)
 	print " -f <chip family>\n";
 	print " -c <config file> (path+file)\n";
 	print " -r <rdb include dir>\n";
+	print " -m <MEMC include dir>\n";
 	print " -w <working directory> (optional)\n";
 	print " -g <generated files base dir> (optional),";
 	print " defaults to ./gen\n";
@@ -4053,12 +4157,11 @@ sub wrap_headers($)
 		next unless ((-f "$din/$f") && ($f =~ m/\.h$/));
 
 		my $text = read_textfile("$din/$f");
-
 		my $cname = uc($f);
 		$cname =~ tr/.-/__/;
 		$cname = '__' . $cname .  '__';
 
-		my $t = $cheader . $genmarker;
+		my $t = BcmUtils::create_copyright_header("h") . $genmarker;
 		$t .= "#ifndef $cname\n#define $cname\n\n" . $text;
 		$t .= "#endif /* $cname */\n";
 
@@ -4071,7 +4174,7 @@ sub wrap_headers($)
 sub main()
 {
 	my %cmdflags=();
-	getopts("hf:c:g:r:w:D:b:", \%cmdflags) or
+	getopts("hf:c:g:r:m:w:D:b:", \%cmdflags) or
 		usage($P,"bad options");
 
 	usage($P, "none")
@@ -4088,6 +4191,9 @@ sub main()
 
 	$arg_rdb_dir = $cmdflags{r}
 		if (defined $cmdflags{r});
+
+	$arg_memc_client_dir = $cmdflags{m}
+		if (defined $cmdflags{m});
 
 	$arg_working_dir = $cmdflags{w}
 		if (defined $cmdflags{w});
@@ -4148,6 +4254,9 @@ sub main()
 
 	my $text = "";
 
+	my $sdio_pinsel_type = BcmSdio::get_pinsel_type($Family);
+	BcmSdio::prepare_sdio_pinsel($sdio_pinsel_type, $Family);
+
 	# ----------------------------------------
 
 	processed_sections();
@@ -4156,7 +4265,7 @@ sub main()
 
 	# ----------------------------------------
 
-	write_textfile("$D/board_params.c", $cheader . $genmarker
+	write_textfile("$D/board_params.c", BcmUtils::create_copyright_header("c") . $genmarker
 		. $partion_header_files . $pinmux_header_files);
 
 	$text = processed_ssbl_pinmux();
@@ -4179,7 +4288,7 @@ sub main()
 	# ----------------------------------------
 
 	write_textfile("$D/include.mk",
-		       $makeheader . "#" . $_genmarker . "\n\n");
+		       BcmUtils::create_copyright_header("mk") . "#" . $_genmarker . "\n\n");
 
 	append_textfile("$D/include.mk",
 			"FAMILY:=" . $Family->{familyname} . "\n");
@@ -4202,6 +4311,8 @@ sub main()
 			. $family_dtx
 			. "\n\n");
 
+	process_board_dev_trees($D, $Family);
+
 	# ----------------------------------------
 
 	write_textfile("$D/aon_history.h", processed_aon_history());
@@ -4212,7 +4323,7 @@ sub main()
 
 	my $fout = "$D/rts.c";
 
-	$text = $cheader . $genmarker. $rts_c_header_files;
+	$text = BcmUtils::create_copyright_header("c") . $genmarker. $rts_c_header_files;
 
 	$text .= processed_rtsconfig();
 	$text .= processed_rtsbase();
@@ -4244,7 +4355,7 @@ sub main()
 	# ----------------------------------------
 
 	$text = processed_fsbl_pinmux();
-	write_textfile("$D/fsbl-pinmux.c", $cheader . $genmarker
+	write_textfile("$D/fsbl-pinmux.c", BcmUtils::create_copyright_header("c") . $genmarker
 		. $pinmux_header_files . $text);
 
 	# ----------------------------------------

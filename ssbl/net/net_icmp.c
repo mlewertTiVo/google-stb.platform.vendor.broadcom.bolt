@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -220,7 +218,9 @@ int _icmp_ping(icmp_info_t *icmp, uint8_t *dest, int seq, int len)
 	 */
 
 	icmp->icmp_maxreplies = 1;	/* allow ICMP replies */
-	_ip_send(icmp->icmp_ipinfo, buf, dest, IPPROTO_ICMP);
+	result = _ip_send(icmp->icmp_ipinfo, buf, dest, IPPROTO_ICMP);
+	if (result < 0)
+		goto out_free;
 	buf = NULL;
 
 	/* Wait for a reply
@@ -258,7 +258,7 @@ int _icmp_ping(icmp_info_t *icmp, uint8_t *dest, int seq, int len)
 	 */
 
 	icmp->icmp_maxreplies = 0;	/* allow ICMP replies */
-
+out_free:
 	if (buf)
 		_ip_free(icmp->icmp_ipinfo, buf);
 

@@ -14,6 +14,8 @@
 .align 5
 .arm
 
+/* Nothing services the secure timer yet so don't turn it on */
+#define ENABLE_SECURE_TMR	0
 
 ENTRY_PROC(mon_vectors)
 	b	 unhandled	@ reset
@@ -75,6 +77,8 @@ END_PROC(unhandled)
 
 
 ENTRY_PROC(do_psci_smc)
+	set_secure_mode r3, r3
+
 	mrc	p15, 0, r3, c0, c0, 5
 	isb
 	and	r3, r3, #MPIDR_AFF0
@@ -102,6 +106,23 @@ ENTRY_PROC(eret32)
 END_PROC(eret32)
 
 
+ENTRY_PROC(system_ctl_reg_defaults)
+	/* System Control Register
+	 * SCTLR(S) EL1(S), EL3 (SCR.NS=0)
+	 * Note this is a banked register determined by SCR.NS
+	 *
+	 * Leave I-cache enable to per_cpu_start() - after smp_on()
+	 * Remap all exceptions to VBAR by setting SCTLR.V = 0
+	 * CP15 DMB, DSB & ISB barrier ops enabled for EL0 and EL1
+	 */
+	ldr	r7, =#(SCTLR_RES1_BITS | SCTLR_CP15BEN)
+	bic	r7, #SCTLR_V
+	mcr	p15, 0, r7, c1, c0, 0
+	isb
+	bx	lr
+END_PROC(system_ctl_reg_defaults)
+
+
 /* r0: linux_entry
  * r1: fdt
  * r2: bakery lock
@@ -125,15 +146,21 @@ ENTRY_PROC(exec32)
 	mcr	p15, 0, r7, c1, c1, 2 /* Write NSACR, aka cptr_el3 */
 	isb
 
+	bl	arch_init_config
+#if ENABLE_SECURE_TMR
 	bl	arch_init_counters_s
+#endif	/* ENABLE_SECURE_TMR */
 	bl	gic_secure_init
-	bl	processor_specific_init_s
 	bl 	security_scr_config
 	bl	hypervisor_off_s
 
 	pop	{r0-r3}
 
 	set_nonsecure_mode	r7, r7
+
+	mov	r7, #0
+	mcrr	p15, 4, r7, r7, c14 /* Write 0x0 to CNTVOFF (EL2, EL3.NS=1) */
+	isb
 
 	/* Switch to HYP with exceptions masked CPSR when we eret
 	 * out of PSCI
@@ -158,22 +185,12 @@ drop_el:
 
 	push	{r0-r3}
 
-	/* System Control Register
-	 * SCTLR(NS): EL1(NS) EL2 EL3 (SCR.NS=1)
-	 * Note this is a banked register determined by SCR.NS 
-	 *
-	 * Remap all exceptions to VBAR by setting SCTLR.V = 0
-	 * CP15 DMB, DSB & ISB barrier ops enabled for EL0 and EL1
-	 */
-	ldr	r7, =#(SCTLR_RES1_BITS | SCTLR_CP15BEN)
-	bic	r7, #SCTLR_V
-	mcr	p15, 0, r7, c1, c0, 0
-	isb
+	/* SCTLR (EL2) */
+	bl	system_ctl_reg_defaults
 
 	bl	arch_init_config
 	bl	hypervisor_off_ns
 	bl	arch_init_counters
-	bl	processor_specific_init_ns
 
 	pop	{r0-r3}
 
@@ -303,54 +320,11 @@ ENTRY_PROC(hypervisor_off_ns)
 END_PROC(hypervisor_off_ns)
 
 
-ENTRY_PROC(processor_specific_init_s)
-	check_is_orion	r7, r8, 1f
-
-	/* ACTLR_EL3 can be mapped to AArch32 register
-	 * ACTLR (S), but this is not mandated
-	 */
-	mrc	p15, 0, r7, c1, c0, 1 /* Read ACTLR */
-	isb
-	orr	r7, r7, #0x2 /* Allow access to CPUECTLR from EL1 */
-	mcr	p15, 0, r7, c1, c0, 1 /* Write ACTLR */
-	isb
-1:
-	bx	 lr
-END_PROC(processor_specific_init_s)
-
-
-ENTRY_PROC(processor_specific_init_ns)
-	check_is_orion	r7, r8, 1f
-
-	/* ACTLR_EL1 is mapped to AArch32 register
-	 * ACTLR (NS)
-	 */
-	mrc	p15, 0, r7, c1, c0, 1 /* Read ACTLR */
-	isb
-	orr	r7, r7, #0x2
-	mcr	p15, 0, r7, c1, c0, 1 /* Write ACTLR */
-
-	/* ACTLR_EL2 is mapped to AArch32 register
-	 * HACTLR
-	 */
-	mrc	p15, 4, r8, c1, c0, 1 /* Read HACTLR */
-	isb
-	orr	r8, r8, #0x2
-	mcr	p15, 4, r8, c1, c0, 1 /* Write HACTLR */
-	isb
-1:
-	bx	 lr
-END_PROC(processor_specific_init_ns)
-
-
 ENTRY_PROC(arch_init_config)
     	push	{r0-r2, lr}
 
 	mrc	p15, 0, r0, c1, c0, 0
 	isb
-
-	/* Enable branch prediction (SCTLR.Z) */
-	orr	r0, #(1 << 11)
 
 	bic	r0, r0, #SCTLR_C /* disable d-cache */
 	bic	r0, r0, #SCTLR_M /* disable mmu */
@@ -361,6 +335,7 @@ ENTRY_PROC(arch_init_config)
 END_PROC(arch_init_config)
 
 
+#if ENABLE_SECURE_TMR
 ENTRY_PROC(arch_init_counters_s)
  	push	{r0-r4, lr}
 
@@ -378,6 +353,7 @@ ENTRY_PROC(arch_init_counters_s)
 
     	pop	{r0-r4, pc}
 END_PROC(arch_init_counters_s)
+#endif	/* ENABLE_SECURE_TMR */
 
 
 /* Set counters and ID
@@ -430,10 +406,6 @@ ENTRY_PROC(arch_init_counters)
 
 	/* ---------------------------- */
 
-	mov	r0, #0
-	mcrr	p15, 4, r0, r0, c14 /* Write 0x0 to CNTVOFF (EL2, EL3.NS=1) */
-	isb
-
 	mrc	p15, 0, r2, c0, c0, 0 /* Read MIDR */
 	isb
 	mcr	p15, 4, r2, c0, c0, 0 /* Write VPIDR (EL2, EL3.NS=1) */
@@ -446,15 +418,9 @@ ENTRY_PROC(arch_init_counters)
 END_PROC(arch_init_counters)
 
 
-/* Boot secondary CPU and is expected to start in SVC_s mode. */
-ENTRY_PROC(cpu_init_secondary)
+/* Boot a CPU, it is expected to start in SVC_s mode. */
+ENTRY_PROC(cpu_init)
 	set_secure_mode	r7, r7 /* make sure */
-	
-	/* A2 errata: Dummy write to L2CTLR to propagate modified default
-	 * register settings to L2 consuming logic
-	 */
-	mrc	p15, 1, r2, c9, c0, 2
-	mcr	p15, 1, r2, c9, c0, 2
 
 	ldr	r0, =(PSCI_BASE + PSCI_SIZE)
 	ldr	r6, =#1024
@@ -468,20 +434,7 @@ ENTRY_PROC(cpu_init_secondary)
 	bic	r0, r0, #7	/* 8-byte alignment for ABI compliance */
 	mov	sp, r0
 
-	/* System Control Register
-	 * SCTLR(S) EL1(S), EL3 (SCR.NS=0)
-	 * Note this is a banked register determined by SCR.NS 
-	 *
-	 * Leave I-cache enable to per_cpu_start() - after smp_on()
-	 * Remap all exceptions to VBAR by setting SCTLR.V = 0
-	 * CP15 DMB, DSB & ISB barrier ops enabled for EL0 and EL1
-	 */
-	ldr	r2, =#(SCTLR_RES1_BITS | SCTLR_CP15BEN)
-	bic	r2, #SCTLR_V
-	mcr	p15, 0, r2, c1, c0, 0
-	isb
-
-	/* Setup VBAR */
+	/* Setup VBAR(S)/VBAR_EL3 */
 	ldr	r8, =mon_vectors
 	mcr	p15, 0, r8, c12, c0, 0
 
@@ -498,28 +451,32 @@ ENTRY_PROC(cpu_init_secondary)
 	/* Switch mode & setup stack for smc */
 	set_mode_sp	r1, r0, MODE_MON
 
+	/* SCTLR (EL3, SCR.NS=0) */
+	bl	system_ctl_reg_defaults
+
 	/* MVBAR setup is valid only if EL3 is AArch32 
 	 * EL1(S), EL3 SCR.NS=0|1
 	 */
 	mcr	p15, 0, r8, c12, c0, 1
-	isb
+
+	/* Make sure we are all done here */
+	barrier
 
 	blx	per_cpu_start
-END_PROC(cpu_init_secondary)
+END_PROC(cpu_init)
 
 
-ENTRY_PROC(smp_on)
-	push	{r0-r4}
+ENTRY_PROC(__smp_on)
 	check_is_orion	r0, r1, 1f
 
-	set_secure_mode	r0, r4
+	set_secure_mode	r0, r2
 
 	/* ACTLR_EL3 can be mapped to AArch32 register
 	 * ACTLR (S), but this is not mandated
 	 */
 	mrc	p15, 0, r0, c1, c0, 1 /* Read ACTLR */
 	isb
-	bic	r0, r0, #0x2 /* Allow access to CPUECTLR from EL1 */
+	orr	r0, r0, #0x2 /* Allow access to CPUECTLR from EL1 */
 	mcr	p15, 0, r0, c1, c0, 1 /* Write ACTLR */
 	isb
 
@@ -530,7 +487,7 @@ ENTRY_PROC(smp_on)
 	 */
 	mrc	p15, 4, r0, c1, c0, 1 /* Read HACTLR */
 	isb
-	bic	r0, r0, #0x2
+	orr	r0, r0, #0x2
 	mcr	p15, 4, r0, c1, c0, 1 /* Write HACTLR */
 	isb
 
@@ -539,21 +496,20 @@ ENTRY_PROC(smp_on)
 	 */
 	mrc	p15, 0, r0, c1, c0, 1 /* Read ACTLR */
 	isb
-	bic	r0, r0, #0x2
+	orr	r0, r0, #0x2
 	mcr	p15, 0, r0, c1, c0, 1 /* Write ACTLR */
 	isb
 
-	revert_secure_mode r4
+	revert_secure_mode r2
 
 	mrrc	p15, 1, r0, r1, c15 /* Read CPU Extended Control Register */
 	isb
 	orr	r0, r0, #CPUECTLR_EL1_SMPEN
-	mrrc	p15, 1, r0, r1, c15 /* Write */
+	mcrr	p15, 1, r0, r1, c15 /* Write */
 	barrier
 1:
-	pop	{r0-r4}
 	bx	lr
-END_PROC(smp_on)
+END_PROC(__smp_on)
 
 
 /* This is a tidied up disassemby of
@@ -704,7 +660,7 @@ ENTRY_PROC(smp_off_unlock)
 
 	/* No point in doing a DCCIMVAC (Data Cache line Clean and Invalidate
 	 * by VA to PoC) here as we are out of coherence. Let it
-	 * filter donwn of its own accord. Have to revisit if we have
+	 * filter down of its own accord. Have to revisit if we have
 	 * cache & MMU on in MON mode, which is unlikely at the moment.
 	 */
 2:

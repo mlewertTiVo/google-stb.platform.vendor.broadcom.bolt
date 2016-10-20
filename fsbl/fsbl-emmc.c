@@ -20,6 +20,7 @@
 #include <sdhc.h>
 #include <emmc_cst.h>
 #include <config.h> /* For EMMC_BUS_VOLTAGE */
+#include <byteorder.h>
 
 #include <bchp_common.h>
 #include <bchp_sdio_1_boot.h>
@@ -82,6 +83,7 @@ struct mmc_cmd {
 struct mmc_data {
 	uint32_t dma_address;
 	uint32_t block_count;
+	bool     dma_used;
 };
 
 struct cmd_info {
@@ -205,6 +207,30 @@ static int emmc_cmd13_send_status(uint32_t *status);
 /*
  * Functions.
 */
+static void pio_read_blk(uint32_t block_size, unsigned long *dst_addr)
+{
+	int cnt = block_size / sizeof(unsigned long);
+	uint32_t val;
+
+	while (cnt--) {
+		val = BDEV_RD(BCHP_SDIO_1_HOST_BUFFDATA);
+		*dst_addr++ = le32_to_cpu(val);
+	}
+}
+
+static void pio_transfer(struct mmc_data *data)
+{
+	while (data->block_count) {
+		if ((BDEV_RD(BCHP_SDIO_1_HOST_STATE) &
+			SDHC_STATE_BUF_READ_RDY) == 0)
+			break;
+		pio_read_blk(EMMC_BLOCK_SIZE, (unsigned long *)data->dma_address);
+		data->dma_address += EMMC_BLOCK_SIZE;
+		data->block_count--;
+	}
+}
+
+
 static void handle_interrupt_error(void)
 {
 	uint32_t status;
@@ -245,7 +271,7 @@ static int wait_cmd_complete(void)
 	return EMMC_OK;
 }
 
-static int wait_xfer_complete(void)
+static int wait_xfer_complete(struct mmc_data *data)
 {
 	uint32_t int_status;
 	uint32_t timeout = 0;
@@ -266,6 +292,10 @@ static int wait_xfer_complete(void)
 			 */
 			BDEV_WR(BCHP_SDIO_1_HOST_SDMA,
 				BDEV_RD(BCHP_SDIO_1_HOST_SDMA));
+		}
+		if (int_status & SDHC_INT_READ_BUF) {
+			DBG_MSG_PUTS(" PIO interrupt\n");
+			pio_transfer(data);
 		}
 		if (int_status & SDHC_INT_ERR_MASK) {
 			DBG_MSG_PUTS(" transfer complete intr error : 0x");
@@ -467,12 +497,18 @@ static int issue_cmd(struct mmc_cmd *cmd, struct mmc_data *data)
 
 	/* The command includes a data transfer */
 	if (data_xfer) {
-		BDEV_WR(BCHP_SDIO_1_HOST_SDMA, data->dma_address);
+		if (data != NULL && data->dma_used)
+			BDEV_WR(BCHP_SDIO_1_HOST_SDMA, data->dma_address);
 		BDEV_WR(BCHP_SDIO_1_HOST_BLOCK,
 			SDHC_MAKE_BLK_REG(data->block_count,
 					  EMMC_BLOCK_SIZE, HOST_BUF_SIZE));
 	}
 	cmd_mode = get_cmd_mode(cmd->index);
+
+	/* If DMA is not  used, clear DMA enable bit */
+	if (data != NULL && !(data->dma_used))
+		cmd_mode &= ~BCHP_SDIO_1_HOST_CMD_MODE_DMA_ENABLE_MASK;
+
 	BDEV_WR(BCHP_SDIO_1_HOST_ARGUMENT, cmd->arg);
 #if DEBUG_EMMC_FSBL
 	DBG_MSG_PUTS(" SDMA : 0x");
@@ -491,7 +527,7 @@ static int issue_cmd(struct mmc_cmd *cmd, struct mmc_data *data)
 
 	/* If the command has a data transfer, wait for transfer complete */
 	if (data_xfer) {
-		if (wait_xfer_complete())
+		if (wait_xfer_complete(data))
 			goto err;
 	}
 	/*
@@ -509,6 +545,7 @@ err:
 	emmc_software_reset(SDHC_SW_RESET_DAT | SDHC_SW_RESET_CMD);
 	return EMMC_NG;
 }
+
 
 #define ARG_CMD0_GO_IDEL_STATE	0x00000000
 static int emmc_cmd0_go_idle_state(void)
@@ -680,7 +717,8 @@ static int emmc_cmd16_set_blocklen(uint32_t block_length)
 }
 
 static int emmc_cmd18_read_multiple_block(
-		uint32_t dma_addr, uint32_t block_count, uint32_t block_addr)
+		uint32_t dma_addr, uint32_t block_count, uint32_t block_addr,
+		bool dma_used)
 {
 	struct mmc_cmd cmd;
 	struct mmc_data data;
@@ -689,6 +727,7 @@ static int emmc_cmd18_read_multiple_block(
 	cmd.arg = block_addr;
 	data.dma_address = dma_addr;
 	data.block_count = block_count;
+	data.dma_used = dma_used;
 	return issue_cmd(&cmd, &data);
 }
 
@@ -962,7 +1001,9 @@ static int emmc_initialize(void)
 	return EMMC_OK;
 }
 
-static int emmc_read(uint32_t dma_addr, uint32_t bfw_size, uint32_t emmc_addr)
+static int emmc_read(
+		uint32_t dma_addr, uint32_t bfw_size,
+		uint32_t emmc_addr, bool dma_used)
 {
 #if DEBUG_EMMC_DATA
 	int i = 0, j = 0;
@@ -975,7 +1016,7 @@ static int emmc_read(uint32_t dma_addr, uint32_t bfw_size, uint32_t emmc_addr)
 				      PCFG_BOOT_ACK
 				      | PCFG_BOOT_PARTITION_ENABLE_BOOT1
 				      | PCFG_PARTITION_ACCESS_DATA);
-	udelay(500000);
+	udelay(50000);
 	if (res) {
 		__puts("\n[emmc_read] Error to select DATA partition!\n");
 		return res;
@@ -990,7 +1031,8 @@ static int emmc_read(uint32_t dma_addr, uint32_t bfw_size, uint32_t emmc_addr)
 	res = emmc_cmd18_read_multiple_block(
 				dma_addr,
 				(uint32_t)(bfw_size>>EMMC_BLOCK_SHIFT),
-				(uint32_t)(emmc_addr>>EMMC_BLOCK_SHIFT));
+				(uint32_t)(emmc_addr>>EMMC_BLOCK_SHIFT),
+				dma_used);
 	if (res) {
 		DBG_MSG_PUTS("\n[emmc_read] failed!\n");
 		return res;
@@ -1049,16 +1091,18 @@ static int emmc_ready_boot(void)
 }
 
 
-int emmc_read_bfw(uint32_t dma_addr,
+int emmc_read_fsbl(uint32_t dma_addr,
 		  uint32_t bfw_size,
-		  uint32_t emmc_addr)
+		  uint32_t emmc_addr,
+		  bool     dma_used)
 {
 	if (emmc_initialize() == EMMC_OK) {
 		/* dma_addr(DDR address) should be aligned 256K
 			and size should be less than 256KB */
 		/* bfw_size  : should be padded as 512B. */
 		/* emmc_addr : Byte address */
-		if (emmc_read(dma_addr, bfw_size, emmc_addr) == EMMC_OK)
+		if (emmc_read(dma_addr, bfw_size, emmc_addr, dma_used) ==
+			EMMC_OK)
 			__puts(">>> 'emmc_read' success!\n");
 		else
 			__puts(">>> 'emmc_read' failed!\n");

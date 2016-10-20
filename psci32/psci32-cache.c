@@ -54,13 +54,16 @@ uint32_t rac_disable_and_flush(void)
 {
 	uint32_t v, old;
 
+	if (!rac_master())
+		return 0;
+
 	v = rdb_read(BCHP_HIF_CPUBIUCTRL_RAC_CONFIG0_REG);
 	if (0 == v)
 		return 0; /* Nothing to do, RAC is not currently on */
 
 	old = v; /* save old state */
 
-	/* Disable ALL cpus RAC */
+	/* Disable RAC for *ALL* cpus */
 	rdb_write(BCHP_HIF_CPUBIUCTRL_RAC_CONFIG0_REG, 0);
 	BARRIER();
 
@@ -69,6 +72,7 @@ uint32_t rac_disable_and_flush(void)
 			BCHP_HIF_CPUBIUCTRL_RAC_FLUSH_REG_FLUSH_RAC_MASK);
 	BARRIER();
 
+	/* Wait for flush to complete */
 	do {
 		dmb();
 		v = rdb_read(BCHP_HIF_CPUBIUCTRL_RAC_FLUSH_REG);
@@ -80,6 +84,9 @@ uint32_t rac_disable_and_flush(void)
 
 void rac_enable(uint32_t rac_cfg0)
 {
+	if (!rac_master())
+		return;
+
 	if (0 == rac_cfg0) {
 		if (debug())
 			msg_cpu("RAC_EN_ZERO", get_cpu_idx(get_mpidr()));

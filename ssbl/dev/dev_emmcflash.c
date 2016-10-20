@@ -53,16 +53,16 @@ void emmc_init_pinmux(int id, sdio_type_e type)
 	case 0:
 #if defined(BCHP_SDIO_0_CFG_SD_PIN_SEL)
 		BDEV_WR_F(SDIO_0_CFG_SD_PIN_SEL, PIN_SEL, val);
-#elif defined(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_sdio0_pin_sel_MASK)
-		BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_0, sdio0_pin_sel, val);
 #endif
 		break;
 
 	case 1:
 #if defined(BCHP_SDIO_1_CFG_SD_PIN_SEL)
 		BDEV_WR_F(SDIO_1_CFG_SD_PIN_SEL, PIN_SEL, val);
-#elif defined(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_sdio1_pin_sel_MASK)
+#else
+#if defined(CONFIG_BCM74371)
 		BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_0, sdio1_pin_sel, val);
+#endif
 #endif
 		break;
 	}

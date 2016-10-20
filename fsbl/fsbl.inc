@@ -17,7 +17,6 @@ FSBL_S += \
  fsbl/fsbl-main.c \
  fsbl/fsbl-minilib.c \
  fsbl/fsbl-pm.c \
- fsbl/fsbl-pwr.c \
  fsbl/fsbl-sec.c \
  fsbl/fsbl-secparams.c \
  fsbl/fsbl-shmoo.c \

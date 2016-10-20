@@ -39,15 +39,18 @@
 #include "net_api.h"
 #endif
 
-#if 0
-#define USBETH_TRACE(x, y ...) xprintf(x, ##y)
-#else
-#define USBETH_TRACE(x, y ...)
-#endif
-
 #define FAIL -1
 
+
+#define USBETH_TRACE(x, ...)	{\
+					if (usbeth_trace) {\
+						xprintf("%s: ", __func__);\
+						xprintf(x "\n", __VA_ARGS__);\
+					} \
+				}
+
 static int Dev_cnt = 0;
+static int usbeth_trace;
 
 /******************************************************************************
   Debug functions
@@ -1114,6 +1117,8 @@ static int usbeth_attach(usbdev_t *dev, usb_driver_t *drv)
 
 	dev->ud_drv = drv;
 
+	usbeth_trace = (env_getenv("USBETH_TRACE")) ? 1 : 0;
+
 	softc = (usbeth_softc_t *) KMALLOC(sizeof(usbeth_softc_t), 0);
 	if (softc == NULL) {
 		xprintf("Failed to allocate softc memory.\n");
@@ -1250,10 +1255,11 @@ usb_driver_t usbeth_driver = {
 
 static int usbeth_ether_open(bolt_devctx_t *ctx)
 {
+	USBETH_TRACE("called. Dev_cnt: %d", Dev_cnt);
+
 	if (!Dev_cnt)
 		return BOLT_ERR_NOTREADY;
 
-	USBETH_TRACE("%s called.\n", __func__);
 	usbeth_open_device((usbeth_softc_t *) ctx->dev_softc);
 
 	return 0;
@@ -1301,43 +1307,53 @@ static int usbeth_ether_write(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 static int usbeth_ether_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 {
 	int retval = 0;
+	char *unimplemented = NULL;
 
 	if (!Dev_cnt)
 		return BOLT_ERR_NOTREADY;
 
 	switch ((int)buffer->buf_ioctlcmd) {
 	case IOCTL_ETHER_GETHWADDR:
-		USBETH_TRACE("IOCTL_ETHER_GETHWADDR called.\n");
+		USBETH_TRACE("IOCTL_ETHER_GETHWADDR called. Dev_cnt: %d",
+			Dev_cnt);
 		usbeth_get_dev_addr((usbeth_softc_t *) ctx->dev_softc,
 				    buffer->buf_ptr);
 		break;
+
 	case IOCTL_ETHER_SETHWADDR:
-		xprintf("IOCTL_ETHER_SETHWADDR not implemented.\n");
+		unimplemented = "SETHWADDR";
 		break;
-#if 0
 	case IOCTL_ETHER_GETSPEED:
-		xprintf("GETSPEED not implemented.\n");
-		retval = -1;
+		unimplemented = "GETSPEED";
 		break;
 	case IOCTL_ETHER_SETSPEED:
-		xprintf("SETSPEED not implemented.\n");
-		retval = -1;
+		unimplemented = "SETSPEED";
 		break;
 	case IOCTL_ETHER_GETLINK:
-		xprintf("GETLINK not implemented.\n");
-		retval = -1;
+		unimplemented = "GETLINK";
 		break;
 	case IOCTL_ETHER_GETLOOPBACK:
-		xprintf("GETLOOPBACK not implemented.\n");
-		retval = -1;
+		unimplemented = "GETLOOPBACK";
 		break;
 	case IOCTL_ETHER_SETLOOPBACK:
-		xprintf("SETLOOPBACK not implemented.\n");
+		unimplemented = "SETLOOPBACK";
+		break;
+
+	default:
+		err_msg("%s: Invalid IOCTL %d",
+			__func__, (int)buffer->buf_ioctlcmd);
 		retval = -1;
 		break;
-#endif
-	default:
-		xprintf("Invalid IOCTL to usbeth_ether_ioctl.\n");
+	}
+
+	/*
+	 *  Recognised ioctls that have not been implemented
+	 * for USB Ethernet drivers, and no expectation yet
+	 * that they will be.
+	 */
+	if (unimplemented) {
+		USBETH_TRACE("Note that IOCTL_ETHER_%s is not implemented",
+			unimplemented);
 		retval = -1;
 	}
 
@@ -1346,10 +1362,11 @@ static int usbeth_ether_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 
 static int usbeth_ether_close(bolt_devctx_t *ctx)
 {
+	USBETH_TRACE("called. Dev_cnt: %d", Dev_cnt);
+
 	if (!Dev_cnt)
 		return BOLT_ERR_NOTREADY;
 
-	USBETH_TRACE("%s called.\n", __func__);
 	usbeth_close_device((usbeth_softc_t *) ctx->dev_softc);
 
 	return 0;

@@ -4,8 +4,8 @@
 Build configuration script
 ==========================
 Broadcom Ltd <support@broadcom.com>
-v1.34, June 9th 2016:
-Updated for 1.19 release.
+v1.36, September 7th 2016:
+Updated for 1.21 release.
 
 Introduction
 ------------
@@ -1697,10 +1697,10 @@ an ID then the menu is presented.
 ~~~
 Usage:
 
-* dt cull -power <minimal|std> -root <ROOT> -node <NODE> -prop <PROP>
-* dt mac  -power <minimal|std> -root /      -node <NODE>
-* dt prop -power <minimal|std> -root <ROOT> -node <NODE> -prop <PROP> -string "<STRING>"
-* dt prop -power <minimal|std> -root <ROOT> -node <NODE> -prop <PROP> -int <int>
+* dt cull -root <ROOT> -node <NODE> -prop <PROP>
+* dt mac  -root /      -node <NODE>
+* dt prop -root <ROOT> -node <NODE> -prop <PROP> -string "<STRING>"
+* dt prop -root <ROOT> -node <NODE> -prop <PROP> -int <int>
 
 Note: These script commands allow selective board specific modification of the
 devicetree as BOLT SSBL starts up, independent of the 'dt bolt' command.
@@ -1720,15 +1720,12 @@ type is supported.
 is generally set by the BOLT 'macprog' command and for each device it is
 incremented to provide a value unique to the platform it is running on.
 
-* '-power' is optional. It may have no effect if the platform
-(BOLT) FSBL does not report its power state.
-
 NOTE: It is recommended to specify the full node and path when using
 these commands as a partial node will match the first that is found.
 
 Example:
 ----
-dt cull -power minimal -root / -node nexus
+dt cull -root / -node nexus
 
 dt mac -root / -node stb0
 
@@ -1757,15 +1754,18 @@ is not set.
 
  avs
 ~~~~
-Usage: avs [enable | disable]
+Usage: avs [enable | disable] -domains <VOLTAGE DOMAINS>
 
 Note: Sets the default AVS state
 
 See also: n/a
 
+* <VOLTAGE DOMAINS> mentions the number of voltage domains(cpu and settop) on
+the platforms that can be build with multiple domains. Default is 2.
+
 Example:
 ----
-avs enable
+avs enable -domains 2
 ----
 
 AVS will be enabled (started) by default if a corresponding board is
@@ -1775,6 +1775,23 @@ is enabled or disabled can be overridden anytime by the "setboard"
 command on the BOLT command line prompt. The "avs" command can exist
 in [family], [chip] and [board].
 
+ dvfs
+~~~~
+Usage: dvfs -mode <avs|dfs|dvfs>  -pmap <MAP> -pstate <STATE>
+
+Note: Sets the mode, pmap and p-state. The parameters for the '-pmap' option
+and '-pstate' are integers.
+
+See also: n/a
+
+* <MAP> mentions all the pstates available for a power profile.
+
+* <STATE> operational state determined by CPU's frequency and voltage.
+
+Example:
+----
+dvfs -mode dvfs  -pmap 3 -pstate 0
+----
 
  sdio
 ~~~~~
@@ -1805,8 +1822,10 @@ reasons.)
 
 * <T> The operating mode (type) which is 'sd', 'nodevice', 'emmc' or 'emmc_on_sdpins'
 
-* -uhs (optional) Sets the property "no-1-8-v" in the Devicetree for Linux
-Ultra High Speed SDIO. Use 1 or 0 to enable or disable.
+* -uhs (optional) Sets properties in the sdhci Devicetree node for Linux
+that will enable Ultra High Speed modes. 1 will add properties to enable
+DDR50 and SDR50 modes for SD and HS200 for eMMC. 0 will disable UHS modes
+by adding the property "no-1-8-v".
 
 * -host_driver_strength (optional) Set the host controller driver strength property to <S> for Ultra High Speed modes
 

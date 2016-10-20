@@ -8,17 +8,22 @@
 # ***************************************************************************
 
 # These parts have dual AVS Monitors
-AVS_DUAL:=3390a0 3390b0
+AVS_DUAL:=
 
 # Whitelists
-AVS_SETUPS   :=3390a0 3390b0 7250b0 7364a0 7364b0 7366b0 7366c0 74371a0 7439b0 7445d0 7445e0 7271a0 7268a0
-AVS_FIRMWARES:=3390a0 3390b0 7250b0 7364a0 7364b0 7366b0 7366c0 74371a0 7439b0 7445d0 7445e0 7271a0 7268a0
+AVS_SETUPS   :=7250b0 7260a0 7268a0 7271a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+AVS_FIRMWARES:=7250b0 7260a0 7268a0 7271a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
 
 # for bsu and temp_reset:
-# These parts use an updated set of conversion functions for PVTMON
-AVS_NEW_CALCS:=3390a0 3390b0 7250b0 7364a0 7364b0 7366b0 7366c0 7439b0 7445d0 7445e0 7271a0 7268a0
-AVS_OVER_TEMP:=3390a0 3390b0 7250b0 7364a0 7364b0 7366b0 7366c0 7439b0 7445d0 7445e0 7271a0 7268a0
+# These parts use an older set of conversion functions for PVTMON
+AVS_OLD_CALCS:=74371
+AVS_NO_OVER_TEMP:=74371
 
+# These parts can be used on reference boards configured with one or two power domains
+AVS_DUAL_DOMAINS:=7260a0 7268a0 7271a0
+
+# These parts support dynamic voltage and frequency scaling
+DVFS_SUPPPORT:=7260a0 7268a0 7271a0
 
 # ***************************************************************************
 
@@ -36,13 +41,18 @@ ifeq ($(filter $(FAMILY), $(AVS_DUAL)), $(FAMILY))
   AVS_CLASS:=avs/dual
   EXTRA_DEFINES += -DAVS_DUAL_MONITORS
 else
-ifeq ($(filter $(FAMILY), 7271a0 7268a0), $(FAMILY))
+ifeq ($(filter $(FAMILY), $(AVS_DUAL_DOMAINS)), $(FAMILY))
   EXTRA_DEFINES += -DAVS_DUAL_DOMAINS
 endif
   AVS_CLASS:=avs/single
 endif
 
-EXTRA_DEFINES += -I$(AVS_CLASS) -I$(AVS_COMMON_CODE)
+ifeq ($(filter $(FAMILY), $(DVFS_SUPPPORT)), $(FAMILY))
+  EXTRA_DEFINES += -DDVFS_SUPPPORT
+  AVS_SSBL_S += $(AVS_COMMON_CODE)/avs_dvfs.c
+endif
+
+EXTRA_DEFINES += -I$(AVS_CLASS) -DAVS_CLASS=$(AVS_CLASS) -I$(AVS_COMMON_CODE)
 
 # ***************************************************************************
 # Only enable the AVS setup on these platforms.
@@ -57,10 +67,10 @@ ifeq ($(filter $(FAMILY), $(AVS_SETUPS)), $(FAMILY))
  AVS_FSBL_S += $(AVS_CLASS)/avs_temp_reset.c
 endif
 
-ifeq ($(filter $(FAMILY), $(AVS_OVER_TEMP)), $(FAMILY))
- EXTRA_DEFINES += -DAVS_ENABLE_OVERTEMP=1
-else
+ifeq ($(filter $(FAMILY), $(AVS_NO_OVER_TEMP)), $(FAMILY))
  EXTRA_DEFINES += -DAVS_ENABLE_OVERTEMP=0
+else
+ EXTRA_DEFINES += -DAVS_ENABLE_OVERTEMP=1
 endif
 
 
@@ -83,10 +93,10 @@ else
  AVS_FW_S   :=  $(AVS_COMMON_CODE)/avs_dummy_fw.bin
 endif
 
-ifeq ($(filter $(FAMILY), $(AVS_NEW_CALCS)), $(FAMILY))
-  EXTRA_DEFINES += -DAVS_USE_NEW_CONVERSION_FORMULAS=1
-else
+ifeq ($(filter $(FAMILY), $(AVS_OLD_CALCS)), $(FAMILY))
   EXTRA_DEFINES += -DAVS_USE_NEW_CONVERSION_FORMULAS=0
+else
+  EXTRA_DEFINES += -DAVS_USE_NEW_CONVERSION_FORMULAS=1
 endif
 
 ifeq ($(CFG_EMULATION),1)
@@ -96,4 +106,4 @@ endif
 # ***************************************************************************
 # These parts go into the SSBL section of the code.
 # ***************************************************************************
-AVS_SSBL_S:= $(AVS_COMMON_CODE)/avs_bsu.c
+AVS_SSBL_S += $(AVS_COMMON_CODE)/avs_bsu.c

@@ -50,9 +50,21 @@
 #endif
 
 int splash_audio_script_run(unsigned int size, unsigned int address,
-				uint32_t repeatcount)
+				uint32_t repeatcount, SplashData *splashData)
 {
-	uint32_t reg, i = 0, addr = 0x0, data = 0, data0 = 0, data1 = 0;
+	uint32_t reg = 0, i = 0, addr = 0x0, data = 0, data0 = 0, data1 = 0;
+
+#ifdef BCHP_CLKGEN_ONOFF_ANA_PLL4_1P8V_TS28HPM_6MX_2MR_FC_X_E_PLLAUDIO0_INST_SEL
+	BDEV_WR(
+	BCHP_CLKGEN_ONOFF_ANA_PLL4_1P8V_TS28HPM_6MX_2MR_FC_X_E_PLLAUDIO0_INST_SEL,
+	reg);
+#endif
+
+#ifdef BCHP_CLKGEN_ONOFF_ANA_PLL4_1P8V_TS28HPM_6MX_2MR_FC_X_E_PLLAUDIO0_INST_SEL
+	BDEV_WR(
+	BCHP_CLKGEN_ONOFF_ANA_PLL4_RFMOD_1P8V_TS28HPM_6MX_2MR_NP_X_E_PLLAUDIO1_INST_SEL,
+	reg);
+#endif
 
 	reg = 0;
 	BDEV_WR(BCHP_HIFIDAC_CTRL_0_INIT, reg);
@@ -402,17 +414,29 @@ int splash_audio_script_run(unsigned int size, unsigned int address,
 
 	reg = BDEV_RD(BCHP_HDMI_CRP_CFG);
 	reg &= ~BCHP_HDMI_CRP_CFG_N_VALUE_MASK;
-	reg |= 0x1800; /* 6144 */
+	reg &= ~BCHP_HDMI_CRP_CFG_INC_N_COUNT_BY_4_ON_HBR_MODE_MASK;
+	if (splashData->pDispInfo->eDspFmt == (BFMT_VideoFmt)28)
+		reg |= 0x1800; /* 6144 */
+	else if (splashData->pDispInfo->eDspFmt == (BFMT_VideoFmt)21)
+		reg |= 0x2D80; /* 11648 */
+	else
+		return -1;
 	BDEV_WR(BCHP_HDMI_CRP_CFG, reg);
 
 	reg = BDEV_RD(BCHP_HDMI_CTS_0);
 	reg &= ~BCHP_HDMI_CTS_0_CTS_0_MASK;
-	reg |= 0x6978; /* 27000 */
+	if (splashData->pDispInfo->eDspFmt == (BFMT_VideoFmt)28)
+		reg |= 0x6978; /* 27000 */
+	else if (splashData->pDispInfo->eDspFmt == (BFMT_VideoFmt)21)
+		reg |= 0x22551; /* 140625 */
 	BDEV_WR(BCHP_HDMI_CTS_0, reg);
 
 	reg = BDEV_RD(BCHP_HDMI_CTS_1);
 	reg &= ~BCHP_HDMI_CTS_1_CTS_1_MASK;
-	reg |= 0x6978; /* 27000 */
+	if (splashData->pDispInfo->eDspFmt == (BFMT_VideoFmt)28)
+		reg |= 0x6978; /* 27000 */
+	else if (splashData->pDispInfo->eDspFmt == (BFMT_VideoFmt)21)
+		reg |= 0x22551; /* 140625 */
 	BDEV_WR(BCHP_HDMI_CTS_1, reg);
 
 	reg = 0xd; /* 13. Reserved bits must be written 0. */

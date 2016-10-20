@@ -529,6 +529,7 @@ uint32_t glitch_addr  = (uint32_t)die; /* obfuscated glitch_entry */
 uint32_t glitch_addr1 = (uint32_t)die;
 uint32_t glitch_info  = (uint32_t)die;
 uint32_t glitch_entry = (uint32_t)die; /*void ()(struct fsbl_info *) */
+uint32_t glitch_psci_bootmode = (uint32_t)die;
 
 
 INITSEG void __noreturn handle_boot_err(uint32_t err_code)
@@ -559,8 +560,7 @@ INITSEG void __noreturn handle_boot_err(uint32_t err_code)
 	__puts("Boot failed: ");
 	writehex(err_code);
 	puts("");
-	while (1)
-		;
+	loop_forever();
 }
 
 

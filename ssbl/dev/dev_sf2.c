@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -291,13 +289,14 @@ static void sf2_led_ctrl_init(unsigned int port)
 #endif
 }
 
-static void sf2_rgmii_init(sf2_softc *softc)
+static unsigned int sf2_rgmii_init(sf2_softc *softc)
 {
 	unsigned int pmode = 0x3;
 	unsigned id_mode = 0;
 	const enet_params *e;
 	unsigned int i, j;
 	unsigned int force_link = 0;
+	unsigned int internal_phy_id = PHY_MAX_ADDR + 1;
 
 	/* Configure the RGMII interface based on the board configuration
 	 * make sure that we skip over Internal and MoCA PHYs as these
@@ -322,7 +321,8 @@ static void sf2_rgmii_init(sf2_softc *softc)
 					break;
 				}
 			}
-			sf2_sgphy_init(atoi(e->phy_id));
+			internal_phy_id = atoi(e->phy_id);
+			sf2_sgphy_init(internal_phy_id);
 			sf2_led_ctrl_init(e->switch_port);
 			continue;
 		}
@@ -387,6 +387,8 @@ static void sf2_rgmii_init(sf2_softc *softc)
 			break;
 		}
 	}
+
+	return internal_phy_id;
 }
 
 static void sf2_mdio_probe(bolt_driver_t * drv, unsigned long probe_a,
@@ -569,6 +571,7 @@ static int sf2_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 	int phy_addr[NUM_SWITCH_PHY];
 	int i, cnt = 0;
 	unsigned int port, phyid;
+	struct ether_phy_info *phy_info;
 
 	buffer->buf_retlen = 0;
 
@@ -579,12 +582,6 @@ static int sf2_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 				phy_addr[cnt++] =
 				atoi(softc->int_phy_params[i]->phy_id);
 		bcm_gphy_workaround(softc->mdio, &phy_addr[0], cnt);
-		break;
-
-	case IOCTL_ETHER_GET_PHY_REGBASE:
-		*(unsigned long **)(buffer->buf_ptr) =
-					(unsigned long *)softc->base;
-		buffer->buf_retlen = sizeof(unsigned long *);
 		break;
 
 	case IOCTL_ETHER_GET_PORT_PHYID:
@@ -611,6 +608,14 @@ static int sf2_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		}
 		*(int *)(buffer->buf_ptr) = (int)softc->mdio->phy_id;
 		buffer->buf_retlen = sizeof(int);
+	break;
+
+	case IOCTL_ETHER_GET_PHY_INFO:
+		phy_info = (struct ether_phy_info *)buffer->buf_ptr;
+		phy_info->type = ETH_SF2;
+		phy_info->phyaddr = (unsigned long *)softc->base;
+		phy_info->version = -1; /* No version */
+		buffer->buf_retlen = sizeof(struct ether_phy_info);
 	break;
 
 	default:
@@ -676,13 +681,18 @@ static void bcm_sf2_mgmt_init(void)
 	BDEV_WR(BCHP_SWITCH_CORE_IMP_CTL, reg);
 }
 
-void bcm_sf2_mdio_init(void)
+mdio_info_t *bcm_sf2_mdio_init(void)
 {
+	unsigned int internal_phy_id;
+
 	/* Configure the SF2 RGMII blocks */
-	sf2_rgmii_init(&sf2_mdio_softc);
+	internal_phy_id = sf2_rgmii_init(&sf2_mdio_softc);
 
 	/* Register the SF2 MDIO block driver */
 	bolt_add_device(&sf2_mdiodrv, 0, 0, &sf2_mdio_softc);
+
+	sf2_mdio_softc.mdio->phy_id = internal_phy_id;
+	return sf2_mdio_softc.mdio;
 }
 
 void bcm_sf2_init(void)

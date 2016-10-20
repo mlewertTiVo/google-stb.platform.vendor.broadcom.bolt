@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -234,9 +232,7 @@ int _udp_send(udp_info_t *info, int s, ebuf_t *buf, uint8_t *dest)
 	/* Off it goes!
 	 */
 
-	_ip_send(info->ui_ipinfo, buf, dest, IPPROTO_UDP);
-
-	return 0;
+	return _ip_send(info->ui_ipinfo, buf, dest, IPPROTO_UDP);
 }
 
 /**********************************************************************

@@ -370,7 +370,7 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	msleep(1);
 #endif
 #if defined(BCHP_USB_CTRL_USB_PM_USB_PWRDN_MASK)
-	/* 3390a0 & 7439b0 so far. */
+	/* 7260a0, 7268a0, 7271a0, 7366c0, 7439b0 */
 	USB_CTRL_UNSET(ctrl, USB_PM, USB_PWRDN);
 	/* 1 millisecond - for USB clocks to settle down */
 	msleep(1);
@@ -399,12 +399,14 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	USB_CTRL_SET(ctrl, SETUP, ss_ehci64bit_en);
 #endif
 
+#if defined(BCHP_USB_CTRL_USB30_CTL1_phy3_pll_seq_start_MASK)
 	/*
 	 * Kick start USB3 PHY
 	 * Make sure it's low to insure a rising edge.
 	 */
 	USB_CTRL_UNSET(ctrl, USB30_CTL1, phy3_pll_seq_start);
 	USB_CTRL_SET(ctrl, USB30_CTL1, phy3_pll_seq_start);
+#endif
 
 	/* Block auto PLL suspend by USB2 PHY */
 	USB_CTRL_SET(ctrl, PLL_CTL, PLL_SUSPEND_EN);

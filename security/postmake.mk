@@ -28,7 +28,7 @@ endif
 
 #default
 ifeq ($(SEC_PFX),)
- SEC_PFX := ba,ba,bb,bb,bb
- SEC_BBL := 1.0.0,1.0.0,1.0.1,1.0.1,3.0.0
- SEC_BFW := 1.0.0,2.0.0,2.1.0,4.1.5,4.1.5
+ SEC_PFX := ba,ba,bb,bb,bb,bb
+ SEC_BBL := 1.0.0,1.0.0,1.0.1,1.0.1,3.0.0,3.1.1
+ SEC_BFW := 1.0.0,2.0.0,2.1.0,4.1.5,4.1.5,4.1.5
 endif

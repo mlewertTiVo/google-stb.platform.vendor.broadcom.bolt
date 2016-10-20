@@ -1,8 +1,6 @@
 #!/usr/bin/perl -w
 # ***************************************************************************
-# *     Copyright (c) 2012-2015, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
 # *
 # *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -18,11 +16,6 @@ use Data::Dumper;
 use Digest::MD5 qw(md5_hex);
 my $P = basename $0;
 
-# Note: had fun trying exists & defined for this.
-use vars qw(@configs);
-my $hascfg = scalar @configs;
-
-
 # args ---------------------------------------------------------------------
 
 my $arg_zeusver = undef;
@@ -36,6 +29,7 @@ my $arg_bbl_ver = 1;
 my $arg_symlinks = 0;
 my $arg_keep = 0;
 my $arg_odir = undef;
+my $arg_gdir = undef;
 my $arg_tool = undef;
 
 
@@ -49,6 +43,7 @@ sub usage_exit()
 	print "-d (debug) -o (omit BBL version) ";
 	print "-k (keep original, as 'last.bin')\n";
 	print "-D <build object base dir>\n";
+	print "-G <generated files base dir>\n";
 	print "-T <patching tool name and path>\n";
 	print " Note: <list N...> is a comma separated list with no spaces, ";
 	print "-d, -k -o and -D are optional\n";
@@ -72,7 +67,7 @@ sub do_shell($)
 	print "\n" . Dumper @a
 		if ($arg_debug);
 
-	die "$P: FAIL: non-zero exit code.\n"
+	die "$P: FAIL: non-zero exit code for command:\n[$cmd]\n"
 		if (($? >> 8) & 0xff);
 
 	return wantarray ? @a : join("", @a);
@@ -81,7 +76,7 @@ sub do_shell($)
 # getopts ------------------------------------------------------------------
 
 my %cmdflags=();
-getopts("sz:p:l:w:f:v:dokD:T:", \%cmdflags) or usage_exit();
+getopts("sz:p:l:w:f:v:dokD:G:T:", \%cmdflags) or usage_exit();
 
 $arg_zeusver = $cmdflags{z} if (defined $cmdflags{z});
 $arg_pfx    = $cmdflags{p} if (defined $cmdflags{p});
@@ -91,6 +86,7 @@ $arg_family = $cmdflags{f} if (defined $cmdflags{f});
 $arg_ver    = $cmdflags{v} if (defined $cmdflags{v});
 $arg_debug  = $cmdflags{d} if (defined $cmdflags{d});
 $arg_odir  = $cmdflags{D} if (defined $cmdflags{D});
+$arg_gdir  = $cmdflags{G} if (defined $cmdflags{G});
 $arg_tool  = $cmdflags{T} if (defined $cmdflags{T});
 
 $arg_bbl_ver = 0 if (defined $cmdflags{o});
@@ -118,6 +114,9 @@ failed("-T missing patching tool")
 
 $arg_odir = "objs/$arg_family"
 	if (!defined $arg_odir);
+
+$arg_gdir = "gen/$arg_family"
+	if (!defined $arg_gdir);
 
 my $bolt = "$arg_odir/bolt.bin";
 
@@ -170,9 +169,614 @@ sub fappend($$)
 	close $fh;
 }
 
+
+# security ------------------------------------------------------------------
+
+my %extra_defines = ();
+
+# BOLT binary image
+my $image = undef;
+
+# Upgradable Firmware Set (UFS)
+my @sections_of_interest = ("AVS", "MEMSYS", "BFW");
+my %ufs_list = ();
+my $ufs_base_offset = 0xffffffff;
+my $ufs_max_offset = 0;
+my $ufs_image = undef;
+my $ufs_avs_base = 0;
+my $ufs_bfw_base = 0;
+my $ufs_memsys_base = 0;
+my $ufs_max_size = 0;
+my $ufs_metadata = 0;
+my $bfw_text_offs = 0xffffffff;
+
+# security: helpers ----------------------------------------------------------
+
+sub check_file_is_good($)
+{
+	my $f = shift;
+	die "*** File $f is missing or empty!"
+	    if (!(-f $f && -s $f));
+}
+
+
+sub read_textfile($) {
+	my $f = shift;
+	open(FH, '<', $f)
+		or die "Failed to read text '$f'";
+	return join('',<FH>);
+}
+
+
+sub read_binfile($) {
+	my $f = shift;
+	open(my $bh, '<', $f)
+		or die "Failed to read binary '$f'";
+	binmode $bh;
+	undef $/;
+	my $in = <$bh>;
+	close $bh;
+	return $in;
+}
+
+
+sub write_binfile($$) {
+	my ($f, $data) = @_;
+	open my $fout, ">", $f
+		or die "Failed to write binary '$f'";
+	binmode $fout;
+	print $fout $data;
+	close $fout;
+}
+
+
+sub strim {
+	my $s = shift;
+	$s =~ s/^\s+|\s+$//g;
+	return $s
+}
+
+
+# for get_extra_defines
+sub left_def_trim {
+	my $s = strim(shift);
+	$s =~ s/^-D//g;
+	$s =~ s/\=.*//g;
+	return strim($s)
+}
+
+
+sub right_def_trim {
+	my $s = strim(shift);
+	$s =~ s/^-D//g;
+	$s =~ s/.*\=//g;
+	return strim($s)
+}
+
+
+# for get_config_defines
+sub left_h_trim {
+	my $s = strim(shift);
+	$s =~ s/^\#define//g;
+	$s = strim($s);
+	$s =~ s/(\s+).*//g;
+	return strim($s)
+}
+
+
+sub right_h_trim {
+	my $s = shift;
+	$s =~ s/^\#define//g;
+	$s =~ s/.*(\s+)//g;
+	return strim($s)
+}
+
+
+sub cfg_is($)
+{
+	my $ref = shift;
+
+	return 0
+		if (! defined $extra_defines{$ref});
+
+	return 0
+		if (0 == $extra_defines{$ref});
+
+	return 1;
+}
+
+
+sub cfg_value($)
+{
+	my $ref = shift;
+
+	return undef
+		if (! defined $extra_defines{$ref});
+
+	return scalar($extra_defines{$ref});
+}
+
+
+sub section_top($)
+{
+	my $section_name = shift;
+
+	my $base = cfg_value($section_name . "_TEXT_OFFS");
+	my $size = cfg_value($section_name . "_SIZE");
+
+	return undef
+		if ((! defined $base) || (! defined $size));
+
+	return $base + $size;
+}
+
+
+# security: functional blocks ------------------------------------------------
+
+#Exists:
+# ENABLE_AVS_INIT
+# ENABLE_AVS_FIRMWARE
+#
+#Enabled:
+# AVS_ENABLE_OVERTEMP	0|1
+# BFW_LOAD		0|1
+sub get_extra_defines()
+{
+	my $f = $arg_gdir . "/.common_flags";
+
+	failed( $f . " does not exist")
+		if (! -f $f);
+
+	my @lines = split / /, read_textfile($f);
+
+	foreach my $i (@lines)
+	{
+		$i = strim($i);
+		if ($i =~ /^-D/) {
+			my $l = left_def_trim($i);
+			my $r =  right_def_trim($i);
+			if ($l ne $r) {
+				$extra_defines{$l} = $r;
+			} else {
+				# mark as enabled
+				$extra_defines{$l} = 1;
+			}
+		}
+	}
+}
+
+
+sub get_config_defines()
+{
+	my $f = $arg_gdir . "/config.h";
+
+	failed( $f . " does not exist")
+		if (! -f $f);
+
+	my @lines = split /\n/, read_textfile($f);
+
+	foreach my $i (@lines)
+	{
+		$i = strim($i);
+		if ($i =~ /#define/) {
+			my $l = left_h_trim($i);
+			my $r = right_h_trim($i);
+			if ($l ne $r) {
+				if ($r =~ /^0[xX][0-9a-fA-F]+$/) {
+					$extra_defines{$l} = hex $r;
+				} else {
+					$extra_defines{$l} = $r;
+				}
+			} else {
+				# mark as enabled
+				$extra_defines{$l} = 1;
+			}
+		}
+	}
+}
+
+
+sub patch_u32($$$)
+{
+	my ($img, $hexoffset, $word) = @_;
+
+	my $u32 = pack("V", scalar($word));
+
+	die "bad length " . length($u32) . " for a u32"
+		if (length($u32) != 4);
+
+	substr($$img, $hexoffset, 4) = $u32;
+}
+
+
+sub patch_zeus_ver($$)
+{
+	my ($img, $hexoffset) = @_;
+
+	patch_u32($img, $hexoffset, 0x00040100)
+		if (cfg_is("CFG_ZEUS4_1"));
+
+	patch_u32($img, $hexoffset, 0x00040200)
+		if (cfg_is("CFG_ZEUS4_2"));
+
+	patch_u32($img, $hexoffset, 0x00040201)
+		if (cfg_is("CFG_ZEUS4_2_1"));
+}
+
+
+sub patch_presence($$)
+{
+	my ($img, $hexoffset) = @_;
+
+	my $second_external = 0x00000000;
+
+	$second_external |= 0x4
+		if (!cfg_is("CFG_NOSHMOO"));
+
+	$second_external |= 0x2
+		if (cfg_is("ENABLE_AVS_FIRMWARE"));
+
+	# This should only be called if are in the
+	# $patched_bolts loop as we know we have a BBL
+	# and BFW somewhere.
+	$second_external |= 0x1;
+
+	patch_u32($img, $hexoffset, $second_external << 8);
+}
+
+
+sub calc_ufs()
+{
+	$bfw_text_offs = cfg_value("BFW_TEXT_OFFS");
+
+	# hard wired ordering of BFW, AVS & MEMSYS binary blobs
+	$ufs_bfw_base = 0x00000;
+
+	$ufs_avs_base = cfg_value("AVS_TEXT_OFFS") -
+		$bfw_text_offs;
+
+	$ufs_metadata =  cfg_value("UFS_PARAMS");
+
+	$ufs_memsys_base = cfg_value("MEMSYS_TEXT_OFFS") -
+		$bfw_text_offs;
+
+	$ufs_max_size = (cfg_value("MEMSYS_TEXT_OFFS") +
+		cfg_value("MEMSYS_SIZE")) - $bfw_text_offs
+			if ($ufs_max_size == 0);
+
+	if ($arg_debug) {
+		printf("   BFW base is %x\n", $bfw_text_offs);
+		printf("    BFW offset: %x\n", $ufs_bfw_base);
+		printf(" PARAMS offset: %x\n", $ufs_metadata);
+		printf("    AVS offset: %x\n", $ufs_avs_base);
+		printf(" MEMSYS offset: %x\n", $ufs_memsys_base);
+		printf("Max image size: %x\n", $ufs_max_size);
+	}
+
+}
+
+sub scan_for_sections_of_interest()
+{
+	# Only create UFS if USE_FIRST_IMAGES=1
+	my $ufs_enable = cfg_value("USE_FIRST_IMAGES");
+
+	print "  SEC     USE_FIRST_IMAGES: " . $ufs_enable . "\n"
+		if ($arg_debug);
+
+	return
+		if ($ufs_enable == 0);
+
+	# Get a list of thing to be added to UFS
+	for my $s (@sections_of_interest) {
+		my $base = cfg_value($s . "_TEXT_OFFS");
+		next
+			if (! defined $base);
+		# Add to UFS list
+		$ufs_list{$s} = $base;
+	}
+
+	# Nothing is above SSBL
+	return
+		if (!keys %ufs_list);
+
+	# Now get the extent of the external blob we
+	# are going to make.
+	for my $section (keys %ufs_list) {
+		my $base = $ufs_list{$section};
+		my $top = section_top($section);
+
+		$ufs_base_offset = $base
+			if ($base <= $ufs_base_offset);
+		$ufs_max_offset = $top
+			if ($ufs_max_offset <= $top);
+	}
+
+	# Check that the Zeus suggested max img size is big enough or not.
+	my $from_cfg_max = $ufs_max_offset - $ufs_base_offset;
+
+	$ufs_max_size = $from_cfg_max
+		if ($from_cfg_max > $ufs_max_size);
+
+	calc_ufs();
+}
+
+
+sub patch_blob($$$)
+{
+	my ($img, $hexoffset, $blob) = @_;
+
+	substr($$img, $hexoffset, length($blob)) = $blob;
+}
+
+
+sub get_avs_file($)
+{
+	my ($should_die) = @_;
+
+	if (! cfg_is("ENABLE_AVS_FIRMWARE")) {
+		die "AVS firmware not enabled!"
+			if ($should_die);
+
+		return undef;
+	}
+
+	if (! $extra_defines{AVS_CLASS}) {
+		die "AVS class not defined!"
+			if ($should_die);
+
+		return undef;
+	}
+
+	my $avs = $extra_defines{AVS_CLASS};
+
+	$avs .= "/avs_" . $arg_family . "_fw.bin";
+
+	return $avs
+		if (-f $avs && -s $avs);
+
+	die "AVS file $avs - not a file or empty!"
+		if ($should_die);
+
+	return undef;
+}
+
+
+sub get_file_size($)
+{
+	my ($f) = @_;
+
+	my $file_sz = (stat($f))[7];
+
+	if ($arg_debug) {
+		printf("  INFO: file '%s' size is 0x%x\n", $f, $file_sz);
+	}
+
+	return $file_sz;
+}
+
+
+sub patch_ufs_metadata($$$$$$)
+{
+	my ($img, $offset, $has_avs, $has_bfw, $has_memsys, $favs) = @_;
+
+	my $ufs_metabase = $offset + $ufs_metadata;
+
+	if ($arg_debug) {
+		printf("\n  INFO: patch_ufs_metadata @ %x\n", $ufs_metabase);
+	}
+
+	my $content = 0x00000000;
+	$content |= 0x4
+		if ($has_memsys);
+
+	$content |= 0x2
+		if ($has_avs);
+
+	$content |= 0x1
+		if ($has_bfw);
+
+	patch_zeus_ver($img, $ufs_metabase);
+
+	patch_u32($img,
+		$ufs_metabase + 0x04, $content << 8);
+
+	# blank
+	patch_u32($img,
+		$ufs_metabase + 0x08, 0x0);
+
+	# blank
+	patch_u32($img,
+		$ufs_metabase + 0x0c, 0x0);
+
+	if ($has_avs) {
+		patch_u32($img,
+			$ufs_metabase  + 0x10, $ufs_avs_base);
+
+		my $actual_avs_size = cfg_value("AVS_CODE_SIZE") +
+			cfg_value("AVS_DATA_SIZE");
+
+		patch_u32($img,
+			$ufs_metabase  + 0x14, scalar $actual_avs_size);
+	} else {
+		patch_u32($img,
+			$ufs_metabase + 0x10, 0x0);
+
+		patch_u32($img,
+			$ufs_metabase + 0x14, 0x0);
+	}
+
+	# AVS padding
+	if (cfg_is("CFG_ZEUS4_1")) {
+		patch_u32($img,
+			$ufs_metabase + 0x18, 0x0); # FIXME!!!!
+	} elsif (cfg_is("CFG_ZEUS4_2_1")) {
+		patch_u32($img,
+			$ufs_metabase + 0x18, 0x0);
+	} elsif (cfg_is("CFG_ZEUS4_2")) {
+		patch_u32($img,
+			$ufs_metabase + 0x18, 0x100);
+	}
+
+	# blank
+	patch_u32($img,
+		$ufs_metabase + 0x1c, 0x0);
+
+	if ($has_memsys) {
+		patch_u32($img,
+			$ufs_metabase + 0x20, $ufs_memsys_base);
+
+		my $cfg_memsys_size = cfg_value("MEMSYS_SIZE");
+		patch_u32($img,
+			$ufs_metabase + 0x24, scalar $cfg_memsys_size);
+	} else {
+		patch_u32($img,
+			$ufs_metabase + 0x20, 0x0);
+
+		patch_u32($img,
+			$ufs_metabase + 0x24, 0x0);
+	}
+}
+
+
+sub assemble_sections_of_interest($$$)
+{
+	my ($odir, $bfw, $bfw_ver) = @_;
+
+	my $has_avs = 0;
+	my $has_bfw = 0;
+	my $has_memsys = 0;
+	my $avs = undef;
+
+	return
+		if (!keys %ufs_list);
+
+	my $memsys = "$odir/memsys.bin";
+
+	for my $section (keys %ufs_list) {
+		# Perl 5.8 compat
+		if ($section eq "AVS") {
+			$avs = get_avs_file(0);
+			$has_avs = 1
+				if (defined $avs);
+		} elsif ($section eq "BFW") {
+			check_file_is_good($bfw);
+			$has_bfw = 1;
+		} elsif ($section eq "MEMSYS") {
+			if (! cfg_is("CFG_NOSHMOO")) {
+				# A BOLT build should always generate
+				# a memsys file.
+				check_file_is_good($memsys);
+				$has_memsys = 1;
+			}
+		} else {
+			die "Unknown section $section!\n";
+		}
+	}
+
+	$bfw = "nobfw"
+		if (! $has_bfw);
+
+	my $fimage = "$odir/external";
+	$fimage .= "_bfw" . $bfw_ver
+		if ($has_bfw);
+	$fimage .= "_avs"
+		if ($has_avs);
+	$fimage .= "_memsys"
+		if ($has_memsys);
+	$fimage .= ".bin";
+
+	print "  EXTERN  $fimage...";
+
+	$ufs_image = chr(0) x ($ufs_max_size);
+
+	if ($has_bfw) {
+		my $bimage = read_binfile($bfw);
+		patch_blob(\$ufs_image,
+			$ufs_bfw_base, $bimage);
+	}
+
+	if ($has_avs) {
+		my $aimage = read_binfile($avs);
+		patch_blob(\$ufs_image,
+			$ufs_avs_base, $aimage);
+	}
+
+	if ($has_memsys) {
+		my $mimage = read_binfile($memsys);
+		patch_blob(\$ufs_image,
+			$ufs_memsys_base, $mimage);
+	}
+
+	# offset into external image for metadata is always UFS_PARAMS
+	# with no added offset.
+	patch_ufs_metadata(\$ufs_image, 0x00000000,
+		$has_avs, $has_bfw, $has_memsys, $avs);
+
+	unlink $fimage
+		if (-f $fimage);
+
+	write_binfile($fimage, $ufs_image);
+	print "OK\n";
+}
+
+
+# security: main -------------------------------------------------------------
+
+sub do_secpatch($$$$)
+{
+	my ($odir, $f, $bfw, $bfw_ver) = @_;
+
+	my $avs = undef;
+	my $has_avs = 0;
+	my $has_memsys = 0;
+	my $fname = "$odir/$f";
+
+	print "  SECPATCH " . $f . "\n";
+	$image = read_binfile($fname);
+
+	assemble_sections_of_interest($odir, $bfw, $bfw_ver);
+
+	# --- Area reserved in FSBL for security ---
+	patch_zeus_ver(\$image, 0x900);
+	patch_presence(\$image, 0x904);
+	# make sure signed & enc status are cleaned out
+	patch_u32(\$image, 0x908, 0x00000000);
+	patch_u32(\$image, 0x90C, 0x00000000);
+
+	# --- Patch metadata into main BOLT image ---
+
+	# test for BFW existence done in @list_pfxs loop
+	my $has_bfw = 1;
+
+	$avs = get_avs_file(0);
+	$has_avs = 1
+		if (defined $avs);
+
+	$has_memsys = 1
+		if (! cfg_is("CFG_NOSHMOO"));
+
+
+	# Offset into bolt.bin image for metadata is UFS_PARAMS
+	# with respect to BFW base.
+	my $offset = cfg_value("BFW_TEXT_OFFS");
+
+	patch_ufs_metadata(\$image, $offset,
+			$has_avs, $has_bfw, $has_memsys, $avs);
+
+	write_binfile($fname, $image);
+}
+
+
 # doit ---------------------------------------------------------------------
 
 my $patched_bolts = 0;
+
+# init security things
+get_extra_defines();
+get_config_defines();
+scan_for_sections_of_interest();
+calc_ufs();
+
 
 for (my $i = 0; $i < @list_pfxs; $i++) {
 
@@ -183,8 +787,10 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 
 	# do as a matched/compatible set
 	if ( (! -f $file_bbl) || (! -f $file_bfw)) {
-		print "skipping as one or more files $file_bbl $file_bfw don't exist\n"
-			if ($arg_debug);
+		if ($arg_debug) {
+			print "  INFO: skipping as ";
+			print "$file_bbl or $file_bfw does not exist\n";
+		}
 		next;
 	}
 
@@ -227,6 +833,12 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 
 	fappend("$arg_odir/$bname", $meta);
 	print " OK\n";
+
+	# note we're doing the final products, not bolt.bin
+	# This is so we may in the future do different things
+	# for different BBL & BFW versions.
+	do_secpatch($arg_odir, $bname, $file_bfw, $list_bfws[$i])
+		if ((defined $ufs_metadata) && ($ufs_metadata != 0));
 
 	# NB: We may have to append "-bfw-$list_bbls[$i]" later if
 	# we get multiple bfw versions per bbl.

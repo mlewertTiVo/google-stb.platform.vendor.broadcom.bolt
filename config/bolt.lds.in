@@ -103,4 +103,13 @@ SECTIONS {
 	. = ALIGN(4);
 	__exidx_end = .;
 	PROVIDE(__exidx_end = __exidx_end);
+
+	/* Keep the u32 end of SSBL image marker.
+	 * This ensures the SSBL binary stays the
+	 * same SSBL_SIZE instead of smaller.
+	 */
+	.end : AT(@SSBL_TEXT_ADDR@ + (@SSBL_SIZE@ - 4))
+	{
+		KEEP(* (.ssbl.end));
+	} > ssbl
 }

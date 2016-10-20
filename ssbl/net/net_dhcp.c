@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -645,7 +643,9 @@ static int dhcp_do_dhcpdiscover(int s, uint8_t *hwaddr, dhcpreply_t *reply)
 	ipaddr[1] = 0xFF;
 	ipaddr[2] = 0xFF;
 	ipaddr[3] = 0xFF;
-	udp_send(s, buf, ipaddr);
+	res = udp_send(s, buf, ipaddr);
+	if (res < 0)
+		return res;
 
 	/* Wait for a reply
 	 */
@@ -703,7 +703,9 @@ static int dhcp_do_dhcprequest(int s, uint8_t *hwaddr,
 	ipaddr[1] = 0xFF;
 	ipaddr[2] = 0xFF;
 	ipaddr[3] = 0xFF;
-	udp_send(s, buf, ipaddr);
+	res = udp_send(s, buf, ipaddr);
+	if (res < 0)
+		return res;
 
 	/* Wait for a reply
 	 */
@@ -735,6 +737,10 @@ int dhcp_bootrequest(dhcpreply_t **rep)
 	dhcpreply_t *request_reply;
 	int nres = 0;
 	int retries;
+
+	/* Do not try DHCP if the network link is down. */
+	if (net_getlinkstatus() == 0)
+		return BOLT_ERR_NOTREADY;
 
 	/* Start with empty reply buffers.  Since we use a portion of the
 	 * discover reply in the request, we'll keep two of them.
@@ -780,6 +786,8 @@ int dhcp_bootrequest(dhcpreply_t **rep)
 
 	nres = BOLT_ERR_TIMEOUT;
 	for (retries = 0; retries < DHCP_NUM_RETRIES * 20; retries++) {
+		if (net_getlinkstatus() == 0)
+			return BOLT_ERR_NOTREADY;
 		nres = dhcp_do_dhcpdiscover(s, hwaddr, discover_reply);
 		if (nres == 0)
 			break;
@@ -798,6 +806,8 @@ int dhcp_bootrequest(dhcpreply_t **rep)
 		 */
 
 		for (retries = 0; retries < DHCP_NUM_RETRIES; retries++) {
+			if (net_getlinkstatus() == 0)
+				return BOLT_ERR_NOTREADY;
 			nres = dhcp_do_dhcprequest(s, hwaddr,
 						   request_reply,
 						   discover_reply);

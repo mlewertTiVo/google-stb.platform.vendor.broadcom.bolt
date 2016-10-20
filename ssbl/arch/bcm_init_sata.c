@@ -11,15 +11,32 @@
 
 #include "board_init.h"
 #include "otp_status.h"
+#include "bchp_sun_top_ctrl.h"
+#include "lib_physio.h"
+#include "timer.h"
 
+#if CFG_SATA
 void board_init_sata(void)
 {
-#if CFG_SATA
 	int port;
+
 #ifdef OTP_OPTION_SATA_DISABLE
 	if (!OTP_OPTION_SATA_DISABLE())
 #endif
 		for (port = 0; port < NUM_SATA; port++)
 			bolt_add_device(&satadrv, port, 0, 0);
-#endif
 }
+
+void sata_exit(void)
+{
+	/* Fully H/W reset the SATA IP block.
+	 * Done so the Linux SATA driver can start afresh.
+	 */
+	BDEV_WR_F(SUN_TOP_CTRL_SW_INIT_0_SET, sata_sw_init, 1);
+	bolt_usleep(10);
+	BARRIER();
+
+	BDEV_WR_F(SUN_TOP_CTRL_SW_INIT_0_CLEAR, sata_sw_init, 1);
+}
+
+#endif

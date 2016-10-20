@@ -41,6 +41,7 @@ struct per_cpu {
 	enum cpu_state		state;
 	uint32_t		entry_point_address;
 	uint32_t		context_id;
+	uint32_t		fdt;
 } __attribute__((aligned(64)));
 
 /* Do not move 'nr_cpu' - its offset is referenced
@@ -51,7 +52,6 @@ struct psci_cfg {
 	unsigned int nr_cluster;
 	unsigned int all_cpus; /* save a mul */
 	unsigned int debug;
-	unsigned int bootonce;
 	unsigned int locked_sticky;
 	unsigned int rac_master;
 	struct per_cpu *cpu;
@@ -95,11 +95,14 @@ void reboot(void);
 unsigned int cpu_is_on(unsigned int cpu);
 
 /* asm */
-void smp_on(void);
+void __smp_on(uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3);
+#define	smp_on() __smp_on(0, 0, 0, 0)
+
 void __noreturn smp_off_unlock(volatile uint32_t *lock);
-void cpu_init_secondary(void);
+void cpu_init(void);
 void exec32(uint32_t linux_entry, uint32_t fdt,
-		volatile uint32_t *lock, int secondary);
+		volatile uint32_t *lock,
+		int is_secondary_cpu);
 
 /* cache */
 void clean_invalidate_dcache(int to_cache_level);

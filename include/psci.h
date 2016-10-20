@@ -44,7 +44,7 @@
  * maximum number of cpus and cpu clusters
  * PSCI is expected to handle.
  *
- *  params  w0/x0: SMM_FUNC_INIT
+ *  params  w0/x0: OEM_PSCI_INIT
  *          w1/x1: Number of cpus per cluster, max number of clusters
  *          w2/x2: unused
  *          w3/x3: unused
@@ -67,7 +67,7 @@
  * if called from aarch32. Format is for smc32 calling
  * convention only.
  *
- *  params  w0/x0: SMM_FUNC_EXEC64
+ *  params  w0/x0: OEM_FUNC_EXEC64
  *          w1/x1: aarch64 Executable (Linux) address
  *          w2/x2: Optional DTB address
  */
@@ -81,7 +81,7 @@
  * if called from aarch32. Format is for smc32 calling
  * convention only.
  *
- *  params  w0/x0: SMM_FUNC_EXEC32
+ *  params  w0/x0: OEM_FUNC_EXEC32
  *          w1/x1: aarch32 Executable (Linux) address
  *          w2/x2: Optional DTB address
  */

@@ -6,6 +6,80 @@
 Release changelog
 =================
 
+ v1.20
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1810[SWBOLT-1810] Add support for upgradable BFW/AVS/MEMSYS firmware sets. This feature is disabled in the BOLT non-secure distribution. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1935[SWBOLT-1935] Enabled 1080i video splash that affected audio. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1960[SWBOLT-1960] Enabled UHS SDR50 mode on a selection of 7445e0 boards that can have SD cards switching between 1.8V and 3.3V.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1968[SWBOLT-1968] Fix pin muxing to add pullups so SD card interface works on 7268a0 DV/VMS boards and 7271a0 DV board.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1938[SWBOLT-1938] Fixed a devicetree problem for chips (such as the BCM7250B0) that do not have consecutive BSC (I2C) devices.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1939[SWBOLT-1939] Get BOLT SATA driver for 7271a0 and 7268a0 up and running.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1905[SWBOLT-1905] Getting a DHCP address times out after around 8 seconds if network cable is not plugged in. For more information, please refer to the ETH_ANEG_TIMEOUT section 'of doc/envars.txt'.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1920[SWBOLT-1920] LPDDR4 Memsys FW with preliminary S3 support, but other S3 changes are still needed for 7271/7268.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1804[SWBOLT-1804] Provided AVS v0.3.6 firmware for 7268a0 that has initial support for DVFS.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1802[SWBOLT-1802] Provided AVS v0.3.6 firmware for 7271a0 that has initial support for DVFS.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1889[SWBOLT-1889] Removed support for 7366b0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1959[SWBOLT-1959] Some chips have an alternate pin muxing path for SDIO/eMMC devices. This feature can also require an enable/select bit set in a register as well to determine which path to route to (default or alternate) even though a configuration script 'pmux' command selected which path to use. BOLT will now detect any use of the alternate pin muxing in the configuration script 'pmux' command and select the right register and bit to change, if required. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1936[SWBOLT-1936] Support a single AVS power domain in a normally dual domain. For in 7271a0 and 7268a0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1944[SWBOLT-1944] Support for BCM97445S_EXT24D has been added.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.20%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.19
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-1893[SWBOLT-1893] AVS update to set the CPU offset voltage before adding margins and applying limits. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1907[SWBOLT-1907] Add Devicetree support for the new Linux spi-nor + spi master driver.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1886[SWBOLT-1886] Add a board strap option for USB IPP setting to the 'usb' configuration script command.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1743[SWBOLT-1743] Add documentation about the Device Tree generation process.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1919[SWBOLT-1919] Added generic-ohci, generic-ehci and generic-xhci to end of "compatible" property for the ohci, ehci and xhci nodes in device tree.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1897[SWBOLT-1897] Added support for BCM97268DV.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1899[SWBOLT-1899] Existing board configurations may fail to build, which is intended with this change. The build failure should be resolved with a stricter PINMUX function name(s). ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1904[SWBOLT-1904] Fix unorrectable read errors when reading an erased NAND page.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1906[SWBOLT-1906] Release notes for older BOLT versions have been added to doc/changelog.txt.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1911[SWBOLT-1911] Support for BCM97268USFF4L and BCM97268USFFA4L has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1912[SWBOLT-1912] Support for BCM97268VMS has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1913[SWBOLT-1913] Support for BCM97445S_EXT24 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1914[SWBOLT-1914] Support for REV09 (4GB of memory) of BCM97252SGW has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1825[SWBOLT-1825] The GEN and ODIR make variables in BOLT can now be specified on the make command line to select non-default directory locations.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1909[SWBOLT-1909] With large 64 bit numbers xprintf might crash due to a stack based buffer overflow.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.19%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.18
 ------
 

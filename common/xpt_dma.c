@@ -22,12 +22,7 @@
 #endif
 #include <bchp_xpt_wdma_regs.h>
 
-/* interrupt support. 3390 is the oddball here */
-#if defined(CONFIG_BCM3390A0) || defined(CONFIG_BCM3390B0)
-#define INT_SUPPORTED 0
-#else
 #define INT_SUPPORTED 1
-#endif
 
 #if INT_SUPPORTED
 #include <bchp_xpt_wdma_desc_done_intr_l2.h>
