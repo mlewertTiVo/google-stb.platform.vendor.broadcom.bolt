@@ -65,17 +65,17 @@ static int rpmb_verify_key_set(struct emmc_chip *chip)
 
 static int rpmb_command(struct emmc_chip *chip,
 			struct rpmb_data_frame *req_frame,
-			struct rpmb_data_frame *resp_frame, int reliable)
+			struct rpmb_data_frame *resp_frame, int writeop)
 {
 	int res;
+	char sbc_err[] = "RPMB error doing SET_BLOCK_COUNT";
 
 	res = emmc_cmd23_set_block_count(chip,
-					reliable ?
+					writeop ?
 					1 | SET_BLOCK_COUNT_RELIABLE_WRITE :
 					1);
 	if (res) {
-		err_msg("%s RPMB error doing SET_BLOCK_COUNT",
-			chip->regs.name);
+		err_msg("%s %s", chip->regs.name, sbc_err);
 		return res;
 	}
 	res = emmc_cmd25_write_multiple_block(chip, 0, (uint32_t)req_frame,
@@ -85,10 +85,31 @@ static int rpmb_command(struct emmc_chip *chip,
 			chip->regs.name);
 		return res;
 	}
+
+	/*
+	 * WRITE_BLOCK and WRITE_KEY commands need to send a
+	 * response request after sending the RPMB command.
+	 */
+	if (writeop) {
+		res = emmc_cmd23_set_block_count(chip, 1);
+		if (res) {
+			err_msg("%s %s", chip->regs.name, sbc_err);
+			return res;
+		}
+
+		resp_frame->req_resp = cpu_to_be16(RPMB_REQ_READ_RESULT);
+		res = emmc_cmd25_write_multiple_block(chip, 0,
+						(uint32_t)resp_frame,
+						1, EMMC_BLOCKSIZE);
+		if (res) {
+			err_msg("%s RPMB error sending response request",
+				chip->regs.name);
+			return res;
+		}
+	}
 	res = emmc_cmd23_set_block_count(chip, 1);
 	if (res) {
-		err_msg("%s RPMB error doing SET_BLOCK_COUNT",
-			chip->regs.name);
+		err_msg("%s %s", chip->regs.name, sbc_err);
 		return res;
 	}
 	res = emmc_cmd18_read_multiple_block(chip, 0, (uint32_t)resp_frame,

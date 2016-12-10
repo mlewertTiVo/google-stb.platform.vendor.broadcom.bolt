@@ -57,6 +57,8 @@
 #define bolt_readblk	bsuapi->xfn_bolt_readblk
 #define bolt_writeblk	bsuapi->xfn_bolt_writeblk
 #define bolt_inpstat	bsuapi->xfn_bolt_inpstat
+#define tz_smm_set_params	bsuapi->xfn_tz_smm_set_params
+#define bolt_load_program	bsuapi->xfn_bolt_load_program
 #define lib_crc32	bsuapi->xfn_crc32
 #define poll_task	bsuapi->xfn_poll_task
 #define msleep		bsuapi->xfn_msleep
@@ -78,13 +80,22 @@
 #endif
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define BOOT_ARGS_SIZE 512
 
 extern struct bsu_api *bsuapi;
 
 extern int android_boot(ui_cmdline_t *cmd, int argc, char *argv[]);
 extern int android_fastboot(ui_cmdline_t *cmd, int argc, char *argv[]);
+extern int android_trusty_boot(ui_cmdline_t *cmd, int argc, char *argv[]);
 
 extern void boot_reason_reg_set(uint32_t reg_val);
 extern uint32_t boot_reason_reg_get(void);
 
+extern int android_get_boot_partition(ui_cmdline_t *cmd, char *boot_partition,
+				      int *is_legacy_boot);
+extern int android_override_bootargs(char* bootargs, char *bootargs_buf);
+extern int android_boot_addloader(void);
+#if defined(BCHP_WKTMR_REG_START)
+extern void android_wktmr_adjust(void);
+#endif
 #endif /* _ANDROID_BSU_H */

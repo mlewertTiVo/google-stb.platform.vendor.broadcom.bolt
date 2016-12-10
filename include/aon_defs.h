@@ -51,6 +51,7 @@ enum {
 #define AON_REG_CONTROL_HASH_LEN		7
 /* AON_REG_BOOT_STATUS 8 is not used anymore from bolt v0.90 and on */
 #define AON_REG_DRAM_SCRAMBLE_FLAGS		8
+#define AON_REG_PSCI_BASE			10 /* valid if PSCI present */
 #define AON_REG_AVS_FLAGS			11
 /* spare: a whole 4 registers! */
 #define AON_REG_MEMSYS_STATE			16

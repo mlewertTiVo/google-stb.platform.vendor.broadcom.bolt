@@ -75,6 +75,13 @@ void setup_chip_for_avs_uart(void)
 		BDEV_WR_F(SUN_TOP_CTRL_UART_ROUTER_SEL_0, port_3_cpu_sel, 11); /*AVS_TOP*/
 		BDEV_WR_F(SUN_TOP_CTRL_TEST_PORT_CTRL, encoded_tp_enable, 16); /*SYS*/
 	}
+#elif defined(CONFIG_BCM7260A0)
+	/* DV boards (UART1 on J3202): */
+	/* 7260: no board mods required */
+	PMUX(AON_PIN, 1, aon_gpio_12, ALT_TP_IN_00);
+	PMUX(AON_PIN, 1, aon_gpio_13, ALT_TP_OUT_00);
+	BDEV_WR_F(SUN_TOP_CTRL_UART_ROUTER_SEL_0, port_0_cpu_sel, 11); /*AVS_TOP*/
+	BDEV_WR_F(SUN_TOP_CTRL_TEST_PORT_CTRL, encoded_tp_enable, 16); /*SYS*/
 #else
 	/* If not defined then it just won't set anything up */
 #endif

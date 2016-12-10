@@ -87,13 +87,14 @@ int avs_load(void)
 }
 
 /* Note: this process can be moved to later point in the boot cycle */
-int avs_start(int en)
+int avs_start(int en, int pmap_id)
 {
 	int rc = AVS_DISABLED;
 	__puts("AVS start:");
+
 #if defined(ENABLE_AVS_FIRMWARE)
 	if (en) {
-		rc = avs_common_start();
+		rc = avs_common_start(pmap_id);
 		avs_perror(rc);
 	} else {
 		puts("NO");

@@ -38,14 +38,29 @@
 .align 11
 
 /* aarch64 EL3 handler for exceptions, especially 
- * System Management Mode (EL3) features. Can add PSCI later on.
+ * System Management Mode (EL3) features for PSCI.
  *
  * ==> VBAR_EL3 should have already been setup in FSBL
  *
  */
 ENTRY_PROC(smm_start)
 	/* Current EL with SP0 */
-	vec	ex_unhandled	/* Synchronous */
+
+	/*
+	 * We can get called here in SVC mode for
+	 * S3 resume so we need to jump into EL3
+	 * via an 'smc' to progress further. Do this
+	 * by faking up some A32 instructions.
+	 */
+	.align	7
+	.word	0xea000000		/* #0 A32: b	<skip next ins>
+					 * #0 A64: ands   	x0, x0, x0
+					 */
+	b	reboot			/* #1 Synchronous */
+	.word	0xe51f0000		/* #2 A32: ldr	r0, [pc, #-0] */
+	.word	0xe1600070		/* #3 A32: smc	#0 */
+	.word	OEM_FUNC_S3_RESUME	/* #4 */
+
 	vec	ex_unhandled	/* IRQ/vIRQ  */
 	vec	ex_unhandled	/* FIQ/vFIQ  */
 	vec	ex_unhandled	/* SError/vSError  */
@@ -264,6 +279,11 @@ END_PROC(get_mpidr)
 ENTRY_PROC(le_sync64)
 	/*  sp & x4 now point to our per cpu stack */
 	save_per_cpu_stack
+#if CFG_TRUSTZONE_MON
+	ldr	x5, =OEM_SMM_SET_PARMS
+	cmp	x0, x5
+	b.eq	smm_set_loadparams
+#endif /* CFG_TRUSTZONE_MON */
 
 	/*  BRCM */
 	ldr	x5, =OEM_PSCI_INIT
@@ -364,6 +384,11 @@ ENTRY_PROC(exec64)
 	msr	scr_el3, x7
 	isb
 
+	/* uses: x0 x1 x2 x3 x4 */
+	xpush2	x0, x1
+	bl	gic_secure_init
+	xpop2	x0, x1
+
 	/* Bit #31: 0=Lower levels are all AArch32, 1=EL1 is AArch64 */
 	mov	x7, #HCR_EL2_RW
 	bl	hypervisor_off	/* uses: x7, x8 */
@@ -394,8 +419,31 @@ END_PROC(exec64)
 /* x0: fdt
  * x1: linux_entry
  */
+#if CFG_TRUSTZONE_MON
+.global bl31_params
+
+ENTRY_PROC(exec64_el3)
+	mov	x7, x1	/* aarch64 executable (Linux) entry address */
+
+	/* uses: x0 x1 x2 x3 x4 */
+	bl	gic_secure_init
+
+	adr	x0, bl31_params
+	mov	x2, xzr
+	mov	x3, xzr
+	barrier
+	br	x7	/* go! */
+END_PROC(exec64_el3)
+#endif
+
+/* x0: fdt
+ * x1: linux_entry
+ */
 ENTRY_PROC(exec32)
-	mov	x2, x0
+	/* Save params */
+	mov	x10, x0
+	mov	x11, x1
+
 	/* Secure Configuration Register.
 	 *   [NS]   EL0 and EL1 cannot access sec memory.
 	 *  [HCE]   HVC instructions are enabled at EL1 and above.
@@ -408,10 +456,17 @@ ENTRY_PROC(exec32)
 	bic	x7, x7, #SCR_RW
 	msr	scr_el3, x7
 
+	/* uses: x0 x1 x2 x3 x4 */
+	bl	gic_secure_init
+
 	/* Bit #31: 0=Lower levels are all AArch32, 1=EL1 is AArch64 */
 	mov	x7, #0
 	bl	hypervisor_off	/* uses: x7, x8 */
 	bl	init_counters
+
+	/* Restore params */
+	mov	x2, x10		/* DTB */
+	mov	x1, #~0		/* ARCH ID */
 
 	/* mask IRQ, FIQ, system & debug exceptions
 	 * and step down to HYP.
@@ -419,7 +474,7 @@ ENTRY_PROC(exec32)
 	mov	x8, #(A32_SPSR_MODE_Hyp | A32_SPSR_M4 | A32_SPSR_F | A32_SPSR_I | A32_SPSR_A)
 
 	/* drop to HYP */
-	drop_el3_to_elx	x8, x1
+	drop_el3_to_elx	x8, x11
 
 	/* backstop for fails */
 	putc	'?'
@@ -879,7 +934,7 @@ ENTRY_PROC(smp_off_unlock)
 
 	/* No point in doing a DCCIMVAC (Data Cache line Clean and Invalidate
 	 * by VA to PoC) here as we are out of coherence. Let it
-	 * filter donwn of its own accord. Have to revisit if we have
+	 * filter down of its own accord. Have to revisit if we have
 	 * cache & MMU on in MON mode, which is unlikely at the moment.
 	 */
 3:

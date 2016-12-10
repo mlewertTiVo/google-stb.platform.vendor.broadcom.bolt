@@ -91,8 +91,7 @@ static void overtemp_check(void)
 	bool fw_running;
 
 	rc = avs_get_data(&voltage, &temperature, &fw_running);
-	if (!rc && voltage && (temperature > 0)) {
-
+	if (!rc && voltage) {
 		temperature = FROM_FW_TEMP(temperature);
 #if (CFG_CMD_LEVEL >= 5)
 		xprintf("[chip temperature: %dC]\n", temperature);

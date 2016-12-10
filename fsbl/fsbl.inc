@@ -25,6 +25,7 @@ FSBL_S += \
  fsbl/fsbl-uart.c \
  fsbl/fsbl-vectors.S \
  fsbl/fsbl-board.c \
+ fsbl/fsbl-die.c \
  $(GEN)/$(FAMILY)/fsbl-pinmux.c
 
 

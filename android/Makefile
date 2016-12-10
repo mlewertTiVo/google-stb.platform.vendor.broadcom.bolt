@@ -17,12 +17,18 @@
 SAVED_FAMILY := $(shell [ -e $(GEN)/.family ] && cat $(GEN)/.family || echo unknown)
 FAMILY = $(firstword $(filter $(FAMILIES), $(MAKECMDGOALS)) $(SAVED_FAMILY))
 
+include $(GEN)/$(FAMILY)/include.mk
+
 ifeq ($(filter clean distclean, $(MAKECMDGOALS)),)
 include $(GEN)/android/boltinc/build/tools.mk
 endif
 
 ODIR := objs/$(FAMILY)
-OBJS := init.o arm-eabi.o gpt_table_in_flash.o android_bsu.o android_boot.o android_fastboot.o
+OBJS := init.o arm-eabi.o gpt_table_in_flash.o android_bsu.o \
+	android_boot.o android_fastboot.o android_boot_common.o
+ifeq ($(CFG_TRUSTZONE_MON),1)
+OBJS += android_trusty_boot.o
+endif
 OBJS := $(addprefix $(ODIR)/, $(OBJS))
 
 BSU = $(ODIR)/android_bsu.elf

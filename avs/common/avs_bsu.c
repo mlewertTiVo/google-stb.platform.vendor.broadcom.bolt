@@ -17,7 +17,7 @@
 
 #if !defined(ENABLE_AVS_INIT)
 
-void avs_ssbl_init(void)
+void avs_ssbl_init(unsigned int pmap_id)
 {
 }
 
@@ -72,28 +72,27 @@ static uint32_t fsbl_enabled_overtemp;
  * been modified by AVS FSBL code. It must be done *ONLY ONCE*
  * before any call to avs_do_reset_on_overtemp()
  *
- *  fsbl_enabled_overtemp actually reflects that the FSBL was
- * was compiled with a certain value of AVS_ENABLE_OVERTEMP
- * (0 or 1), or that it was overridden in FSBL code - which
- * may be different from SSBL if the FSBL was not part of
- * the same build.
+ *  fsbl_enabled_overtemp actually reflects that the overtemp
+ * was overridden in FSBL code - which may be different from
+ * SSBL if the FSBL was not part of the same build.
  *
  *  Input parameters:
- *	nothing
+ *	pmap_id: PMap ID to be applied
  *
  *  Return value:
  *	nothing
  ********************************************************************* */
-void avs_ssbl_init(void)
+void avs_ssbl_init(unsigned int pmap_id)
 {
-	if (AVS_ENABLE_OVERTEMP)
-		fsbl_enabled_overtemp =
+	fsbl_enabled_overtemp =
 #ifdef BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD
-			BDEV_RD_F(AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET,
-				enable);
+		BDEV_RD_F(AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET, enable);
 #else
-			BDEV_RD_F(AVS_HW_MNTR_TEMPERATURE_RESET_ENABLE,
-				reset_enable);
+		BDEV_RD_F(AVS_HW_MNTR_TEMPERATURE_RESET_ENABLE, reset_enable);
+#endif
+
+#ifdef DVFS_SUPPPORT
+	dvfs_init_board_pmap(pmap_id);
 #endif
 }
 
@@ -111,7 +110,7 @@ void avs_ssbl_init(void)
  ********************************************************************* */
 void avs_do_reset_on_overtemp(int en)
 {
-	if (fsbl_enabled_overtemp && AVS_ENABLE_OVERTEMP)
+	if (fsbl_enabled_overtemp)
 #ifdef BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD
 		BDEV_WR_F(AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET,
 			enable, en);

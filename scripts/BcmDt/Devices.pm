@@ -19,6 +19,16 @@ our $Debug = 0;
 my $P = basename $::0;
 my %syscons = ();
 
+# With DT structures, using the Dumper utility will print out
+# infinite output because each node has a 'parent' field.  The
+# assignment below skips the printing/evaluation of the 'parent'.
+$Data::Dumper::Sortkeys = sub
+{
+	my $x = shift;
+	my @a = grep { ! /^parent$/ } keys %$x;
+	return \@a;
+};
+
 # Used by board DTS generation code
 my %labels = ();
 
@@ -2019,11 +2029,28 @@ sub add_memc_ddr($$$$)
 {
 	my ($dt, $rh, $memc_idx, $info) = @_;
 	my $bchp_defines = $rh->{rh_defines};
+	my $compat_base = 'brcm,brcmstb-memc-ddr';
+	my @compat_strings = ($compat_base);
+	my $rev_id = $bchp_defines->{"BCHP_MEMC_GEN_${memc_idx}_CORE_REV_ID_ARCH_REV_ID_DEFAULT"};
+	my $cfg_id = $bchp_defines->{"BCHP_MEMC_GEN_${memc_idx}_CORE_REV_ID_CFG_REV_ID_DEFAULT"};
+	my $sub_cfg_id = $bchp_defines->{"BCHP_MEMC_GEN_${memc_idx}_CORE_REV_ID_SUB_CFG_REV_ID_DEFAULT"};
 
 	return unless defined($bchp_defines->{BCHP_MEMC_DDR_0_REG_START});
 
+	if (defined($rev_id)) {
+		my $revision = sprintf("%x.%x.%x", $rev_id, $cfg_id, $sub_cfg_id);
+		if ($rev_id == 0xb && $cfg_id == 0x1) {
+			my $extra_rev = sprintf("%x.%x.x", $rev_id, $cfg_id);
+			# For memc rev b.1, we want a b.1.x compatible string.
+			unshift(@compat_strings, "$compat_base-rev-$extra_rev");
+		}
+		# The most specific compatible string goes before the more
+		# generic ones.
+		unshift(@compat_strings, "$compat_base-rev-$revision");
+	}
+
 	my ($reg, $size) = get_reg_range($rh, "BCHP_MEMC_DDR_${memc_idx}");
-	my %defaults = (compatible => "brcm,brcmstb-memc-ddr",
+	my %defaults = (compatible => [ 'string', \@compat_strings ],
 		'reg' => [ 'hex', [ $reg, $size ] ],
 		);
 	override_default(\%defaults, $info);
@@ -2032,6 +2059,38 @@ sub add_memc_ddr($$$$)
 	my $label = sprintf("memc_ddr%d", $memc_idx);
 	my $t = sprintf("%s: %s {\n", $label, $unit);
 	insert_label($label, $unit);
+	$t .= output_default(\%defaults);
+	$t .= "};\n";
+
+	$dt->add_node(DevTree::node->new($t));
+}
+
+sub add_memc_gen($$$$)
+{
+	my ($dt, $rh, $memc_idx, $info) = @_;
+	my $bchp_defines = $rh->{rh_defines};
+	my $compat_base = 'brcm,brcmstb-memc-gen';
+	my @compat_strings = ($compat_base);
+	my $rev_id = $bchp_defines->{"BCHP_MEMC_GEN_${memc_idx}_CORE_REV_ID_ARCH_REV_ID_DEFAULT"};
+	my $cfg_id = $bchp_defines->{"BCHP_MEMC_GEN_${memc_idx}_CORE_REV_ID_CFG_REV_ID_DEFAULT"};
+	my $sub_cfg_id = $bchp_defines->{"BCHP_MEMC_GEN_${memc_idx}_CORE_REV_ID_SUB_CFG_REV_ID_DEFAULT"};
+
+	return unless defined($bchp_defines->{BCHP_MEMC_GEN_0_REG_START});
+
+	if (defined($rev_id)) {
+		my $revision = sprintf("%x.%x.%x", $rev_id, $cfg_id, $sub_cfg_id);
+		# The specific compatible string goes before the generic one.
+		unshift(@compat_strings, "$compat_base-rev-$revision");
+	}
+
+	my ($reg, $size) = get_reg_range($rh, "BCHP_MEMC_GEN_${memc_idx}");
+	my %defaults = (
+		'compatible' => [ 'string', \@compat_strings ],
+		'reg' => [ 'hex', [ $reg, $size ] ],
+		);
+	override_default(\%defaults, $info);
+
+	my $t = sprintf("memc-gen@%x {\n", $reg);
 	$t .= output_default(\%defaults);
 	$t .= "};\n";
 
@@ -2851,6 +2910,7 @@ sub add_memc($$$$)
 	my $node = DevTree::node->new($t);
 	$dt->add_node($node);
 
+	add_memc_gen($node, $rh, $memc_idx, $info);
 	add_memc_arb($node, $rh, $memc_idx, $info);
 	add_ddr_phy($node, $rh, $memc_idx, $info);
 	add_ddr_shim_phy($node, $rh, $memc_idx, $info);
@@ -3354,7 +3414,9 @@ sub add_wlan($$$$)
 # PARAMS:
 #   $rh_funcs -- hashref of functions; each value is an arrayref
 #       of clock names.
-#   @funcs -- the function names of interest (eg 'NAND').
+#   $ra_funcs -- arrayref the function names of interest (eg ['NAND']).
+#   $re_dev - the regular expression of the device.  This is
+#       optional and only used for special hacks.
 # DESCRIPTION:
 #    For a given function, generates the 'clock' and 'clock-names'
 #    properties to be inserted into devices.  This function is
@@ -3368,7 +3430,8 @@ sub add_wlan($$$$)
 #       }
 sub gen_clocks_prop
 {
-	my ($rh_funcs, @funcs) = @_;
+	my ($rh_funcs, $ra_funcs, $re_dev) = @_;
+	my @funcs = @$ra_funcs;
 	my @f;
 	foreach (@funcs) {
 		push @f, @{$rh_funcs->{$_}};
@@ -3381,8 +3444,16 @@ sub gen_clocks_prop
 
 	# change genet clock names to generic
 	$str1 =~ s/\b(sw_genet(?:|wol|eee))\d\b/$1/g;
-	# change usb clock names to generic
-	$str1 =~ s/\b(sw_usb)\d+\b/$1/g;
+
+	# change usb clock names to generic.  For the case of
+	# usb-phy, do some ad hoc renaming.
+	if ($re_dev && $re_dev eq qr/^usb-phy\@/) {
+		$str1 =~ s/\b(sw_usb)2\d*\b/$1/g;
+		$str1 =~ s/\b(sw_usb3)\d*\b/$1/g;
+	} else {
+		$str1 =~ s/\b(sw_usb)\d+\b/$1/g;
+	}
+
 	# change pcie clock names to generic
 	$str1 =~ s/\b(sw_pcie)\d+\b/$1/g;
 	# change sata30 => sata3
@@ -3396,6 +3467,25 @@ sub gen_clocks_prop
 
 ###############################################################
 # FUNCTION:
+#  get_devs
+# PARAMS:
+#   $dt -- the device tree which we will be inserting things.
+#   $re -- regular expression of the device.
+#   $depth -- optional integer that indicates the depth
+#       to search for $re1.  If this is not specified, the
+#       depth is assumed unlimited.
+# RETURNS:
+#   list of matching devices.
+###############################################################
+sub get_devs($$$)
+{
+	my ($dt, $re, $depth) = @_;
+	return $dt->find_node($re, $depth);
+}
+    
+
+###############################################################
+# FUNCTION:
 #   insert_clocks_prop_into_devs
 # PARAMS:
 #   $dt -- the device tree which we will be inserting things.
@@ -3406,6 +3496,8 @@ sub gen_clocks_prop
 #       Values are: 'none', 'grow', 'interleave', 'partition'.
 #       See the code comments for the precise meanings.
 #   $re0 -- the regexp that describes the functions of interest.
+#       Can also be an array of regexps; each regexp will be
+#       evaluated and the results will be collected.
 #   $re1 -- the regexp that describes the device name of interest.
 #   $re2 -- the regexp that furthe describes the device name of
 #       interest.  This is only used by USB devices so far
@@ -3424,16 +3516,20 @@ sub gen_clocks_prop
 #   undef
 sub insert_clocks_prop_into_devs
 {
-	my ($dt, $rh_funcs, $mode, $re0, $re1, $re2, $depth) = @_;
+	my ($dt, $rh_funcs, $mode, $re0_in, $re1, $re2, $depth) = @_;
 	my $num_inserted = 0;
 
 	die if $mode !~ /^(none|grow|interleave|partition)$/;
 
-	# Find all of the functions that match the regexp $re0.
+	my $re0_arr = "ARRAY" eq ref($re0_in) ? $re0_in : [ $re0_in ];
+
+	# Find all of the functions that match the regexp array $re0_arr.
 	my @funcs;
 	foreach my $func (keys %$rh_funcs) {
-		push @funcs, $func
-			if ($func =~ $re0);
+		foreach my $re0 (@$re0_arr) {
+			push @funcs, $func
+				if ($func =~ $re0);
+        }
 	}
 	@funcs = sort @funcs;
 
@@ -3461,26 +3557,26 @@ sub insert_clocks_prop_into_devs
 	my $nf = scalar(@funcs);
 	my $nd = scalar(@devs);
 	my $n = ($nd > $nf) ? $nd/$nf : $nf/$nd;
-	die "internal error"
+	die sprintf("nf=$nf, nd=$nd, internal error int(%s) != %s", int($n), $n)
 		if (int($n) != $n);
 	my @props;
 
 	if ($mode eq 'none') {
 		# Simple one-to-one mapping of funcs and devices.
 		die 'internal error' if ($n != 1);
-		@props = map { gen_clocks_prop($rh_funcs, $_) } @funcs;
+		@props = map { gen_clocks_prop($rh_funcs, [$_]) } @funcs;
 
 	} elsif ($mode eq 'grow') {
 		# There are more devices than funcs.  Each function
 		# in @funcs will repeat itself $n times; ie if @funcs = (f0, f1)
 		# and $n is 2, then @funcs will grow to (f0, f0, f1, f1).
 		# eg USB ehci/ohci will follow this.
-		die 'internal error' if $nd < $nf;
+		die 'internal error: more funcs than devices' if $nd < $nf;
 		my @a = @funcs;
 		@funcs = ();
 		push @funcs, ($_) x $n
 			foreach (@a);
-		@props = map { gen_clocks_prop($rh_funcs, $_) } @funcs;
+		@props = map { gen_clocks_prop($rh_funcs, [$_]) } @funcs;
 
 	} elsif ($mode eq 'interleave') {
 		# There are more functions than devices.  We assign the
@@ -3493,9 +3589,19 @@ sub insert_clocks_prop_into_devs
 			for (my $j=0; $j<$n; $j++) {
 				push @a, $funcs[$nd*$j + $i];
 			}
-			push @props, gen_clocks_prop($rh_funcs, @a);
-		}
 
+			# Hack for usb-phy.
+			if ($re1 eq qr/^usb-phy\@/) {
+				my $missing_xhci = !$devs[$i]->find_prop('has_xhci');
+				# drop the sw_usb30 if we don't have xhci.
+				pop @a
+					if ($missing_xhci && $a[-1] =~ /^USB3/);
+			}
+
+			my $x = gen_clocks_prop($rh_funcs, [@a], $re1);
+			push @props, $x;
+		}
+        
 	} elsif ($mode eq 'partition') {
 		# There are more functions than devices.  We assign the
 		# functions by partitioning.  For example, if @devs = (d0, d1)
@@ -3507,7 +3613,7 @@ sub insert_clocks_prop_into_devs
 			for (my $j=0; $j<$n; $j++) {
 				push @a, $funcs[$nd*$i + $j];
 			}
-			push @props, gen_clocks_prop($rh_funcs, @a);
+			push @props, gen_clocks_prop($rh_funcs, [@a]);
 		}
 	}
 
@@ -3516,8 +3622,9 @@ sub insert_clocks_prop_into_devs
 		my $prop = shift @props;
 		my $clks = $prop->{clks};
 		my $clock_names = $prop->{clock_names};
-		die "internal error: $re0/$re1"
-			if (!$clks || !$clock_names || !$d);
+		if (!$clks || !$clock_names || !$d) {
+			die "internal error";
+		}
 		$d->add_prop($clks);
 		$d->add_prop($clock_names);
 		$num_inserted++;
@@ -3710,12 +3817,22 @@ STOP
 	# on new systems which will have the new style driver.
 	insert_clocks_prop_into_devs($rdb, $rh_funcs, 'grow',
 		qr/^USBD$/, qr/^bdc_v2\@/, undef, 1);
-	# phy
-	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'grow',
-		qr/^USB2[01]$/, qr/^usb-phy\@/, undef, 1);
+	# usb-phy -- do some ad hoc things here to match what we want:
+	# If there is only one device, use the functions (USB2x, USB3x).
+	# If there is more than one device, create a list of
+	# (USB20, USB21, USB30, USB30) and then use the 'interleave'
+	# algorithm to assign the clocks.
+	@a = get_devs($dt, qr/^usb-phy\@/, 1);
+	my $num_usb_phy = @a;
+	my $re0_arr = [ qr/^USB2[01]$/, qr/^USB3[01]$/, qr/^USB3[01]$/ ];
+	my $re1_arr = [ qr/^USB2[01]$/, qr/^USB3[01]$/];
+	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'interleave',
+		$num_usb_phy == 1 ? $re1_arr:$re0_arr, qr/^usb-phy\@/, undef, 1);
 	print "$P: WARN: no clocks inserted for USB!\n"
 		if (!$ni && BcmUtils::get_num_usb($bd));
-
+	# End of new USB clock assignment.
+	####################
+    
 	# Add the clock aliases
 	foreach my $k (sort keys %{$rh->{aliases}}) {
 		add_reference_alias($dt, $k, ${$rh->{aliases}}{$k});

@@ -95,3 +95,20 @@ loop:	str     w0, [x1, #4]!
 
 	ret
 END_PROC(gic_secure_init)
+
+
+ENTRY_PROC(gic_bypass)
+	xpush2	 x0,  x1
+
+	mrs	x0, S3_1_C15_C3_0	/* Read CBAR_EL1 */
+	ldr	x1, =0xffffff00		/* [7:0] PERIPHBASE[39:32] */
+	isb
+	and	x0, x0, x1
+	orr	x0, x0, GIC_CPU_OFFS	/* GICC_CTLR */
+
+	mov	w1, #0			/* DisableGrp0 | DisableGrp1 */
+	str	w1, [x0]
+
+	xpop2	 x0,  x1
+	ret
+END_PROC(gic_bypass)

@@ -10,19 +10,19 @@ A grab-bag of assorted things that may be of assistance. No assurance
 of completeness or validity is made for things here: 'YMMV'.
 
 
- Devicetree and Linux
+ Device Tree and Linux
 ---------------------
-IMPORTANT: BOLT provides a devicetree to Linux. That means the versions
+IMPORTANT: BOLT provides a Device Tree to Linux. That means the versions
 of each are tied more closely together. You can't just upgrade
-one without considering the other. Note the actual devicetree
+one without considering the other. Note the actual Device Tree
 passed into Linux and track it. Diffing with an upgraded BOLT
 will be handy if you have problems. The release notes are your
 friend here as we specify which kernel to use.
 
 * If after updating BOLT: Linux does not boot but you get a silent
-hang, that generally means a Devicetree problem. Run "dt bolt;dt show"
+hang, that generally means a Device Tree problem. Run "dt bolt;dt show"
 for the previous (working) BOLT and the current one. The text
-output should be diff'd to see what in Devicetree has changed.
+output should be diff'd to see what in Device Tree has changed.
 
 * Some Linux failures can be debugged by adding command line flags,
 an example is show below, but please see the Linux documentation
@@ -34,7 +34,7 @@ for the precise commands for your kernel.
 
 * If after updating BOLT: Linux crashes near or at the userland
 "init" process, or trying to mount an initrd, then the first suspect
-is the DDR allocation setup in Devicetree. Either the DDR address
+is the DDR allocation setup in Device Tree. Either the DDR address
 or size is wrong, or your 'cma' nodes are wrong (for non-dynamic CMA
 kernels.) Note that bogus cma nodes might fail early in the kernel
 boot process, but with dynamic CMA you should not have that problem.
@@ -123,7 +123,7 @@ can be different. If you have a DDR not listed in the
 shmoo menu (above) then contact your FAE. Remember to
 check your DDR sizes and change your config (*.cfg)
 file to match it; i.e. the memory, region & cma
-devicetree nodes for the 'dt autogen' and 'ddr' build
+Device Tree nodes for the 'dt autogen' and 'ddr' build
 commands.
 
 
@@ -221,7 +221,7 @@ example, do:
 ----
  <now you can boot Linux>
 
-The above modifies the devicetree for all things,
+The above modifies the Device Tree for all things,
 then adjusts the 'reg' property of the 'memory'
 node to 256Kb. The last prevents BOLT from
 putting the old value back as it prevents the
@@ -248,10 +248,10 @@ All on one line to autostart Linux:
 * Make sure you put '[end]' at the end of your config file
 and don't put any more text after it.
 
-* Note that the devicetree memory setting are either identical
+* Note that the Device Tree memory setting are either identical
 to the ddr, or a subset of them. The 'ddr' entries in the
 config file have a physical effect (SHMOO), those in
-devicetree are only to setup Linux.
+Device Tree are only to setup Linux.
 
 * Try to make sure any modifications you make to BOLT
 also work on our reference boards. Its the key to

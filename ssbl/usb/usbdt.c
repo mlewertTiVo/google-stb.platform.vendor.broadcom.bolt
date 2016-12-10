@@ -25,6 +25,7 @@
 #include "board.h"
 #include "bchp_sun_top_ctrl.h"
 #include "chipid.h"
+#include "usb-brcm-common-init.h"
 #if defined(CONFIG_BCM7439B0)
 #include "bchp_jtag_otp.h"
 /* temporary define until bchp_jtag_otp.h is updated */
@@ -47,9 +48,20 @@
 #define USB_SELECT_MASK_XHCI 0x04
 #define USB_SELECT_MASK_BDC  0x08
 
+struct prop_to_def {
+	char *prop;
+	int val;
+} usb_device_props[] = {
+	{"off", USB_CTLR_DEVICE_OFF},
+	{"on", USB_CTLR_DEVICE_ON},
+	{"dual", USB_CTLR_DEVICE_DUAL},
+	{"typec_pd", USB_CTLR_DEVICE_TYPEC_PD},
+};
+
 struct usb_controller_list usb_clist;
 
 static void *current_dtb;
+static char dt_rdb_root[] = DT_RDB_DEVNODE_BASE_PATH;
 
 static char *type_to_string(int type)
 {
@@ -132,6 +144,10 @@ static void usb_find_dt_ports(void *fdt, int *offset, int *depth,
 		port = &ctl->ports[ctl->port_cnt++];
 		port->type = type;
 		port->regs = DT_PROP_DATA_TO_U32(prop->data, 0);
+		prop = fdt_get_property(current_dtb, *offset,
+					"status", &proplen);
+		if (prop && (strcmp(prop->data, "disabled") == 0))
+			port->disabled = 1;
 	}
 }
 
@@ -266,45 +282,38 @@ static void usb_validate_with_product_id(struct usb_controller_list *clist)
 	}
 }
 
-static int del_ctlr_node(uint32_t ctrl_addr)
+static int add_status_disabled(const char *path)
 {
-	char node_name[80];
-	int parent;
-	int rc;
-
-	parent = bolt_devtree_node_from_path(current_dtb,
-					DT_RDB_DEVNODE_BASE_PATH);
-	if (parent < 0)
-		return parent;
-	xsprintf(node_name, "usb@%8x", ctrl_addr);
-	rc = bolt_devtree_delnode_at(current_dtb, node_name, parent);
-	if (rc)
-		return rc;
-	xsprintf(node_name, "usb-phy@%8x", ctrl_addr);
-	return bolt_devtree_delnode_at(current_dtb, node_name, parent);
+	return bolt_devtree_addprop_path(current_dtb, path, "status",
+					"disabled", 9);
 }
 
-static int del_port_node(uint32_t ctrl_addr, char *port_name,
+static int dis_ctlr_node(uint32_t ctrl_addr)
+{
+	char node_name[80];
+	int rc;
+
+	xsprintf(node_name, "%s/usb@%8x", dt_rdb_root, ctrl_addr);
+	rc = add_status_disabled(node_name);
+	if (rc)
+		return rc;
+	xsprintf(node_name, "%s/usb-phy@%8x", dt_rdb_root, ctrl_addr);
+	return add_status_disabled(node_name);
+}
+
+static int dis_port_node(uint32_t ctrl_addr, char *port_name,
 			uint32_t port_addr)
 {
 	char node_name[80];
-	char root[] = DT_RDB_DEVNODE_BASE_PATH;
-	int parent;
 	int rc;
 
-	xsprintf(node_name, "%s/usb@%8x", root, ctrl_addr);
-	parent = bolt_devtree_node_from_path(current_dtb, node_name);
-	if (parent < 0)
-		return parent;
-	xsprintf(node_name, "%s@%8x", port_name, port_addr);
-	rc = bolt_devtree_delnode_at(current_dtb, node_name, parent);
+	xsprintf(node_name, "%s/usb@%8x/%s@%8x", dt_rdb_root, ctrl_addr,
+		port_name, port_addr);
+	rc = add_status_disabled(node_name);
 	if (rc)
 		return rc;
-	parent = bolt_devtree_node_from_path(current_dtb, root);
-	if (parent < 0)
-		return parent;
-	xsprintf(node_name, "%s_v2@%8x", port_name, port_addr);
-	return bolt_devtree_delnode_at(current_dtb, node_name, parent);
+	xsprintf(node_name, "%s/%s_v2@%8x", dt_rdb_root, port_name, port_addr);
+	return add_status_disabled(node_name);
 }
 
 static int disable_xhci_phy(uint32_t ctrl_addr)
@@ -312,7 +321,7 @@ static int disable_xhci_phy(uint32_t ctrl_addr)
 	char node_name[80];
 	int node;
 
-	xsprintf(node_name, "%s/usb-phy@%8x", DT_RDB_DEVNODE_BASE_PATH,
+	xsprintf(node_name, "%s/usb-phy@%8x", dt_rdb_root,
 		ctrl_addr);
 	node = bolt_devtree_node_from_path(current_dtb, node_name);
 	if (node < 0)
@@ -344,17 +353,17 @@ void usb_remove_disabled_from_dt(struct usb_controller_list *clist)
 				if (port->type == USB_PORT_TYPE_XHCI)
 					if (disable_xhci_phy(ctl->ctrl_regs))
 						xprintf(err_dis_xhci_phy);
-				if (del_port_node(
+				if (dis_port_node(
 						ctl->ctrl_regs,
 						type_to_string(port->type),
 						port->regs))
-					xprintf("USB: Error removing disabled"
-						" node from Device Tree\n");
+					xprintf("USB: Error disabling"
+						" node in Device Tree\n");
 			}
 		}
 		if (ctl->disabled) {
-			if (del_ctlr_node(ctl->ctrl_regs))
-				xprintf("USB: Error removing node for USB%d\n",
+			if (dis_ctlr_node(ctl->ctrl_regs))
+				xprintf("USB: Error disabling node in USB%d\n",
 					x);
 		}
 	}
@@ -368,7 +377,7 @@ static void set_single_or_override(void *fdt, int offset, const char *strnode,
 	char *s;
 	uint32_t data;
 
-	p = bolt_devtree_node_from_path(fdt, DT_RDB_DEVNODE_BASE_PATH);
+	p = bolt_devtree_node_from_path(fdt, dt_rdb_root);
 	if (p < 0) {
 		xprintf("USB init: no such parent node!\n");
 		return;
@@ -398,6 +407,18 @@ static void set_single_or_override(void *fdt, int offset, const char *strnode,
 			xprintf("USB init: devicetree read error %s for %s:%s\n",
 					fdt_strerror(plen), strnode, strprop);
 	}
+}
+
+static int device_prop_to_val(const char *name, int length)
+{
+	unsigned int x;
+
+	for (x = 0;
+	     x < (sizeof(usb_device_props) / sizeof(struct prop_to_def)); x++) {
+		if (!strncmp(usb_device_props[x].prop, name, length))
+			return usb_device_props[x].val;
+	}
+	return -1;
 }
 
 /*
@@ -461,17 +482,14 @@ int usb_find_ports(struct usb_controller_list *clist)
 			prop = fdt_get_property(current_dtb, offset,
 						"device", &proplen);
 			if (proplen > 0) {
-				if (!strncmp("off", prop->data, proplen))
-					clist->ctrls[x].device_mode =
-						USB_CTLR_DEVICE_MODE_OFF;
-				else if (!strncmp("on", prop->data, proplen))
-					clist->ctrls[x].device_mode =
-						USB_CTLR_DEVICE_MODE_ON;
-				else if (!strncmp("dual", prop->data, proplen))
-					clist->ctrls[x].device_mode =
-						USB_CTLR_DEVICE_MODE_DUAL;
+				int val;
+
+				val = device_prop_to_val(prop->data, proplen);
+				if (val >= 0)
+					clist->ctrls[x].device_mode = val;
 				else
-					xprintf("USB: bad \"device\" prop\n");
+					xprintf("USB: bad \"device\" prop %s\n",
+						prop->data);
 			}
 			usb_find_dt_ports(current_dtb, &offset, &depth,
 					  &clist->ctrls[x]);

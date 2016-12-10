@@ -21,6 +21,8 @@
 #define LOADFLG_BSU 		0x0100	/* BSU sidecar app */
 #define LOADFLG_APP64		0x0200	/* 64 bit app */
 #define LOADFLG_DIRECT_CALL	0x0400	/* Don't use PSCI etc. */
+#define LOADFLG_EL3_EXEC	0x0800	/* Execute at EL3 level */
+#define LOADFLG_SECURE		0x1000	/* Indicate the image is secure */
 
 typedef struct bolt_loadargs_s {
 	const char *la_filename; /* name of file on I/O device */

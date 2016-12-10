@@ -4,8 +4,8 @@
 Build configuration script
 ==========================
 Broadcom Ltd <support@broadcom.com>
-v1.36, September 7th 2016:
-Updated for 1.21 release.
+v1.37, October 18th 2016:
+Updated for 1.22 release.
 
 Introduction
 ------------
@@ -54,7 +54,7 @@ used between building BOLT. Only when a different configuration and/or
 family is required do you need to re-specify them, i.e. 'make clean all'
 may be done with abandon without destroying the current configuration.
 
-RTS settings (.rts) and devicetree source (.dts) files are specified
+RTS settings (.rts) and Device Tree source (.dts) files are specified
 withing a configuration file.
 
 
@@ -96,7 +96,7 @@ board selection commands have inheritance in that anything referencing
 a previous heading inherits its commands properties. These properties
 may be overridden in the current heading.
 
-Comments may consist of c style '/* */' and perl '#' 
+Comments may consist of c style '/* */' and Perl '#'
 delimiters but may not span over one line.
 
 If an invalid command is encountered then the script
@@ -142,7 +142,7 @@ Example:
 ----
 
 The script will check VALUE against its own version information and will
-abort processing if they do not match. The purpose is to prevent mis-matches
+abort processing if they do not match. The purpose is to prevent mismatches
 between new BOLT deliverables and a customers previous custom BOLT build
 script files.
 
@@ -177,7 +177,7 @@ Example:
 ----
 
 We can specify how all the flash devices will be split into partitions (MTD
-devices in Linux). These partitions will be passed via device tree for use in
+devices in Linux). These partitions will be passed via Device Tree for use in
 Linux. Note that a single map heading should include the partition map for all
 the flash devices in the system.
 
@@ -545,7 +545,9 @@ family.
 
 The 'mmap' commands should be only in the [family] section. All the chips
 in a family share the same memory map information regardless of how many
-memory controllers are actually accessible.
+memory controllers are actually accessible. Currently the 'mmap' provided
+values describe a _fixed_ property of a chip i.e. they are not customer
+modifiable and therefore must [red]#never# be altered.
 
 
  mset, gset, cset
@@ -776,7 +778,7 @@ prevented from being programmed ('-').
 ~~~~
 Usage: dts <FILE> <LOAD ADDRESS>
 
-Note: Select a devicetree file to be used by BOLT.
+Note: Select a Device Tree file to be used by BOLT.
 
 See also: n/a
 
@@ -786,7 +788,7 @@ dts config/family-7445a0.dts @ 0x00001000
 dts config/family-7445d0.dts
 ----
 
-Choose a devicetree source file (*.dts) that BOLT
+Choose a Device Tree source file (*.dts) that BOLT
 will incorporate into its build.
 
 The 'dt bolt' user interface command, or
@@ -799,7 +801,7 @@ based on runtime values.
 ~~~~~~~~~~~
 Usage: dt autogen -node <NODE> [<OPTS>]
 
-Note: Request the bolt build system to autogenerate a device tree node.
+Note: Request the bolt build system to autogenerate a Device Tree node.
 
 See also: n/a
 
@@ -831,7 +833,7 @@ dt autogen -node sdio -undo 1
 
 NOTE: If you use this command (dt autogen), it must be in the "[family]" 
  section.  In addition, you must use the 'dts' command first.  The dts
- command specifies the device tree textfile to start with, and
+ command specifies the Device Tree textfile to start with, and
  this command will add node(s) to it.  The result can be found
  in ./gen/$(FAMILY)/*.dtx.
 
@@ -1000,12 +1002,11 @@ entry will be:
 ----
 
 More information about the SATA DT binding can be found at in the
-kernel sources, under
-'Documentation/devicetree/bindings/ata/brcm-sata.txt'.
+kernel sources, under 'Documentation/devicetree/bindings/ata/brcm-sata.txt'.
 
 If you use this command (dt autogen), it must be in the "[family]" 
 section.  In addition, you must use the 'dts' command first.  The dts
-command specifies the device tree textfile to start with, and
+command specifies the Device Tree textfile to start with, and
 this command will add node(s) to it.  The result can be found
 in ./gen/$(FAMILY)/*.dtx.
 
@@ -1063,7 +1064,7 @@ Broadcom Linux distribution for a full list. The most common setting are:
 
 * *L1* - The RDB interrupt name, e.g. 'UART_RG' from BCHP_HIF_CPU_INTR1_INTR_W2_MASK_STATUS_UART_RG_CPU_INTR_SHIFT
 
-* *ALIAS* - A unique name to refer the uart by in the 'alias' Devicetree node. It should have the prefix
+* *ALIAS* - A unique name to refer the uart by in the 'alias' Device Tree node. It should have the prefix
 "serial_" e.g. 'serial_rg'
 
 * *CON* - Set the default Linux boot console uart. The '-stdout' flag takes a single
@@ -1148,7 +1149,7 @@ option. Trip points must come in pairs, consisting of a temperature value and a
 hysteresis. Hysteresis may be zero, if desired. It is highly recommended you
 consult Broadcom before changing the trip points away from their defaults.
 
-Device tree binding reference: https://www.kernel.org/doc/Documentation/devicetree/bindings/thermal/thermal.txt
+Device Tree binding reference: https://www.kernel.org/doc/Documentation/devicetree/bindings/thermal/thermal.txt
 
 Example:
 
@@ -1210,18 +1211,18 @@ Example:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Instead of using the register database (RDB) to source
 the base register addresses to setup USB, BOLT now
-sources them via Devicetree, just like Linux does. 
+sources them via Device Tree, just like Linux does.
 
-* If you do not have USB device nodes in your Devicetree
+* If you do not have USB device nodes in your Device Tree
 then the BOLT USB driver WILL NOT be initialized.
 
-* The Broadcom specific Devicetree properties
+* The Broadcom specific Device Tree properties
 'ioc' (Invert Over-Current) and 'ipp' (Invert Port Power)
-are read from the Devicetree as well, note that these
+are read from the Device Tree as well, note that these
 options are settable at build time by the autogen command
 (see above) and can be overridden at runtime by the
 USBIPP and USBIOC environment variables. Note that the
-environment variables also affect the Devicetree so that
+environment variables also affect the Device Tree so that
 BOLT and Linux USB setting match.
 
 
@@ -1352,19 +1353,19 @@ enet -switch_port 0 -phy_type INT -mdio_mode 1 -phy_speed 1000 -phy_id 5
 enet -switch_port 7 -phy_type MOCA -mdio_mode - -phy_speed 1000 -phy_id 257
 ----
 
-This sets the internal ethernet (not USB ethernet)
+This sets the internal Ethernet (not USB Ethernet)
 configuration for a board. Note that running the
 BOLT 'ephycfg' command sets environment variables
 which will override the board defaults you set with
 this build script command.
 
 A '''-''' value unsets the parameter the board will use
-and will REMOVE its devicetree entry (property) from
+and will REMOVE its Device Tree entry (property) from
 its corresponding ethernet@xxxxxxxx node.
 
 A special case is for phy_type, where if <PHY> is '''-''' then
 the complete ethernet@xxxxxxxx node will be REMOVED from
-devicetree.
+Device Tree.
 
 Only '-genet' and '-switch_port' are required parameters,
 but for the physical eth/genet/switch port device (if enabled in the build)
@@ -1389,14 +1390,14 @@ phy_type
 phy_type <PHY> - The phy configuration value. 
 The following types have meaning to the single
 physical device BOLT can use as well as for
-devicetree:
+Device Tree:
 
 *         INT - (1) internal PHY
 *         MII - (2) 10/100 MII (18-wire interface)
 *       RGMII - (4) 14-wire RGMII interface.
 * RGMII_NO_ID - (6) same as above, but disable phase shift on TXC clock
 
-The following types only have meaning for devicetree
+The following types only have meaning for Device Tree
 and are not valid for physical devices:
 
 *      RVMII - (3) 14-wire RGMII interface.
@@ -1410,11 +1411,11 @@ mdio_mode
 mdio_mode <MODE> -  The mdio configuration value.
 
 *    0 - standard MDIO is not available e.g. connected to a BCM3383.
-*    1 - (default) standard MDIO is available (ethernet PHY)
-* boot - BOLT configure it only e.g. linked to an ethernet switch.
+*    1 - (default) standard MDIO is available (Ethernet PHY)
+* boot - BOLT configure it only e.g. linked to an Ethernet switch.
 
 NOTE: This applies only to the physical device BOLT can use,
-not the devicetree entries as that will result in undefined values.
+not the Device Tree entries as that will result in undefined values.
 
 More info:  http://en.wikipedia.org/wiki/Management_Data_Input/Output
 
@@ -1442,18 +1443,18 @@ when booting Linux. A value of -1 indicates a failure in probing.
 NOTE: If the  phy id/address for ID_AUTO is 256 (0x100) and
 ID_NONE is 257 (0x101). Do not use hexadecimal values for these in
 the config script."probe" and "noprobe" applies only to the physical
-device BOLT can use, not the devicetree entries as that will result
+device BOLT can use, not the Device Tree entries as that will result
 in undefined values.
 
 For the physical device BOLT uses, then for the case of "probe"
-failing the devicetree value will be set to ID_NONE.
+failing the Device Tree value will be set to ID_NONE.
 
 ethsw
 +++++
 ethsw <HEXVAL>
  A HEX number for specifying the switch type the GENET or
 integrated switch port  is connected to. It has no meaning
-for the BOLT physical ethernet device, only for Linux (devicetree.)
+for the BOLT physical Ethernet device, only for Linux (Device Tree).
 
 
  moca
@@ -1471,11 +1472,11 @@ Example:
 
 This sets the internal MoCA configuration for a board.
 
-* '-enet_node' is an alias to the Ethernet device tree node
+* '-enet_node' is an alias to the Ethernet Device Tree node
 which provides the data-path for the MoCA hardware block.
 
 * '-moca_band' applies to MoCA devices
-in devicetree, its ignored otherwise. It is a
+in Device Tree, its ignored otherwise. It is a
 string representing a band as follows:
 
 ----
@@ -1493,7 +1494,7 @@ string representing a band as follows:
 	h      ( 975 ~ 1025 MHz)
 ----
 
-This is only used as a devicetree configuration entry for Linux.
+This is only used as a Device Tree configuration entry for Linux.
 
 
 Command: pinmux
@@ -1703,16 +1704,16 @@ Usage:
 * dt prop -root <ROOT> -node <NODE> -prop <PROP> -int <int>
 
 Note: These script commands allow selective board specific modification of the
-devicetree as BOLT SSBL starts up, independent of the 'dt bolt' command.
+Device Tree as BOLT SSBL starts up, independent of the 'dt bolt' command.
 
 See also: dt autogen
 
-* <ROOT> and <NODE> are the textual names in the devicetree.
+* <ROOT> and <NODE> are the textual names in the Device Tree.
 
-** 'cull' removes a single devicetree property within the specified node
+** 'cull' removes a single Device Tree property within the specified node
 if the optional '-prop' parameter is present, else it deletes the whole node.
 
-** 'prop' adds or modifies a devicetree property. Currently, only the string
+** 'prop' adds or modifies a Device Tree property. Currently, only the string
 type is supported.
 
 **  'mac' sets the "local-mac-address" property _after_ all physical ENET
@@ -1754,18 +1755,23 @@ is not set.
 
  avs
 ~~~~
-Usage: avs [enable | disable] -domains <VOLTAGE DOMAINS>
+Usage: avs [enable | disable] -domains <VOLTAGE DOMAINS> -mode <avs|dfs|dvfs> -pmap <MAP> -pstate <STATE>
 
-Note: Sets the default AVS state
+Note: Sets the default AVS state and number of voltage domains. Also sets
+the DVFS mode, pmap and pstate.
 
 See also: n/a
 
 * <VOLTAGE DOMAINS> mentions the number of voltage domains(cpu and settop) on
 the platforms that can be build with multiple domains. Default is 2.
 
+* <MAP> mentions all the pstates available for a power profile.
+
+* <STATE> operational state determined by CPU's frequency and voltage.
+
 Example:
 ----
-avs enable -domains 2
+avs enable -domains 2 -mode dvfs -pmap 0 -pstate 0
 ----
 
 AVS will be enabled (started) by default if a corresponding board is
@@ -1775,23 +1781,8 @@ is enabled or disabled can be overridden anytime by the "setboard"
 command on the BOLT command line prompt. The "avs" command can exist
 in [family], [chip] and [board].
 
- dvfs
-~~~~
-Usage: dvfs -mode <avs|dfs|dvfs>  -pmap <MAP> -pstate <STATE>
-
 Note: Sets the mode, pmap and p-state. The parameters for the '-pmap' option
 and '-pstate' are integers.
-
-See also: n/a
-
-* <MAP> mentions all the pstates available for a power profile.
-
-* <STATE> operational state determined by CPU's frequency and voltage.
-
-Example:
-----
-dvfs -mode dvfs  -pmap 3 -pstate 0
-----
 
  sdio
 ~~~~~
@@ -1822,7 +1813,7 @@ reasons.)
 
 * <T> The operating mode (type) which is 'sd', 'nodevice', 'emmc' or 'emmc_on_sdpins'
 
-* -uhs (optional) Sets properties in the sdhci Devicetree node for Linux
+* -uhs (optional) Sets properties in the sdhci Device Tree node for Linux
 that will enable Ultra High Speed modes. 1 will add properties to enable
 DDR50 and SDR50 modes for SD and HS200 for eMMC. 0 will disable UHS modes
 by adding the property "no-1-8-v".
@@ -1907,7 +1898,7 @@ Linux boot failure.
 
  usb
 ~~~~
-Usage: usb -controller <N> -type <T> [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual]
+Usage: usb -controller <N> -type <T> [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual|typec_pd]
 
 Note: Sets the default USB hardware operating mode on a per board basis.
 

@@ -94,6 +94,7 @@ SSBL_S += \
 	$(GEN)/$(FAMILY)/rts.c \
 	\
 	ssbl/arch/bcm_devices.c \
+	ssbl/arch/bcm_init_avs.c \
 	ssbl/arch/bcm_init_enet.c \
 	ssbl/arch/bcm_init_flash.c \
 	ssbl/arch/bcm_init_hdmi.c \
@@ -247,7 +248,7 @@ SSBL_S += \
 	ssbl/arch/supplement-fsbl.c
 endif
 
-ifeq ($(CFG_TRUSTZONE),1)
+ifeq ($(CFG_TRUSTZONE_CMD),1)
 include ssbl/trustzone/tz.inc
 endif
 

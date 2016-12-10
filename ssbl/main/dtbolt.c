@@ -646,6 +646,17 @@ static int bolt_populate_memory_ctls(void *fdt)
 		if (node < 0)
 			continue;
 
+		/*
+		 * Mark unused memory controllers as disabled. This helps Linux
+		 * in determining how many active memory controllers there are.
+		 * We use this in the CPUfreq driver, for instance.
+		 */
+		if (ddr->ddr_size == 0)
+			rc = bolt_dt_addprop_str(fdt, node, "status",
+				"disabled");
+		if (rc)
+			return rc;
+
 		/* clock-frequency is always in Hertz whereas our local storage
 		 * for ddr_clock is in Mhz, convert that
 		 */
@@ -2536,6 +2547,12 @@ int bolt_devtree_boltset(void *fdt)
 	rc = bolt_dt_addprop_u32(fdt, bolt, "version", BOLT_VERSION);
 	if (rc)
 		goto out;
+
+#ifdef DVFS_SUPPPORT
+	rc = bolt_dt_addprop_u32(fdt, bolt, "pmap", board_pmap());
+	if (rc)
+		goto out;
+#endif
 
 out:
 	bolt_populate_model_and_compatible(fdt);

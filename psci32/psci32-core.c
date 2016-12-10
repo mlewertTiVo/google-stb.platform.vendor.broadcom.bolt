@@ -14,6 +14,8 @@
 #include <bchp_cntcontrolbase.h>
 #include <bitops.h>
 #include <bakery_lock32.h>
+#include <aon_defs.h>
+#include <arm-macros.h>
 
 /* TBD
  * - S3
@@ -668,6 +670,52 @@ static int boot_linux(uint32_t linux_entry, uint32_t fdt, int me)
 	return PSCI_ERR_INTERNAL_FAILURE;
 }
 
+
+void resume_from_s3(int me)
+{
+	struct brcmstb_s3_params *params;
+	uintptr_t addr;
+	uint32_t flags, spsr = get_spsr();
+
+	/* We should always restart in SVC mode. */
+	if ((spsr & CPSR_MODE_MASK) != MODE_SVC) {
+		if (config->debug) {
+			__puts("PSCI: S3 bad resume, spsr: ");
+			writehex(spsr);
+			puts("");
+		}
+		goto failed_resume;
+	}
+
+	flags = AON_REG(AON_REG_MAGIC_FLAGS);
+	if ((flags & S3_FLAG_PSCI_BOOT) &&
+		 (!(flags & S3_FLAG_BOOTED64))) {
+
+		addr = AON_REG(AON_REG_CONTROL_LOW);
+		addr |= shift_left_32((uintptr_t)AON_REG(AON_REG_CONTROL_HIGH));
+
+		params = (struct brcmstb_s3_params *)addr;
+
+		if (config->debug) {
+			__puts("PSCI: S3 resume @ ");
+			writehex(params->reentry);
+			puts("");
+		}
+
+		(void)boot_linux(params->reentry, 0 /* No DTB */, me);
+	}
+
+	if (config->debug) {
+		__puts("PSCI: S3 bad resume, flags: ");
+		writehex(flags);
+		puts("");
+	}
+
+failed_resume:
+	reboot(); /* Backstop */
+}
+
+
 void psci_decode(uint32_t r0, uint32_t r1, uint32_t r2,	uint32_t r3)
 {
 	uint32_t rc = PSCI_ERR_NOT_SUPPORTED;
@@ -712,6 +760,10 @@ void psci_decode(uint32_t r0, uint32_t r1, uint32_t r2,	uint32_t r3)
 			rac_enable(r1);
 			rc = PSCI_SUCCESS;
 		}
+		break;
+
+	case OEM_FUNC_S3_RESUME:
+		resume_from_s3(me);
 		break;
 
 	case OEM_FUNC_EXEC64:

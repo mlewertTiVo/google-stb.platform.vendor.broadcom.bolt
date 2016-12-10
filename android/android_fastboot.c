@@ -22,11 +22,13 @@
 #include "sparse_format.h"
 #include "gpt.h"
 #include "ioctl.h"
+#include "eio_boot.h"
 
 /* Compiler option for debugging fastboot flash code */
 #undef FB_DBG_PRINT_SPARSE_IMG_HDR  /* print sparse img header */
 #undef FB_DBG_PRINT_CHUNK_HDR /* print chunk hdr while flashing sparse img */
 #undef FB_DBG_PRINT_IMG_HDR /* print image hdr & image can be raw or sparse */
+#undef FB_DBG_PRINT_TCP_CHUNKS
 
 /*
  * Constant definitions
@@ -44,8 +46,10 @@
 #define FB_FLASH_STAGING_BUFFER		(0x20000000)
 #define FB_FLASH_STAGING_BUFFER_SIZE	(1024*1024*256)
 
-/* The 64 defined bytes plus \0 */
+/* The 64 defined bytes, plus \0 */
 #define RESPONSE_LEN	(64 + 1)
+/* header when using handshake. */
+#define RESPONSE_HDR	(8)
 
 /* The min USB BULK OUT pipe transfer size is based on the max-packet-size
  * field as defined by USB standard and the size changes based on the USB
@@ -97,6 +101,11 @@ static struct fastboot_info fb_info;
 static unsigned int download_size;
 static unsigned int download_bytes;
 
+static unsigned int download_payload;
+static unsigned int download_overhead;
+static unsigned int chunk_received;
+static unsigned int chunk_size;
+static unsigned int chunk_header;
 
 /* Compare strings based on length of first input (s1) */
 static int strcmp_l1(const char *s1, const char *s2)
@@ -130,8 +139,8 @@ void fastboot_flash_dump_ptn(void)
 
 	for(n = 0; n < pcount; n++) {
 		ptn = ptable + n;
-		os_printf("ptn %d name='%s' start=%d len=%llu\n",
-			n, ptn->name, ptn->start, ptn->length);
+		os_printf("ptn %d name='%s' start=%d len=%llu uuid='%s'\n",
+			n, ptn->name, ptn->start, ptn->length, ptn->uuid);
 	}
 }
 
@@ -341,7 +350,7 @@ static int fastboot_flash_write_raw_image(const char *devname,
 	unsigned long long curr_write_offset;
 	unsigned char *curr_read_ptr;
 	int fd;
-	
+
 	fd = bolt_open((char *)devname);
 	if (fd < 0) {
 		os_printf("Error opening '%s' for fastboot flash\n", devname);
@@ -407,7 +416,7 @@ static int fastboot_flash_write_gpt(const char *devname,
 {
 	int res = BOLT_OK;
 	struct fastboot_ptentry *ptn;
-	uint8_t *download_buffer = (uint8_t *) FB_FLASH_STAGING_BUFFER;
+	uint8_t *download_buffer = (uint8_t *)FB_FLASH_STAGING_BUFFER;
 	struct fastboot_ptentry gpt_ptn;
 
 	/* First check if gpt partition exist.	If it does, then we use what
@@ -481,9 +490,10 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 	char ptn_name[15];
 	struct fastboot_ptentry *ptn;
 	struct bootloader_img_hdr *bl_img_hdr;
-	uint8_t *download_buffer = (uint8_t *) FB_FLASH_STAGING_BUFFER;
+	uint8_t *download_buffer = (uint8_t *)FB_FLASH_STAGING_BUFFER;
 	uint8_t *bolt_img_buf;
 	uint8_t *bsu_img_buf;
+	uint8_t *bl31_img_buf;
 
 	bl_img_hdr = (struct bootloader_img_hdr *) download_buffer;
 
@@ -496,21 +506,23 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 	}
 
 	if ((download_bytes < bl_img_hdr->bolt_img_size) ||
-		(download_bytes < bl_img_hdr->bsu_img_size)) {
+		(download_bytes < bl_img_hdr->bsu_img_size) ||
+		((bl_img_hdr->version > 0x1) && (download_bytes < bl_img_hdr->bl31_img_size))) {
 		os_printf("invalid bootloader image size...\n");
-		os_printf("download_bytes=%d, bolt_img_size=%d, bsu_img_size=%d\n",
+		os_printf("download_bytes=%d, bolt_img_size=%d, bsu_img_size=%d, bl31_img_size=%d\n",
 				download_bytes, bl_img_hdr->bolt_img_size,
-						bl_img_hdr->bsu_img_size);
+						bl_img_hdr->bsu_img_size, bl_img_hdr->bl31_img_size);
 		os_sprintf(response, "FAILinvalid bootloader image size");
 		goto exit;
 	}
 
 	if ((download_bytes < bl_img_hdr->bolt_img_offset) ||
-		(download_bytes < bl_img_hdr->bsu_img_offset)) {
+		(download_bytes < bl_img_hdr->bsu_img_offset) ||
+		((bl_img_hdr->version > 0x1) && bl_img_hdr->bl31_img_size && (download_bytes < bl_img_hdr->bl31_img_offset))) {
 		os_printf("invalid bootloader image offset...\n");
-		os_printf("download_bytes=%d, bolt_img_offset=%d, bsu_img_offset=%d\n",
+		os_printf("download_bytes=%d, bolt_img_offset=%d, bsu_img_offset=%d, bl31_img_offset=%d\n",
 				download_bytes, bl_img_hdr->bolt_img_offset,
-						bl_img_hdr->bsu_img_offset);
+						bl_img_hdr->bsu_img_offset, bl_img_hdr->bl31_img_offset);
 		os_sprintf(response, "FAILinvalid bootloader image offset");
 		goto exit;
 	}
@@ -595,6 +607,48 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 
 	os_printf("Done flashing %s image\n", ptn_name);
 
+	/***** Handle BL31 image (version > 0x1) *****/
+	if ((bl_img_hdr->version > 0x1) && bl_img_hdr->bl31_img_size) {
+		os_sprintf(ptn_name, "bl31");
+
+		ptn = fastboot_flash_find_ptn(ptn_name);
+
+		if (ptn == 0) {
+			os_printf("'%s' partition does not exist\n", ptn_name);
+			os_sprintf(response, "FAIL'%s' partition does not exist", ptn_name);
+			goto exit;
+		}
+
+		if ((bl_img_hdr->bl31_img_size > ptn->length)) {
+			os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%d\n",
+					ptn_name, bl_img_hdr->bl31_img_size, ptn->length);
+			os_sprintf(response, "FAILimage too large for '%s' partition", ptn_name);
+			goto exit;
+		}
+
+		/* override the global variable "download_bytes" to be the size of the
+		 * BL31 image as reported in header so we can re-use the same function
+		 * as writing any raw image */
+		download_bytes = bl_img_hdr->bl31_img_size;
+		bl31_img_buf = download_buffer+bl_img_hdr->bl31_img_offset;
+
+		os_printf("%s image: write %d bytes from %#010x to '%s' device\n",
+				ptn_name,
+				download_bytes,
+				(unsigned int)bl31_img_buf,
+				flash_devname);
+
+		res = fastboot_flash_write_raw_image(flash_devname, bl31_img_buf, ptn);
+
+		if (res < 0) {
+			os_printf("Failed in flashing %s image\n", ptn_name);
+			os_sprintf(response, "FAILerror writing to '%s' partition", ptn_name);
+			goto exit;
+		}
+
+		os_printf("Done flashing %s image\n", ptn_name);
+	}
+
 	/***** All bootloader images flashed successfully *****/
 	os_sprintf(response, "OKAY");
 
@@ -610,7 +664,7 @@ static int fastboot_flash_dev_write(const char *flash_devname,
 	int res;
 	struct fastboot_ptentry *ptn;
 	sparse_header_t *s_header;
-	uint8_t *download_buffer = (uint8_t *) FB_FLASH_STAGING_BUFFER;
+	uint8_t *download_buffer = (uint8_t *)FB_FLASH_STAGING_BUFFER;
 	char devname[15];
 
 	/* If the partition to be flashed is called 'bootloader', then it
@@ -659,7 +713,7 @@ static int fastboot_flash_dev_write(const char *flash_devname,
 		os_sprintf(response, "FAILimage too large for partition");
 		return BOLT_OK;
 	}
-	
+
 	s_header = (sparse_header_t *) download_buffer;
 
 #ifdef FB_DBG_PRINT_IMG_HDR
@@ -1083,9 +1137,9 @@ static void fastboot_uninit(void)
 static int cb_reboot(struct fastboot_info *info)
 {
 	int res;
-	char *cmd = (char *)info->cmd_buf;
+	char *cmd = (char *)(info->cmd_buf+(info->header?FB_HS_OVERHEAD:0));
 	char response[RESPONSE_LEN];
-	
+
 	os_sprintf(response, "OKAY");
 	res = fastboot_tx_write_str(response);
 
@@ -1115,7 +1169,7 @@ static int cb_boot(struct fastboot_info *info)
 {
 	int res;
 	char response[RESPONSE_LEN];
-	
+
 	os_sprintf(response, "FAILcommand not suported");
 	res = fastboot_tx_write_str(response);
 
@@ -1285,6 +1339,159 @@ static void getvar_partition_size(char *cmd_var, char *response)
 	}
 }
 
+static int has_boot_commander()
+{
+	int fd=-1;
+	char *fb_flashdev_mode_str;
+	char flash_devname[20];
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (!fb_flashdev_mode_str) {
+		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
+		goto ret_legacy;
+	}
+	os_sprintf(flash_devname, "%s.%s", fb_flashdev_mode_str, BOOT_SLOT_COMMANDER);
+	fd = bolt_open((char *)flash_devname);
+	if (fd < 0) {
+		os_printf("Error opening %s. Can't read boot commander: %d\n", flash_devname, fd);
+		goto ret_legacy;
+	}
+	bolt_close(fd);
+	return 1;
+
+ret_legacy:
+	return 0;
+}
+
+static int get_boot_commander(struct eio_boot *eio)
+{
+	int fd=-1;
+	char *fb_flashdev_mode_str;
+	char flash_devname[20];
+	int ret;
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (!fb_flashdev_mode_str) {
+		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
+		goto ret_legacy;
+	}
+	os_sprintf(flash_devname, "%s.%s", fb_flashdev_mode_str, BOOT_SLOT_COMMANDER);
+	fd = bolt_open((char *)flash_devname);
+	if (fd < 0) {
+		os_printf("Error opening %s. Can't read boot commander: %d\n", flash_devname, fd);
+		goto ret_legacy;
+	}
+	ret = bolt_readblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+	if (ret != sizeof(struct eio_boot)) {
+		os_printf("Error reading %s. Can't read commander block: %d\n", flash_devname, ret);
+		bolt_close(fd);
+		goto ret_legacy;
+	}
+	bolt_close(fd);
+	return 1;
+
+ret_legacy:
+	return 0;
+}
+
+static int write_boot_commander(struct eio_boot *eio)
+{
+	int fd=-1;
+	char *fb_flashdev_mode_str;
+	char flash_devname[20];
+	int ret;
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (!fb_flashdev_mode_str) {
+		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
+		goto ret_fail;
+	}
+	os_sprintf(flash_devname, "%s.%s", fb_flashdev_mode_str, BOOT_SLOT_COMMANDER);
+	fd = bolt_open((char *)flash_devname);
+	if (fd < 0) {
+		os_printf("Error opening %s. Can't read boot commander: %d\n", flash_devname, fd);
+		goto ret_fail;
+	}
+	ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+	if (ret != sizeof(struct eio_boot)) {
+		os_printf("Error writing %s. Can't write commander block: %d\n", flash_devname, ret);
+		bolt_close(fd);
+		goto ret_fail;
+	}
+	bolt_close(fd);
+	return 1;
+
+ret_fail:
+	return 0;
+}
+
+static void getvar_has_slot(char *cmd_var, char *response)
+{
+	os_strtok_r(NULL, ":", &cmd_var);
+	if (os_strlen(cmd_var) != 0) {
+		if (has_boot_commander() &&
+				(!os_strcmp(cmd_var, BOOT_SLOT_SYSTEM_PREFIX) ||
+				!os_strcmp(cmd_var, BOOT_SLOT_BOOT_PREFIX))) {
+			os_sprintf(response, "%s", "yes");
+		} else {
+			os_sprintf(response, "%s", "no");
+		}
+	}
+}
+
+static void getvar_current_slot(char *cmd_var, char *response)
+{
+	struct eio_boot eio;
+	if (get_boot_commander(&eio)) {
+		os_sprintf(response, "%s", eio.current == 1 ? BOOT_SLOT_1_SUFFIX : BOOT_SLOT_0_SUFFIX);
+	}
+}
+
+static void getvar_slot_suffixes(char *cmd_var, char *response)
+{
+	if (has_boot_commander()) {
+		os_sprintf(response, "%s,%s", BOOT_SLOT_0_SUFFIX, BOOT_SLOT_1_SUFFIX);
+	}
+}
+
+static void getvar_slot_successful(char *cmd_var, char *response)
+{
+	struct eio_boot eio;
+	os_strtok_r(NULL, ":", &cmd_var);
+	if (os_strlen(cmd_var) != 0) {
+		if (get_boot_commander(&eio) &&
+				((!os_strcmp(cmd_var, BOOT_SLOT_0_SUFFIX) && eio.slot[0].boot_ok) ||
+				 (!os_strcmp(cmd_var, BOOT_SLOT_1_SUFFIX) && eio.slot[1].boot_ok))) {
+			os_sprintf(response, "%s", "yes");
+		} else {
+			os_sprintf(response, "%s", "no");
+		}
+	}
+}
+
+static void getvar_slot_unbootable(char *cmd_var, char *response)
+{
+	struct eio_boot eio;
+	os_strtok_r(NULL, ":", &cmd_var);
+	if (os_strlen(cmd_var) != 0) {
+		if (get_boot_commander(&eio) &&
+				((!os_strcmp(cmd_var, BOOT_SLOT_0_SUFFIX) && eio.slot[0].boot_fail) ||
+				 (!os_strcmp(cmd_var, BOOT_SLOT_1_SUFFIX) && eio.slot[1].boot_fail))) {
+			os_sprintf(response, "%s", "yes");
+		} else {
+			os_sprintf(response, "%s", "no");
+		}
+	}
+}
+
+static void getvar_slot_retry_count(char *cmd_var, char *response)
+{
+	/* for now, we only+always try once. */
+	if (has_boot_commander()) {
+		os_sprintf(response, "1");
+	}
+}
+
 /* Look-up table for handling "fastboot getvar <variable>" command
  *
  * Remarks on how to update this table:
@@ -1348,6 +1555,24 @@ static const struct getvar_dispatch getvar_dispatch[] = {
 	}, {
 		.name = "partition-size:",
 		.cb = getvar_partition_size,
+	}, {
+		.name = "has-slot:",
+		.cb = getvar_has_slot,
+	}, {
+		.name = "current-slot",
+		.cb = getvar_current_slot,
+	}, {
+		.name = "slot-suffixes",
+		.cb = getvar_slot_suffixes,
+	}, {
+		.name = "slot-successful:",
+		.cb = getvar_slot_successful,
+	}, {
+		.name = "slot-unbootable:",
+		.cb = getvar_slot_unbootable,
+	}, {
+		.name = "slot-retry-count:",
+		.cb = getvar_slot_retry_count,
 	},
 };
 
@@ -1433,6 +1658,17 @@ static int getvar_all()
 					goto exit;
 			}
 
+		} else if ( (os_strcmp(getvar_dispatch[i].name, "has-slot:") == 0) ) {
+
+			len = os_sprintf(response, "INFO");
+			len += os_sprintf(response + len, "%s: ", getvar_dispatch[i].name);
+			if (has_boot_commander()) {
+				len += os_sprintf(response + len, "%s,%s", BOOT_SLOT_BOOT_PREFIX, BOOT_SLOT_SYSTEM_PREFIX);
+			}
+			res = fastboot_tx_write_str(response);
+			if (res < 0)
+				goto exit;
+
 		} else {
 			/*
 			 * The response format must be:
@@ -1456,6 +1692,7 @@ static int getvar_all()
 	 * means all the variables have been reported successfully.  The last
 	 * thing to do is to send OKAY to allow host to send in another
 	 * fastboot command. */
+
 	res = fastboot_tx_write_str("OKAY");
 
 exit:
@@ -1466,7 +1703,7 @@ static int cb_getvar(struct fastboot_info *info)
 {
 	int res;
 	int len;
-	char *cmd = (char *)info->cmd_buf;
+	char *cmd = (char *)(info->cmd_buf+(info->header?FB_HS_OVERHEAD:0));
 	char *cmd_var = NULL;
 	char response[RESPONSE_LEN];
 	unsigned int i;
@@ -1513,18 +1750,17 @@ static int cb_getvar(struct fastboot_info *info)
 	}
 
 	res = fastboot_tx_write_str(response);
-
 	return res;
 }
 
 static int cb_download(struct fastboot_info *info)
 {
 	int res;
-	char *cmd = (char *)info->cmd_buf;
+	char *cmd = (char *)(info->cmd_buf+(info->header?FB_HS_OVERHEAD:0));
 	char *cmd_var = NULL;
 	char *dummy;
 	char response[RESPONSE_LEN];
-	
+
 	os_strtok_r(cmd, ":", &cmd_var);
 
 	if (os_strlen(cmd_var) == 0) {
@@ -1542,6 +1778,9 @@ static int cb_download(struct fastboot_info *info)
 	/* Reset the bytes already downloaded to 0 to prepare image download
 	 * handler */
 	download_bytes = 0;
+	download_payload = 0;
+	download_overhead = 0;
+	chunk_header = 0;
 
 	os_printf("Starting download of %d bytes\n", download_size);
 
@@ -1569,7 +1808,7 @@ static int cb_download(struct fastboot_info *info)
 static int cb_flash(struct fastboot_info *info)
 {
 	int res;
-	char *cmd = (char *)info->cmd_buf;
+	char *cmd = (char *)(info->cmd_buf+(info->header?FB_HS_OVERHEAD:0));
 	char *cmd_var = NULL;
 	char response[RESPONSE_LEN];
 	char *devname = info->flash_devname;
@@ -1641,7 +1880,7 @@ static int cb_flash(struct fastboot_info *info)
 static int cb_erase(struct fastboot_info *info)
 {
 	int res;
-	char *cmd = (char *)info->cmd_buf;
+	char *cmd = (char *)(info->cmd_buf+(info->header?FB_HS_OVERHEAD:0));
 	char *cmd_var = NULL;
 	char response[RESPONSE_LEN];
 	char *devname = info->flash_devname;
@@ -1672,7 +1911,7 @@ static int cb_continue(struct fastboot_info *info)
 {
 	int res;
 	char response[RESPONSE_LEN];
-	
+
 	os_sprintf(response, "OKAY");
 	res = fastboot_tx_write_str(response);
 
@@ -1777,7 +2016,7 @@ static int oem_erase_data(struct fastboot_info *info)
 static int cb_oem(struct fastboot_info *info)
 {
 	int res;
-	char *cmd = (char *)info->cmd_buf;
+	char *cmd = (char *)(info->cmd_buf+(info->header?FB_HS_OVERHEAD:0));
 	char *cmd_var = NULL;
 	char response[RESPONSE_LEN];
 	int lock_state;
@@ -1853,6 +2092,73 @@ static int cb_oem(struct fastboot_info *info)
 	return res;
 }
 
+static int cb_active_slot(struct fastboot_info *info)
+{
+	int res;
+	char *cmd = (char *)(info->cmd_buf+(info->header?FB_HS_OVERHEAD:0));
+	char *cmd_var = NULL;
+	struct eio_boot eio;
+	int slot = -1;
+
+	os_strtok_r(cmd, ":", &cmd_var);
+
+	if (os_strlen(cmd_var) == 0) {
+		os_printf("Error: missing slot-suffix\n");
+		res = fastboot_tx_write_str("FAILmissing slot-suffix");
+		return res;
+	}
+
+	if (!get_boot_commander(&eio)) {
+		os_printf("Error: invalid A|B target\n");
+		res = fastboot_tx_write_str("FAILinvalid A|B target");
+		return res;
+	}
+
+	if (!os_strcmp(cmd_var, BOOT_SLOT_0_SUFFIX) && !os_strcmp(cmd_var, BOOT_SLOT_1_SUFFIX)) {
+		os_printf("Error: invalid slot-suffix\n");
+		res = fastboot_tx_write_str("FAILinvalid slot-suffix");
+		return res;
+	}
+
+	if (!os_strcmp(cmd_var, BOOT_SLOT_0_SUFFIX)) {
+		slot = 0;
+	} else if (!os_strcmp(cmd_var, BOOT_SLOT_1_SUFFIX)) {
+		slot = 1;
+	}
+	if (slot == -1) {
+		res = fastboot_tx_write_str("FAIL");
+		return res;
+	}
+
+	eio.current = slot;
+	eio.slot[slot].boot_fail = 0;
+	eio.slot[slot].boot_ok   = 0;
+	eio.slot[slot].boot_try  = 0;
+	if (!write_boot_commander(&eio)) {
+		os_printf("Error: failed setting slot-suffix\n");
+		res = fastboot_tx_write_str("FAILfailed setting slot-suffix");
+		return res;
+	}
+
+	res = fastboot_tx_write_str("OKAY");
+	return res;
+}
+
+static int cb_handshake(struct fastboot_info *info)
+{
+	int res;
+
+	if (info->handshake) {
+		info->header = 0;
+	}
+	/* we are in handsake mode, reply, then start accepting/sending headers
+	 * in the command stream. */
+   info->handshake = 1;
+	res = fastboot_tx_write_str("FB01");
+	info->header = 1;
+	return res;
+}
+
 /* Look-up table to handle Fastboot commands */
 struct cmd_dispatch {
 	char *cmd;
@@ -1865,13 +2171,13 @@ static const struct cmd_dispatch cmd_dispatch[] = {
 		.cb = cb_reboot,
 	}, {
 		.cmd = "getvar:",
-		.cb = cb_getvar,	
+		.cb = cb_getvar,
 	}, {
 		.cmd = "download:",
-		.cb = cb_download,	
+		.cb = cb_download,
 	}, {
 		.cmd = "boot",
-		.cb = cb_boot,	
+		.cb = cb_boot,
 	}, {
 		.cmd = "flash:",
 		.cb = cb_flash,
@@ -1887,6 +2193,12 @@ static const struct cmd_dispatch cmd_dispatch[] = {
 	}, {
 		.cmd = "oem",
 		.cb = cb_oem,
+	}, {
+		.cmd = "set_active",
+		.cb = cb_active_slot,
+	}, {
+		.cmd = FASTBOOT_HANDSHAKE,
+		.cb = cb_handshake,
 	},
 };
 
@@ -1894,7 +2206,7 @@ static const struct cmd_dispatch cmd_dispatch[] = {
 /* Fastboot command processor to call the appropriate callback (cb_*) func */
 int fastboot_rx_cmd_handler(void)
 {
-	char *cmdbuf = (char *)fb_info.cmd_buf;
+	char *cmdbuf = (char *)(fb_info.cmd_buf+(fb_info.header?FB_HS_OVERHEAD:0));
 	int (*func_cb)(struct fastboot_info *info) = NULL;
 	unsigned int i;
 	int res = BOLT_OK;
@@ -1903,12 +2215,12 @@ int fastboot_rx_cmd_handler(void)
 		if (!strcmp_l1(cmd_dispatch[i].cmd, cmdbuf)) {
 			func_cb = cmd_dispatch[i].cb;
 			break;
-		}		
+		}
 	}
 
 	if (!func_cb) {
 		os_printf("Error: unknown command: %s\n", cmdbuf);
-		res = fastboot_tx_write_str("FAILunknown command");		
+		res = fastboot_tx_write_str("FAILunknown command");
 	} else {
 		/* Default next transfer size to min transfer size, but the
 		 * callback function might override it in the case when we
@@ -1933,7 +2245,7 @@ int fastboot_rx_cmd_handler(void)
  * hung up the USB bus.*/
 static unsigned int dl_image_rx_bytes_expected(void)
 {
-	int rx_remain = download_size - download_bytes;
+	int rx_remain = download_size - download_payload;
 	if (rx_remain < 0)
 		return 0;
 	if (rx_remain > (int) fb_info.max_transfer_size)
@@ -1941,6 +2253,81 @@ static unsigned int dl_image_rx_bytes_expected(void)
 	if (rx_remain < (int) fb_info.min_transfer_size)
 		return fb_info.min_transfer_size;
 	return rx_remain;
+}
+
+static void	fastboot_rx_dl_read(const unsigned char *buffer,
+	unsigned int *buffer_consumed, unsigned int *buffer_size)
+{
+	unsigned int copy = 0;
+	unsigned int chunk_outstanding = chunk_size - chunk_received;
+
+	if (*buffer_size < chunk_outstanding) {
+		copy = *buffer_size;
+		*buffer_size = 0;
+	} else {
+		copy = chunk_outstanding;
+		*buffer_size -= copy;
+	}
+
+	os_memcpy((void *)FB_FLASH_STAGING_BUFFER + download_payload,
+		(uint8_t *)buffer+(*buffer_consumed), copy);
+
+	download_payload += copy;
+	chunk_received   += copy;
+	*buffer_consumed += copy;
+
+	if (chunk_received == chunk_size) {
+#if defined(FB_DBG_PRINT_TCP_CHUNKS)
+		os_printf("\nfilled-chunk:%lu bytes (%lu:%lu:%lu)",
+			chunk_size, download_payload, download_size, download_bytes);
+#endif
+		chunk_header   = 0;
+		chunk_size     = 0;
+		chunk_received = 0;
+	}
+}
+
+static void	fastboot_rx_dl_chunk(const unsigned char *buffer,
+	unsigned int *buffer_consumed, unsigned int *buffer_size)
+{
+	unsigned int header = 0;
+	unsigned int i;
+	uint64_t size = 0, current;
+
+	if (*buffer_size >= FB_HS_OVERHEAD-chunk_header) {
+		header = FB_HS_OVERHEAD-chunk_header;
+	} else {
+		header = *buffer_size;
+	}
+
+	if (header+chunk_header > FB_HS_OVERHEAD) {
+		header = FB_HS_OVERHEAD-chunk_header;
+	}
+
+	for (i = 0 ; i < header ; i++) {
+		current = (uint8_t)buffer[*buffer_consumed+i];
+		current <<= (56 - (i+chunk_header) * 8);
+		size += current;
+	}
+	chunk_size   += size;
+	chunk_header += header;
+
+	*buffer_consumed += header;
+	if (*buffer_size > header) {
+		*buffer_size -= header;
+	} else {
+		*buffer_size = 0;
+	}
+
+#if defined(FB_DBG_PRINT_TCP_CHUNKS)
+	os_printf("\ncurrent-chunk:%lu bytes (%lu:%s)",
+		chunk_size, chunk_header, (chunk_header==FB_HS_OVERHEAD)?"full":"partial");
+#endif
+
+	if (chunk_header == FB_HS_OVERHEAD) {
+		download_overhead += FB_HS_OVERHEAD;
+		chunk_received = 0;
+	}
 }
 
 /* Function to save download image to local staging buffer */
@@ -1953,26 +2340,40 @@ static int fastboot_rx_dl_image_handler(void)
 	const unsigned char *buffer = fb_info.cmd_buf;
 	unsigned int buffer_size = fb_info.transport_read_bytes;
 	unsigned int pre_dot_num, now_dot_num;
+	unsigned int buffer_consumed = 0;
 
-	if (buffer_size < transfer_size)
+	if (transfer_size > buffer_size)
 		transfer_size = buffer_size;
 
-	os_memcpy((void *)FB_FLASH_STAGING_BUFFER + download_bytes,
-			buffer, transfer_size);
-
 	pre_dot_num = download_bytes / BYTES_PER_DOT;
-	download_bytes += transfer_size;
-	now_dot_num = download_bytes / BYTES_PER_DOT;
 
+	if (fb_info.transport_mode != FB_TRANSPORT_TCP) {
+		os_memcpy((void *)FB_FLASH_STAGING_BUFFER + download_payload,
+				(uint8_t *)buffer, transfer_size);
+		download_bytes   += transfer_size;
+		download_payload += transfer_size;
+	} else {
+		download_bytes   += transfer_size;
+		while (buffer_size) {
+			/* read the chunk size if none set fully. */
+			if (chunk_header < FB_HS_OVERHEAD) {
+				fastboot_rx_dl_chunk(buffer, &buffer_consumed, &buffer_size);
+			}
+			/* read the data from the chunk. */
+			fastboot_rx_dl_read(buffer, &buffer_consumed, &buffer_size);
+		}
+	}
+
+	now_dot_num = download_bytes / BYTES_PER_DOT;
 	if (pre_dot_num != now_dot_num) {
 		os_printf(".");
 		if (!(now_dot_num % 64))
 			os_printf("\n");
 	}
-
 	/* Check if transfer is done */
-	if (download_bytes >= download_size) {
+	if (download_payload >= download_size) {
 		download_size = 0;
+		download_overhead = 0;
 		fb_info.cmd_buf_size = fb_info.min_transfer_size;
 		fb_info.cmd_state = FB_STATE_CMD_PROC;
 		os_sprintf(response, "OKAY");
@@ -1997,18 +2398,33 @@ static int fastboot_rx_dl_image_handler(void)
 static int fastboot_tx_write_str(const char *buffer)
 {
 	int res = BOLT_OK;
+	char with_header[RESPONSE_HDR+RESPONSE_LEN];
+	uint32_t size = os_strlen(buffer);
+	int i;
 
-	/* +1 for bytes to transfer to account for NULL terminated char */
+	if (fb_info.header) {
+		for (i = 0; i < RESPONSE_HDR ; i++) {
+			with_header[i] = size >> (56 - i * 8);
+		}
+		DLOG("fb-out-hdr: %01x%01x%01x%01x%01x%01x%01x%01x\n",
+				with_header[0], with_header[1], with_header[2], with_header[3],
+				with_header[4], with_header[5], with_header[6], with_header[7]);
+	}
+
+	os_sprintf(with_header+(fb_info.header?RESPONSE_HDR:0), "%s", buffer);
+
 	res = bolt_writeblk(fb_info.transport_dev_fd,
 				0x0,
-				(unsigned char *)buffer,
-				os_strlen(buffer)+1);
+				(unsigned char *)with_header,
+				/* when hand-shaking used: add response header, no null termination.
+				 * otherwise: add the null termination. */
+				size+(fb_info.header?RESPONSE_HDR:0)+(fb_info.handshake?0:1));
+	DLOG("fb-out-cmd (%u), res %d: %s\n", size, res, buffer);
 
 	/* Handle error here instead of passing up to caller by reporting
 	 * the error. But let the fastboot-polling loop going */
 	if (res < 0)
 		os_printf("Error: failed to send response to host (%d)\n", res);
-
 	return res;
 }
 
@@ -2017,6 +2433,7 @@ static int fastboot_tx_write_str(const char *buffer)
 static int fastboot_poll(void)
 {
 	int res;
+	int skip = 0;
 
 	/* If no data from transport layer, just get out */
 	if (bolt_inpstat(fb_info.transport_dev_fd) == 0)
@@ -2048,8 +2465,31 @@ static int fastboot_poll(void)
 		if (res < (int)fb_info.cmd_buf_size)
 			fb_info.cmd_buf[res] = '\0';
 
+		/* tcp mode handshake can be received anytime to confirm
+		 * mode and sync, so look for it. */
+		if (fb_info.transport_mode == FB_TRANSPORT_TCP) {
+			if (os_strncmp((const char *)fb_info.cmd_buf,
+								(const char *)FASTBOOT_HANDSHAKE,
+								FASTBOOT_HANDSHAKE_SIZE) == 0) {
+				fb_info.header = 0;
+			}
+		}
+
+		if (fb_info.header)
+			skip = FB_HS_OVERHEAD;
+
 		/* If a command is received, process the command */
-		DLOG("fb-in-cmd: %s\n", fb_info.cmd_buf);
+		if (skip) {
+			int i;
+			uint64_t current, size = 0;
+			for (i = 0 ; i < skip ; i++) {
+				current = (uint8_t)fb_info.cmd_buf[i];
+				current <<= (56 - i * 8);
+				size += current;
+			}
+			DLOG("fb-in-hdr: %llu\n", size);
+		}
+		DLOG("fb-in-cmd (%d): %s\n", res, fb_info.cmd_buf+skip);
 
 		res = fastboot_rx_cmd_handler();
 	}

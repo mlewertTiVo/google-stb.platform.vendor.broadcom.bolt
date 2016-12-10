@@ -72,13 +72,6 @@ void *memset(void *s, int c, size_t n)
 }
 
 
-void __noreturn die(char *msg)
-{
-	__puts("FATAL ERROR: ");
-	puts(msg);
-	loop_forever();
-}
-
 void __puts(const char *s)
 {
 	while (*s) {
@@ -88,12 +81,16 @@ void __puts(const char *s)
 	}
 }
 
+void crlf(void)
+{
+	putchar('\r');
+	putchar('\n');
+}
 
 int puts(const char *s)
 {
 	__puts(s);
-	putchar('\r');
-	putchar('\n');
+	crlf();
 	return 0;
 }
 
@@ -132,6 +129,20 @@ static char *_itoa(int n, char s[])
 }
 
 
+void report_hex(const char *s, uint32_t h)
+{
+	if (s[0] == '@')
+		__puts(&s[1]);
+	else
+		__puts(s);
+
+	writehex(h);
+
+	if (s[0] != '@')
+		crlf();
+}
+
+
 char *itoa(int n)
 {
 	static char ret[11];
@@ -139,11 +150,12 @@ char *itoa(int n)
 	return ret;
 }
 
+
 #if CFG_STACK_PROTECT_FSBL
 uintptr_t __stack_chk_guard = FSBL_STACK_CHECK_VAL;
 
 void __noreturn __stack_chk_fail(void)
 {
-	die("stack check");
+	sys_die(DIE_STACK_CHECK_FAIL, "stack check");
 }
 #endif

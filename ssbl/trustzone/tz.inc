@@ -13,6 +13,7 @@ SSBL_S += \
 	ssbl/trustzone/tz_dt.c \
 	ssbl/trustzone/tz_boot.c \
 	ssbl/trustzone/tz_config.c \
+	ssbl/trustzone/tz_smm.c \
 	$(GEN)/dtc/libfdt/fdt_empty_tree.c
 
 # TZ files limited to this dir as much as is possible

@@ -70,6 +70,7 @@
  *  params  w0/x0: OEM_FUNC_EXEC64
  *          w1/x1: aarch64 Executable (Linux) address
  *          w2/x2: Optional DTB address
+ *          w3/x3: unused
  */
 #define OEM_FUNC_EXEC64			0x83000001
 
@@ -84,6 +85,7 @@
  *  params  w0/x0: OEM_FUNC_EXEC32
  *          w1/x1: aarch32 Executable (Linux) address
  *          w2/x2: Optional DTB address
+ *          w3/x3: unused
  */
 #define OEM_FUNC_EXEC32			0x83000002
 
@@ -142,6 +144,66 @@
  *          w3/x3: unused
  */
 #define OEM_PSCI_RAC_ENABLE		0x83000006
+
+/* OEM_FUNC_EXEC64_EL3
+ *
+ * SMC call to switch to aarch64 EL3, then run SM setup code.
+ * Note: Upper 32 bits of the parameters are masked off
+ * if called from aarch32. Format is for smc32 calling
+ * convention only.
+ *
+ *  params  w0/x0: SMM_FUNC_EXEC64
+ *          w1/x1: aarch64 Executable address
+ *          w2/x2: Optional DTB address
+ *          w3/x3: unused
+ */
+#define OEM_FUNC_EXEC64_EL3		0x83000007
+
+/* OEM_FUNC_S3_RESUME
+ *
+ * SMC call to resume Linux or other OS from an S3 sleep.
+ * Note: Must only be called from aarch32 SVC mode.
+ *
+ * Returns	Does not return.
+ *
+ *  params  w0/x0: OEM_FUNC_S3_RESUME
+ *          w1/x1: unused
+ *          w2/x2: unused
+ *          w3/x3: unused
+ */
+#define OEM_FUNC_S3_RESUME		0x83000008
+
+/* OEM_FUNC_LEGACY_GIC_BYPASS
+ *
+ * SMC call to bypass the GIC.
+ * See:
+ *  ARM Generic Interrupt Controller Architecture version 2.0
+ *  Architecture Specification, ARM IHI 0048B.b (ID072613).
+ *  Section 2.2.3.1 - Interrupt signal bypass, and GICv2 bypass disable.
+ *
+ * The bypass is required for BSU apps (µC/OS-III) which don't init the GIC
+ * and is negated (GIC routing re-enabled) anytime one of the OEM_FUNC_EXEC
+ * calls are made. Note that PSCI_CPU_ON will only enable portions of the
+ * GIC relevant to secondary cores, i.e. core #0 must be the first up to fully
+ * init the GIC. This all applies to 64 bit boostrap mode only as 32 bit
+ * does not touch the GIC.
+ *
+ * Returns	Always returns PSCI_SUCCESS.
+ *
+ *  params  w0/x0: unused
+ *          w1/x1: unused
+ *          w2/x2: unused
+ *          w3/x3: unused
+ */
+#define OEM_FUNC_LEGACY_GIC_BYPASS	0x83000009
+
+
+/*     u32 Function ID
+ *     u64 load addr for BL32 or BL33
+ *     u32 unused
+ *     u32 load flags (secure vs. non-secure)
+ */
+#define OEM_SMM_SET_PARMS		0x3b000000
 
 
 /* ------------------------------------------
@@ -242,6 +304,10 @@
  */
 #define PSCI_SYSTEM_RESET		0x84000009
 
+
+/* ------------------------------------------
+ *     PSCI v1.0 (from Issue 'C' v1.0 docs)
+ * ------------------------------------------ */
 
 /*     u32 Function ID
  *     u32 psci_func_id

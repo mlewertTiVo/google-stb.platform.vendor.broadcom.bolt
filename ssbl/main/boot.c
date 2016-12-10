@@ -204,7 +204,9 @@ int bolt_go(bolt_loadargs_t *la)
 	if (!(la->la_flags & LOADFLG_DIRECT_CALL))
 		return psci_boot(la->la_flags, la->la_entrypt, p.dt_address);
 #endif
-	bolt_set_aon_bootmode(0); /* Used for S3 to say how we first booted. */
+	/* Used for S3 to say how we first booted. */
+	bolt_set_aon_bootmode(0);
+
 	xprintf("32 bit direct boot...\n");
 	bolt_start(la->la_entrypt, 0xffffffff,
 		(unsigned int)p.dt_address, 0);
@@ -457,5 +459,14 @@ out:
 void bolt_set_aon_bootmode(unsigned long flags)
 {
 	AON_REG(AON_REG_MAGIC_FLAGS) = flags;
+#ifdef STUB64_START
+	/*
+	 * Before we boot Linux save where we put the PSCI code blob, as on
+	 * S3 wake the FSBL can recover this value. This value is what SSBL
+	 * was built with and may not be the same as what FSBL passed into
+	 * us, i.e. SSBL gets to decide where PSCI should go.
+	 */
+	AON_REG(AON_REG_PSCI_BASE) = PSCI_BASE;
+#endif
 	dmb();
 }

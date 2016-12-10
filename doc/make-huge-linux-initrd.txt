@@ -56,7 +56,7 @@ happens to be physical address 0x0000_8000 due to the 1:1 mapping set up by BOLT
 The Device Tree Blob (DTB) is placed at approximately 117MB (0x0751_f000),
 which means that the total size of a zImage and the resulting decompressed
 Image must not exceed 112MB.  The reason that it requires the sum of size of
-the compressed and uncompressed image is that the linux decompressor process
+the compressed and uncompressed image is that the Linux decompressor process
 is:
 
 1. compressed image is loaded at 0x8000
@@ -161,7 +161,7 @@ have to cut those allocations and refactor your application memory usage.
 
 * Know where things are and where they will eventually end up. You might get strange
 failures because you're decompressing Linux over an initrd, or loading an initrd over
-the BOLT code, or Linux overwriting the Devicetree blob (DTB) Linux needs.
+the BOLT code, or Linux overwriting the Device Tree blob (DTB) Linux needs.
 
 IMPORTANT: Storing a huge initrd or initramfs in nand flash is a REALLY BAD IDEA.
 Use a proper nand aware filesystem to prevent the eventual and inevitable failure.
@@ -293,7 +293,7 @@ The FSBL in BOLT runs from SRAM and is fine, the SSBL has
 to be put in a place where its not overwritten by loading
 either the zImage or the initrd.ex2. In this example we
 relocate its start to a ~624MiB (0x26ffc000) offset. This
-also takes care of the Devicetree as its in the BOLT heap
+also takes care of the Device Tree as its in the BOLT heap
 and beyond the new starting address.
 
 [source,shell]
@@ -464,7 +464,7 @@ Troubleshooting
 
 If your kernel gets a very early failure or no output at all check that the
 BOLT SSBL is out of harms way (see <<ref1, Put BOLT out of harms way>>) as
-either the SSBL code or the Devicetree data may be getting overwritten by
+either the SSBL code or the Device Tree data may be getting overwritten by
 the loaded kernel, initrd or during the decompression stage of the kernel
 startup sequence.
 

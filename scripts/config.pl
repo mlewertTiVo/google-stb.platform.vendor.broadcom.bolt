@@ -28,7 +28,7 @@ my $P = basename $0;
 
 my $debug = 2;
 
-use constant THIS_VERSION => "1.36";
+use constant THIS_VERSION => "1.37";
 
 my $_genmarker = " AUTOMATICALLY GENERATED - DO NOT EDIT ";
 
@@ -105,7 +105,8 @@ my @configs = (
 	       "SYSINIT",
 	       "SYSTEMPORT",
                "TCP",
-	       "TRUSTZONE",
+	       "TRUSTZONE_CMD",
+		   "TRUSTZONE_MON",
 	       "UI",
 	       "UNCACHED",
 	       "USB",
@@ -426,7 +427,6 @@ sub new($$) {
 package Avs;
 sub new($$) {
 	my ($class, $s) = @_;
-	$s->{domains} = 2 if !defined($s->{domains});
 	bless $s, $class;
 	return $s;
 }
@@ -625,7 +625,6 @@ use Storable qw/freeze thaw dclone/;
 sub new($$) {
 	my ($class, $s) = (shift, {});
 	$s->{avs} = [];
-	$s->{dvfs} = [];
 	$s->{sdio} = [];
 	$s->{sdio_pinsel} = undef;
 	$s->{board_id} = undef;
@@ -699,15 +698,6 @@ sub add($$$) {
 			}
 		}
 		push @{$s->{avs}}, $part
-			if (!$found);
-	} elsif ($item eq 'dvfs') {
-		for $r (@{$s->{dvfs}}) {
-			if (defined($r->{mode})) {
-				$found = $r = $part;
-				last;
-			}
-		}
-		push @{$s->{dvfs}}, $part
 			if (!$found);
 	} elsif ($item eq 'nandshape') {
 		push @{$s->{nandshape}}, $part;
@@ -890,6 +880,7 @@ sub get_bchp_info($) {
 		'bchp_switch_reg.h',
 		'bchp_switch_fcb.h',
 		'bchp_memc_arb_?.h',
+		'bchp_memc_gen_?.h',
 		'bchp_memc_l2_0_?.h',
 		'bchp_memc_l2_1_?.h',
 		'bchp_memc_l2_2_?.h',
@@ -1506,36 +1497,59 @@ sub cmd_avs($) {
 	cfg_error("Incorrect avs rvalue. Only enable/disable supported.")
 		if(($enable ne "enable") && ($enable ne "disable"));
 
-	my $o = check_opts($f, [qw//], [qw/domains/]); # returns a hash
-	cfg_error("option for domains must be 1 or 2")
-		if (defined($o->{domains}) && $o->{domains} !~ /^[1 2]$/i);
+	my $o = check_opts($f, [qw//], [qw/domains mode pmap pstate/]);
+
+	if (defined($o->{mode})) {
+		if($o->{mode} !~ /^avs|dfs|dvfs/i) {
+			cfg_error("option for mode must be avs, dfs or dvfs");
+		}
+	}
+	else {
+		$o->{mode} = "avs";
+	}
+
+	if (defined($o->{domains})) {
+		if($o->{domains} !~ /^[1 2]$/i){
+			cfg_error("option for domains must be 1 or 2");
+		}
+		elsif(($o->{domains} == 1) &&
+			($o->{mode} =~ /^dvfs/i) &&
+			($enable eq "enable")){
+			cfg_error("Only avs and dfs mode supported when domains is 1");
+		}
+	}
+	else {
+		$o->{domains} = 2;
+	}
+
+	if (defined($o->{pmap})){
+		# TODO: replace 30 with 'PMapMax' of include/${family}/pmap.h
+		if ($o->{pmap} < 0 || $o->{pmap} > 30) {
+			cfg_error("option for pmap must be [0..30]");
+		}
+	}
+	else {
+		$o->{pmap} = 0;
+	}
+
+	if (defined($o->{pstate})){
+		if ($o->{pstate} !~ /^[0-4]$/i) {
+			cfg_error("option for pstate must be 0, 1, 2, 3 or 4");
+		}
+	}
+	else {
+		$o->{pstate} = 0;
+	}
 
 	if($enable eq "enable"){
 		$o->{$enable} = 1;
 	}
 	elsif($enable eq "disable"){
 		$o->{$enable} = 0;
+		$o->{mode} = "avs";
 	}
 
 	$Current->add('avs', Avs->new($o));
-}
-
-sub cmd_dvfs($) {
-	   my ($f) = @_;
-
-	   my $cmd = join(' ', @$f);
-
-	   shift @$f; # drop 'dvfs'
-	   my $o = check_opts($f, [qw/mode pmap pstate/], []);
-
-	   cfg_error("option for mode must be avs, dfs, dvs or dvfs")
-		if (defined($o->{mode}) && $o->{mode} !~ /^avs|dfs|dvfs$/i);
-	   cfg_error("option for pmap must be 0, 1, 2, 3 or 4")
-		if (defined($o->{pmap}) && $o->{pmap} !~ /^[0-4]$/i);
-	   cfg_error("option for pstate must be 0, 1, 2, 3 or 4")
-		if (defined($o->{pstate}) && $o->{pstate} !~ /^[0-4]$/i);
-
-	   $Current->add('dvfs', Dvfs->new($o));
 }
 
 sub cmd_sdio($) {
@@ -1727,8 +1741,9 @@ sub cmd_usb_sub($$) {
 		if (defined($o->{ipp}) && $o->{ipp} !~ /^[012]$/i);
 	cfg_error('option for ioc must be 0 or 1')
 		if (defined($o->{ioc}) && $o->{ioc} !~ /^[01]$/i);
-	cfg_error('option for bdc must be on, off, or dual')
-		if (defined($o->{bdc}) && $o->{bdc} !~ /^on|off|dual$/i);
+	cfg_error('option for bdc must be off, on, dual or typec_pd')
+		if (defined($o->{bdc}) && $o->{bdc} !~
+		    /^(off|on|dual|typec_pd)$/i);
 
 	$rh = $rh->{rh_defines};
 	my $node = sprintf('usb%s@%08x', $new_style ? "-phy" : "", $usb_start);
@@ -1751,7 +1766,7 @@ sub cmd_usb_sub($$) {
 		subcmd_dt_ops('prop', $args)
 			if ($o->{bdc});
 
-		if ($o->{bdc} && ($o->{bdc} =~ /^on|dual$/)) {
+		if ($o->{bdc} && !($o->{bdc} =~ /^off$/)) {
 			my $postfix = '';
 			my $root = "/rdb";
 			if ($new_style) {
@@ -1766,14 +1781,20 @@ sub cmd_usb_sub($$) {
 				(undef, $rh, $n, {}, "aon_pm_l2");
 			my $node_bdc = sprintf "bdc%s@%s", $postfix,
 				$ra_usb_info->[$i]->{bdc}->[0];
-			my $node_ehci = sprintf "ehci%s@%s", $postfix,
-				$ra_usb_info->[$i]->{ehci}->[1];
-			my $node_ohci = sprintf "ohci%s@%s", $postfix,
-				$ra_usb_info->[$i]->{ohci}->[1];
 
 			if ($o->{bdc} eq 'on') {
-				subcmd_dt_ops('cull', ['-root' => $root, '-node' => $node_ehci, ]);
-				subcmd_dt_ops('cull', ['-root' => $root, '-node' => $node_ohci, ]);
+			    my $node_ehci = sprintf "ehci%s@%s", $postfix,
+				$ra_usb_info->[$i]->{ehci}->[1];
+			    my $node_ohci = sprintf "ohci%s@%s", $postfix,
+				$ra_usb_info->[$i]->{ohci}->[1];
+			    subcmd_dt_ops('prop', ['-root' => $root,
+						   '-node' => $node_ehci,
+						   '-prop' => 'status',
+						   '-string' => "disabled",]);
+			    subcmd_dt_ops('prop', ['-root' => $root,
+						   '-node' => $node_ohci,
+						   '-prop' => 'status',
+						   '-string' => "disabled",]);
 			} 
 			subcmd_dt_ops('prop', ['-root' => $root, '-node' => $node_bdc,
 				'-prop' => 'status', '-string' => "okay",]);
@@ -1894,7 +1915,6 @@ my %headings = (
 
 my %commands = (
 		'avs' =>	\&cmd_avs,
-		'dvfs' =>   \&cmd_dvfs,
 		'bid' =>	\&cmd_board_id,
 		'bsc' =>	\&cmd_bsc,
 		'cmdlevel' =>	\&cmd_cmdlevel,
@@ -2129,6 +2149,20 @@ sub is_mcb_available($$) {
 	}
 
 	return 0;
+}
+
+sub check_armv8_mon() {
+	my $arm_rev = find_cset("ARM_V8");
+	my $tzmon = get_config_val("TRUSTZONE_MON");
+	my $tzcmd = get_config_val("TRUSTZONE_CMD");
+	if (!defined $arm_rev and uc($tzmon) eq "ON") {
+		cfg_error("config TRUSTZONE_MON can only be used in " .
+		"64 bit mode");
+	}
+	if (defined $arm_rev and uc($tzmon) eq "OFF" and uc($tzcmd) eq "ON") {
+		cfg_error("config TRUSTZONE_MON must be set to use " .
+		"config TRUSTZONE_CMD in 64bit mode");
+	}
 }
 
 sub gen_ddr($) {
@@ -2501,38 +2535,29 @@ sub gen_numddr($) {
 	return $text;
 }
 
-sub gen_avs($) {
+sub gen_avs_board_types($) {
 	my ($avs) = @_;
 	my $text = "\t\t.avs\t=\t";
 	my $value = 0;
 
 	for my $b (@$avs) {
+		$value = ($b->{domains} << 1) | ($b->{pmap} << 3);
 		if($b->{enable}) {
-			$value = ((0x1 << 4) | $b->{domains});
-		}
-		else {
-			$value = $b->{domains};
+			$value |= 1;
 		}
 		$text .= "$value,\n";
 	}
 	return $text;
 }
 
-sub gen_dvfs($) {
+sub gen_avs_board_params($) {
 	my ($dvfs) = @_;
 	my $text = "\t\t.dvfs = {\n";
-	my $flag = 0;
 
 	for my $m (@$dvfs) {
 		$text .= "\t\t\t.mode = " . $m->{mode} . "_mode_e,\n";
 		$text .= "\t\t\t.pmap = " . $m->{pmap} . ",\n";
 		$text .= "\t\t\t.pstate  = " . $m->{pstate} . ",\n";
-		$flag = 1;
-	}
-	if($flag == 0){
-	    $text .= "\t\t\t.mode = "."max_mode_e,\n";
-	    $text .= "\t\t\t.pmap = "."2,\n";
-	    $text .= "\t\t\t.pstate  = "."0,\n";
 	}
 	return $text . "\t\t},\n";
 }
@@ -3084,6 +3109,8 @@ sub processed_dt_ops() {
 }
 
 sub processed_board_types() {
+	my $domains = 0;
+	my $pmap = 0;
 	my $text = "static const struct board_type __maybe_unused "
 		. $genprefix . "board_types[] = {\n";
 	for my $b (get_valid_boards()) {
@@ -3093,11 +3120,22 @@ sub processed_board_types() {
 		$text .= gen_board_prid($b);
 		$text .= gen_numddr($b);
 		$text .= gen_ddr($b->{ddr});
-		$text .= gen_avs($b->{avs});
+		$text .= gen_avs_board_types($b->{avs});
 		$text .= gen_memsys($b);
 		$text .= "},\n";
 	}
 	$text .= "};\n";
+
+	if (defined $arg_single_board) {
+		my $sb = get_valid_boards();
+		$pmap = $sb->{avs}[0]->{pmap};
+		$domains = $sb->{avs}[0]->{domains};
+		$text .= "\n#define PMAP_NUMBER ";
+		$text .= sprintf("0x%02x", $pmap);
+		$text .= "\n#define NUM_POWER_DOMAINS ";
+		$text .= sprintf("0x%02x", $domains);
+		$text .= "\n\n";
+	}
 	return $text;
 }
 
@@ -3179,7 +3217,7 @@ sub processed_board_params() {
 		$text .= gen_rtsdefault($b->{rtsdefault});
 		$text .= gen_enet($b->{enet});
 		$text .= gen_moca($b->{moca});
-		$text .= gen_dvfs($b->{dvfs});
+		$text .= gen_avs_board_params($b->{avs});
 		$text .= gen_gpio_key($b->{gpio_key});
 		$text .= gen_bt_rfkill_gpio($b->{bt_rfkill_gpio});
 		$text .= gen_pinmux_fn($b->{board});
@@ -4242,6 +4280,7 @@ sub main()
 		show_flash_maps();
 	}
 
+	check_armv8_mon();
 	# ---------- START post-process ----------
 
 	my $D = $arg_gen_dir . "/" . $Family->{familyname};

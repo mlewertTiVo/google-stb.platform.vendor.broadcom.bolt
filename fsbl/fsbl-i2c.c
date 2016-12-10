@@ -56,8 +56,7 @@ static uint32_t get_i2c_id(volatile bsc_regs_t *i2c)
 	volatile uint32_t v;
 	signed int count = 10; /* ~10msec */
 
-	__puts("I2C @ ");
-	writehex((uint32_t)i2c);
+	report_hex("@I2C @ ", (uint32_t)i2c);
 
 	/* make sure its off
 	*/
@@ -115,7 +114,7 @@ static uint32_t get_i2c_id(volatile bsc_regs_t *i2c)
 		writehex(v);
 	}
 
-	puts("");
+	crlf();
 	return v;
 }
 

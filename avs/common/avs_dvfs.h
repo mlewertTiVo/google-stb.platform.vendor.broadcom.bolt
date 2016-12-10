@@ -76,7 +76,7 @@ enum AVS_ERROR avs_set_state(uint32_t state);
 /* Use this to get the gurrent state (0-4) */
 enum AVS_ERROR avs_get_state(uint32_t *state);
 
-void dvfs_init_board_pmap(void);
+void dvfs_init_board_pmap(int pmap_id);
 
 #ifdef __cplusplus
 }

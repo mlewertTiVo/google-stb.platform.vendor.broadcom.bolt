@@ -43,7 +43,7 @@
 
 #include "common.h"
 #include "ssbl-sec.h"
-#include "avs_bsu.h" /* for avs_ssbl_init() */
+#include "avs_bsu.h" /* for avs_info_print() */
 
 #define WANT_OTP_DECODE 1 /* SWBOLT-263 */
 #include "otp_status.h"
@@ -231,7 +231,6 @@ static void say_hello(int blink)
 	uint32_t prod, fam;
 	unsigned int i;
 	struct board_type *b = board_thisboard();
-	uint32_t sysif_mhz;
 
 	xprintf("\n");
 	for (i = 0; i < ARRAY_SIZE(logo); i++) {
@@ -263,18 +262,6 @@ static void say_hello(int blink)
 
 	print_otp();
 
-	xprintf("CPU: %dx %s [%08x] %d MHz\n",
-		arch_get_num_processors(),
-		arch_get_cpu_bootname(),
-		arch_get_midr(),
-		get_cpu_freq_mhz());
-
-	xprintf("SCB: %d MHz\n", (uint32_t)arch_get_scb_freq_hz()/1000000);
-	sysif_mhz = (uint32_t)arch_get_sysif_freq_hz() / 1000000;
-	if (sysif_mhz != 0)
-		xprintf("SYSIF: %d MHz\n", sysif_mhz);
-	board_print_ddrspeed();
-
 	/* SWBOLT-99
 	*/
 #ifndef SECURE_BOOT
@@ -293,6 +280,23 @@ static void say_hello(int blink)
 				chip_id_without_rev(prid_reg));
 		}
 	}
+}
+
+static void print_clock_info(void)
+{
+	uint32_t sysif_mhz;
+
+	xprintf("CPU: %dx %s [%08x] %d MHz\n",
+		arch_get_num_processors(),
+		arch_get_cpu_bootname(),
+		arch_get_midr(),
+		get_cpu_freq_mhz());
+
+	xprintf("SCB: %d MHz\n", (uint32_t)arch_get_scb_freq_hz()/1000000);
+	sysif_mhz = (uint32_t)arch_get_sysif_freq_hz() / 1000000;
+	if (sysif_mhz != 0)
+		xprintf("SYSIF: %d MHz\n", sysif_mhz);
+	board_print_ddrspeed();
 }
 
 /*  *********************************************************************
@@ -317,6 +321,12 @@ void bolt_start64(unsigned long ept, unsigned long param1,
 				unsigned long param2, unsigned long param3)
 {
 	bolt_launch64(ept, param1, param2, param3);
+}
+
+void bolt_start64_el3(unsigned long ept, unsigned long param1,
+				unsigned long param2, unsigned long param3)
+{
+	bolt_launch64_el3(ept, param1, param2, param3);
 }
 
 void bolt_start32(unsigned long ept, unsigned long param1,
@@ -620,20 +630,11 @@ void bolt_main(int a, int b)
 #endif
 	sflags = bolt_autostart_check();
 
-	/*
-	 * Set up AVS features, must be done
-	 * before we do e.g. a temperature park
-	 * action or monitoring.
-	 */
-	avs_ssbl_init();
-
-#if defined(DVFS_SUPPPORT)
-	dvfs_init_board_pmap();
-#endif
 	board_device_init();
 #if (CFG_CMD_LEVEL >= 5)
 	bolt_config_info(1);
 #endif
+	print_clock_info(); /* CPU, SCB, DDR,,, */
 	bolt_setup_default_env();
 
 	/* USB uses DT, so do setup before board_final_init() */

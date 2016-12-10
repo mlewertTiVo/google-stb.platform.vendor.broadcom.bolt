@@ -37,7 +37,7 @@
 /*#define _FATFS_DEBUG_*/
 
 /*
- * Bios Parameter Block offsets and values
+ * Bios Parameter Block sector offsets, and values.
  */
 
 #define BPB_JMPINSTR		0x00
@@ -59,6 +59,7 @@
 #define BPB_SYSTEMID		54
 #define BPB_MEDIADESCRIPTOR	21
 #define BPB_SIGNATURE		38
+#define BPB_EXTENDED_SIGNATURE	66
 #define BPB_SIGNATURE_VALUE1	0x28
 #define BPB_SIGNATURE_VALUE2	0x29
 
@@ -554,7 +555,7 @@ static int fat_findpart(fatfs_t *fatfs)
 		 * Found a valid primary FAT partition via GPT. Hop over to the
 		 * appropriate boot sector
 		 */
-		xprintf("fatfs (gpt): Found a FAT partition @ lba %xh\n",
+		xprintf("fatfs (gpt): Found a WIN partition @ lba %xh\n",
 				fatfs->fat_partstart);
 
 		is_gpt = 1;
@@ -677,9 +678,15 @@ static int fat_readbpb(fatfs_t *fatfs)
 	fatfs->fat_bs.bs_fatsize16 = READWORD(buffer, BPB_FATSIZE16);
 	fatfs->fat_32bit = 0;
 
-	/* FAT32 entries */
+	/* FAT32 entries? */
 	if (fatfs->fat_bs.bs_fatsize16 == 0) {
-		/* Assume FAT32 */
+		uint8_t es = READBYTE(buffer, BPB_EXTENDED_SIGNATURE);
+
+		/* Check for FAT32 extended signatures. */
+		if ((es != BPB_SIGNATURE_VALUE1) &&
+				(es != BPB_SIGNATURE_VALUE2))
+			goto not_fat32;
+
 		fatfs->fat_bs.bs_fat32length =
 		    READWORD32(buffer, BPB_FATSIZE32);
 		fatfs->fat_bs.bs_flags = READWORD(buffer, BPB_EXTFLAGS);
@@ -692,7 +699,9 @@ static int fat_readbpb(fatfs_t *fatfs)
 		fatfs->fat_32bit = 1;
 		fatfs->fat_bpb.bpb_sectorsperfat = fatfs->fat_bs.bs_fat32length;
 	}
+not_fat32:
 #endif
+
 #ifdef _FATFS_DEBUG_
 	fat_dumpbpb(&(fatfs->fat_bpb));
 #if CFG_FAT32FS

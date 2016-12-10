@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -39,8 +37,7 @@ struct board_type *get_tmp_board(void)
 
 static void print_select(void)
 {
-	puts("");
-	__puts("Select board type: ");
+	__puts(CRLF"Select board type: ");
 }
 
 
@@ -51,12 +48,12 @@ static void using_board(struct fsbl_info *info)
 	char *dst, *src;
 #endif
 	puts("");
-	if (info->n_boards == 1) {
+	if (FSBLINFO_N_BOARDS(info->n_boards) == 1) {
 			puts("single board");
 	} else {
 		__puts("using board #");
 		putchar(board_idx_to_char(info->board_idx));
-		puts("");
+		crlf();
 	}
 
 	/* Cache current board so it survives shmoo as
@@ -88,8 +85,7 @@ static void using_board(struct fsbl_info *info)
 			tmp_board.ddr[i].tag = dst;
 #if (CFG_CMD_LEVEL >= 5)
 			__puts("TAG: ");
-			__puts(dst);
-			puts("");
+			puts(dst);
 #endif
 		}
 	}
@@ -125,12 +121,12 @@ struct board_nvm_info *nvm_load(void)
 
 	if (load_from_flash(dst, SHMOO_TEXT_OFFS,
 			sizeof(struct board_nvm_info)) < 0)
-		die("nvm load");
+		sys_die(DIE_BOARD_NVM_LOAD, "nvm load");
 
 	s = (struct board_nvm_info *)dst;
 #endif
 	if (s->magic != BOARD_NVM_MAGIC)
-		die("nvm magic");
+		sys_die(DIE_BOARD_NVM_MAGIC, "nvm magic");
 
 	return s;
 }
@@ -140,22 +136,29 @@ struct board_nvm_info *nvm_load(void)
 void load_boards(struct fsbl_info *info, uint32_t dst)
 {
 #ifdef SECURE_BOOT
-	/* For secure boot the board info is in FSBL instead of
-	the loadable BOARDS section of BOLT. */
-	info->n_boards = ARRAY_SIZE(board_types);
+	/*
+	 * For secure boot the board info is in FSBL instead of
+	 * the loadable BOARDS section of BOLT.
+	 */
+	info->n_boards = ARRAY_SIZE(board_types) |
+		(FSBLINFO_CURRENT_VERSION << FSBLINFO_VERSION_SHIFT);
+
 	info->board_types = (struct board_type *)board_types;
 #else
 	const struct boards_nvm_list *b = (const struct boards_nvm_list *)dst;
 
 	if (load_from_flash((void *)dst, BOARDS_TEXT_OFFS, BOARDS_SIZE))
-		die("brd list load");
+		sys_die(DIE_BOARD_LIST_LOAD, "brd list load");
 
 	if (b->magic != BOARD_LIST_MAGIC)
-		die("brd list magic");
+		sys_die(DIE_BOARD_LIST_MAGIC, "brd list magic");
 
 	info->n_boards = b->n_boards;
 	info->board_types = (struct board_type *)
 			((physaddr_t)(dst) + (physaddr_t)b->board_types);
+	info->n_pmaps = b->n_pmaps;
+	info->pmap_table = (struct pmap_entry *)
+			((physaddr_t)(dst) + (physaddr_t)b->pmap_table);
 #endif
 }
 
@@ -195,7 +198,7 @@ int board_select(struct fsbl_info *info, uint32_t dst)
 #endif
 	load_boards(info, dst);
 
-	if (info->n_boards == 1) {
+	if (FSBLINFO_N_BOARDS(info->n_boards) == 1) {
 		info->board_idx = 0;
 		info->saved_board.product_id = prid;
 		using_board(info);
@@ -204,7 +207,7 @@ int board_select(struct fsbl_info *info, uint32_t dst)
 
 	}
 
-	if (info->saved_board.board_idx < info->n_boards) {
+	if (info->saved_board.board_idx < FSBLINFO_N_BOARDS(info->n_boards)) {
 		info->board_idx = info->saved_board.board_idx;
 		info->saved_board.product_id = prid;
 		using_board(info);
@@ -212,23 +215,17 @@ int board_select(struct fsbl_info *info, uint32_t dst)
 			return 0;
 	}
 
-	puts("");
-	puts("======");
-	puts("BOARDS");
-	puts("======");
-	puts("");
+	puts(CRLF"======"CRLF"BOARDS"CRLF"======");
 
-	for (i = 0; i < info->n_boards; i++) {
+	for (i = 0; i < FSBLINFO_N_BOARDS(info->n_boards); i++) {
 		const struct board_type *b = &(info->board_types[i]);
 
 		putchar(board_idx_to_char(i));
 		__puts(") ");
 		__puts(b->name);
 #if CFG_BOARD_ID
-		__puts("\t\t");
-		writehex(b->prid);
-		putchar(':');
-		writehex((uint32_t)b->bid);
+		report_hex("@\t\t", b->prid);
+		report_hex("@:", (uint32_t)b->bid);
 		/* nb: an id of 0.0 is never a valid value
 		*/
 		if (info->bid && (b->bid == info->bid) && (b->prid == prid)) {
@@ -236,9 +233,9 @@ int board_select(struct fsbl_info *info, uint32_t dst)
 			idx = i;
 		}
 #endif
-		puts("");
+		crlf();
 	}
-	puts("");
+	crlf();
 
 #if CFG_BOARD_ID
 	if ((!force_menu) && (idx >= 0)) {
@@ -250,11 +247,8 @@ int board_select(struct fsbl_info *info, uint32_t dst)
 	}
 #endif
 
-	puts("RESET + 1 = this menu");
-	puts("RESET + 8 = bypass AVS");
-	puts("2)  shmoo menu after board menu");
-	puts("");
-
+	puts("RESET + 1 = this menu"CRLF"RESET + 8 = bypass AVS"CRLF
+			"2)  shmoo menu after board menu");
 	print_select();
 
 	while (1) {
@@ -270,7 +264,7 @@ int board_select(struct fsbl_info *info, uint32_t dst)
 			continue;
 
 		info->board_idx = board_char_to_idx(i);
-		if (info->board_idx >= info->n_boards)
+		if (info->board_idx >= FSBLINFO_N_BOARDS(info->n_boards))
 			continue;
 
 		indicate_if_match(info, info->board_idx, prid);

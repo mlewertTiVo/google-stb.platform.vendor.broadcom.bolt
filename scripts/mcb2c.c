@@ -20,6 +20,7 @@ static const char *COPYRIGHT_HEADER =
 
 /* indent -npro -kr -i8 -ts8 -sob -l80 -ss -ncs -cp1 */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,8 @@ static char **extract_fnames(int ndentries, struct dirent **dentries,
 static void free_fnames(int nentries, char **fnames);
 static void free_dentries(int ndentries, struct dirent **dentries);
 char *strdup_toupper(char *str);
+static bool is_mcb_duplicate(struct mcb_properties *mcb,
+	struct mcb_properties *mcbtable, unsigned int nentries);
 static int parse_mcbfname(char *fname, struct mcb_properties *mcb_prop);
 static int print_base_mcb(FILE *fp, int mcb_nentries, uint32_t *mcb,
 	char *fname);
@@ -97,7 +100,7 @@ off_t filesize(char *fname)
 	rc = stat(fname, &file_status);
 	if (rc != 0) {
 		int saved_errno = errno;
-		DEBUG fprintf(stderr, " could not stat %s\n", fname);
+		fprintf(stderr, " could not stat %s\n", fname);
 		exit(saved_errno);
 	}
 	return file_status.st_size;
@@ -109,7 +112,7 @@ char *remove_ext(char *sin, char cext, char csep)
 	int len;
 
 	if (sin == NULL) {
-		DEBUG fprintf(stderr, "null string!\n");
+		fprintf(stderr, "null string!\n");
 		exit(-EINVAL);
 	}
 
@@ -117,7 +120,7 @@ char *remove_ext(char *sin, char cext, char csep)
 
 	sout = malloc(len);
 	if (!sout) {
-		DEBUG fprintf(stderr, "malloc fail!\n");
+		fprintf(stderr, "malloc fail!\n");
 		exit(-ENOMEM);
 	}
 
@@ -300,7 +303,7 @@ int main(int argc, char *argv[])
 
 	if (NULL == getcwd(base_dir, sizeof(base_dir))) {
 		saved_errno = errno;
-		DEBUG fprintf(stderr, "Cannot get the current working dir\n");
+		fprintf(stderr, "Cannot get the current working dir\n");
 		return saved_errno;
 	}
 
@@ -310,7 +313,7 @@ int main(int argc, char *argv[])
 		fp = fopen(out_mcb, "w+");
 		if (fp == NULL) {
 			saved_errno = errno;
-			DEBUG fprintf(stderr, "Cannot open %s\n", out_mcb);
+			fprintf(stderr, "Cannot open %s\n", out_mcb);
 			usage(argv[0]);
 			return saved_errno;
 		}
@@ -340,7 +343,7 @@ int main(int argc, char *argv[])
 
 		if (base_mcb_fname == NULL) {
 			cleanup_on_error(fp, out_mcb);
-			DEBUG fprintf(stderr, "No valid MCB file for %s\n",
+			fprintf(stderr, "No valid MCB file for %s\n",
 				fflg ? fixed_mcbmain[0] : fixed_mcbsub[0]);
 			usage(argv[0]);
 			return ENOENT;
@@ -352,7 +355,7 @@ int main(int argc, char *argv[])
 		if (chdir(dir_mcb) < 0) {
 			saved_errno = errno;
 			cleanup_on_error(fp, out_mcb);
-			DEBUG fprintf(stderr, "Cannot change directory to %s\n",
+			fprintf(stderr, "Cannot change directory to %s\n",
 				dir_mcb);
 			usage(argv[0]);
 			return saved_errno;
@@ -361,7 +364,7 @@ int main(int argc, char *argv[])
 		ndentries = scandir(".", &dentries, filter_reg, alphasort);
 		if (ndentries <= 0) {
 			cleanup_on_error(fp, out_mcb);
-			DEBUG fprintf(stderr, "No valid MCB file in %s\n",
+			fprintf(stderr, "No valid MCB file in %s\n",
 				dir_mcb);
 			usage(argv[0]);
 			return ENOENT;
@@ -370,7 +373,7 @@ int main(int argc, char *argv[])
 		mcbfiles = extract_fnames(ndentries, dentries, chip_id);
 		if (mcbfiles == NULL) {
 			cleanup_on_error(fp, out_mcb);
-			DEBUG fprintf(stderr, " not enough memory\n");
+			fprintf(stderr, " not enough memory\n");
 			return ENOMEM;
 		}
 		free_dentries(ndentries, dentries);
@@ -379,7 +382,7 @@ int main(int argc, char *argv[])
 		base_mcb_fname = mcbfiles[0];
 		if (base_mcb_fname == NULL) {
 			cleanup_on_error(fp, out_mcb);
-			DEBUG fprintf(stderr, "no valid MCB files\n");
+			fprintf(stderr, "no valid MCB files\n");
 			return EINVAL;
 		}
 	}
@@ -388,14 +391,14 @@ int main(int argc, char *argv[])
 	if (base_mcb_fd < 0) {
 		saved_errno = errno;
 		cleanup_on_error(fp, out_mcb);
-		DEBUG fprintf(stderr, " fail to open %s\n", base_mcb_fname);
+		fprintf(stderr, " fail to open %s\n", base_mcb_fname);
 		return saved_errno;
 	}
 
 	mcb_fsize = filesize(base_mcb_fname);
 	if ((mcb_fsize == 0) || (mcb_fsize % sizeof(uint32_t))) {
 		cleanup_on_error(fp, out_mcb);
-		DEBUG fprintf(stderr, " bad size! %s - %d\n",
+		fprintf(stderr, " bad size! %s - %d\n",
 			base_mcb_fname, mcb_fsize);
 		return EINVAL;
 	}
@@ -405,7 +408,7 @@ int main(int argc, char *argv[])
 	base_mcb = malloc(mcb_fsize);
 	if (base_mcb == NULL) {
 		cleanup_on_error(fp, out_mcb);
-		DEBUG fprintf(stderr, " not enough memory for %d bytes\n",
+		fprintf(stderr, " not enough memory for %d bytes\n",
 			mcb_fsize);
 		return ENOMEM;
 	}
@@ -419,7 +422,7 @@ int main(int argc, char *argv[])
 		mcb = malloc(mcb_fsize);
 		if (mcb == NULL) {
 			cleanup_on_error(fp, out_mcb);
-			DEBUG fprintf(stderr,
+			fprintf(stderr,
 				" not enough memory for %d bytes\n", mcb_fsize);
 			return ENOMEM;
 		}
@@ -487,7 +490,7 @@ int main(int argc, char *argv[])
 	mcbfiles = extract_fnames(ndentries, dentries, chip_id);
 	if (mcbfiles == NULL) {
 		cleanup_on_error(fp, out_mcb);
-		DEBUG fprintf(stderr, " not enough memory\n");
+		fprintf(stderr, " not enough memory\n");
 		return ENOMEM;
 	}
 	free_dentries(ndentries, dentries);
@@ -511,7 +514,7 @@ int main(int argc, char *argv[])
 
 		submcbfiles = extract_fnames(nsubentries, subentries, NULL);
 		if (submcbfiles == NULL) {
-			DEBUG fprintf(stderr, " not enough memory\n");
+			fprintf(stderr, " not enough memory\n");
 			return ENOMEM;
 		}
 		free_dentries(nsubentries, subentries);
@@ -519,7 +522,7 @@ int main(int argc, char *argv[])
 		if (out_mcb != NULL) {
 			p = remove_ext(out_mcb, '.', '/');
 			if (p == NULL) {
-				DEBUG fprintf(stderr,
+				fprintf(stderr,
 					"cannot remove extension from %s\n",
 					out_mcb);
 				return EINVAL;
@@ -543,7 +546,7 @@ int main(int argc, char *argv[])
 
 	if (chdir(base_dir) < 0) {
 		saved_errno = errno;
-		DEBUG fprintf(stderr, "Cannot change directory to %s\n",
+		fprintf(stderr, "Cannot change directory to %s\n",
 			base_dir);
 		return saved_errno;
 	}
@@ -580,6 +583,7 @@ static int does_chip_id_match_filename(const char *fname, const char *chip_id)
 	 * 7445d1 == 7445dx
 	 * 7445d0 == 7445d0
 	 * 7445d1 != 7445d0
+	 * 7271A0 == 7271A_
 	 */
 	size_t len;
 	char last_char;
@@ -593,11 +597,14 @@ static int does_chip_id_match_filename(const char *fname, const char *chip_id)
 	if (strncasecmp(chip_id, fname, len-1))
 		return 0;
 
-	last_char = fname[len-1];
-	if (last_char != 'x' && last_char != 'X') {
-		if (last_char != chip_id[len-1])
-			return 0;
-	}
+	last_char = toupper(fname[len-1]);
+	if (last_char == '_')
+		return 1;
+	if (last_char == 'X')
+		return 1;
+
+	if (last_char != chip_id[len-1])
+		return 0;
 
 	return 1;
 }
@@ -682,7 +689,7 @@ char *strdup_toupper(char *str)
 
 	p = uc = strdup(str);
 	if (NULL == p) {
-		DEBUG fprintf(stderr, "strdup alloc fail!\n");
+		fprintf(stderr, "strdup alloc fail!\n");
 		return NULL;
 	}
 
@@ -730,7 +737,7 @@ static int normalize_fname(char *sname, char *fname)
 
 	nfields = parse_mcbfname(fname, &mcb_prop);
 	if (nfields != NUM_PARAMS_FROM_MCB_FILENAME) {
-		DEBUG fprintf(stderr, "%s splits into %d pieces\n",
+		fprintf(stderr, "%s splits into %d pieces\n",
 			fname, nfields);
 		return -1;;
 	}
@@ -921,15 +928,14 @@ static int process_mcbfile(FILE *fp, char *fname,
 
 	if (g_compress) {
 		if (fsize != mcb_fsize) {
-			DEBUG fprintf(stderr, " all mcb must be the "
+			fprintf(stderr, " all mcb must be the "
 				"same size! %s - %d != %d\n",
 				fname, fsize, mcb_fsize);
 			return 0;
 		}
 	} else {
 		if ((fsize == 0) || (fsize % sizeof(uint32_t))) {
-			DEBUG fprintf(stderr, " bad size! %s - %d\n",
-				fname, fsize);
+			fprintf(stderr, " bad size! %s - %d\n", fname, fsize);
 			return 0;
 		}
 
@@ -938,15 +944,14 @@ static int process_mcbfile(FILE *fp, char *fname,
 	mcb_nentries = fsize / sizeof(uint32_t);
 	mcb = malloc(fsize);
 	if (mcb == NULL) {
-		DEBUG fprintf(stderr, " not enough memory for %d bytes\n",
-			fsize);
+		fprintf(stderr, " not enough memory for %d bytes\n", fsize);
 		return 0;
 	}
 
 	fd = open(fname, O_RDONLY);
 	if (fd < 0) {
 		free(mcb);
-		DEBUG fprintf(stderr, " fail to open %s\n", fname);
+		fprintf(stderr, " fail to open %s\n", fname);
 		return 0;
 	}
 	read_array(fd, mcb, mcb_nentries);
@@ -1069,8 +1074,6 @@ static int parse_dramparts(char *p, struct mcb_properties *mcb_prop)
 	mcb_prop->ddr_size = atoi(p);
 	if (mcb_prop->ddr_size == 0)
 		return -1;
-	if ((mcb_prop->ddr_size & (mcb_prop->ddr_size - 1)) != 0)
-		return -1; /* only power of 2 */
 
 	sprintf(buf, "%d", mcb_prop->ddr_size);
 	p += strlen(buf);
@@ -1094,6 +1097,55 @@ static int parse_dramparts(char *p, struct mcb_properties *mcb_prop)
 		return -1;
 
 	return 0;
+}
+
+/* is_mcb_duplicate -- checks if the identical property of an MCB has
+ *   already been processed
+ *
+ *  Historically, an MCB file name contained the minor revision number
+ * of a chip family. It is now omitted by default. To support MCB files
+ * both with and without a minor revision number, the minor revision
+ * number is ignored in terms of converting MCB's into C data structure.
+ * Supporting both conventions dramatically increases the chance of
+ * having multiple MCB with the same properties as such multiplicity
+ * is not detected/prevented by a file system.
+ *
+ *  Whenever a new MCB is processed, its PHY width, device size, device
+ * width and speed will be checked against already processed MCB's. If
+ * a match is found, it should be treated as an error condition.
+ *
+ *  Please note that checking duplicate is not required for custom MCB's
+ * because their tags are considered unique.
+ *
+ * Parameters:
+ *  mcb_prop [in]  pointer to an MCB property
+ *  mcbtable [in]  pointer to a table of MCB properties
+ *  nentries [in]  number of valid entries in mcbtable
+ * Returns:
+ *  true if the identical property of mcb_prop are found in mcbtable
+ *  false otherwise
+ */
+static bool is_mcb_duplicate(struct mcb_properties *mcb_prop,
+	struct mcb_properties *mcbtable, unsigned int nentries)
+{
+	unsigned int i;
+
+	if (mcb_prop == NULL || mcbtable == NULL || nentries == 0)
+		return false;
+
+	for (i=0; i<nentries; ++i) {
+		if (mcb_prop->ddr_clock != mcbtable[i].ddr_clock)
+			continue;
+		if (mcb_prop->ddr_size != mcbtable[i].ddr_size)
+			continue;
+		if (mcb_prop->ddr_width != mcbtable[i].ddr_width)
+			continue;
+		if (mcb_prop->phy_width != mcbtable[i].phy_width)
+			continue;
+		return true;
+	}
+
+	return false;
 }
 
 /* parse_mcbfname -- parses an MCB filename into DDR speed, PHY width, device
@@ -1189,10 +1241,13 @@ error_return:
 static int print_mcbtable(FILE *fp, int nfiles, char **mcbfiles)
 {
 	int i;
+	struct mcb_properties *mcbtable;
 
 	if (fp == NULL || nfiles == 0 || mcbfiles == NULL)
 		return -1;
 
+	mcbtable = (struct mcb_properties *)
+		malloc(nfiles * sizeof(struct mcb_properties));
 	/*
 		const struct memsys_info __maybe_unused shmoo_data[] __attribute__ ((section(\".mcbtable\"))) = {
 			{ NULL, MCB_MAGIC1, MCB_MAGIC2, MCB_MAGIC3, -1, NULL },
@@ -1219,10 +1274,15 @@ static int print_mcbtable(FILE *fp, int nfiles, char **mcbfiles)
 
 		nfields = parse_mcbfname(fname, &mcb_prop);
 		if (nfields != NUM_PARAMS_FROM_MCB_FILENAME) {
-			DEBUG fprintf(stderr, "%s splits into %d pieces\n",
+			fprintf(stderr, "%s splits into %d pieces\n",
 				fname, nfields);
 			return -1;;
 		}
+		if (is_mcb_duplicate(&mcb_prop, mcbtable, i)) {
+			fprintf(stderr, "%s is duplicate\n", mcbfiles[i]);
+			return -1;;
+		}
+		memcpy(&mcbtable[i], &mcb_prop, sizeof(mcb_prop));
 
 		fprintf(fp, "\t{ %s", fname_base);
 
@@ -1278,7 +1338,7 @@ static int print_mcbsubtable(FILE *fp, int nfiles, char **mcbfiles)
 
 		nfields = parse_mcbfname(fname, &mcb_prop);
 		if (nfields != NUM_PARAMS_FROM_MCB_FILENAME) {
-			DEBUG fprintf(stderr, "%s splits into %d pieces\n",
+			fprintf(stderr, "%s splits into %d pieces\n",
 				fname, nfields);
 			return -1;
 		}
@@ -1321,7 +1381,7 @@ static int print_mcbsubtable(FILE *fp, int nfiles, char **mcbfiles)
 		*/
 		nfields = parse_mcbfname(fname, &mcb_prop);
 		if (nfields != NUM_PARAMS_FROM_MCB_FILENAME) {
-			DEBUG fprintf(stderr, "%s splits into %d pieces\n",
+			fprintf(stderr, "%s splits into %d pieces\n",
 				fname, nfields);
 			return -1;
 		}
@@ -1378,7 +1438,7 @@ static char *find_matching_mcbfile(const char *pattern_mcb, const char *dir_mcb,
 
 	/* change directory to where MCB files are */
 	if (chdir(dir_mcb) < 0) {
-		DEBUG fprintf(stderr, "Cannot change directory to %s\n",
+		fprintf(stderr, "Cannot change directory to %s\n",
 			dir_mcb);
 		return NULL;
 	}
@@ -1390,13 +1450,13 @@ static char *find_matching_mcbfile(const char *pattern_mcb, const char *dir_mcb,
 		size_t len_subdir = strlen(tmp);
 
 		if (len_subdir >= sizeof(dir_sub)) {
-			DEBUG fprintf(stderr, "Too long sub_dir %s\n", tmp);
+			fprintf(stderr, "Too long sub_dir %s\n", tmp);
 			return NULL;
 		}
 		strcpy(dir_sub, tmp);
 		pattern = pattern_mcb + strlen(dir_sub) + 1; /* "dir_sub" + "/" */
 		if (chdir(dir_sub) < 0) {
-			DEBUG fprintf(stderr, "Cannot change directory to %s\n",
+			fprintf(stderr, "Cannot change directory to %s\n",
 				dir_sub);
 			return NULL;
 		}
@@ -1407,13 +1467,13 @@ static char *find_matching_mcbfile(const char *pattern_mcb, const char *dir_mcb,
 		pattern = pattern_mcb;
 		items = decompose_fname(buf);
 		if (items == NULL) {
-			DEBUG fprintf(stderr, "Cannot decompose %s\n", buf);
+			fprintf(stderr, "Cannot decompose %s\n", buf);
 			return NULL;
 		}
 		len_chip_id = strlen(items);
 		if (len_chip_id >= sizeof(chip_id)) {
 			free(items);
-			DEBUG fprintf(stderr, "Too long chip_id %s\n", items);
+			fprintf(stderr, "Too long chip_id %s\n", items);
 			return NULL;
 		}
 		strcpy(chip_id, items);
@@ -1422,7 +1482,7 @@ static char *find_matching_mcbfile(const char *pattern_mcb, const char *dir_mcb,
 
 	ndentries = scandir(".", &dentries, filter_reg, alphasort);
 	if (ndentries <= 0) {
-		DEBUG fprintf(stderr, "No valid MCB file in %s\n", dir_sub);
+		fprintf(stderr, "No valid MCB file in %s\n", dir_sub);
 		return NULL;
 	}
 
@@ -1464,7 +1524,7 @@ static char *find_matching_mcbfile(const char *pattern_mcb, const char *dir_mcb,
 
 	if (chdir(base_dir) < 0) {
 		free(mcbfilename);
-		DEBUG fprintf(stderr, "Cannot change directory to %s\n",
+		fprintf(stderr, "Cannot change directory to %s\n",
 			base_dir);
 		return NULL;
 	}

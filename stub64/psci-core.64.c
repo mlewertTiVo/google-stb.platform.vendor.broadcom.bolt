@@ -14,6 +14,7 @@
 #include <bchp_cntcontrolbase.h>
 #include <bitops.h>
 #include <bakery_lock64.h>
+#include <aon_defs.h>
 
 
 /* TBD:
@@ -635,9 +636,15 @@ static int boot_linux(uint64_t fn, uint64_t fdt,
 	int me = get_cpu_idx(get_mpidr());
 
 	if (config->debug) {
-		__puts("PSCI: DTB @ ");
-		writehex64(fdt);
-		__puts(", Linux entry @ ");
+		__puts("PSCI: ");
+		if (fn == OEM_FUNC_EXEC64_EL3) {
+			__puts("Secure monitor");
+		} else {
+			__puts("DTB @ ");
+			writehex64(fdt);
+			__puts(", Linux");
+		}
+		__puts(" entry @ ");
 		writehex64(linux_entry);
 		puts("");
 	}
@@ -655,13 +662,73 @@ static int boot_linux(uint64_t fn, uint64_t fdt,
 	/* https://www.kernel.org/doc/Documentation/arm64/booting.txt
 	 * We can keep i-cache and SMP coherency on.
 	 */
-	if (fn == OEM_FUNC_EXEC64)
+	if (fn == OEM_FUNC_EXEC64_EL3) {
+#if CFG_TRUSTZONE_MON
+		exec64_el3(fdt, linux_entry);
+#endif
+	} else if (fn == OEM_FUNC_EXEC64)
 		exec64(fdt, linux_entry);
 	else
 		exec32(fdt, linux_entry);
 
 	/* Should not return here after exec??() */
 	return PSCI_ERR_INTERNAL_FAILURE;
+}
+
+
+void resume_from_s3(void)
+{
+	struct brcmstb_s3_params *params;
+	uintptr_t addr;
+	uint32_t flags;
+	uint64_t spsr_el3, fn;
+
+	if (!is_aarch32_smc_exception()) {
+		if (config->debug)
+			puts("PSCI: S3 bad resume: A64");
+		goto failed_resume;
+	}
+
+	get_spsr_el3(spsr_el3);
+	isb64();
+
+	if ((spsr_el3 & A32_SPSR_MODE) != A32_SPSR_MODE_Supervisor) {
+		if (config->debug) {
+			__puts("PSCI: S3 bad resume, spsr: ");
+			writehex64(spsr_el3);
+			puts("");
+		}
+		goto failed_resume;
+	}
+
+	flags = AON_REG(AON_REG_MAGIC_FLAGS);
+	if (flags & S3_FLAG_PSCI_BOOT) {
+
+		fn = (flags & S3_FLAG_BOOTED64) ?
+			OEM_FUNC_EXEC64 : OEM_FUNC_EXEC32;
+
+		addr = AON_REG(AON_REG_CONTROL_LOW);
+		addr |= shift_left_32((uintptr_t)AON_REG(AON_REG_CONTROL_HIGH));
+
+		params = (struct brcmstb_s3_params *)addr;
+
+		if (config->debug) {
+			__puts("PSCI: S3 resume @ ");
+			writehex(params->reentry);
+			puts("");
+		}
+
+		(void)boot_linux(fn, 0 /* No DTB */, params->reentry, 0);
+	}
+
+	if (config->debug) {
+		__puts("PSCI: S3 bad resume, flags: ");
+		writehex(flags);
+		puts("");
+	}
+
+failed_resume:
+	reboot(); /* Backstop */
 }
 
 
@@ -708,13 +775,26 @@ void psci_decode(uint64_t x0, uint64_t x1, uint64_t x2,	uint64_t x3,
 		rc = rac_enable(x1);
 		break;
 
+	case OEM_FUNC_S3_RESUME:
+		resume_from_s3();
+		break;
+
 	case OEM_FUNC_EXEC64:
+	case OEM_FUNC_EXEC64_EL3:
 	case OEM_FUNC_EXEC32:
 		rc = PSCI_ERR_DENIED;
 		if (me != 0)
 			break;
 		rc = boot_linux(x0, x2, x1, x4);
 		/* May or may not return here */
+		break;
+
+	case OEM_FUNC_LEGACY_GIC_BYPASS:
+		if (me == 0) {
+			gic_bypass();
+			rc = PSCI_SUCCESS;
+		} else
+			rc = PSCI_ERR_DENIED;
 		break;
 
 	/* v0.1 */

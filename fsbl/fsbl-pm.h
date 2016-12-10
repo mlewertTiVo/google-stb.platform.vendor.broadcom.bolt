@@ -23,7 +23,11 @@ void fsbl_finish_warm_boot(uint32_t restore_val);
 #else
 
 static inline bool fsbl_ack_warm_boot(void) { return false; }
-static inline void fsbl_finish_warm_boot(uint32_t t) { die("no S3 support"); }
+
+static inline void fsbl_finish_warm_boot(uint32_t t)
+{
+	sys_die(DIE_PM_NO_S3_SUPPORT, "no S3 support");
+}
 
 #endif /* CFG_PM_S3 */
 

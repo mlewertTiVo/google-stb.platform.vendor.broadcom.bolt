@@ -422,12 +422,16 @@ sub gen_memc_dts($)
 	my $text = "";
 
 	for my $d (@$ddr) {
-		next if $d->{size_mb} && '-' eq $d->{size_mb};
+		next if (!$d->{size_mb});
 		my $label = BcmDt::Devices::get_path_by_label("memc_ddr" . $d->{n});
 		next if !defined($label);
 		$text .= sprintf("&memc_ddr%d {\n", $d->{n});
-		$text .= sprintf("\tclock-frequency = <%d>;\n",
+		if ($d->{size_mb} eq '-') {
+			$text .= "\tstatus=\"disabled\";\n";
+		} else {
+			$text .= sprintf("\tclock-frequency = <%d>;\n",
 				 substr($d->{clk}, 0, -3)  * 1000 * 1000);
+		}
 		$text .= "};\n\n";
 	};
 

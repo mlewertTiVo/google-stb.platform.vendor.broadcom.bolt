@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -16,12 +14,23 @@
 
 #include <fsbl-common.h>
 #include <board_types.h>
+#ifdef DVFS_SUPPPORT
+#include <fsbl-pmap.h>
+#endif
 
 const struct boards_nvm_list nvm_boards
 		__attribute__ ((section(".header"))) = {
 	.magic = BOARD_LIST_MAGIC,
-	.n_boards = ARRAY_SIZE(board_types),
+	.n_boards = ARRAY_SIZE(board_types) |
+		(FSBLINFO_CURRENT_VERSION << FSBLINFO_VERSION_SHIFT),
 	.board_types = board_types,
+#if defined(DVFS_SUPPPORT)
+	.n_pmaps = ARRAY_SIZE(pmapTable),
+	.pmap_table = pmapTable,
+#else
+	.n_pmaps = 0,
+	.pmap_table = 0,
+#endif
 };
 
 #endif

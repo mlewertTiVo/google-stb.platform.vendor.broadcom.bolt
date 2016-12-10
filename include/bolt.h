@@ -77,10 +77,16 @@ void bolt_launch(unsigned long ept, unsigned long param1,
 void bolt_start64(unsigned long ept, unsigned long param1,
 		unsigned long param2, unsigned long param3);
 
+void bolt_start64_el3(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
 void bolt_start32(unsigned long ept, unsigned long param1,
 		unsigned long param2, unsigned long param3);
 
 void bolt_launch64(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
+void bolt_launch64_el3(unsigned long ept, unsigned long param1,
 		unsigned long param2, unsigned long param3);
 
 void bolt_launch32(unsigned long ept, unsigned long param1,

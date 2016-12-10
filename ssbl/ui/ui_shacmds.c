@@ -54,9 +54,9 @@ int ui_init_shacmds(void)
 }
 
 
-static void ssbl_die(char *msg)
+static void ssbl_die(const uint16_t die_code, const char *die_string)
 {
-	xprintf("sha fail '%s'\n", msg);
+	err_msg("sha failed with '%s' code 0x%04x\n", die_string, die_code);
 }
 
 

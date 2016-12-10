@@ -27,6 +27,8 @@ enum pmaps {
 	PMap2,
 	PMap3,
 	PMap4,
+	PMap5,
+	PMap6,
 	PMapMax,
 } pmaps;
 
@@ -38,17 +40,18 @@ struct pmapParameters {
 	uint8_t mdiv_p2;
 	uint8_t mdiv_p3;
 	uint8_t mdiv_p4;
+	unsigned int num_domains;
+	char *desc;
 } pmapParameters;
 
-#ifndef AVS_ONCE
-#define AVS_ONCE
 static const struct pmapParameters pmapTable[PMapMax] = {
-	{167,	3,	2,	3,	4,	6,	10},
-	{194,	3,	4,	5,	6,	8,	10},
-	{194,	3,	3,	4,	5,	8,	10},
-	{194,	3,	2,	3,	4,	6,	10},
-	{206,	3,	2,	3,	4,	6,	10},
+	{167,	3,	2,	3,	4,	6,	10,	1,	"PMap0"},
+	{167,	3,	3,	4,	6,	8,	10,	1,	"PMap1"},
+	{167,	3,	3,	4,	6,	8,	10,	1,	"PMap2"},
+	{167,	3,	3,	4,	6,	8,	10,	1,	"PMap3"},
+	{167,	3,	2,	3,	4,	6,	10,	2,	"PMap4"},
+	{167,	3,	2,	3,	4,	6,	10,	2,	"PMap5"},
+	{167,	3,	2,	3,	4,	6,	10,	2,	"PMap6"},
 };
-#endif
 
 #endif

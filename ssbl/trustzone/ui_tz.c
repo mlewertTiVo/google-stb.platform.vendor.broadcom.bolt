@@ -42,12 +42,39 @@
 static bolt_loadargs_t bolt_tzloadargs;
 static int tz_initialized;
 
-static const char *tz_boot_help_summary =
-	"Load NW and TZ executable files into memory, execute TZ program";
+#ifdef STUB64_START
+static int tz_monitor_loaded;
+static bolt_loadargs_t bolt_tz_mon_loadargs;
+static const char *tz_mon_help_summary =
+	"Load EL3 monitor into memory";
 
+static const char *tz_mon_help_usage =
+	"tz mon host:filename|dev:filename\n\n"
+	"This command loads the EL3 monitor into memory.\n"
+	"By default, 'tz mon' will load the\n"
+	"program as a uncompressed image at the\n"
+	"start of the TZ memory + an offset.\n"
+	"0x01b00000 for 2GB systems\n"
+	"0x00b00000 for 1GB system\n";
+#endif
+
+static const char *tz_boot_help_summary =
+	"Load NW and TZ executable files into memory, executes TZ program";
+
+#ifdef STUB64_START
 static const char *tz_boot_help_usage =
-	"tz boot [-options]\n"
-	"        host:tz_filename|dev:tz_filename\n"
+	"tz boot host:tz_filename|dev:tz_filename\n"
+	"        host:nw_filename|dev:nw_filename\n"
+	"        [arg]\n\n"
+	"This command loads NW and TZ executable files from boot devices\n"
+	"and executes both via the EL3 monitor. By default, 'tz boot'\n"
+	"will load the NW\nprogram as a zImage binary at address "
+	__stringify(BOOT_START_ADDRESS)", and\n"
+	"the TZ program as an uncompressed image at the start of TZ memory.\n"
+	"'tz mon' must be executed successfully before using this command.";
+#else
+static const char *tz_boot_help_usage =
+	"tz boot host:tz_filename|dev:tz_filename\n"
 	"        host:nw_filename|dev:nw_filename\n"
 	"        [arg]\n\n"
 	"This command loads NW and TZ executable files from boot devices,\n"
@@ -56,8 +83,22 @@ static const char *tz_boot_help_usage =
 	__stringify(BOOT_START_ADDRESS)", and the TZ program\n"
 	"as an uncompressed image at the start of the TZ memory, and then\n"
 	"jump to the start of the TZ program.";
+#endif
 
-static int tz_cmd_boot_common(ui_cmdline_t *cmd, bool tz_prog)
+static const char *tz_get_prog_type(tz_payload_type tz_prog)
+{
+	switch (tz_prog) {
+	case e_tz_spd_image:
+		return "EL3 monitor";
+	case e_tz_tz_image:
+		return "TZ";
+	case e_tz_nw_image:
+		return "NW";
+	}
+	return "?";
+}
+
+static int tz_cmd_boot_common(ui_cmdline_t *cmd, tz_payload_type tz_prog)
 {
 	int rc;
 	char *arg;
@@ -68,11 +109,25 @@ static int tz_cmd_boot_common(ui_cmdline_t *cmd, bool tz_prog)
 	const char *loader;
 	bolt_loadargs_t *la = &bolt_tzloadargs;
 	int node;
+	struct tz_info *t;
+	struct tz_mem_layout *mem_layout;
 
-	arg = cmd_getarg(cmd, (tz_prog) ? 0 : 1);
+	switch (tz_prog) {
+	case e_tz_spd_image:
+		arg = cmd_getarg(cmd, 0);
+		break;
+	case e_tz_tz_image:
+		arg = cmd_getarg(cmd, 0);
+		break;
+	case e_tz_nw_image:
+		arg = cmd_getarg(cmd, 1);
+		break;
+	default:
+		arg = NULL;
+	}
 	if (!arg) {
 		xprintf("No %s program name specified\n",
-			(tz_prog) ? "TZ" : "NW");
+			tz_get_prog_type(tz_prog));
 		return BOLT_ERR;
 	}
 
@@ -81,7 +136,7 @@ static int tz_cmd_boot_common(ui_cmdline_t *cmd, bool tz_prog)
 
 	if (!device) {
 		xprintf("No device name specified for %s program.\n",
-			(!tz_prog) ? "NW" : "TZ");
+			tz_get_prog_type(tz_prog));
 		return BOLT_ERR;
 	}
 
@@ -89,7 +144,10 @@ static int tz_cmd_boot_common(ui_cmdline_t *cmd, bool tz_prog)
 	if (info >= 0)
 		info &= BOLT_DEV_MASK;
 
-	loader = (tz_prog) ? "raw" : "zimg";
+	if (tz_prog == e_tz_nw_image)
+		loader = "zimg";
+	else
+		loader = "raw";
 
 	/*
 	 * Fill in the loader args
@@ -97,10 +155,25 @@ static int tz_cmd_boot_common(ui_cmdline_t *cmd, bool tz_prog)
 
 	memset(la, 0, sizeof(*la));
 
-	if (tz_prog) {
-		struct tz_info *t;
-		struct tz_mem_layout *mem_layout;
+	switch (tz_prog) {
+	case e_tz_spd_image:
+#ifdef STUB64_START
+		t = tz_info();
+		if (!t)
+			return BOLT_ERR;
+		mem_layout = t->mem_layout;
+		if (!mem_layout)
+			return BOLT_ERR;
 
+		/* Need to save the mon load args for later */
+		la = &bolt_tz_mon_loadargs;
+		la->la_flags |= LOADFLG_EL3_EXEC|LOADFLG_APP64;
+		la->la_address = t->mem_addr + mem_layout->spd_offset;
+		la->la_maxsize = BOOT_AREA_SIZE;
+		tz_monitor_loaded = 1;
+#endif
+		break;
+	case e_tz_tz_image:
 		t = tz_info();
 		if (!t)
 			return BOLT_ERR;
@@ -109,13 +182,20 @@ static int tz_cmd_boot_common(ui_cmdline_t *cmd, bool tz_prog)
 		if (!mem_layout)
 			return BOLT_ERR;
 
-		la->la_flags = LOADFLG_EXECUTE | LOADFLG_SPECADDR;
+		la->la_flags = LOADFLG_SPECADDR|LOADFLG_SECURE;
+#ifdef STUB64_START
+		la->la_flags |= LOADFLG_APP64;
+#else
+		la->la_flags |= LOADFLG_EXECUTE;
+#endif
 		la->la_address = t->mem_addr + mem_layout->os_offset;
 		la->la_maxsize = BOOT_AREA_SIZE;
-	} else {
+		break;
+	case e_tz_nw_image:
 		la->la_flags = LOADFLG_SPECADDR;
 		la->la_address = BOOT_START_ADDRESS;
 		la->la_maxsize = BOOT_AREA_SIZE;
+		break;
 	}
 
 	switch (info) {
@@ -161,9 +241,7 @@ static int tz_cmd_boot_common(ui_cmdline_t *cmd, bool tz_prog)
 	la->la_options = cmd_getarg(cmd, 2);
 
 	if (la->la_options) {
-		if (tz_prog) {
-			/* Nothing to do yet */
-		} else {
+		if (tz_prog == e_tz_nw_image) {
 			bolt_devtree_params_t p;
 			void *fdt;
 
@@ -200,9 +278,21 @@ static int tz_cmd_boot_common(ui_cmdline_t *cmd, bool tz_prog)
 
 	rc = tz_boot(loader, la);
 
+#ifdef STUB64_START
+	/*
+	 * In 64 bit mode, and we have completed loading all three
+	 * images, boot the monitor.
+	 */
+	if (rc >= 0 && tz_prog == e_tz_tz_image) {
+		la = &bolt_tz_mon_loadargs;
+		la->la_flags |= LOADFLG_EXECUTE;
+		rc = tz_go(la);
+	}
+#endif
 	/* Success when !LOADFLG_EXECUTE, so exit now. */
 	if (rc >= 0)
 		return rc;
+
 out:
 	/*
 	 * Give the bad news.
@@ -211,9 +301,7 @@ out:
 
 	/* Delete bootargs from DT on failure */
 	if (la->la_options) {
-		if (tz_prog) {
-			/* Nothing to do yet */
-		} else {
+		if (tz_prog == e_tz_nw_image) {
 			bolt_devtree_params_t p;
 			void *fdt;
 
@@ -229,6 +317,22 @@ out:
 	return rc;
 }
 
+#ifdef STUB64_START
+static int tz_cmd_mon(ui_cmdline_t *cmd, int argc, char *argv[])
+{
+	int tc;
+
+	if (!tz_initialized) {
+		err_msg("TZ not initialized");
+		return BOLT_ERR_INV_COMMAND;
+	}
+
+	/* Load the monitor program */
+	tc = tz_cmd_boot_common(cmd, e_tz_spd_image);
+
+	return tc;
+}
+#endif
 
 static int tz_cmd_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 {
@@ -238,6 +342,14 @@ static int tz_cmd_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 		err_msg("TZ not initialized");
 		return BOLT_ERR_INV_COMMAND;
 	}
+
+#ifdef STUB64_START
+	/* Check that we have a monitor to boot the images */
+	if (!tz_monitor_loaded) {
+		err_msg("EL3 monitor required to boot TZ in 64 bit mode");
+		return BOLT_ERR_INV_COMMAND;
+	}
+#endif
 
 	/* More than 3 arguments means there were extra/unquoted boot args */
 	if (argc > 3) {
@@ -252,12 +364,12 @@ static int tz_cmd_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 	tz_devtree_set_nwos();
 
 	/* Load NW program */
-	tc = tz_cmd_boot_common(cmd, false);
+	tc = tz_cmd_boot_common(cmd, e_tz_nw_image);
 	if (tc < 0)
 		return tc;
 
 	/* Boot TZ program */
-	tc = tz_cmd_boot_common(cmd, true);
+	tc = tz_cmd_boot_common(cmd, e_tz_tz_image);
 
 	return tc;
 }
@@ -323,6 +435,9 @@ static int tz_cmd_init(ui_cmdline_t *cmd, int argc, char *argv[])
 	else
 		tz_initialized = 1;
 
+#ifdef STUB64_START
+	tz_monitor_loaded = 0;
+#endif
 	return rc;
 }
 
@@ -377,10 +492,17 @@ int ui_init_tz(void)
 		"tz init",
 		"");
 
+#ifdef STUB64_START
+	cmd_addcmd("tz mon", tz_cmd_mon, NULL,
+	   (char *)tz_mon_help_summary,
+	   (char *)tz_mon_help_usage,
+		"");
+#endif
+
 	cmd_addcmd("tz boot", tz_cmd_boot, NULL,
 		(char *)tz_boot_help_summary,
 		(char *)tz_boot_help_usage,
-		"");
+	    "");
 
 	cmd_addcmd("tz dt show", tz_cmd_dt_show, NULL,
 		"Decode contents of the memory resident TZ DTB file as a DTS\n",

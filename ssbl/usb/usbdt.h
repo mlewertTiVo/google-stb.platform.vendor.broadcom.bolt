@@ -21,10 +21,6 @@
 #define USB_PORT_TYPE_BDC  3
 #define USB_PORT_TYPE_MAX 4
 
-#define USB_CTLR_DEVICE_MODE_OFF 0
-#define USB_CTLR_DEVICE_MODE_ON 1
-#define USB_CTLR_DEVICE_MODE_DUAL 2
-
 struct usb_controller_list {
 	int cnt;
 	struct usb_controller {

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2016, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -152,26 +150,33 @@ enum AVS_ERROR avs_get_state(uint32_t *state)
 }
 
 
-void dvfs_init_board_pmap(void)
+void dvfs_init_board_pmap(int pmap_id)
 {
-	struct board_type *board = board_thisboard();
+	const struct dvfs_params *dvfs = board_dvfs();
+	bool firmware_running;
 
-	if (AVS_DOMAINS(board->avs) == 2) {
-		const struct dvfs_params *dvfs = board_dvfs();
-		bool firmware_running;
+	avs_get_data(0, 0, &firmware_running);
+	if (!firmware_running){
+		xprintf("Error: AVS firmware not running\n");
+		return;
+	}
 
+	if (pmap_id >= PMapMax) {
+		xprintf("DVFS: PMap%d is not supported\n",pmap_id);
+		return;
+	}
+
+	if ((dvfs->mode == dfs_mode_e) || (dvfs->mode == dvfs_mode_e)) {
 		struct pmap_parameters pmap = {
-			.ndiv_int	= pmapTable[dvfs->pmap].ndiv_int,
-			.pdiv		= pmapTable[dvfs->pmap].pdiv,
-			.mdiv_p0	= pmapTable[dvfs->pmap].mdiv_p0,
-			.mdiv_p1	= pmapTable[dvfs->pmap].mdiv_p1,
-			.mdiv_p2	= pmapTable[dvfs->pmap].mdiv_p2,
-			.mdiv_p3	= pmapTable[dvfs->pmap].mdiv_p3,
-			.mdiv_p4	= pmapTable[dvfs->pmap].mdiv_p4
+			.ndiv_int	= pmapTable[pmap_id].ndiv_int,
+			.pdiv		= pmapTable[pmap_id].pdiv,
+			.mdiv_p0	= pmapTable[pmap_id].mdiv_p0,
+			.mdiv_p1	= pmapTable[pmap_id].mdiv_p1,
+			.mdiv_p2	= pmapTable[pmap_id].mdiv_p2,
+			.mdiv_p3	= pmapTable[pmap_id].mdiv_p3,
+			.mdiv_p4	= pmapTable[pmap_id].mdiv_p4
 		};
 
-		avs_get_data(0, 0, &firmware_running);
-		if (firmware_running)
-			avs_set_pmap(dvfs->mode, &pmap, dvfs->pstate);
+		avs_set_pmap(dvfs->mode, &pmap, dvfs->pstate);
 	}
 }

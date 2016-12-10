@@ -30,11 +30,11 @@ extern "C" {
 /* outer API to FSBL */
 void avs_init(void);
 int avs_load(void);
-int avs_start(int en);
+int avs_start(int en, int pmap_id);
 
 void avs_class_init(void);
 int avs_common_load(void);
-int avs_common_start(void);
+int avs_common_start(int pmap_id);
 
 void avs_warm_start(void);
 

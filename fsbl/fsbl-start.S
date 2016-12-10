@@ -43,7 +43,6 @@
 
 	.global fsbl_b_start
 fsbl_b_start:
-#ifndef SECURE_BOOT
 	@ see if we're running from SRAM (Boot 2.0) or flash (Boot 1.0)
 	mov	r0, pc
 	ldr	r3, =_fsbl_copy_start
@@ -70,7 +69,6 @@ fsbl_b_start:
 	bx	r0
 
 1:
-#endif
 	@ zero out .bss
 	ldr	r0, =_fsbl_zero_start
 	ldr	r1, =_fsbl_zero_end

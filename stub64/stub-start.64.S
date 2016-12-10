@@ -186,15 +186,9 @@ bootmode:
 	ldr	x0, =SCTLR_EL2_RES1_BITS
 	msr	sctlr_el2, x0
 
-	/* final step - switch to A32 mode */
-	putc	'E'
-
-	/* Where we start aarch32 at. This should branch back again
-	* to the reset vector but now we're in A32 mode so the code
-	* path will now take us into FSBL proper.
-	*/
-	ldr	x0, =SRAM_ADDR
-
+#if CFG_PM_S3
+	bl	pm_check_wokeup
+#else
 	/* Vector Base Address Register
 	 *  vector base address for any exception that is taken to EL3
 	 *
@@ -209,6 +203,15 @@ bootmode:
 	ldr	x2, =PSCI_BASE
 	msr	vbar_el3, x2
 	isb
+#endif
+	/* final step - switch to A32 mode */
+	putc	'E'
+
+	/* Where we start aarch32 at. This should branch back again
+	* to the reset vector but now we're in A32 mode so the code
+	* path will now take us into FSBL proper.
+	*/
+	ldr	x0, =SRAM_ADDR
 
 	/* Saved Program Status Register (@ EL3)
 	 *  [M3:0]   AArch32 mode

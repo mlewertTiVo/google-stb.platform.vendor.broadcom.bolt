@@ -58,8 +58,7 @@ static void print_shmoo_version(void)
 
 	gmemsys->get_version(&v);
 
-	__puts("SHMOO ");
-	writehex(v.version);
+	report_hex("@SHMOO ", v.version);
 
 	__puts(" BLD:");
 	__puts(v.build_ver);
@@ -76,7 +75,7 @@ static void print_shmoo_version(void)
 	putchar(',');
 	writehex(EDIS_OFFS);
 #endif
-	puts("");
+	crlf();
 }
 
 
@@ -161,24 +160,18 @@ static void print_shmoo_error(memsys_error_t *e)
 
 	puts("eMEMC: ");
 	for (idx = 0; idx < MEMSYS_ERROR_MEMC_MAX_WORDS; idx++) {
-		putchar(' ');
-		writehex(e->memc[idx]);
+		report_hex(" ", e->memc[idx]);
 	}
-	puts("");
 
-	__puts(" ePHY:");
+	puts("ePHY:");
 	for (idx = 0; idx < MEMSYS_ERROR_PHY_MAX_WORDS; idx++) {
-		putchar(' ');
-		writehex(e->phy[idx]);
+		report_hex(" ", e->phy[idx]);
 	}
-	puts("");
 
-	__puts("eSHMOO: ");
+	puts("eSHMOO: ");
 	for (idx = 0; idx < MEMSYS_ERROR_SHMOO_MAX_WORDS; idx++) {
-		putchar(' ');
-		writehex(e->shmoo[idx]);
+		report_hex(" ", e->shmoo[idx]);
 	}
-	puts("");
 }
 
 
@@ -192,8 +185,7 @@ static void do_shmoo(const struct ddr_info *ddr, uint32_t *mcb, bool warm_boot)
 
 	__puts(" MEMSYS-");
 	putchar('0' + memc);
-	__puts(" @ ");
-	writehex(p->memc_reg_base);
+	report_hex("@ @ ", p->memc_reg_base);
 	putchar(' ');
 
 	memset(&params, 0, sizeof(params));
@@ -248,23 +240,14 @@ void dump_shmoo(uint32_t *src, uint32_t words)
 {
 	int a;
 
-	puts("");
+	crlf();
 	for (a = 0; a < words; a++) {
-		__puts(" "); writehex((uint32_t)a);
-		__puts(" - "); writehex((uint32_t)src[a]); puts("");
+		report_hex("@ ", (uint32_t)a);
+		report_hex(" - ", (uint32_t)src[a]);
 	}
-	puts("");
+	crlf();
 }
 #endif
-
-
-/* ------------------------------------------------------------------------- */
-
-static void memsys_die(char *s)
-{
-	puts(s);
-	sec_memsys_set_status(0);
-}
 
 
 /* ------------------------------------------------------------------------- */
@@ -276,7 +259,7 @@ void memsys_load(void)
 	gmemsys = (const struct memsys_interface *)dst;
 
 	if (gmemsys->signature != BOARD_MSYS_MAGIC)
-		memsys_die("bad ms");
+		memsys_die(DIE_BAD_BOARD_MSYS_MAGIC, "bad ms");
 
 	gloud_shmoo = 0;
 	gmemsys->setup();
@@ -303,10 +286,10 @@ void shmoo_load(void)
 	*/
 	if (!gmemsys->shmoo_data) {
 		if (load_from_flash(dst, SHMOO_TEXT_OFFS, SHMOO_SIZE) < 0)
-			die("shmoo load");
+			sys_die(DIE_SHMOO_LOAD, "shmoo load");
 
 		if (!s->shmoo_data)
-			memsys_die("bad mi");
+			memsys_die(DIE_MISSING_SHMOO_DATA, "bad mi");
 
 		/*	shmoo table = sram base + offset of the mcb table
 			(0 based offset, see shmoo.lds)
@@ -317,10 +300,10 @@ void shmoo_load(void)
 	/* Either memsys_load() set this up for FIXed, or we did it
 	just now for !SECURE_BOOT & FLEXible MCB tables. */
 	if (!is_valid_mcb(mcb_table))
-		memsys_die("mcb magic");
+		memsys_die(DIE_BAD_MCB_MAGIC, "mcb magic");
 
 	if (mcb_table[1].ddr_clock != MCB_MAGIC1)
-		memsys_die("bad table");
+		memsys_die(DIE_BAD_MCB_TABLE, "bad table");
 
 /* Prevent subtables for secure boot. */
 #ifndef SECURE_BOOT
@@ -496,7 +479,7 @@ void shmoo_set(const struct ddr_info *ddr, bool warm_boot)
 		/* We did not find any matching ddr params for flex so
 		 we have to die now. */
 		if (!v)
-			die("mcb not found");
+			sys_die(DIE_MCB_NOT_FOUND, "mcb not found");
 
 		v = ADDROF(dst, v); /* adjust to sram offset */
 
@@ -518,7 +501,7 @@ void shmoo_set(const struct ddr_info *ddr, bool warm_boot)
 				count += 4;
 				/* we went off the deep end */
 				if (count > bytes)
-					die("patch");
+					sys_die(DIE_PATCH_MCB, "patch");
 			}
 
 			for (count = 0; count < (bytes / sizeof(uint32_t));
@@ -527,20 +510,16 @@ void shmoo_set(const struct ddr_info *ddr, bool warm_boot)
 
 			if (csum != v[1]) {
 				writehex(csum);
-				__puts("!=");
-				writehex(v[1]);
-				__puts(" ");
-				die("checksum");
+				report_hex("!=", v[1]);
+				sys_die(DIE_MCB_CHECKSUM, "checksum");
 			}
 			putchar('!');
 		} else
 			putchar('=');
 	}
 
-	__puts("@ ");
-	writehex((uint32_t)scratch);
-	__puts(" <= ");
-	writehex((uint32_t)v_saved);
+	report_hex("@@ ", (uint32_t)scratch);
+	report_hex("@ <= ", (uint32_t)v_saved);
 
 	do_shmoo(ddr, scratch, warm_boot);
 }
@@ -566,7 +545,7 @@ void shmoo_menu(struct board_nvm_info *nvm)
 	int i, max = 'a';
 	struct memsys_info *mi = mcb_table;
 
-	puts("");
+	crlf();
 	mi += 2; /* bypass header and template entries */
 	while (mi->values != NULL) {
 		putchar(max);
@@ -600,7 +579,7 @@ void shmoo_menu(struct board_nvm_info *nvm)
 		i = getchar();
 		/* coverity[negative_returns] */
 		putchar(i);
-		puts("");
+		crlf();
 
 		if (i == '1')
 			return;

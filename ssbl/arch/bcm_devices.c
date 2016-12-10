@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -48,6 +46,12 @@ void board_device_reset(void)
     ********************************************************************* */
 void board_device_init(void)
 {
+	/* Set up AVS features, must be done
+	 * before we do e.g. a temperature park
+	 * action or monitoring.
+	 */
+	board_init_avs();
+
 	board_init_flash();
 #if CFG_GENET && CFG_ENET
 	board_init_enet();

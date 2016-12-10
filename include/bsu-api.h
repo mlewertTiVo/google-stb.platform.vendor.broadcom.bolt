@@ -85,6 +85,10 @@ extern void bolt_launch_bsu(unsigned long ept, unsigned long param1,
 void bolt_start_bsu(unsigned long ept, unsigned long param1,
 			unsigned long param2);
 
+#if CFG_TRUSTZONE_MON
+extern void tz_smm_set_params(bolt_loadargs_t *la);
+#endif
+
 /* ------------------------------------------------------------------------- */
 
 struct bsu_meminfo {
@@ -301,6 +305,11 @@ struct bsu_api {
 	const ssbl_board_params *(*xfn_board_params)(void);
 #else
 	const void *(*xfn_board_params)(void);
+#endif
+
+#if CFG_TRUSTZONE_MON
+	void (*xfn_tz_smm_set_params)(bolt_loadargs_t *la);
+	int (*xfn_bolt_load_program)(const char *name, bolt_loadargs_t * la);
 #endif
 };
 

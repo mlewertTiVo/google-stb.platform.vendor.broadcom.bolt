@@ -120,6 +120,7 @@ static int s3_key_load(enum bsp_initiate_command cmd)
 static int s3_compare_hash(uint32_t *orig, uint32_t *new)
 {
 	unsigned int i;
+
 	for (i = 0; i < BRCMSTB_HASH_LEN / 4; i++)
 		if (orig[i] != new[i])
 			return -1;
@@ -143,16 +144,14 @@ static int verify_s3_params(struct brcmstb_s3_params *params, uint32_t flags)
 	region.addr = (uintptr_t)&params->magic;
 	region.len = AON_REG(AON_REG_CONTROL_HASH_LEN);
 
-	__puts("Verifying S3 parameters @ ");
-	writehex(region.addr);
-	puts("");
+	report_hex("PM: verify params @ ", region.addr);
 
 	if (params->magic != BRCMSTB_S3_MAGIC)
 		return -1;
 
 #ifndef SECURE_BOOT
 	if (!fsbl_pm_mem_verify(flags)) {
-		puts("WARNING: Skipping params verification");
+		puts("PM: WARNING: skip params verify");
 		return 0;
 	}
 #endif
@@ -180,14 +179,14 @@ static int verify_s3_params(struct brcmstb_s3_params *params, uint32_t flags)
 	status = 1234; /* security anti-glitch trace status */
 	status = s3_compare_hash(orig_hash, hash);
 	if (status) {
-		puts("S3 parameter verification hash mismatch");
+		puts("PM: verify params hash mismatch");
 		return -1;
 	}
 
 	check_return_val((uint32_t)status, BPHYSADDR(BCHP_HIF_TOP_CTRL_SCRATCH),
 			 TRACE_VERIFY_WARM_0_BIT, ERR_S3_PARAM_HASH_FAILED);
 
-	puts("Verification complete");
+	puts("PM: verify OK");
 
 	return 0;
 }
@@ -204,7 +203,7 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 
 #ifndef SECURE_BOOT
 	if (!fsbl_pm_mem_verify(flags)) {
-		puts("WARNING: Skipping memory verification");
+		puts("PM: WARNING: skip memory verify");
 		return 0;
 	}
 #endif
@@ -220,9 +219,7 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 		len += mcpb_get_dma_chain_len(
 			(struct mcpb_dma_desc *)pa_to_va(desc2), maxdescs);
 
-	__puts("Verifying main memory, len ");
-	writehex(len);
-	puts("");
+	report_hex("PM: verify main memory, len ", len);
 
 	if (memdma_run(desc1, desc2, dual_channel))
 		return -1;
@@ -232,36 +229,17 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 	status = 1234; /* security anti-glitch trace status */
 	status = s3_compare_hash(params->hash, hash);
 	if (status) {
-		puts("Memory verification hash mismatch");
+		puts("PM: verify memory mismatch");
 		return -1;
 	}
 
 	check_return_val(status, BPHYSADDR(BCHP_HIF_TOP_CTRL_SCRATCH),
 			 TRACE_VERIFY_WARM_1_BIT, ERR_S3_DDR_HASH_FAILED);
 
-	puts("Verification complete");
+	puts("PM: verify OK");
 
 	return 0;
 }
-
-
-#ifdef STUB64_START
-uint32_t psci_bootmode(uint32_t flags)
-{
-	if (flags & S3_FLAG_PSCI_BOOT) {
-		__puts("PSCI");
-		if (flags & S3_FLAG_BOOTED64) {
-			puts("64");
-			return OEM_FUNC_EXEC64;
-		} else {
-			puts("32");
-			return OEM_FUNC_EXEC32;
-		}
-	}
-	puts("JMP");
-	return 0;
-}
-#endif
 
 void fsbl_finish_warm_boot(uint32_t restore_val)
 {
@@ -269,9 +247,10 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 	uintptr_t addr;
 	uint32_t flags;
 	extern uint32_t glitch_addr, glitch_trace;
-	const struct memdma_initparams e = {die, udelay, memset, NULL};
-	extern uint32_t __maybe_unused glitch_psci_bootmode;
-	uint32_t __maybe_unused psci_fn;
+	const struct memdma_initparams e = {sys_die, udelay, memset, NULL};
+#ifdef STUB64_START
+	uint32_t psci_base = (uint32_t)sys_die;
+#endif
 
 	/*
 	 * FIXME: once BFW stops making assumptions about AON_REG(0), we can
@@ -295,6 +274,23 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 		handle_boot_err(ERR_S3_PARAM_HASH_FAILED);
 	}
 
+#ifdef STUB64_START
+       /*
+	* After params verify, check PSCI base is valid.
+	*/
+	if (flags & S3_FLAG_PSCI_BOOT) {
+		psci_base = AON_REG(AON_REG_PSCI_BASE);
+		if (0 == psci_base) /* Should have been setup in SSBL */
+			handle_boot_err(ERR_S3_BAD_PSCI_BASE);
+
+		if (PSCI_BASE != psci_base) {
+			report_hex("@MVBAR: ", PSCI_BASE);
+				if (!a53_bootmode())
+					setup_mvbar(psci_base);
+			report_hex(" -> ", psci_base);
+		}
+	}
+#endif
 	if (verify_s3_memory(params, flags)) {
 		puts("S3 memory verification failed");
 		handle_boot_err(ERR_S3_DDR_HASH_FAILED);
@@ -307,39 +303,42 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 	fsbl_clear_reset_history();
 
 	__puts("OS reentry @ ");
-	writehex(params->reentry);
 #ifndef SECURE_BOOT
 	if (!fsbl_pm_mem_verify(flags)) {
-		__puts(" !verif ");
-
-		/*
-		 * Without memory verification, we also skip the anti-glitch
-		 * checks and jump (or psci call) straight to the OS re-entry
-		 * point.
-		 */
-#ifdef STUB64_START
-		psci_fn = psci_bootmode(flags);
-		if (psci_fn) {
-			psci(psci_fn, params->reentry, 0, 0);
-			die("ret PSCI!"); /* Unexpected return. */
-		}
-#endif
 		void (*reentry)();
 
-		reentry = (void (*)())(uintptr_t)params->reentry;
+		/*
+		 * Without memory verification, we skip the anti-glitch
+		 * checks and jump (or jump via a psci call) straight to
+		 * the OS re-entry point.
+		 */
+#ifdef STUB64_START
+		if (flags & S3_FLAG_PSCI_BOOT)
+			reentry = (void (*)())(uintptr_t)psci_base;
+		else
+#endif
+			reentry = (void (*)())(uintptr_t)params->reentry;
+
+		writehex((uint32_t)reentry);
+		puts(" !verif");
+
 		(*reentry)();
-		die("ret JMP!"); /* Unexpected return. */
+		/* Unexpected return. */
+		sys_die(DIE_PM_RET_FROM_S3, "RET!"); /* Unexpected return. */
 	}
 #endif
 	if ((uintptr_t)anti_glitch_e > (uintptr_t)anti_glitch_d) {
-		glitch_addr = (uint32_t)params->reentry / 2;
-		glitch_trace = BDEV_RD(BCHP_HIF_TOP_CTRL_SCRATCH);
-
 #ifdef STUB64_START
-		psci_fn = psci_bootmode(flags);
-		if (psci_fn)
-			glitch_psci_bootmode = psci_fn;
+		if (flags & S3_FLAG_PSCI_BOOT)
+			glitch_addr = psci_base / 2;
+		else
 #endif
+			glitch_addr = (uint32_t)params->reentry / 2;
+
+		writehex(glitch_addr * 2);
+		puts("");
+
+		glitch_trace = BDEV_RD(BCHP_HIF_TOP_CTRL_SCRATCH);
 		anti_glitch_e();
 	}
 	handle_boot_err(ERR_GLITCH_TRACE_CHECK);

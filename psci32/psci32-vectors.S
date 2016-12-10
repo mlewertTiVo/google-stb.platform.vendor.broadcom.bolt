@@ -18,7 +18,7 @@
 #define ENABLE_SECURE_TMR	0
 
 ENTRY_PROC(mon_vectors)
-	b	 unhandled	@ reset
+	blx	 s3_resume	@ reset
 	b	 unhandled	@ undefined instruction
 	b	 do_psci_smc	@ software interrupt
 	b	 unhandled	@ data abort
@@ -32,6 +32,13 @@ END_PROC(mon_vectors)
 .section .text
 .align 4
 .arm
+
+ENTRY_PROC(s3_resume)
+	ldr	r0, =OEM_FUNC_S3_RESUME
+	smc	#0 /* do the PSCI call */
+	isb
+	blx	reboot
+END_PROC(s3_resume)
 
 
 ENTRY_PROC(unhandled)

@@ -62,8 +62,9 @@ struct memsys_params {
 	unsigned long edis_reg_base;
 };
 
-#define AVS_ENABLE(avs) (avs >> 4)
-#define AVS_DOMAINS(avs) (avs & 0xf)
+#define AVS_ENABLE(avs) ((avs) & 0x1)
+#define AVS_DOMAINS(avs) (((avs) >> 1) & 0x3)
+#define AVS_PMAP_ID(avs) (((avs) >> 3) & 0x1F)
 
 /*
 name:	Unambiguous name that maps directly to
@@ -93,10 +94,29 @@ struct board_type {
 	struct	ddr_info ddr[MAX_DDR];
 };
 
+/* clock_divisors (and a multiplier)
+ *
+ * The output frequency of a clock is defined:
+ *   freqOUT = freqVCO / MDIV, where freqVCO = refClock / PDIV * NDIV
+ */
+struct clock_divisors {
+	uint16_t ndiv; /* 10-bit in register specification */
+	uint8_t pdiv; /* 4-bit in register specification */
+	uint8_t mdiv; /* 8-bit in register specification */
+};
+
+/* simplified PMap, only for CPU and SCB */
+struct pmap_entry {
+	struct clock_divisors cpu;
+	struct clock_divisors scb;
+};
+
 struct boards_nvm_list {
 	uint32_t magic;
 	uint32_t n_boards;
 	const struct board_type *board_types;
+	uint32_t n_pmaps;
+	const struct pmap_entry *pmap_table;
 };
 
 struct nand_chip {
@@ -120,13 +140,19 @@ struct boot_shape_mask {
 
 #define DDR_OVERRIDE_NO 0xFFFFFFFF
 
-/* Allocated:			0xFFE00007 */
+/* Allocated:			0xFFE000FF */
 #define FSBL_HARDFLAG_AVS_MASK	0x00000003
 #define FSBL_HARDFLAG_AVS_SHIFT 0
 #define FSBL_HARDFLAG_AVS_BOARD	0x00000000
 #define FSBL_HARDFLAG_AVS_ON	0x00000001
 #define FSBL_HARDFLAG_AVS_OFF	0x00000002
 #define FSBL_HARDFLAG_AVS_RSVD	0x00000003
+
+#define FSBL_HARDFLAG_PMAP_MASK	0x0000001F
+#define FSBL_HARDFLAG_PMAP_SHIFT 3
+#define FSBL_HARDFLAG_PMAP_BOARD FSBL_HARDFLAG_PMAP_MASK
+#define FSBL_HARDFLAG_PMAP_ID(f) \
+	(((f) >> FSBL_HARDFLAG_PMAP_SHIFT) & FSBL_HARDFLAG_PMAP_MASK)
 
 #define FSBL_HARDFLAG_RTS_MASK	0x000003FF
 #define FSBL_HARDFLAG_RTS_SHIFT 22
@@ -143,10 +169,11 @@ struct boot_shape_mask {
 #define FSBL_HARDFLAG_RTS_V1_MASK	0x0000000F
 #define FSBL_HARDFLAG_RTS_V1_SHIFT	28
 
-/* rts:0..1022, 1203:unset */
+/* rts:0..1022, 1023:unset */
 #define FSBL_HARDFLAG_DEFAULT (\
 	(FSBL_HARDFLAG_RTS_BOARD << FSBL_HARDFLAG_RTS_SHIFT) | \
 	(FSBL_HARDFLAG_RTS_V2) | \
+	(FSBL_HARDFLAG_PMAP_BOARD << FSBL_HARDFLAG_PMAP_SHIFT) | \
 	(FSBL_HARDFLAG_AVS_BOARD << FSBL_HARDFLAG_AVS_SHIFT))
 
 /* This interface between FSBL & SSBL is
@@ -228,6 +255,28 @@ enum {
 #define FSBL_RUNFLAG_MHL_MASK  0x7
 #define FSBL_RUNFLAG_MHL_SHIFT 1
 
+/*
+ * As of BOLT v1.22 'struct fsbl_info' will
+ * be versioned. The version will share the
+ * n_boards element.
+ *
+ * [31:16] x = unused
+ * [15:08] v = version
+ * [07:00] b = number of boards
+ *
+ * xxxxxxxx.xxxxxxxx.vvvvvvvv.bbbbbbbb
+ */
+#define	FSBLINFO_N_BOARDS_MASK		(0x00000000ff)
+#define	FSBLINFO_N_BOARDS_SHIFT		0
+#define	FSBLINFO_N_BOARDS(x)		(((x) & FSBLINFO_N_BOARDS_MASK)\
+						>> FSBLINFO_N_BOARDS_SHIFT)
+
+#define	FSBLINFO_VERSION_MASK		(0x000000ff00)
+#define	FSBLINFO_VERSION_SHIFT		8
+#define	FSBLINFO_VERSION(x)		(((x) & FSBLINFO_VERSION_MASK)\
+						>> FSBLINFO_VERSION_SHIFT)
+
+#define FSBLINFO_CURRENT_VERSION	1
 
 /* This is the primary interface between FSBL & SSBL
 */
@@ -247,6 +296,11 @@ struct fsbl_info {
 	uint8_t bid;
 #endif
 	uint32_t runflags;
+#ifdef STUB64_START
+	uint32_t psci_base;
+#endif
+	uint32_t n_pmaps;
+	struct pmap_entry *pmap_table;
 };
 
 #endif /* __FSBL_COMMON_H__ */

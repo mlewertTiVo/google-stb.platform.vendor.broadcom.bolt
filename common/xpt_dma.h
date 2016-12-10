@@ -51,7 +51,7 @@ struct wdma_desc {
 };
 
 struct memdma_initparams {
-	void (*die)(char *msg);
+	void (*sys_die)(const uint16_t die_code, const char *die_string);
 	void (*udelay)(uint32_t time);
 	void *(*memset)(void *s, int c, size_t n);
 	int (*wait_for_int)(void);

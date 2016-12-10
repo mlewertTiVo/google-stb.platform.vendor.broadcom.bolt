@@ -200,10 +200,10 @@ tcp_info_t *_tcp_init(ip_info_t * ipi, void *ref)
 	 * stack can only be initialized once per boot session.
 	 * There is no concept of attaching and deteching TCP stack.
 	 * The port for transporting Android fastboot protocol is hard-coded
-	 * to '1234' as it is also hard-coded in the Host-side Fastboot
+	 * to '5554' as it is also hard-coded in the Host-side Fastboot
 	 * application.
 	 */
-	bolt_add_device(&tcpfastboot, 1234, 0, NULL);
+	bolt_add_device(&tcpfastboot, 5554, 0, NULL);
 	bolt_add_device(&tcpconsole, 0, 0, NULL);
 	
 	return ti;

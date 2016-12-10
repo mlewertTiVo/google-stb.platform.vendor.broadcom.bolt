@@ -28,19 +28,24 @@
 #include "fsbl-common.h"
 #include "board.h"
 
+
 static int ui_cmd_reboot(ui_cmdline_t *cmd, int argc, char *argv[]);
+static int ui_cmd_info(ui_cmdline_t *cmd, int argc, char *argv[]);
+static int ui_cmd_time(ui_cmdline_t *cmd, int argc, char *argv[]);
+
 #if (CFG_CMD_LEVEL >= 3)
 static int ui_cmd_loop(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_console(ui_cmdline_t *cmd, int argc, char *argv[]);
 #endif
-static int ui_cmd_info(ui_cmdline_t *cmd, int argc, char *argv[]);
+
 #if CFG_MHL
 static int ui_cmd_mhl_power(ui_cmdline_t *cmd, int argc, char *argv[]);
 #endif
-static int ui_cmd_time(ui_cmdline_t *cmd,int argc,char *argv[]);
+
 #ifdef STUB64_START
 static int ui_cmd_psci(ui_cmdline_t *cmd, int argc, char *argv[]);
 #endif
+
 
 int ui_init_misccmds(void)
 {
@@ -92,7 +97,7 @@ int ui_init_misccmds(void)
 	return 0;
 }
 
-static int ui_cmd_time(ui_cmdline_t *cmd,int argc,char *argv[])
+static int ui_cmd_time(ui_cmdline_t *cmd, int argc, char *argv[])
 {
 	uint64_t  t1, t2;
 	uint64_t  delta, delta_us;
@@ -172,37 +177,6 @@ static int ui_cmd_loop(ui_cmdline_t *cmd, int argc, char *argv[])
 	return res;
 }
 
-#ifdef STUB64_START
-static int ui_cmd_psci(ui_cmdline_t *cmd, int argc, char *argv[])
-{
-	const char *x;
-	unsigned long r0_back, r0, r1 = 0, r2 = 0, r3 = 0;
-
-	/* Only r0 is required, the rest
-	 * depends on the feature requested.
-	 */
-	if (cmd_sw_value(cmd, "-r0", &x))
-		r0 = atoi(x);
-	else
-		return BOLT_ERR_INV_PARAM;
-
-	if (cmd_sw_value(cmd, "-r1", &x))
-		r1 = atoi(x);
-
-	if (cmd_sw_value(cmd, "-r2", &x))
-		r2 = atoi(x);
-
-	if (cmd_sw_value(cmd, "-r3", &x))
-		r3 = atoi(x);
-
-	r0_back = psci(r0, r1, r2, r3);
-
-	xprintf("PSCI result: 0x%lx\n", r0_back);
-
-	return BOLT_OK;
-}
-#endif
-
 static int ui_cmd_console(ui_cmdline_t *cmd, int argc, char *argv[])
 {
 	int res;
@@ -241,3 +215,35 @@ static int ui_cmd_info(ui_cmdline_t *cmd, int argc, char *argv[])
 
 	return 0;
 }
+
+#ifdef STUB64_START
+static int ui_cmd_psci(ui_cmdline_t *cmd, int argc, char *argv[])
+{
+	const char *x;
+	unsigned long r0_back, r0, r1 = 0, r2 = 0, r3 = 0;
+
+	/* Only r0 is required, the rest
+	 * depends on the feature requested.
+	 */
+	if (cmd_sw_value(cmd, "-r0", &x))
+		r0 = atoi(x);
+	else
+		return BOLT_ERR_INV_PARAM;
+
+	if (cmd_sw_value(cmd, "-r1", &x))
+		r1 = atoi(x);
+
+	if (cmd_sw_value(cmd, "-r2", &x))
+		r2 = atoi(x);
+
+	if (cmd_sw_value(cmd, "-r3", &x))
+		r3 = atoi(x);
+
+	r0_back = psci(r0, r1, r2, r3);
+
+	xprintf("PSCI result: 0x%lx\n", r0_back);
+
+	return BOLT_OK;
+}
+#endif
+

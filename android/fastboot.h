@@ -20,6 +20,8 @@
 #include "android_types.h"
 
 #define FASTBOOT_VERSION                "0.4"
+#define FASTBOOT_HANDSHAKE              "FB01"
+#define FASTBOOT_HANDSHAKE_SIZE         4
 
 /* The code to access flash device assumes 512 bytes per LBA */
 #define BYTES_PER_LBA           (512)
@@ -48,15 +50,22 @@ struct fastboot_ptentry
 	unsigned long long length;
 	/* Controls the details of how operations are done on the partition */
 	unsigned long long flags;
+	/* Partition unique UUID (generated) */
+	char uuid[64];
 };
 
 /* Constant to define transport mode selected by user */
-#define FB_TRANSPORT_TCP 0      
-#define FB_TRANSPORT_USB 1      
+#define FB_TRANSPORT_TCP 0
+#define FB_TRANSPORT_USB 1
 
 /* Fastboot command processor states defintions */
-#define FB_STATE_CMD_PROC 0     
+#define FB_STATE_CMD_PROC 0
 #define FB_STATE_DATA_DL 1
+
+/* if hand-shaking with peer, we need to account for a 8-bytes overhead on
+ * command and responses which carries the size of the paylaod.
+ */
+#define FB_HS_OVERHEAD 8
 
 /* Fastboot context information */
 struct fastboot_info
@@ -94,6 +103,14 @@ struct fastboot_info
 	/* Counter to keep track of the valid state change request to ensure a
 	 * valid lock state change is submitted twice before erasing data */
 	int dev_lock_state_change_req_cnt;
+
+	/* handshake - marked when we successfully shake hands with host, used for
+	 *             tcp support.
+	 * header - after handshake took place, command/response stream hace a mandatory
+	 *          header.
+	 */
+   int handshake;
+   int header;
 };
 
 /* Constants releted to Bootloader Image Header */
@@ -121,6 +138,12 @@ struct bootloader_img_hdr
 
 	/* BSU image size*/
 	__le32 bsu_img_size;
+
+	/* BL31 image offset location within bootloader image */
+	__le32 bl31_img_offset;
+
+	/* BL31 image size*/
+	__le32 bl31_img_size;
 };
 
 /* The Android-style flash handling */

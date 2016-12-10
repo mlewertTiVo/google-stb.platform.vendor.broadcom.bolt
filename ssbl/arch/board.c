@@ -45,6 +45,17 @@ static void board_print_ddr_ssc(int which, uint32_t divisor)
 }
 
 
+static struct fsbl_info *get_inf(void)
+{
+	struct fsbl_info *inf = board_info();
+
+	if (!inf || (inf->board_idx >= FSBLINFO_N_BOARDS(inf->n_boards)))
+		return NULL;
+
+	return inf;
+}
+
+
 /*  *********************************************************************
     *  board_config_info()
     *
@@ -215,9 +226,9 @@ unsigned int board_bootmode(void)
 
 struct board_type *board_thisboard(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return NULL;
 
 	return get_board_type(inf);
@@ -226,9 +237,9 @@ struct board_type *board_thisboard(void)
 
 struct partition_profile *board_flash_partition_table(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return NULL;
 
 	return board_params[inf->board_idx].mapselect;
@@ -236,13 +247,32 @@ struct partition_profile *board_flash_partition_table(void)
 
 const struct dvfs_params *board_dvfs(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return NULL;
 
 	return &(board_params[inf->board_idx].dvfs);
 }
+
+#ifdef DVFS_SUPPPORT
+unsigned int board_pmap(void)
+{
+	struct fsbl_info *inf = board_info();
+	unsigned int pmap_id;
+
+	if (!inf || (inf->board_idx >= inf->n_boards))
+		return PMapMax;
+
+	pmap_id = FSBL_HARDFLAG_PMAP_ID(inf->saved_board.hardflags);
+	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD) {
+		/* has not been overridden */
+		pmap_id = AVS_PMAP_ID(inf->board_types[inf->board_idx].avs);
+	}
+
+	return pmap_id;
+}
+#endif
 
 const char *board_name(void)
 {
@@ -289,10 +319,10 @@ uint32_t board_totaldram(void)
 
 const enet_params *board_enet(int instance)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 	const enet_params *e;
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return NULL;
 
 	e = board_params[inf->board_idx].enet;
@@ -309,12 +339,11 @@ const enet_params *board_enet(int instance)
 
 const sdio_params *board_sdio(int sdio)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 	const sdio_params *s;
 	int i;
 
-	if (!inf || (inf->board_idx >= inf->n_boards)
-		|| (sdio >= NUM_SDIO) || (sdio < 0))
+	if (!inf || (sdio >= NUM_SDIO) || (sdio < 0))
 		return NULL;
 
 	s = board_params[inf->board_idx].sdio;
@@ -331,9 +360,9 @@ const sdio_params *board_sdio(int sdio)
 
 unsigned int board_num_enet(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return 0;
 
 	return NUM_ENET;
@@ -341,9 +370,9 @@ unsigned int board_num_enet(void)
 
 const moca_params *board_moca(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return NULL;
 
 	return board_params[inf->board_idx].moca;
@@ -351,9 +380,9 @@ const moca_params *board_moca(void)
 
 const gpio_key_params *board_gpio_keys(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return NULL;
 
 	return board_params[inf->board_idx].gpio_key;
@@ -371,9 +400,9 @@ const bt_rfkill_params *board_bt_rfkill_gpios(void)
 
 const struct ssbl_board_params *board_current_params(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return NULL;
 
 	return &board_params[inf->board_idx];
@@ -382,10 +411,10 @@ const struct ssbl_board_params *board_current_params(void)
 
 dt_ops_s *board_dt_ops(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 	dt_ops_s *c;
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return NULL;
 
 	c = (dt_ops_s *)board_params[inf->board_idx].dt_ops;
@@ -398,10 +427,10 @@ dt_ops_s *board_dt_ops(void)
 
 void board_pinmux(void)
 {
-	struct fsbl_info *inf = board_info();
+	struct fsbl_info *inf = get_inf();
 	const struct reg_update *extra_mux;
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf)
 		return;
 
 	if (board_params[inf->board_idx].pinmuxfn)

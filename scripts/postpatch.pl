@@ -318,7 +318,6 @@ sub section_top($)
 # ENABLE_AVS_FIRMWARE
 #
 #Enabled:
-# AVS_ENABLE_OVERTEMP	0|1
 # BFW_LOAD		0|1
 sub get_extra_defines()
 {

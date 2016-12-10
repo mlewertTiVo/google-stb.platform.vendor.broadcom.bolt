@@ -56,10 +56,23 @@ int psci_boot(unsigned int la_flags, long la_entrypt, void *dt_address)
 #ifdef STUB64_START
 	if (la_flags & LOADFLG_APP64) {
 		bolt_set_aon_bootmode(S3_FLAG_PSCI_BOOT | S3_FLAG_BOOTED64);
-		xprintf("64 bit PSCI boot...\n");
-		bolt_start64(la_entrypt, 0xffffffff,
+		xprintf("64 bit PSCI ");
+
+		if (la_flags & LOADFLG_EL3_EXEC) {
+			xprintf("(@ EL3) boot...\n");
+			bolt_start64_el3(la_entrypt, 0xffffffff,
 				(unsigned int)dt_address, 0);
+		} else {
+			xprintf("boot...\n");
+			bolt_start64(la_entrypt, 0xffffffff,
+				(unsigned int)dt_address, 0);
+		}
 	} else {
+		if (la_flags & LOADFLG_EL3_EXEC) {
+			err_msg("EL3 boot unsupported in 32 bit bootmode");
+			return BOLT_ERR_INV_PARAM;
+		}
+
 		bolt_set_aon_bootmode(S3_FLAG_PSCI_BOOT);
 		xprintf("32 bit PSCI boot...\n");
 		bolt_start32(la_entrypt, 0xffffffff,

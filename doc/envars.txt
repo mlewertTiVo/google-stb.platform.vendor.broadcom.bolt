@@ -357,13 +357,13 @@ BOLT>
 
 ------------------------------------------------------------------------- {qwe}
 
- Devicetree
+ Device Tree
 -----------
 
  DT_ADDRESS
 ~~~~~~~~~~~
-Points to the the address of the current Devicetree BOLT should reference.
-You can load in another Devicetree and set DT_ADDRESS to point to it.
+Points to the the address of the current Device Tree BOLT should reference.
+You can load in another Device Tree and set DT_ADDRESS to point to it.
 Note that you should run 'dt sane' to check it and make sure DT_SIZE
 is updated.
 
@@ -397,7 +397,7 @@ DTB reported size 0x1ced @ 0x10000000
 
  DT_SIZE
 ~~~~~~~~
-The size of the current Devicetree BOLT references.
+The size of the current Device Tree BOLT references.
 
  DT_OFF
 ~~~~~~~
@@ -451,7 +451,7 @@ Could not activate device eth0: Error
 ----
 
  ETH_ANEG_TIMEOUT
-~~~~~~~
+~~~~~~~~~~~~~~~~~
 If defined, it overrides the default timeout value, 8 (eight) seconds, on
 auto-negotiation. Further, if the overridden value is differet from
 the default 8 seconds, informative message is printed out.
@@ -678,7 +678,7 @@ The PHY type.
 *       RGMII - (4) 14-wire RGMII interface.
 * RGMII_NO_ID - (6) same as above, but disable phase shift on TXC clock
 
-The following types only have meaning for devicetree
+The following types only have meaning for Device Tree
 and are not valid for physical devices:
 
 *      RVMII - (3) 14-wire RGMII interface.
@@ -707,7 +707,7 @@ The MDIO configuration.
 * boot - BOLT configure it only e.g. linked to an ethernet switch.
 
 Note that this applies only to the physical device BOLT can use,
-not the Devicetree entries as that will result in undefined values.
+not the Device Tree entries as that will result in undefined values.
 
 ------------------------------------------------------------------------- {qwe}
 
@@ -776,7 +776,7 @@ USB @ 0xf0480200: IPP is active low, IOC is negative polarity
 
  USBDT
 ~~~~~~
-A debug flag to dump out the Devicetree USB configuration
+A debug flag to dump out the Device Tree USB configuration
 as BOLT starts.
 
 NOTE: This is independent of the 'USBMODE' setting.
@@ -813,7 +813,7 @@ BOLT>
 
 This override bitmask allows combinations of OHCI, EHCI, XHCI and BDC
 USB drivers to be selectively disabled and also removed from
-Devicetree so Linux will also not be able to use them.
+Device Tree so Linux will also not be able to use them.
 
 .USB_SELECT Bitmasks
 [width="10%"]

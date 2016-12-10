@@ -68,19 +68,12 @@ void fsbl_print_version(int vermax, int vermin)
 
 static void fsbl_banner(void)
 {
-	__puts("BCM");
-	writehex(BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID));
-	puts("");
-
-	__puts("PRID");
-	writehex(BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID));
-	puts("");
+	report_hex("BCM", BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID));
+	report_hex("PRID", BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID));
 
 	fsbl_print_version(BOLT_VER_MAJOR, BOLT_VER_MINOR);
 
-	__puts("RR:");
-	writehex(BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY));
-	puts("");
+	report_hex("RR:", BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY));
 
 	if (BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY) &
 	    BCHP_AON_CTRL_RESET_HISTORY_security_master_reset_MASK)
@@ -144,11 +137,16 @@ void fsbl_main(void)
 	struct board_nvm_info *pnvm;
 	struct board_type *b;
 	physaddr_t b_ddr;
-	int do_shmoo_menu, hf;
+	int do_shmoo_menu, avs_hf, avs_en;
+	unsigned int pmap_id = 0;
 	uint32_t restore_val;
 	int en_avs_thresh;
 #ifndef SECURE_BOOT
 	int bypass_avs;
+#ifdef DVFS_SUPPPORT
+	struct clock_divisors cpu_clks;
+	struct clock_divisors scb_clks;
+#endif
 #endif
 	uint32_t mhl_power;
 #endif
@@ -218,23 +216,13 @@ void fsbl_main(void)
 		(uint32_t *)pnvm, sizeof(*pnvm));
 
 	__puts("AVS: overtemp mon ");
-	/* The AVS sub-makefile include supplies us with the
-	 * flag for this feature.
-	 */
-	if (AVS_ENABLE_OVERTEMP) {
-		en_avs_thresh = (info.saved_board.hardflags &
-					FSBL_HARDFLAG_OTPARK_MASK) ? 0 : 1;
-
-		avs_set_temp_threshold(STB_DEVICE, en_avs_thresh);
-
-		if (en_avs_thresh)
-			puts("ON");
-		else
-			puts("OFF");
-	} else {
-		/* Not applicable since its been disabled */
-		puts("N/A");
-	}
+	en_avs_thresh = (info.saved_board.hardflags &
+					FSBL_HARDFLAG_OTPARK_MASK)? 0 : 1;
+	avs_set_temp_threshold(STB_DEVICE, en_avs_thresh);
+	if (en_avs_thresh)
+		puts("ON");
+	else
+		puts("OFF");
 
 	/* This has to happen before board_select() and
 	 * read_mhl_power_config() in case those set
@@ -266,6 +254,25 @@ void fsbl_main(void)
 	have been populated. */
 	do_shmoo_menu = board_select(&info, SHMOO_SRAM_ADDR);
 
+#ifndef SECURE_BOOT
+	/* save PMap data, or will be overwritten by loading Shmoo */
+	pmap_id = FSBL_HARDFLAG_PMAP_ID(info.saved_board.hardflags);
+	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD)
+		/* board default PMap ID as it is overridden */
+		pmap_id = AVS_PMAP_ID(info.board_types[info.board_idx].avs);
+	if (pmap_id >= info.n_pmaps)
+		pmap_id = 0; /* fall back to PMap ID #0 */
+#ifdef DVFS_SUPPPORT
+	cpu_clks = info.pmap_table[pmap_id].cpu;
+	scb_clks = info.pmap_table[pmap_id].scb;
+#endif
+#else /* SECURE BOOT */
+#if CFG_ZEUS4_2
+	pmap_id =  DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1) &
+			PARAM_AVS_PARAM_1_PMAP_MASK;
+#endif
+#endif
+
 	/* CAUTION: load memsys *before* shmoo data. We may
 	use FIXed MCB tables, so allow an override. */
 	sec_verify_memsys();
@@ -285,20 +292,27 @@ void fsbl_main(void)
 	/* must be called before shmoo because SCB has to be full frequency */
 	adjust_clocks(b, mhl_power);
 
+	avs_hf = (info.saved_board.hardflags >> FSBL_HARDFLAG_AVS_SHIFT) &
+		FSBL_HARDFLAG_AVS_MASK;
+	avs_en = ((avs_hf == FSBL_HARDFLAG_AVS_BOARD) && AVS_ENABLE(b->avs)) ||
+		(avs_hf == FSBL_HARDFLAG_AVS_ON);
 #ifndef SECURE_BOOT
 	if (!bypass_avs)
 #endif
-		if (avs_err == AVS_LOADED) {
-			hf = (info.saved_board.hardflags >>
-				FSBL_HARDFLAG_AVS_SHIFT) &
-				FSBL_HARDFLAG_AVS_MASK;
-
-			avs_err = avs_start(((hf == FSBL_HARDFLAG_AVS_BOARD) &&
-					     AVS_ENABLE(b->avs)) ||
-					     (hf == FSBL_HARDFLAG_AVS_ON));
-		}
+		if (avs_err == AVS_LOADED)
+			avs_err = avs_start(avs_en, pmap_id);
 
 	info.avs_err = avs_err;
+
+#ifndef SECURE_BOOT
+#ifdef DVFS_SUPPPORT
+	/* If AVS was bypassed or failed to start, it could not set
+	 * SCB and CPU speeds. We are on our own.
+	 */
+	if (bypass_avs || !avs_en)
+		apply_dvfs_clocks(cpu_clks, scb_clks);
+#endif
+#endif
 
 	if (warm_boot)
 		memsys_warm_restart(b->nddr);
@@ -365,6 +379,8 @@ void fsbl_main(void)
 	*/
 	load_boards(&info, b_ddr);
 
+	report_hex("INFO v", FSBLINFO_VERSION(info.n_boards));
+
 	/* copy into the loaded list of boards our tmp
 	board in case its been runtime modified e.g. by
 	board_try_patch_ddr() or shmoo_set() */
@@ -373,7 +389,7 @@ void fsbl_main(void)
 
 #ifdef SECURE_BOOT
 	memcpy((struct board_type *)b_ddr, info.board_types,
-		info.n_boards * sizeof(struct board_type));
+		FSBLINFO_N_BOARDS(info.n_boards) * sizeof(struct board_type));
 
 	/* Reset info to point to DDR now. Note that this address
 	will be different from the SECURE_BOOT=n case as we've no
@@ -434,13 +450,13 @@ void *copy_code(void)
 
 	__puts("COPY CODE... ");
 	if (load_from_flash_ext(dst, flash_offs, ssbl_size, &flash) < 0)
-		die("flash read failure");
+		sys_die(DIE_FLASH_READ_FAILURE, "flash read failure");
 #else
 	uint32_t flash_offs = SSBL_TEXT_OFFS;
 
 	__puts("COPY CODE... ");
 	if (load_from_flash(dst, flash_offs, SSBL_SIZE) < 0)
-		die("flash read failure");
+		sys_die(DIE_FLASH_READ_FAILURE, "flash read failure");
 #endif
 #endif
 	puts("DONE");
@@ -454,6 +470,9 @@ static void set_other_info(struct fsbl_info *info)
 	info->uart_base = (CFG_SSBL_CONSOLE) ? (uint32_t)get_uart_base() : 0;
 	info->pte = (uint32_t)SSBL_PAGE_TABLE;
 	info->runflags = 0;
+#ifdef STUB64_START
+	info->psci_base = PSCI_BASE;
+#endif
 }
 
 

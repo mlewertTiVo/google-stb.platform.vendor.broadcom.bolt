@@ -148,15 +148,15 @@ This command loads and executes a program from a boot device
 By default, 'boot' will load a raw binary at virtual 
 address 0x8000 and then jump to that address
 
-If we have a valid devicetree then it is modified (see the
+If we have a valid Device Tree then it is modified (see the
 'dt bolt' command) just before the program is run. If the
-devicetree is not required to be auto-modified by BOLT
+Device Tree is not required to be auto-modified by BOLT
 use the 'dt off' command.
 
 See also the 'dt bolt' command.
 
 An optional argument [arg] may be specified. This will be
-put into the Devicetree "chosen" node as the "bootargs"
+put into the Device Tree "chosen" node as the "bootargs"
 property. To specify multiple arguments, enclose them
 in quotes. Use single quotes ('') when your argument has
 double quotes ("") in it, and double quotes when using
@@ -640,7 +640,7 @@ BOLT> dt on
 
  dt bolt
 --------
-dt bolt ........... Modify an existing DTB (devicetree) in memory.
+dt bolt ........... Modify an existing DTB (Device Tree) in memory.
  
 
 SUMMARY
@@ -652,7 +652,7 @@ The DT_ADDRESS envar is used as the base address of the dtb.
 NOTES
 ~~~~~
 The environment variable DT_SIZE will be changed to reflect the new size
-of the devicetree specified by the address in DT_ADDRESS. All values
+of the Device Tree specified by the address in DT_ADDRESS. All values
 are hexadecimal. Note that further modification cannot be done
 unless you issue a 'dt on' command prior to the next 'dt bolt'
 command.
@@ -697,11 +697,11 @@ address of the dtb.
 
 NOTES
 ~~~~~
-Each call will add a /memreserve/ line in the devicetree. Its up to you
+Each call will add a /memreserve/ line in the Device Tree. Its up to you
 to check for overlaps.
 
 The values are volatile and are lost across reboots. You can hard wire
-them into the devicetree boilerplate files at build time or add them to
+them into the Device Tree boilerplate files at build time or add them to
 a startup script.
 
 The splash screen also uses /memreserve/ so be sure your other
@@ -787,7 +787,7 @@ dt del node [path] [node name]
 
 NOTES
 ~~~~~
-Deletes any node from the devicetree. See the environment
+Deletes any node from the Device Tree. See the environment
 variable DT_SIZE for any changes.
 
 
@@ -888,7 +888,7 @@ dt add node [path] [name]
 
 NOTES
 ~~~~~
-This adds a level 1 (top) node to the device tree binary, which may change its size.
+This adds a level 1 (top) node to the Device Tree binary, which may change its size.
 See the environment variable DT_SIZE for any changes. If the node already exists then
 an error is returned.
 
@@ -949,7 +949,7 @@ dt sane
 
 NOTES
 ~~~~~
-This is a basic check of the parameters of the devicetree binary in memory.
+This is a basic check of the parameters of the Device Tree binary in memory.
 
 
 EXAMPLE
@@ -993,11 +993,11 @@ It could even have been previously loaded via e.g. tftp but the
 environment variable DT_ADDRESS must be set to the load location prior to 
 executing this command.
 
-The resulting devicetree source (DTS) output can be screen scraped into
+The resulting Device Tree source (DTS) output can be screen scraped into
 a file that is directly compilable by the standard Linux 'dtc' utility.
 
 A partial or full node name may also be used to filter only portions
-of the devicetree you are interested in.
+of the Device Tree you are interested in.
 
 There is a limitation with regard to the '-paths' flag: For more than one
 subnode (partial or full name filter) matches from _different_ parent
@@ -1180,7 +1180,7 @@ Perform an erase operation on non-volatile memory
 
 USAGE
 ~~~~~
-erase [device], erase [device.partiton]
+erase [device], erase [device.partition]
 
 
 NOTES
@@ -1385,7 +1385,7 @@ OPTIONS
 * -mem=* ........... If mem device then specify from where to read
 * -memsize=* ....... If mem device then specify amount to read
 * -size=* .......... Size of source device when programming from flash to flash. 
-                    Otherwise, for disk and network files, this is the maximimum
+                    Otherwise, for disk and network files, this is the maximum
                    size of file, which when less than 1024 is interpreted in MB.
 * -header .......... Deprecated option; do not use
 * -noheader ........ Deprecated option; do not use
@@ -2255,6 +2255,95 @@ BOLT> ping -E -x -c=4 192.168.0.42
 *** command status = 0
 ----
 
+------------------------------------------------------------------------- {qwe}
+
+ pmap
+----
+pmap ............ list all, or select a pmap
+
+SUMMARY
+~~~~~~~
+Show PMap ID's (power profiles) available, or select another.
+
+USAGE
+~~~~~
+pmap [-set=<N> | -clear]
+
+Without any command line argument, available PMap ID's will be
+listed along with associated number of power domains.
+
+For -set=<N> option, <N> is a PMap ID.
+
+For -clear option, any PMap ID selection gets reverted back to
+the default one for the current board.
+
+NOTES
+~~~~~
+A PMap specified at build time can be checked and replaced with
+a new one using the 'pmap' command. For the newly selected PMap
+to be effective, the board has to reboot (or reset).
+
+Without any command line argument, selectable PMap's are listed
+with numbers at beginning of their lines while non-selectable are
+with asterisk. The number of power domains is marked at the end of
+a line, enclosed in parenthesis. 0 (zero) means "don't care".
+The asterisk at the end of a line indicates the currently selected
+PMap.
+
+Trying to select a PMap that is incompatible with the number of
+power domains on the current board or unavailable in the list will
+result in a failure message, and will not change the existing PMap
+selection.
+
+NOTES
+~~~~~
+The 'pmap' command is available only on ARM64 based platforms.
+It is also disabled once SECURE_BOOT is defined.
+
+EXAMPLE
+~~~~~~~
+
+----
+BOLT> pmap
+*)	PMap0 (1)
+*)	PMap1 (1)
+*)	PMap2 (1)
+*)	PMap3 (1)
+4)	PMap4 (2)
+5)	PMap5 (2)
+6)	PMap6 (2)
+7)	PMap7 (2) *
+8)	PMap8 (2)
+*** command status = 0
+----
+
+----
+BOLT> pmap
+0)      PMap0 (0)
+1)      PMap1 (0)
+2)      PMap2 (0) *
+*** command status = 0
+----
+
+----
+BOLT> pmap -set=1
+board selection update!
+board was f, now f (flags:0xffe00008)
+*** command status = 0
+----
+
+----
+BOLT> pmap -set=5
+PMap must be [0..2]. 5 is invalid.
+*** command status = -1
+----
+
+----
+BOLT> pmap -clear
+board selection update!
+board was f, now f (flags:0xfffffff8)
+*** command status = 0
+----
 
 ------------------------------------------------------------------------- {qwe}
 

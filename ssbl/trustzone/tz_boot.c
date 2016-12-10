@@ -59,11 +59,21 @@ int tz_go(bolt_loadargs_t *la)
 	if (!info)
 		return BOLT_ERR;
 
-	xprintf("Starting TZ program at %#lx (DTB @ %p)\n\n",
-		la->la_address, t->dt_addr);
 
-	bolt_start(la->la_entrypt, 0xffffffff,
+#ifdef STUB64_START
+	if (la->la_flags&LOADFLG_EL3_EXEC) {
+		xprintf("TZ: Starting 64 bit EL3 monitor at %#lx\n",
+				la->la_address);
+		bolt_start64_el3(la->la_entrypt, 0xffffffff,
 		(unsigned int)t->dt_addr, info->uart_base);
+	} else
+#endif
+	{
+		xprintf("TZ: Starting TZ program at %#lx (DTB @ %p)\n",
+			la->la_address, t->dt_addr);
+		bolt_start(la->la_entrypt, 0xffffffff,
+			(unsigned int)t->dt_addr, info->uart_base);
+	}
 
 	return 0;
 }
@@ -113,8 +123,16 @@ int tz_boot(const char *ldrname, bolt_loadargs_t *la)
 	 * Banzai!  Run the program.
 	 */
 
-	if ((la->la_flags & LOADFLG_EXECUTE) && (la->la_entrypt != 0))
+	if ((la->la_flags & LOADFLG_EXECUTE) && (la->la_entrypt != 0)) {
 		rc = tz_go(la);
+	} else {
+#ifdef STUB64_START
+		/* On 64bit, set load addr and DT addr for Secure/NS worlds. */
+		/* We don't need to set params when loading the EL3 image. */
+		if (!(la->la_flags & LOADFLG_EL3_EXEC))
+			tz_smm_set_params(la);
+#endif
+	}
 
 out:
 	return rc;

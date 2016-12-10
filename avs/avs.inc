@@ -17,7 +17,6 @@ AVS_FIRMWARES:=7250b0 7260a0 7268a0 7271a0 7364a0 7364b0 7364c0 7366c0 74371a0 7
 # for bsu and temp_reset:
 # These parts use an older set of conversion functions for PVTMON
 AVS_OLD_CALCS:=74371
-AVS_NO_OVER_TEMP:=74371
 
 # These parts can be used on reference boards configured with one or two power domains
 AVS_DUAL_DOMAINS:=7260a0 7268a0 7271a0
@@ -57,8 +56,6 @@ EXTRA_DEFINES += -I$(AVS_CLASS) -DAVS_CLASS=$(AVS_CLASS) -I$(AVS_COMMON_CODE)
 # ***************************************************************************
 # Only enable the AVS setup on these platforms.
 # Its okay to run this part on all versions of these chips.
-#  Note that we normally enable AVS_ENABLE_OVERTEMP to allow an
-# over temperature condition to trigger a reset.
 # ***************************************************************************
 
 ifeq ($(filter $(FAMILY), $(AVS_SETUPS)), $(FAMILY))
@@ -66,13 +63,6 @@ ifeq ($(filter $(FAMILY), $(AVS_SETUPS)), $(FAMILY))
  AVS_FSBL_S += $(AVS_CLASS)/avs_init.c
  AVS_FSBL_S += $(AVS_CLASS)/avs_temp_reset.c
 endif
-
-ifeq ($(filter $(FAMILY), $(AVS_NO_OVER_TEMP)), $(FAMILY))
- EXTRA_DEFINES += -DAVS_ENABLE_OVERTEMP=0
-else
- EXTRA_DEFINES += -DAVS_ENABLE_OVERTEMP=1
-endif
-
 
 # ***************************************************************************
 # Only enable the AVS firmware on these platforms.

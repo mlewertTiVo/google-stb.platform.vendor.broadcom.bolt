@@ -137,11 +137,8 @@ static int identify_nand(struct fsbl_flash *flash)
 		return NAND_CHIP_ONFI;
 	}
 
-	__puts("NAND ID: ");
-	writehex(id0);
-	putchar(' ');
-	writehex(id1);
-	puts("");
+	report_hex("@NAND ID: ", id0);
+	report_hex(" ", id1);
 
 	return NAND_CHIP_NONE;
 }
@@ -183,7 +180,8 @@ void get_flash_info(struct fsbl_info *info)
 
 	info->nand_chip_idx = identify_nand(flash);
 	if (info->nand_chip_idx == NAND_CHIP_NONE)
-		die("unrecognized NAND chip");
+		sys_die(DIE_UNRECOGNIZED_NAND_CHIP,
+			"unrecognized NAND chip");
 	else
 		flash->type = FLASH_TYPE_NAND;
 }
@@ -230,14 +228,14 @@ static void nand_copy_page(struct fsbl_flash *flash, uint32_t addr,
 	BDEV_WR(BCHP_NAND_ECC_UNC_ADDR, 0);
 	for (i = 0; i < page_size; i += NAND_FC_SIZE) {
 		uint32_t eaddr;
+
 		do_nand_cmd(NAND_CMD_PAGE_READ, page_addr + i);
 		eaddr = BDEV_RD(BCHP_NAND_ECC_UNC_ADDR);
 		if (eaddr) {
-			__puts("NAND: uncorrectable error @ ");
-			writehex(eaddr);
-			puts("");
+			report_hex("NAND: uncorrectable error @ ", eaddr);
 			/* FIXME: should we just die on errors? */
-			die("NAND flash is corrupt");
+			sys_die(DIE_NAND_FLASH_IS_CORRUPT,
+				"NAND flash is corrupt");
 		}
 		for (j = 0; j < NAND_FC_SIZE; j += 4)
 			if (i + j < offs + len && i + j >= offs)
@@ -267,15 +265,13 @@ static int get_nand_offset(uint32_t *ret_offs, struct fsbl_flash *flash,
 
 	while (check_offs <= ALIGN_TO(text_offs, block_size)) {
 		if (part->part_size && check_offs >= part->part_size) {
-			__puts("out of good blocks in partition @ ");
-			writehex(part->part_offs);
-			puts("");
+			report_hex("out of good blocks in partition @ ",
+				part->part_offs);
 			return -1;
 		}
 		if (nand_block_is_bad(flash, part->part_offs + check_offs)) {
-			__puts("Skipping bad block ");
-			writehex(part->part_offs + check_offs);
-			puts("");
+			report_hex("Skipping bad block ",
+				part->part_offs + check_offs);
 			text_offs += block_size;
 		}
 		check_offs += block_size;
@@ -305,7 +301,7 @@ static int get_nand_offset(uint32_t *ret_offs, struct fsbl_flash *flash,
  * ***WARNING*** we don't currently check that the partition doesn't extend
  * beyond the end of the flash
  *
- * Returns 0 on success, negative on error (or die()'s)
+ * Returns 0 on success, negative on error (or sys_die()'s)
  */
 int get_flash_offset(uint32_t *ret_offs, uint32_t text_offs,
 		     struct fsbl_flash_partition *part)
@@ -317,7 +313,8 @@ int get_flash_offset(uint32_t *ret_offs, uint32_t text_offs,
 
 	flash = fsbl_get_flash(part->cs);
 	if (!flash)
-		die("chip-select not supported");
+		sys_die(DIE_CHIP_SELECT_NOT_SUPPORTED,
+			"chip-select not supported");
 
 	if (flash->type == FLASH_TYPE_NAND)
 		return get_nand_offset(ret_offs, flash, part, text_offs);
@@ -351,7 +348,8 @@ static int copy_from_nand(struct fsbl_flash *flash,
 			return -1;
 
 		if (addr & 0x03 || len & 0x03)
-			die("unaligned access to NAND flash");
+			sys_die(DIE_UNALIGNED_ACCESS_TO_NAND_FLASH,
+				"unaligned access to NAND flash");
 
 		/* Copy the current block */
 		for (i = addr & blk_mask; i < block_size && len > 0;
@@ -376,7 +374,7 @@ static int copy_from_nand(struct fsbl_flash *flash,
  * @len: length of the data to read from flash
  * @part: partition and device information
  *
- * Returns non-zero on errors (or we may die())
+ * Returns non-zero on errors (or we may sys_die())
  *
  * ***WARNING*** we don't currently check that the partition doesn't extend
  * beyond the end of the flash
@@ -391,7 +389,8 @@ int load_from_flash_ext(void *dst, uint32_t flash_offs, size_t len,
 
 	flash = fsbl_get_flash(part->cs);
 	if (!flash)
-		die("chip-select not supported");
+		sys_die(DIE_CHIP_SELECT_NOT_SUPPORTED,
+			"chip-select not supported");
 
 	if (flash->type == FLASH_TYPE_NAND)
 		return copy_from_nand(flash, part, dst, flash_offs, len);

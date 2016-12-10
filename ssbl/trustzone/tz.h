@@ -20,6 +20,7 @@ int tz_devtree_init_nwos(void);
 int tz_devtree_set(void);
 int tz_devtree_set_nwos(void);
 
+int tz_go(bolt_loadargs_t *la);
 int tz_boot(const char *ldrname, bolt_loadargs_t *la);
 
 #endif /* _TZ_H_ */

@@ -101,6 +101,7 @@ int ui_init_loadcmds(void)
 		   "-32;boot a 32 bit app|"
 		   "-64;boot a 64 bit app|"
 		   "-nopsci;don't use PSCI to boot app|"
+		   "-el3;launch at EL3 (valid only for aarch64)|"
 #endif
 		   "-loader=*;Specify BOLT loader name|"
 		   "-tftp;Load the file using the TFTP protocol|"
@@ -385,6 +386,9 @@ static int ui_cmd_bootcommon(ui_cmdline_t *cmd, int flags)
 		/* Jumping to a 64 bit app is not doable without PSCI. */
 		if (bolt_loadargs.la_flags & LOADFLG_DIRECT_CALL)
 			return BOLT_ERR_INV_PARAM;
+
+		if (cmd_sw_isset(cmd, "-el3"))
+			la->la_flags |= LOADFLG_EL3_EXEC;
 
 		la->la_flags |= LOADFLG_APP64;
 	}

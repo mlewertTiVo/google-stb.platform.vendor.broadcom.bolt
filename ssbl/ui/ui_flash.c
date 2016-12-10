@@ -38,6 +38,9 @@
 #include "bsp_config.h"
 #include "gisb.h"
 
+#if defined(DVFS_SUPPPORT)
+#include "pmap.h"
+#endif
 
 /*  *********************************************************************
     *  Prototypes
@@ -47,6 +50,9 @@ static int ui_cmd_flash(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[]);
 #if !defined(SECURE_BOOT)
 static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[]);
+#if defined(DVFS_SUPPPORT)
+static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[]);
+#endif
 #endif
 static int ui_cmd_rts(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_gisb(ui_cmdline_t *cmd, int argc, char *argv[]);
@@ -82,7 +88,7 @@ int ui_init_flashcmds(void)
 		   "truncate and force write|"
 		   "-offset=*;Begin programming at this offset in the flash device|"
 		   "-size=*;Size of source device when programming from flash to flash.\n"
-		   "Otherwise, for disk and network files, this is the maximimum\n"
+		   "Otherwise, for disk and network files, this is the maximum\n"
 		   "size of file, which when less than 1024 is interpreted in MB.|"
 		   "-mem=*;if mem device then specify from where to read|"
 		   "-memsize=*;if mem device then specify amount to read|"
@@ -105,6 +111,13 @@ int ui_init_flashcmds(void)
 			"-force;always update flash|"
 			"-forget;forget saved board selection"
 );
+#if defined(DVFS_SUPPPORT)
+	cmd_addcmd("pmap", ui_cmd_pmap, NULL, "list all, or select a PMap",
+			"pmap [-set=N] where N is the number shown when listing PMap",
+			"-set=*;program and save to flash PMap|"
+			"-clear;unprogram and unset flash saved PMap (will then use board defaults)"
+);
+#endif
 #endif
 	cmd_addcmd("rts", ui_cmd_rts, NULL, "list all, or select an rts",
 			"rts [-set=N] where N is the number shown when listing rts sets",
@@ -664,7 +677,7 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[])
 	if (!b)
 		goto out;
 
-	for (i = 0; i < inf->n_boards; i++) {
+	for (i = 0; i < FSBLINFO_N_BOARDS(inf->n_boards); i++) {
 		c = b[i].name;
 		xprintf("%c)\t%s %s %s%s\n", board_idx_to_char(i),
 			(AVS_ENABLE(b[i].avs) ? "AVS  " : "noavs"),
@@ -672,6 +685,10 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[])
 			(i == inf->board_idx) ? "*" : " ",
 			(i == inf->saved_board.board_idx) ? "S" : " ");
 	}
+
+	xprintf(" FSBL info version %d, %d boards.\n",
+		FSBLINFO_VERSION(inf->n_boards),
+		FSBLINFO_N_BOARDS(inf->n_boards));
 
 	hardflags = (inf->saved_board.hardflags	>>
 			FSBL_HARDFLAG_AVS_SHIFT) &
@@ -752,7 +769,7 @@ static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[])
 			return BOLT_ERR_INV_PARAM;
 
 		i = board_char_to_idx(s[0]);
-		if (i >= inf->n_boards)
+		if (i >= FSBLINFO_N_BOARDS(inf->n_boards))
 			return BOLT_ERR_INV_PARAM;
 
 		if (forget) {
@@ -803,6 +820,88 @@ static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[])
 
 	return rc;
 }
+
+#if defined(DVFS_SUPPPORT)
+static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
+{
+	bool set_pmap = false, clear_pmap = false;
+	int i, pmap_id_old, pmap_id_new;
+	const char *s;
+	struct fsbl_info *inf = board_info();
+	uint32_t hf_new, hf_old;
+	struct board_type *b;
+	unsigned int num_domains_board, num_domains_pmap;
+
+	if (!inf)
+		return ui_showusage(cmd);
+
+	b = get_board_type(inf); /* no need to sanity check */
+	num_domains_board = AVS_DOMAINS(b->avs);
+
+	if (cmd_sw_value(cmd, "-set", &s))
+		set_pmap = true;
+
+	if (cmd_sw_isset(cmd, "-clear"))
+		clear_pmap = true;
+
+	if (set_pmap && clear_pmap) {
+		xprintf("cannot set and clear PMap at the same time!\n");
+		return BOLT_ERR;
+	}
+
+	pmap_id_old = board_pmap();
+	if (pmap_id_old >= PMapMax)
+		xprintf("Stored PMap ID %d is invalid.\n", pmap_id_old);
+
+	if (!set_pmap && !clear_pmap) {
+		for (i=0; i<(int)ARRAY_SIZE(pmapTable); ++i) {
+			char index[4]; /* enough for [0..999] */
+
+			num_domains_pmap = pmapTable[i].num_domains;
+			if (num_domains_pmap != 0 &&
+				num_domains_board != num_domains_pmap) {
+				index[0] = '*';
+				index[1] = 0;
+			} else {
+				sprintf(index, "%d", i);
+			}
+
+			xprintf("%s)\t%s (%d)%s\n", index, pmapTable[i].desc,
+				num_domains_pmap, (pmap_id_old == i) ? " *" : "");
+		}
+		return BOLT_OK;
+	} else if (set_pmap) {
+		pmap_id_new = atoi(s);
+		if (pmap_id_new < 0 || pmap_id_new >= PMapMax) {
+			err_msg("PMap must be [0..%d]. %d is invalid.",
+				PMapMax-1, pmap_id_new);
+			return BOLT_ERR;
+		}
+		num_domains_pmap = pmapTable[pmap_id_new].num_domains;
+		if (num_domains_pmap != 0 &&
+			num_domains_board != num_domains_pmap) {
+			err_msg("PMap ID %d cannot be for this board.",
+				pmap_id_new);
+			return BOLT_ERR;
+		}
+	} else if (clear_pmap) {
+		pmap_id_new = -1;
+	} else { /* nobody expects the unexpected! */
+		return BOLT_ERR;
+	};
+
+	hf_old = inf->saved_board.hardflags;
+	hf_new = hf_old;
+	hf_new &= ~(FSBL_HARDFLAG_PMAP_MASK << FSBL_HARDFLAG_PMAP_SHIFT);
+	hf_new |= pmap_id_new << FSBL_HARDFLAG_PMAP_SHIFT;
+	if (hf_new != hf_old) {
+		inf->saved_board.hardflags = hf_new;
+		board_check(1);
+	}
+
+	return BOLT_OK;
+}
+#endif
 #endif
 
 static int ui_cmd_rts(ui_cmdline_t *cmd, int argc, char *argv[])

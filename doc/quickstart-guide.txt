@@ -25,7 +25,7 @@ link:bolt_commands.html[BOLT commands]
 for a rundown on the currently supported UI commands.
 
 Mostly, these changes are new flags to commands and added
-commands for new areas such as devicetree <<1>>.
+commands for new areas such as Device Tree <<1>>.
 See
 link:cfe_differences.html[CFE differences]
 for the major changes in user interface between CFE and BOLT.
@@ -37,7 +37,7 @@ refactor and update for new technology where needed.
 
 For those familiar with CFE, here is a rundown of the changes:
 
-* Devicetree support has been added. This is for the
+* Device Tree support has been added. This is for the
 standard way Linux ARM gets its configuration info.
 
 * The build system has been unified. FSBL & SSBL are
@@ -62,13 +62,16 @@ through giant files. It also means its easier
 to add or remove functional areas, depending
 upon the target product.
 
-* Linux ARM generates a 'zImage' format file that
+* 32 bit Linux ARM generates a 'zImage' format file that
 consists of a zipped up Linux with a small bit of
 decompression code prepended.
 They are not ELF format files as we had in CFE.
 Loading and running Linux is very similar to CFE,
 though 'zimg' rather than 'elf' is the default for
-the 'load' and 'boot' commands in BOLT.
+the 'load' and 'boot' commands in BOLT. For 64
+bit Linux the format is 'Image' or a gz compressed
+'Image' file. BOLT autodetects zImage and Image
+and boots either in the correct ARM mode.
 
 * Linux ARM64 generates an 'Image' format file.
 BOLT can auto-detect zImage, Image or a gz
@@ -120,7 +123,7 @@ TOOLCHAIN variable or anything else to set up.
 In this example the Broadcom supplied GCC toolchain 
 package is called 'stbgcc-4.8-1.1.tar.bz2'
 and the BOLT source code package is called
-'bolt-v1.21.tgz' The exact names depend upon
+'bolt-v1.22.tgz' The exact names depend upon
 the release you get from us.
 
 First unpack and install the toolchain in
@@ -176,8 +179,8 @@ your development location. In this case we use the
 
 ----
  [user@machine]$mkdir ~/bolt
- [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.21.tgz
- [user@machine]$tar -xzf bolt-v1.21.tgz
+ [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.22.tgz
+ [user@machine]$tar -xzf bolt-v1.22.tgz
 ----
 
 
@@ -188,7 +191,7 @@ style line endings for the UNIX(R) style BOLT requires. BOLT will fail to
 build if this happens.
 
 ----
- [user@machine]$cd ~/bolt/bolt-v1.21
+ [user@machine]$cd ~/bolt/bolt-v1.22
 ----
 
 
@@ -205,7 +208,7 @@ family (chip) types available, as shown here by this command:
 
 ----
  [user@machine]$make show
-7250b0 7268a0 7271a0 7364a0 7364b0 7366c0 74371a0 7439b0 7445d0 7445e0
+7250b0 7260a0 7268a0 7271a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
 ----
 
 Now select a family (in this example - 7445d0) and build BOLT:
@@ -233,10 +236,10 @@ bolt-$(VERSION)-$(FAMILY)-[ba|bb|xx]-bfw-$(BFW_VER).bin
 [source,shell]
 ----
 ls -l objs/7445d0/bolt-*.bin
-lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.21-7445d0-ba-bfw-4.1.5.bin
-lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.21-7445d0-bb-bfw-4.1.5.bin
--rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.21-7445d0-ba-bfw-4.1.5.bin
--rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.21-7445d0-bb-bfw-4.1.5.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.22-7445d0-ba-bfw-4.1.5.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.22-7445d0-bb-bfw-4.1.5.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.22-7445d0-ba-bfw-4.1.5.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.22-7445d0-bb-bfw-4.1.5.bin
 ----
 
 For brevity we also symlink the longer BOLT binary names
@@ -297,11 +300,6 @@ To run Linux:
 BOLT> boot flash0.kernel:
 ----
 
-NOTE: zImage detection is on by default. Use '-loader=raw' if
-     you want to force loading of a raw binary or text file to memory, the
-     same goes for elf format files: '-loader=elf' Note that the
-	 'batch' command defaults to 'raw', not 'zImage'.
-
 TIP: If BOLT is too big to fit in flash0.kernel, you can
 use another partition if its big enough, e.g.
 ----
@@ -309,6 +307,16 @@ BOLT> flash 192.168.0.42:vmlinuz-initrd-7445d0 flash1.rootfs0
 
 BOLT> boot flash1.rootfs0:
 ----
+
+NOTE: zImage detection is on by default. Use '-loader=raw' if
+     you want to force loading of a raw binary or text file to memory, the
+     same goes for elf format files: '-loader=elf' Note that the
+	 'batch' command defaults to 'raw', not 'zImage'.
+
+IMPORTANT: To boot 64 bit Linux you *must* use PSCI, which BOLT
+does by default when using the 'zImage' loader. When using any
+other loader type this selection between 32 and 64 bit boot is
+not done automatically for you.
 
 
 ////

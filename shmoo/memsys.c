@@ -58,7 +58,7 @@ struct ddr_info *shmoo_ddr_by_index(uint32_t d) {
 
 void shmoo_set(const struct ddr_info *ddr, bool warm_boot) {
 	if (warm_boot)
-		die("warm boot not supported");
+		sys_die(DIE_WARM_BOOT_NOT_SUPPORTED, "warm boot not supported");
 	__puts("MEMSYS #");
 	putchar('0' + ddr->which);
 	memsys_init_all(ddr->which);

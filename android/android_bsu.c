@@ -46,10 +46,10 @@ const struct bsu_cmd {
 			"  ANDROID_RECOVERY_IMG - for recovery boot image",
 		.switches =
 			"-rawfs;Load the file from an unformatted file system|"
-			"-auto;Boot depending on reboot reason (default)|"
-			"-r;Boot recovery image from flash|"
-			"-n;Boot normal image from flash|"
-			"-i=*;Boot specified image"
+#if CFG_TRUSTZONE_MON
+			"-tee; Android trusted boot with BL31/Trusty OS|"
+			"-32; Trusty is a 32-bit binary (default is 64-bit)|"
+#endif
 	},
 	{	.command = "android fastboot",
 		.func = android_fastboot,
@@ -72,7 +72,7 @@ const struct bsu_cmd {
 		.switches =
 			"-transport=*; Use tcp or usb (default)|"
 			"-device=*; Use BOLT device full name|"
-	}
+	},
 };
 
 struct bsu_api *bsuapi;

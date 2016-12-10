@@ -295,7 +295,7 @@ static void board_check_id(struct fsbl_info *inf)
 	/* ignore the minor chip revision for the purpose of board detection */
 	prid = BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID) & ~CHIPID_MINOR_REV_MASK;
 
-	for (i = 0 ; i < inf->n_boards; i++)	{
+	for (i = 0 ; i < FSBLINFO_N_BOARDS(inf->n_boards); i++)	{
 
 		if (id == inf->board_types[i].bid) {
 			found++;
@@ -376,7 +376,7 @@ int board_check(int force)
 			*/
 			memcpy(&new, s, sizeof(*s));
 			new.magic = BOARD_NVM_MAGIC;
-			new.board_idx = inf->n_boards;
+			new.board_idx = FSBLINFO_N_BOARDS(inf->n_boards);
 			new.product_id = prid;
 			(void)board_update_now(&new, sizeof(*s), offs);
 			bolt_master_reboot();
@@ -387,10 +387,10 @@ int board_check(int force)
 			return BOLT_OK;
 	}
 
-	if (s->board_idx <= inf->n_boards)
+	if (s->board_idx <= FSBLINFO_N_BOARDS(inf->n_boards))
 		c = board_idx_to_char(s->board_idx);
 
-	if (inf->board_idx <= inf->n_boards)
+	if (inf->board_idx <= FSBLINFO_N_BOARDS(inf->n_boards))
 		d = board_idx_to_char(inf->board_idx);
 
 #if CFG_BOARD_ID

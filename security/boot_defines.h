@@ -134,6 +134,7 @@
 #define ERR_MEMC_1_INIT_FAILED                  21
 #define ERR_S3_PARAM_HASH_FAILED                22
 #define ERR_S3_DDR_HASH_FAILED                  23
+#define ERR_S3_BAD_PSCI_BASE                    24
 
 /* boot status */
 #define BOOT_BFW_STATUS_SHIFT                   0
@@ -218,10 +219,25 @@
 #define PARAM_SSBL_CTRL                         0x00000BE8
 #endif
 
-#define AON_FW_TYPE_MASK                        0x3F000000
-#define AON_FW_TYPE_AVS                         0x2A000000
-#define AON_FW_TYPE_BFW                         0x1B000000
-#define AON_FW_TYPE_MEMSYS                      0x3D000000
+/* board param for AVS */
+#if CFG_ZEUS4_2
+#define PARAM_AVS_PARAM_0                       0x000000D4
+#define PARAM_AVS_PARAM_1                       0x000000E4
+#define PARAM_AVS_PARAM_1_PMAP_MASK             0x1F
+#endif
+
+/* flag for booting from eMMC data partition*/
+#define AON_EMMC_DATA_PART_BOOT_MASK            0x0F000000
+#define AON_EMMC_DATA_PART_BOOT                 0x07000000
+#define AON_EMMC_DATA_PART_BOOT_AVS             0x01000000
+#define AON_EMMC_DATA_PART_BOOT_BFW             0x02000000
+#define AON_EMMC_DATA_PART_BOOT_MEMSYS          0x04000000
+#define AON_EMMC_DATA_PART_BOOT_AVS_BYPASS      0x08000000
+
+#define AON_FW_TYPE_MASK                        0x30000000
+#define AON_FW_TYPE_AVS                         0x10000000
+#define AON_FW_TYPE_BFW                         0x20000000
+#define AON_FW_TYPE_MEMSYS                      0x30000000
 
 #define BOOT_BSP_RESET_MASK                     0xC0000000
 #define BOOT_BSP_RESET_FLAG                     0x80000000

@@ -121,6 +121,12 @@ ENTRY_PROC(bolt_launch64)
 END_PROC(bolt_launch64)
 
 
+ENTRY_PROC(bolt_launch64_el3)
+	ldr	r4, =OEM_FUNC_EXEC64_EL3
+	b	psci_exec
+END_PROC(bolt_launch64_el3)
+
+
 ENTRY_PROC(bolt_launch32)
 	ldr	r4, =OEM_FUNC_EXEC32
 	b	psci_exec

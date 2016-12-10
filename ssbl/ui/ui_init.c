@@ -71,7 +71,7 @@ void ui_init(void)
 	ui_init_rpmb_cmds();
 #endif
 	ui_init_shacmds();
-#if CFG_TRUSTZONE
+#if CFG_TRUSTZONE_CMD
 	ui_init_tz();
 #endif
 #ifdef SECURE_BOOT

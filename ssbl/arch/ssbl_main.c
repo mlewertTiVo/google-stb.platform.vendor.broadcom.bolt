@@ -11,6 +11,7 @@
 
 #include <arch.h>
 #include <arch-mmu.h>
+#include <stdbool.h>
 #include <arm-start.h>
 #include <board.h>
 #include <bolt.h>
@@ -276,6 +277,70 @@ static void install_smm32(void)
 		(uint8_t *)&PSCI32_VAR(ODIR, start),
 		(uint32_t)&PSCI32_VAR(ODIR, size));
 }
+
+/*
+ * SSBL code for Power on/cold boot.
+ * If the VBAR_EL3/MVBAR value set by FSBL is different
+ * to that which SSBL was made with then we have to
+ * reprogram it to the SSBL value.
+ *
+ * This is for the case of an FSBL being
+ * supplied in binary only form and it is not
+ * upgradable. The only caveat is that nothing
+ * (SSBL wise) must be at the old vector if the
+ * strap was set for 64 bit boot and restore is
+ * false.
+ */
+static void reprogram_psci_base(uint32_t oldvec, uint32_t newvec,
+		bool is64boot, bool restore)
+{
+	__puts("MVBAR reprogram: ");
+	writehex(oldvec);
+	__puts(" -> ");
+
+	if (is64boot) {
+		const uint32_t a64_revec[4] = {
+			0x92407c00,	/* and	x0, x0, #0xffffffff */
+			0xd51ec000,	/* msr	vbar_el3, x0 */
+			0xd5033fdf,	/* isb */
+			0xd69f03e0	/* eret */
+		};
+		uint32_t saved[4];
+
+		/* Offset for lower EL using aarch32 'Synchronous' entry */
+		oldvec += 0x600;
+
+		if (restore) {
+			memcpy(saved, (uint32_t *)oldvec, sizeof(a64_revec));
+			dsb();
+		}
+
+		/* Copy over our A64 code to the old vector */
+		memcpy((uint32_t *)oldvec, a64_revec, sizeof(a64_revec));
+		dsb();
+
+		/* Call it with the new vector in x0 */
+		(void)psci(newvec, 0, 0, 0);
+
+		if (restore)
+			memcpy((uint32_t *)oldvec, saved, sizeof(a64_revec));
+
+	} else {
+		/*
+		 * Write MVBAR. EL1(S), EL3(NS) or EL3(S)
+		 * Setup is valid only if EL3 is AArch32.
+		 */
+		__asm__ __volatile__(
+			"mcr	p15, 0, %0, c12, c0, 1\n"
+			"isb\n"
+			: /* no outputs */
+			: "r" (newvec)
+			: "memory");
+	}
+
+	writehex(newvec);
+	puts("");
+}
 #endif /* STUB64_START */
 
 
@@ -334,6 +399,15 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	puts(" OK");
 
 	dsb(); /* make sure its there before we call it */
+
+	/*
+	 * Check what (a possibly older) FSBL passed in to us.
+	 * No need to save the DDR used for this (if 64 bit bootstrap)
+	 * as it is a new boot and not an e.g. S3 wakeup.
+	 */
+	if (_fsbl_info->psci_base != PSCI_BASE)
+		reprogram_psci_base(_fsbl_info->psci_base, PSCI_BASE,
+			arch_booted64(), false);
 #endif
 	arch_mark_executable(SRAM_ADDR, SRAM_LEN, false);
 	set_ssbl_page(pt_1st, _fdata);

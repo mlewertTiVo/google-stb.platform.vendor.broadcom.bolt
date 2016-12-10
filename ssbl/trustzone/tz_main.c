@@ -229,7 +229,7 @@ int tz_init(void)
 		return rc;
 
 	/*
-	 * Decide memory laylout
+	 * Decide memory layout
 	 */
 	if (t->mem_size == 0x2000000) {
 		/* 32MB */

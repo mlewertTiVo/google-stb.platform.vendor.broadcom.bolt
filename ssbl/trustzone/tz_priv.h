@@ -10,6 +10,8 @@
 #ifndef _TZ_PRIV_H_
 #define _TZ_PRIV_H_
 
+typedef enum { e_tz_spd_image, e_tz_tz_image, e_tz_nw_image } tz_payload_type;
+
 struct tz_reg_group {
 	const char	*compatible;
 	uint32_t	start;
@@ -20,6 +22,10 @@ struct tz_mem_layout {
 	/* offset from mem_addr */
 	uint64_t	os_offset;
 	uint64_t	os_size;
+
+	/* offset from mem_addr */
+	uint64_t	spd_offset;
+	uint64_t	spd_size;
 
 	uint64_t	tzioc_offset;
 	uint64_t	tzioc_size;
@@ -61,5 +67,7 @@ extern struct tz_mem_layout s_tz_mem_layout_32MB;
 
 int tz_config_init(void);
 int tz_config_uart(int uart);
+
+void tz_smm_set_params(bolt_loadargs_t *la);
 
 #endif /* _TZ_PRIV_H_ */

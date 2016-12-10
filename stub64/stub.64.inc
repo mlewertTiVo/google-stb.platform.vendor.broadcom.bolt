@@ -10,7 +10,8 @@
 STUB_S += \
 	stub64/stub-start.64.S \
 	stub64/stub-gic.64.S \
-	stub64/stub-uart.64.c
+	stub64/stub-uart.64.c \
+	stub64/stub-pm.64.c \
 
 # Installed by SSBL to handle EL3 exceptions
 SMM_S += \
@@ -22,3 +23,8 @@ SMM_S += \
 	stub64/stub-gic.64.S \
 	stub64/bakery_lock_normal.64.c \
 	stub64/psci-cache.64.c
+
+ifeq ($(CFG_TRUSTZONE_MON),1)
+SMM_S += \
+	stub64/smm-setparms.64.c
+endif

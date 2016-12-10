@@ -275,6 +275,7 @@ static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry)
 	u64 starting_lba;	/* starting sector */
 	u64 ending_lba;		/* ending sector */
 	struct fastboot_ptentry ptn;	/* partition structure to fill in and register */
+   int len;
 
 	/* 
 	 * For all entries, fill in the name/start/length/flags fields.
@@ -319,8 +320,24 @@ static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry)
 
 		ptn.flags = (le64_to_cpu(entry->attributes));
 
-		os_printf("Adding: %32s, offset 0x%8.8x, size 0x%16.16llx, flags 0x%16.16llx\n",
-				ptn.name, ptn.start, ptn.length, ptn.flags);
+		len = 0;
+		len += os_sprintf(ptn.uuid + len, "%x%x%x%x-",
+			entry->unique_partition_guid.b[3], entry->unique_partition_guid.b[2],
+			entry->unique_partition_guid.b[1], entry->unique_partition_guid.b[0]);
+		len += os_sprintf(ptn.uuid + len, "%x%x-",
+			entry->unique_partition_guid.b[5], entry->unique_partition_guid.b[4]);
+		len += os_sprintf(ptn.uuid + len, "%x%x-",
+			entry->unique_partition_guid.b[7], entry->unique_partition_guid.b[6]);
+		len += os_sprintf(ptn.uuid + len, "%x%x-",
+			entry->unique_partition_guid.b[8], entry->unique_partition_guid.b[9]);
+		len += os_sprintf(ptn.uuid + len, "%x%x%x%x%x%x",
+			entry->unique_partition_guid.b[10], entry->unique_partition_guid.b[11],
+			entry->unique_partition_guid.b[12], entry->unique_partition_guid.b[13],
+			entry->unique_partition_guid.b[14], entry->unique_partition_guid.b[15]);
+		ptn.uuid[sizeof(ptn.uuid)-1] = '\0';
+
+		os_printf("Adding: %32s, offset 0x%8.8x, size 0x%16.16llx, flags 0x%16.16llx, uuid %48s\n",
+				ptn.name, ptn.start, ptn.length, ptn.flags, ptn.uuid);
 
 		fastboot_flash_add_ptn(&ptn);
 	}

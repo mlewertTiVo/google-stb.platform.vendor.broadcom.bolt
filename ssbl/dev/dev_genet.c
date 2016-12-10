@@ -627,6 +627,8 @@ static void port_ctl_set_physpeed(genet_softc *softc)
 	case 100:
 		if (strcmp(softc->phyintf, "MII") == 0)
 			softc->sys->sys_port_ctrl = PORT_MODE_EXT_EPHY;
+		else if (strcmp(softc->phyintf, "RVMII") == 0)
+			softc->sys->sys_port_ctrl = PORT_MODE_EXT_RVMII_25;
 		else
 			softc->sys->sys_port_ctrl = PORT_MODE_EXT_GPHY;
 		break;

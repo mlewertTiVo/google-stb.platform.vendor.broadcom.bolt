@@ -388,6 +388,42 @@ static int tz_populate_tzioc(void *fdt, bool tz_fdt)
 	return 0;
 }
 
+static int tz_populate_optee(void *fdt)
+{
+	int rc;
+	struct tz_info *t;
+	int firmware_node;
+	int optee_node;
+
+	t = tz_info();
+	if (!t)
+		return BOLT_ERR;
+
+	/* Add firmware node */
+	rc = bolt_devtree_addnode_at(fdt, "firmware", 0, &firmware_node);
+	if (rc)
+		return rc;
+
+
+	/* Add optee node */
+	rc = bolt_devtree_addnode_at(fdt, "optee",
+					firmware_node, &optee_node);
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_str(fdt, optee_node, "compatible",
+					"linaro,optee-tz");
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_str(fdt, optee_node, "method",
+					"smc");
+	if (rc)
+		return rc;
+
+	return 0;
+}
+
 static int tz_populate_nwos(void *fdt)
 {
 	int rc;
@@ -465,6 +501,117 @@ static int tz_populate_memory(void *fdt)
 	if (rc)
 		return rc;
 
+	return 0;
+}
+
+static int tz_populate_timers(void *fdt)
+{
+	int rc;
+	int timers_node;
+	bolt_devtree_params_t p;
+	void *fdt_nwos;
+	int timers_nwos;
+
+	/* Get NWOS device tree */
+	bolt_devtree_getenvs(&p);
+
+	fdt_nwos = p.dt_address;
+	if (!fdt_nwos)
+		return BOLT_ERR_BADADDR;
+
+	/* Get NWOS timer node */
+	timers_nwos = fdt_subnode_offset(fdt_nwos, 0, "timer");
+	if (timers_nwos < 0)
+		return BOLT_ERR;
+
+	/* Add interrupt-controller node */
+	rc = bolt_devtree_addnode_at(fdt, "timer", 0, &timers_node);
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, timers_node,
+		fdt_nwos, timers_nwos, "always-on");
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, timers_node,
+		fdt_nwos, timers_nwos, "clock-frequency");
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, timers_node,
+		fdt_nwos, timers_nwos, "interrupts");
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, timers_node,
+		fdt_nwos, timers_nwos, "compatible");
+	if (rc)
+		return rc;
+	return 0;
+}
+
+static int tz_populate_interrupt_controller(void *fdt)
+{
+	int rc;
+	int gics_node;
+	bolt_devtree_params_t p;
+	void *fdt_nwos;
+	int gic_nwos;
+
+	/* Get NWOS device tree */
+	bolt_devtree_getenvs(&p);
+
+	fdt_nwos = p.dt_address;
+	if (!fdt_nwos)
+		return BOLT_ERR_BADADDR;
+
+	/* Get NWOS interrupt-controller node */
+	gic_nwos = fdt_subnode_offset(fdt_nwos, 0, "interrupt-controller");
+	if (gic_nwos < 0)
+		return BOLT_ERR;
+
+	/* Add interrupt-controller node */
+	rc = bolt_devtree_addnode_at(fdt,
+								 "interrupt-controller",
+								 0,
+								 &gics_node);
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, gics_node,
+		fdt_nwos, gic_nwos, "phandle");
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, gics_node,
+		fdt_nwos, gic_nwos, "linux,phandle");
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, gics_node,
+		fdt_nwos, gic_nwos, "reg-names");
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, gics_node,
+		fdt_nwos, gic_nwos, "reg");
+	if (rc)
+		return rc;
+
+	rc = bolt_dt_addprop_u32(fdt, gics_node, "#interrupt-cells", 3);
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, gics_node,
+		fdt_nwos, gic_nwos, "interrupt-controller");
+	if (rc)
+		return rc;
+
+	rc = tz_devtree_cpprop(fdt, gics_node,
+		fdt_nwos, gic_nwos, "compatible");
+	if (rc)
+		return rc;
 	return 0;
 }
 
@@ -816,6 +963,14 @@ int tz_devtree_init(void)
 	if (rc)
 		goto out;
 
+	rc = tz_populate_timers(fdt);
+	if (rc)
+		goto out;
+
+	rc = tz_populate_interrupt_controller(fdt);
+	if (rc)
+		goto out;
+
 	rc = tz_populate_cpus(fdt);
 	if (rc)
 		goto out;
@@ -882,6 +1037,10 @@ int tz_devtree_init_nwos(void)
 		goto out;
 
 	rc = tz_populate_tzioc(fdt, false);
+	if (rc)
+		goto out;
+
+	rc = tz_populate_optee(fdt);
 	if (rc)
 		goto out;
 

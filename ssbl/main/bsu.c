@@ -343,7 +343,7 @@ static const ssbl_board_params *bsu_board_params(void)
 {
 	struct fsbl_info *inf = board_info();
 
-	if (!inf || (inf->board_idx >= inf->n_boards))
+	if (!inf || (inf->board_idx >= FSBLINFO_N_BOARDS(inf->n_boards)))
 		return NULL;
 
 	return &board_params[inf->board_idx];
@@ -510,6 +510,11 @@ static struct bsu_api bsu_xapi = {
 	.xfn_bolt_ioctl = bolt_ioctl,
 	.xfn_usleep = bolt_usleep,
 	.xfn_board_params = bsu_board_params,
+
+#if CFG_TRUSTZONE_MON
+	.xfn_tz_smm_set_params = tz_smm_set_params,
+	.xfn_bolt_load_program = bolt_load_program,
+#endif
 };
 
 #define RESERVE_FOR_LINUX 10UL

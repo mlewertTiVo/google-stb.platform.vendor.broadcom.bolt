@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -16,6 +14,14 @@
 
 unsigned int get_cpu_freq_mhz(void);
 void adjust_clocks(struct board_type *b, uint32_t mhl_power);
+
+#ifdef DVFS_SUPPPORT
+void apply_dvfs_clocks(struct clock_divisors cpu_clks,
+	struct clock_divisors scb_clks);
+#else
+static inline void apply_dvfs_clocks(struct clock_divisors cpu_clks,
+	struct clock_divisors scb_clks) {}
+#endif
 
 #endif /* _FSBL_CLOCK_H */
 

@@ -241,6 +241,17 @@ static inline uint32_t get_mpidr(void)
 	return mpidr;
 }
 
+static inline uint32_t get_spsr(void)
+{
+	uint32_t cpsr;
+
+	__asm__ __volatile__ (
+		"mrs	%0, SPSR\n"
+		: "=r" (cpsr));
+
+	return cpsr;
+}
+
 /* Interrupt Status Register
  * ISR (RO, EL1, EL2, EL3)
  */

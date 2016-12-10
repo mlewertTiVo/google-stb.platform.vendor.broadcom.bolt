@@ -107,6 +107,7 @@ void cpu_boot32(uint64_t at_addr, uint64_t per_cpu_stacktop, uint64_t context,
 		volatile uint32_t *lock);
 void cpu_boot64(uint64_t at_addr, uint64_t per_cpu_stacktop, uint64_t context,
 		volatile uint32_t *lock);
+void gic_bypass(void);
 
 /* smm-cache */
 void clean_invalidate_dcache(int to_cache_level);
@@ -120,6 +121,12 @@ uint32_t rac_disable_and_flush(void);
 int rac_enable(uint32_t rac_cfg0);
 int rac_is_enabled(void);
 
+#if CFG_TRUSTZONE_MON
+/* Trustzone Monitor */
+void tz_sm_set_loadaddr(uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
+			uint64_t x4 /* current stack pointer */);
+#endif /* CFG_TRUSTZONE_MON */
+
 /* smm-psci */
 struct psci_cfg *get_config(void);
 unsigned int get_cpu_idx(uint64_t mpidr);
@@ -131,6 +138,7 @@ void psci_init(uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
 			uint64_t x4 /* current stack pointer */);
 
 void exec64(uint64_t fdt, uint64_t linux_entry);
+void exec64_el3(uint64_t fdt, uint64_t linux_entry);
 void exec32(uint64_t fdt, uint64_t linux_entry);
 
 void eret64(uint64_t x0 /* psci return code */,

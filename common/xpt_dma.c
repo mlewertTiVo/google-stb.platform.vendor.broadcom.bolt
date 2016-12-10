@@ -43,6 +43,7 @@
 #include <bchp_xpt_security_ns_intr2_0.h>
 #include <bchp_xpt_pmu.h>
 
+#include <fsbl-die.h>
 #include <lib_types.h>
 
 #include "xpt_dma.h"
@@ -541,7 +542,7 @@ static int __mem2mem_dma_run(dma_addr_t mcpb, dma_addr_t wdma,
 		} while ((timeout -= 10) > 0);
 	}
 
-	efn->die("XPTDMA: DMA !DONE");
+	efn->sys_die(DIE_XPT_DMA_NOT_DONE, "XPTDMA: DMA !DONE");
 
 out:
 	xpt_set_power(0);

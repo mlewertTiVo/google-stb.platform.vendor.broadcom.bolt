@@ -118,7 +118,7 @@ int select_image(image_info *info)
 			break;
 #endif
 	default:
-			die("unknown image type");
+			sys_die(DIE_UNKNOWN_IMAGE_TYPE, "unknown image type");
 			break;
 	}
 	image_ptr = (uint32_t *)(SRAM_ADDR+image_offset);
@@ -127,6 +127,15 @@ int select_image(image_info *info)
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &= ~AON_FW_TYPE_MASK;
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |= aon_value;
 
+	/* If error is set due to eMMC data partition,
+	 * clear the error so that we can try to boot from boot partition.
+	 */
+	aon_value = REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
+	if (aon_value & AON_EMMC_DATA_PART_BOOT) {
+		REG(BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR) &=
+			~BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR_DISASTER_RECOVER_MASK;
+		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &= ~BOOT_BSP_RESET_MASK;
+	}
 #ifdef CFG_FULL_EMULATION
 	/* no sec in generic emulation */
 	disaster = 0;
@@ -165,12 +174,10 @@ int select_image(image_info *info)
 
 	boot_status = sec_get_aon_boot_status(boot_status_shift);
 	if  (boot_status == BOOT_STATUS_2_FAIL) {
-		__puts(image_name_ptr);
-		writehex(boot_status);
-		puts("");
+		report_hex(image_name_ptr, boot_status);
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &=
 			~(BOOT_IMAGE_STATUS_MASK << boot_status_shift);
-		die("Boot 2nd image failed");
+		sys_die(DIE_BOOT_2ND_IMAGE_FAILED, "Boot 2nd image failed");
 	}
 
 #if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
@@ -244,14 +251,10 @@ int select_image(image_info *info)
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH)
 		|= (boot_status << boot_status_shift);
 
-	__puts("select_image: addr_offset: ");
-	writehex((unsigned long) info->addr_offset);
-	__puts(" part_offset: ");
-	writehex((unsigned long) info->flash.part_offs);
-
-	__puts(" bootStatus: ");
-	writehex(REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH));
-	puts("");
+	report_hex("@select_image: addr_offset: ",
+		(unsigned long) info->addr_offset);
+	report_hex("@ part_offset: ", (unsigned long) info->flash.part_offs);
+	report_hex(" bootStatus: ", REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH));
 
 	return 0;
 }
@@ -280,31 +283,34 @@ void sec_init(void)
 	if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS)
 		& 0x0f000000) == 0x07000000) {
 		if (sec_memsys_ready())
-			die("!MR");
+			sys_die(DIE_MEMSYS_NOT_READY, "!MR");
 	}
 #endif
 
 	rval = sec_read_otp_bit(OTP_BSECK_ENABLE_BIT, &otp_val);
 	if (rval)
-		die("OTP read failed");
+		sys_die(DIE_OTP_READ_FAILED, "OTP read failed");
 
 	dst = (uint32_t *) (BOOT_PARAMETER_OFFSET+SRAM_ADDR);
 	/* if bseck is enabled, then get the boot params from BSP */
 	if (CFG_ZEUS4_2 && otp_val) {
 		if (sec_get_bootparam(dst)) /* get boot params from BSP */
-			die("Get boot param failed");
+			sys_die(DIE_GET_BOOT_PARAM_FAILED,
+				"Get boot param failed");
 		return;
 	}
 
 	ret = load_from_flash(dst, BOOT_PARAMETER_OFFSET, BOOT_PARAMETER_SIZE);
 	if (ret < 0)
-		die("boot parameter read failure");
+		sys_die(DIE_BOOT_PARAMETER_READ_FAILURE,
+			"boot parameter read failure");
 
 #if CFG_ZEUS4_1
 	dst = (uint32_t *) (PARAM_SSBL_SIZE+SRAM_ADDR);
 	ret = load_from_flash(dst, PARAM_SSBL_SIZE, 8);
 	if (ret < 0)
-		die("boot parameter read failure");
+		sys_die(DIE_BOOT_PARAMETER_READ_FAILURE,
+			"boot parameter read failure");
 #endif
 }
 
@@ -315,14 +321,33 @@ void sec_bfw_load(bool warm_boot)
 #if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
 	uint32_t *page_table = 0;
 	uint32_t bfw_buffer_addr;
+	int bypass_emmc_data_part = 1;
 #endif
-
+#if (BFW_USE_EMMC_DATA_PART == 1)
+	uint32_t aon_reg;
+#endif
 	g_info.image_type = IMAGE_TYPE_BFW;
 	if (select_image(&g_info))
-		die("no BFW image");
+		sys_die(DIE_NO_BFW_IMAGE, "no BFW image");
+
+	/* Did we get here because of booting failure from eMMC data partition?
+	 * If we got here because booting from data partition failed,
+	 * then do not use page table. When page table is not used,
+	 * BSP will try to boot BFW image from boot partition.
+	 * If we are booting from eMMC data partition for the first time
+	 * set the flags to indicate that eMMC data partition is being used.
+	 */
+#if (BFW_USE_EMMC_DATA_PART == 1)
+	aon_reg = BDEV_RD(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
+	if ((aon_reg & AON_EMMC_DATA_PART_BOOT_BFW) == 0) {
+		aon_reg |= AON_EMMC_DATA_PART_BOOT_BFW;
+		BDEV_WR(BCHP_AON_CTRL_UNCLEARED_SCRATCH, aon_reg);
+		bypass_emmc_data_part = 0;
+	}
+#endif
 
 #if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
-	if (g_info.flash.cs == 1 || BFW_USE_EMMC_DATA_PART == 1) {
+	if (g_info.flash.cs == 1 || bypass_emmc_data_part != 1) {
 		__puts("using page list, ");
 #if CFG_PM_S3
 		if (warm_boot) {
@@ -405,7 +430,7 @@ void sec_verify_memsys(void)
 
 	info.image_type = IMAGE_TYPE_MEMSYS;
 	if (select_image(&info))
-		die("no MemsysFW image");
+		sys_die(DIE_NO_MEMSYS_FW_IMAGE, "no MemsysFW image");
 #endif
 
 	__puts("MEMSYS-");
@@ -415,13 +440,13 @@ void sec_verify_memsys(void)
 		len = MEMSYS_ALT_SIZE;
 		puts("ALT");
 #else
-		die("no ALT!");
+		sys_die(DIE_MEMSYS_ALT_NOT_SUPPORTED, "no ALT!");
 #endif
 	} else
 		puts("STD");
 
 	if (load_from_flash(dst, flash_offs, len) < 0)
-		die("memsys load failure");
+		sys_die(DIE_MEMSYS_LOAD_FAILURE, "memsys load failure");
 #endif
 }
 
@@ -442,7 +467,7 @@ uint32_t sec_avs_select_image(void)
 {
 	g_info.image_type = IMAGE_TYPE_AVS;
 	if (select_image(&g_info))
-		die("no AVS image");
+		sys_die(DIE_NO_AVS_IMAGE, "no AVS image");
 
 	return g_info.addr_offset;
 }
@@ -489,6 +514,17 @@ void sec_mitch_check(void)
 #endif /* S_UNITTEST */
 }
 
+void sec_set_errcode(uint16_t die_code)
+{
+	uint32_t value;
+
+	/* log error code into MS 16 bit, and trace value in LS 16 bit */
+	value = REG(BCHP_SUN_TOP_CTRL_UNCLEARED_SCRATCH);
+	value &= 0x0000ffff;
+	value |= ((uint32_t)die_code) << 16;
+	REG(BCHP_SUN_TOP_CTRL_UNCLEARED_SCRATCH) = value;
+}
+
 
 /* ------------------------------------------------------------------------- */
 /* Anti-glitch
@@ -524,12 +560,11 @@ end up at a fail point.
 */
 
 
-uint32_t glitch_trace = (uint32_t)die;
-uint32_t glitch_addr  = (uint32_t)die; /* obfuscated glitch_entry */
-uint32_t glitch_addr1 = (uint32_t)die;
-uint32_t glitch_info  = (uint32_t)die;
-uint32_t glitch_entry = (uint32_t)die; /*void ()(struct fsbl_info *) */
-uint32_t glitch_psci_bootmode = (uint32_t)die;
+uint32_t glitch_trace = (uint32_t)sys_die;
+uint32_t glitch_addr  = (uint32_t)sys_die; /* obfuscated glitch_entry */
+uint32_t glitch_addr1 = (uint32_t)sys_die;
+uint32_t glitch_info  = (uint32_t)sys_die;
+uint32_t glitch_entry = (uint32_t)sys_die; /*void ()(struct fsbl_info *) */
 
 
 INITSEG void __noreturn handle_boot_err(uint32_t err_code)
@@ -557,9 +592,7 @@ INITSEG void __noreturn handle_boot_err(uint32_t err_code)
 		while (1)
 			;
 	}
-	__puts("Boot failed: ");
-	writehex(err_code);
-	puts("");
+	report_hex("Boot failed: ", err_code);
 	loop_forever();
 }
 

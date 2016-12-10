@@ -255,9 +255,6 @@ static void avs_ask_limits(struct at_initialization *params)
 
 #endif
 
-/* single voltage domain margin correction in mV */
-#define SINGLE_DOMAIN_MARGIN_CORRECTION (75 - DEFAULT_VMARGIN_LOW)
-
 #define DEFAULT_POLLING_DELAY 1000	/* once a second */
 #define DEFAULT_EXTRA_DELAY  0	/* extra delay needed by this voltage regulator
 				 * to become stable */
@@ -312,10 +309,17 @@ static void avs_get_default_params(struct at_initialization *params)
 	/* set for boards with single regulator */
 	struct board_type *b = get_tmp_board();
 
+/* single voltage domain margin correction in mV */
+#define SINGLE_DOMAIN_MARGIN_CORRECTION 120
+
 	if (!b || AVS_DOMAINS(b->avs) == 1) {
+		unsigned correction = SINGLE_DOMAIN_MARGIN_CORRECTION;
+		if (ENABLE_TEST_PROMPTS) {
+			correction = avs_get_int_number("Vmargin Low correction", correction);
+		}
 		params->single_domain = true;
-		params->margin_low  += SINGLE_DOMAIN_MARGIN_CORRECTION;
-		params->margin_high += SINGLE_DOMAIN_MARGIN_CORRECTION;
+		params->margin_low  = correction;
+		params->margin_high = correction;
 	}
 #endif
 
@@ -341,7 +345,7 @@ static bool did_we_resume;
 /* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
 
 #define AVS_RESERVED_SPACE 256 /* this area is reserved for over-temp restore */
-#define AVS_PARAM_SIZE     0x400
+#define AVS_PARAM_SIZE     0x400+0x100 /* There is 0x100 bytes of padding */
 
 static int load_code(void)
 {
@@ -353,6 +357,10 @@ static int load_code(void)
 	int data_length = (BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_END + 1) *
 		sizeof(uint32_t) - AVS_RESERVED_SPACE; /* in bytes */
 	image_info info;
+	int bypass_emmc_data_part = 1;
+#if (AVS_USE_EMMC_DATA_PART == 1)
+	uint32_t aon_reg;
+#endif
 
 #define round_up(x) (((x)+3)/4*4)
 
@@ -362,45 +370,68 @@ static int load_code(void)
 	avs_print_string("\n");
 
 	if (get_image_info(&info) < 0)
-		die("no AVS image info");
+		sys_die(DIE_NO_AVS_IMAGE_INFO, "no AVS image info");
 
 	bytes = round_up(code_length);
 	if (AVS_DEBUG_STARTUP)
 		avs_print_string("Loading code...\n");
+
+	/* Check if we got here due to booting error from eMMC data partition.
+	 * If we got here because booting from data partition failed,
+	 * then clear the flag and bypass booting from eMMC data partition.
+	 * If we are booting from eMMC data partition for the first time
+	 * just set the eMMC data partition flag and use eMMC data partition.
+	 */
 #if (AVS_USE_EMMC_DATA_PART == 1)
-	/* read the code, data, and security params to the temporary buffer */
-	if (emmc_read_fsbl(AVS_SRAM_ADDR,
-		bytes+round_up(data_length)+AVS_PARAM_SIZE,
-		AVS_EMMC_DATA_PART_ADDR, false) != 0)
-		die("AVS code load from eMMC failed");
-	/* copy the code to AVS PROG_ARRAY */
-	memcpy(((void*)BCHP_PHYSICAL_OFFSET+
-		BCHP_AVS_CPU_PROG_MEM_WORDi_ARRAY_BASE),
-		(void*)MEMSYS_SRAM_ADDR, bytes); 
-#else
-	if (load_from_flash_ext((uint32_t *)(BCHP_PHYSICAL_OFFSET+
-		BCHP_AVS_CPU_PROG_MEM_WORDi_ARRAY_BASE), flash_offs,
-		bytes, &info.flash) < 0)
-		die("AVS code load failed");
+	aon_reg = BDEV_RD(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
+	aon_reg |= AON_EMMC_DATA_PART_BOOT_AVS_BYPASS;
+	if (!(aon_reg & AON_EMMC_DATA_PART_BOOT_AVS)) {
+		bypass_emmc_data_part = 0;
+		aon_reg &= ~AON_EMMC_DATA_PART_BOOT_AVS_BYPASS;
+		aon_reg |= AON_EMMC_DATA_PART_BOOT_AVS;
+	}
+	BDEV_WR(BCHP_AON_CTRL_UNCLEARED_SCRATCH, aon_reg);
 #endif
+
+	if (bypass_emmc_data_part != 1) {
+		/* read the code, data and security params to the buffer */
+		if (emmc_read_fsbl(AVS_SRAM_ADDR,
+			bytes+round_up(data_length)+AVS_PARAM_SIZE,
+			AVS_EMMC_DATA_PART_ADDR, false) != 0)
+			sys_die(DIE_AVS_CODE_LOAD_FROM_EMMC_FAILED,
+				"AVS code load from eMMC failed");
+		/* copy the code to AVS PROG_ARRAY */
+		memcpy(((void*)BCHP_PHYSICAL_OFFSET+
+			BCHP_AVS_CPU_PROG_MEM_WORDi_ARRAY_BASE),
+			(void*)MEMSYS_SRAM_ADDR, bytes);
+	}
+	else {
+		if (load_from_flash_ext((uint32_t *)(BCHP_PHYSICAL_OFFSET+
+			BCHP_AVS_CPU_PROG_MEM_WORDi_ARRAY_BASE), flash_offs,
+			bytes, &info.flash) < 0)
+			sys_die(DIE_AVS_CODE_LOAD_FAILED,
+				"AVS code load failed");
+	}
 
 	flash_offs += bytes;
 
 	bytes = round_up(data_length);
 	if (AVS_DEBUG_STARTUP)
 		avs_print_string("Loading data...\n");
-#if (AVS_USE_EMMC_DATA_PART == 1)
-	/* copy the data to AVS DATA_ARRAY */
-	memcpy(((void*)BCHP_PHYSICAL_OFFSET+
-		BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE),
-		(void*)(MEMSYS_SRAM_ADDR+round_up(code_length)), bytes); 
-#else
-	if (load_from_flash_ext(
-		(uint32_t *)(BCHP_PHYSICAL_OFFSET+
-		BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE), flash_offs,
-		bytes, &info.flash) < 0)
-		die("AVS data load failed");
-#endif
+	if (bypass_emmc_data_part != 1) {
+		/* copy the data to AVS DATA_ARRAY */
+		memcpy(((void*)BCHP_PHYSICAL_OFFSET+
+			BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE),
+			(void*)(MEMSYS_SRAM_ADDR+round_up(code_length)), bytes);
+	}
+	else {
+		if (load_from_flash_ext(
+			(uint32_t *)(BCHP_PHYSICAL_OFFSET+
+			BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE), flash_offs,
+			bytes, &info.flash) < 0)
+			sys_die(DIE_AVS_DATA_LOAD_FAILED,
+				"AVS data load failed");
+	}
 
 	return AVS_LOADED;
 }
@@ -634,6 +665,39 @@ static void __maybe_unused avs_time_process_report(char *msg, unsigned was)
 
 /* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
 
+#if defined(AVS_DUAL_DOMAINS)
+static void setup_avs_params(int pmap_id)
+{
+	/* set for boards with single regulator */
+	struct board_type __maybe_unused *b = get_tmp_board();
+	unsigned long param0 = 0;
+	unsigned long param1 = 0;
+
+#ifdef PARAM_AVS_PARAM_0
+	/* read run time AVS params from secure */
+	/* parameter section, if they exist.    */
+	param0 = DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_0);
+	param1 = DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1);
+#endif
+
+#define DEFAULT_PSTATE 4 /* 0 starts up at fastest state, 4 at slowest */
+
+#if !defined(SECURE_BOOT)
+	if (!b || AVS_DOMAINS(b->avs) == 1)
+		param1 = 0x00000100;
+	else
+		param1 = 0x00000200;
+
+	param1 |= (pmap_id & 0x1F);
+	param1 |= (DEFAULT_PSTATE & 0x7) << 5;
+#endif
+
+	/* pass AVS_PARAM_0 and AVS_PARAM_1 to AVS processor */
+	BDEV_WR(BCHP_AVS_TOP_CTRL_SPARE_LOW, param0);
+	BDEV_WR(BCHP_AVS_TOP_CTRL_SPARE_HIGH, param1);
+}
+#endif
+
 /* These are the public functions that do EVERYTHING to setup the AVS firmware.
  */
 /* Once security is enabled we'll need to break these steps up in order to
@@ -690,7 +754,7 @@ int avs_common_load(void)
 	return result;
 }
 
-int avs_common_start(void)
+int avs_common_start(int pmap_id)
 {
 	unsigned __maybe_unused time;
 	struct at_initialization params;
@@ -717,6 +781,10 @@ int avs_common_start(void)
 
 	if (TIME_PROCESS)
 		time = get_time_diff(0);
+
+#if defined(AVS_DUAL_DOMAINS)
+	setup_avs_params(pmap_id);
+#endif
 
 	avs_start_firmware(&params);
 

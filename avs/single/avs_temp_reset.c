@@ -46,6 +46,7 @@
  * This is really just a last ditch effort to save the part from burning up.
  * The part is guaranteed to run up to 125C so using 150C is just to
  * catch run-away temperature situations.
+ *
  * The result of a reset due to over-temp can be read in:
  * "BCHP_AON_CTRL_RESET_HISTORY" with bit:
  * AON_CTRL :: RESET_HISTORY :: * overtemp_reset [13:13]
@@ -55,21 +56,19 @@ void avs_set_temp_threshold(unsigned int device, int en)
 {
 	uint32_t reg;
 
-	if (AVS_ENABLE_OVERTEMP) {
 #ifdef BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD
-		/* original: o_ADC_data=(410.04-T)/0.48705 */
-		/* For T=130 reg=574.97176=>574=23Eh, 23Eh<<1=>47Ch */
-		reg = (4100400-(MAX_TEMPERATURE*10000))/4870;
-		/* The actual temperature is located in bits 10:1 (not 10:0) */
-		BDEV_WR(BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD, reg << 1);
-		BDEV_WR(BCHP_AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET, en);
+	/* original: o_ADC_data=(410.04-T)/0.48705 */
+	/* For T=130 reg=574.97176=>574=23Eh, 23Eh<<1=>47Ch */
+	reg = (4100400-(MAX_TEMPERATURE*10000))/4870;
+	/* The actual temperature is located in bits 10:1 (not 10:0) */
+	BDEV_WR(BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD, reg << 1);
+	BDEV_WR(BCHP_AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET, en);
 #else
-		/* original: reg=854.8-2.069*T */
-		reg = (854800 - (2069 * MAX_TEMPERATURE)) / 1000;
-		BDEV_WR(BCHP_AVS_HW_MNTR_TEMPERATURE_THRESHOLD, reg);
-		BDEV_WR(BCHP_AVS_HW_MNTR_TEMPERATURE_RESET_ENABLE, en);
+	/* original: reg=854.8-2.069*T */
+	reg = (854800 - (2069 * MAX_TEMPERATURE)) / 1000;
+	BDEV_WR(BCHP_AVS_HW_MNTR_TEMPERATURE_THRESHOLD, reg);
+	BDEV_WR(BCHP_AVS_HW_MNTR_TEMPERATURE_RESET_ENABLE, en);
 #endif
-	}
 }
 
 /* This can be used to verify that reset occured due to over-temp */
@@ -81,29 +80,27 @@ bool avs_check_temp_reset(bool quiet)
 	uint32_t reg;
 	bool result = false;
 
-	if (AVS_ENABLE_OVERTEMP) {
-		reg = BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY);
-		if (reg & BCHP_AON_CTRL_RESET_HISTORY_overtemp_reset_MASK)
-			result = true;
-		if (result && !quiet) {
-			unsigned temperature;
-			puts("\n** Over-temp Reset! **\n");
+	reg = BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY);
+	if (reg & BCHP_AON_CTRL_RESET_HISTORY_overtemp_reset_MASK)
+		result = true;
+	if (result && !quiet) {
+		unsigned temperature;
+		puts("\n** Over-temp Reset! **\n");
 #ifdef BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD
-			/* The actual temperature is located in bits 10:1 (not 10:0) */
-			reg = (BDEV_RD(BCHP_AVS_TMON_TEMPERATURE_MEASUREMENT_STATUS) &
-				BCHP_AVS_TMON_TEMPERATURE_MEASUREMENT_STATUS_data_MASK) >> 1;
-			/* temperature=410.04-(reg*0.48705) */
-			temperature = (4100400 - (reg * 4870)) / 10000;
+		/* The actual temperature is located in bits 10:1 (not 10:0) */
+		reg = (BDEV_RD(BCHP_AVS_TMON_TEMPERATURE_MEASUREMENT_STATUS) &
+			BCHP_AVS_TMON_TEMPERATURE_MEASUREMENT_STATUS_data_MASK) >> 1;
+		/* temperature=410.04-(reg*0.48705) */
+		temperature = (4100400 - (reg * 4870)) / 10000;
 #else
-			reg = BDEV_RD(BCHP_AVS_RO_REGISTERS_0_PVT_TEMPERATURE_MNTR_STATUS) &
-				BCHP_AVS_RO_REGISTERS_0_PVT_TEMPERATURE_MNTR_STATUS_data_MASK;
-			/* temperature=(854.8-reg)/2.069 */
-			temperature = (8548 - (reg * 10)) * 100 / 2069;
+		reg = BDEV_RD(BCHP_AVS_RO_REGISTERS_0_PVT_TEMPERATURE_MNTR_STATUS) &
+			BCHP_AVS_RO_REGISTERS_0_PVT_TEMPERATURE_MNTR_STATUS_data_MASK;
+		/* temperature=(854.8-reg)/2.069 */
+		temperature = (8548 - (reg * 10)) * 100 / 2069;
 #endif
-			__puts("TEMP=");
-			writehex(temperature);
-			puts("");
-		}
+		__puts("TEMP=");
+		writehex(temperature);
+		puts("");
 	}
 
 	return result;

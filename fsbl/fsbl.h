@@ -15,6 +15,7 @@
 #define _FSBL_H
 
 #include <fsbl-common.h>
+#include <fsbl-die.h>
 #include <stdbool.h>
 
 #define DIV10(a) ((a)/10)
@@ -28,6 +29,8 @@
 
 /* Do not generate function prologue */
 #define NAKED __attribute__((naked))
+
+#define CRLF "\r\n"
 
 #ifdef STUB64_START
 /* Zeus 4.2.1, ARMv8. Currently, no MEMSYS in lower 64KiB
@@ -126,13 +129,22 @@ void memcpy4(uint32_t *dst, const uint32_t *src, size_t bytes);
 void fastcopy(uint32_t *dst, const uint32_t *src, size_t bytes);
 void memcpy(void *dst, const void *src, size_t n);
 void *memset(void *s, int c, size_t n);
-void __noreturn die(char *msg);
 void __puts(const char *s);
 int puts(const char *s);
 void writehex(uint32_t val);
 char *itoa(int n);
 #define writeint(n) __puts(itoa(n))
+/*
+ * report_hex(): Starting a string with a '@' char will prevent the
+ * generation of a new line (crlf) at the end.
+ */
+void report_hex(const char *s, uint32_t h);
+void crlf(void);
 
+/* die
+*/
+void __noreturn sys_die(const uint16_t die_code, const char *die_string);
+void __noreturn memsys_die(const uint16_t die_code, const char *die_string);
 
 /* shmoo + saved board, memsys.
 */
@@ -187,6 +199,7 @@ void sec_set_memc(struct fsbl_info *pinfo);
 void sec_mitch_check(void);
 void sec_print_version(void);
 void __noreturn fsbl_end(struct fsbl_info *info);
+void sec_set_errcode(uint16_t die_code);
 
 /* glitch
 */
