@@ -13,6 +13,12 @@
 #include <lib_types.h>
 #include "fsbl.h"
 
+#if defined(CONFIG_BCM7260A0)
+void bcm7260a0_patch_mpm(void);
+#else
+static inline void bcm7260a0_patch_mpm(void) { }
+#endif
+
 #if defined(CONFIG_BCM7260) || defined(CONFIG_BCM7268) || defined(CONFIG_BCM7271)
 void orion_hack_early_bus_cfg(void);
 #else

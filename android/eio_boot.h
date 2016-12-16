@@ -17,8 +17,8 @@
 #ifndef EIO_BOOT__H
 #define EIO_BOOT__H
 
-#define BOOT_SLOT_0_SUFFIX      "_i"
-#define BOOT_SLOT_1_SUFFIX      "_e"
+#define BOOT_SLOT_0_SUFFIX      "i"
+#define BOOT_SLOT_1_SUFFIX      "e"
 
 #define BOOT_SLOT_SYSTEM_PREFIX "system"
 #define BOOT_SLOT_BOOT_PREFIX   "boot"

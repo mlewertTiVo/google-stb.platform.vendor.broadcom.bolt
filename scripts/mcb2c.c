@@ -1278,10 +1278,17 @@ static int print_mcbtable(FILE *fp, int nfiles, char **mcbfiles)
 				fname, nfields);
 			return -1;;
 		}
-		if (is_mcb_duplicate(&mcb_prop, mcbtable, i)) {
-			fprintf(stderr, "%s is duplicate\n", mcbfiles[i]);
-			return -1;;
-		}
+
+		/* Check duplication only when compressing. For fixed MCB's
+		 * (non-compressed), duplication should be allowed.
+		 */
+		if (g_compress)
+			if (is_mcb_duplicate(&mcb_prop, mcbtable, i)) {
+				fprintf(stderr, "%s is duplicate\n",
+					mcbfiles[i]);
+				return -1;;
+			}
+
 		memcpy(&mcbtable[i], &mcb_prop, sizeof(mcb_prop));
 
 		fprintf(fp, "\t{ %s", fname_base);

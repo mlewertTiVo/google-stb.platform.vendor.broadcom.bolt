@@ -6,10 +6,20 @@
 Release changelog
 =================
 
- v1.22
+ v1.23
 ------
 
-link:http://jira.broadcom.com/browse/SWBOLT-2075[SWBOLT-2075] Add DVFS Support.
+link:http://jira.broadcom.com/browse/SWBOLT-2095[SWBOLT-2095] Fixed regression that broke 7439 USB/BDC for Android in BOLT previous v1.22. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2062[SWBOLT-2062] Limitation on the 2GB of installed DRAM has been lifted from BCM7260, BCM7268 and BCM7271. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.23%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.22
+------
 
 link:http://jira.broadcom.com/browse/SWBOLT-2060[SWBOLT-2060] Add OEM_FUNC_LEGACY_GIC_BYPASS call to 64 bit PSCI code.
 

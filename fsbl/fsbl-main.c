@@ -174,6 +174,7 @@ void fsbl_main(void)
 			for (i = 0; i <=
 				BCHP_AON_CTRL_SYSTEM_DATA_RAMi_ARRAY_END; ++i)
 				AON_REG(i) = 0;
+		bcm7260a0_patch_mpm();
 	}
 
 	orion_hack_early_bus_cfg();

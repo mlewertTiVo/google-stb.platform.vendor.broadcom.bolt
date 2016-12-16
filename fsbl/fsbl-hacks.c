@@ -8,15 +8,78 @@
  ***************************************************************************/
 
 #include "fsbl-hacks.h"
-#include "pinmux.h"
-#include "chipid.h"
 
 #include <bchp_common.h>
-#include <bchp_sun_top_ctrl.h>
-#include <bchp_sun_gisb_arb.h>
-#include <bchp_timer.h>
 #include <bchp_hif_cpubiuctrl.h>
+#include <bchp_sun_gisb_arb.h>
+#include <bchp_sun_top_ctrl.h>
+#include <bchp_timer.h>
 
+#if defined(CONFIG_BCM7260A0)
+#include <bchp_mpm_cpu_ctrl.h>
+#include <bchp_mpm_cpu_data_mem.h>
+#endif
+
+#if defined(CONFIG_BCM7260A0)
+static const uint32_t MPM_TIMEOUT = 3*27000000; /* 3 seconds */
+static const uint32_t MPM_PATCH_DATA[] = { 0x0, 0xEA8, 0x0 };
+static const uint32_t MPM_PATCH_OFFSET = 0x5D60;
+
+static inline bool is_patch_done(void)
+{
+	return (0 != (BDEV_RD(BCHP_MPM_CPU_CTRL_PM_CTRL) &
+		BCHP_MPM_CPU_CTRL_PM_CTRL_MPM_WAKEUP_SYSTEM_MASK));
+}
+
+void bcm7260a0_patch_mpm(void)
+{
+	uint32_t *dccm;
+	uint32_t strap1;
+
+	strap1 = BDEV_RD(BCHP_SUN_TOP_CTRL_STRAP_VALUE_1);
+	/* only when powered via USB-C */
+	if (0 == (strap1 &
+		BCHP_SUN_TOP_CTRL_STRAP_VALUE_1_strap_mpm_runmode_0_MASK))
+		return;
+	/* we should not have been here if booted in S3 mode */
+	if (0 != (strap1 &
+		BCHP_SUN_TOP_CTRL_STRAP_VALUE_1_strap_powerup_in_s3_MASK))
+		return;
+
+	/* has the patch been applied */
+	if (is_patch_done())
+		return;
+
+	/* from now on, it is the "do or die" situation */
+
+	/* take MPM out of reset */
+	BDEV_WR(BCHP_MPM_CPU_CTRL_RESET_CTRL,
+		(0 << BCHP_MPM_CPU_CTRL_RESET_CTRL_CPU_RESET_LEVEL_SHIFT));
+	__puts("L");
+	BARRIER();
+	/* wait for MPM CPU to complete the reset before accessing it again */
+	udelay(1);
+
+	/* apply patch */
+	dccm = (uint32_t *) BPHYSADDR(BCHP_MPM_CPU_DATA_MEM_WORDi_ARRAY_BASE +
+		MPM_PATCH_OFFSET);
+	memcpy(dccm, MPM_PATCH_DATA, sizeof(MPM_PATCH_DATA));
+	__puts("P");
+	BARRIER();
+
+	/* mimic as if booted in S3 mode */
+	BDEV_WR_F(MPM_CPU_CTRL_MISC_CTRL, SELECT_UART_PINS, 1);
+
+	/* one-shot reset to MPM */
+	BDEV_WR(BCHP_MPM_CPU_CTRL_RESET_CTRL,
+		(1 << BCHP_MPM_CPU_CTRL_RESET_CTRL_CPU_RESET_ONE_SHOT_SHIFT));
+	__puts("O");
+
+	/* wait for MPM to complete negotiation, FOREVER */
+	while (!is_patch_done()) ;
+	puts("W");
+}
+#endif
 
 #if defined(CONFIG_BCM7260) || defined(CONFIG_BCM7268) || defined(CONFIG_BCM7271)
 void orion_hack_early_bus_cfg(void)
@@ -32,10 +95,14 @@ void orion_hack_early_bus_cfg(void)
 	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT4,
 		(0x23FFFF << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT4_ULIMIT_SHIFT) |
 		(4 << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT4_BUSNUM_SHIFT));
-	/* limit5: MCP0 0x0_4000_0000..0x0_BFFF_FFFF */
+	/* limit5: MCP0 0x0_4000_0000..0x0_7FFF_FFFF */
 	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5,
-		(0xBFFFF << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_ULIMIT_SHIFT) |
+		(0x7FFFF << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_ULIMIT_SHIFT) |
 		(4 << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT5_BUSNUM_SHIFT));
+	/* limit7: MCP0 0x0_8000_0000..0x0_BFFF_FFFF */
+	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7,
+		(0xBFFFF << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7_ULIMIT_SHIFT) |
+		(4 << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7_BUSNUM_SHIFT));
 }
 #endif
 

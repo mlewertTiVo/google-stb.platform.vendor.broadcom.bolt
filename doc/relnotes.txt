@@ -8,7 +8,7 @@ Release notes
 Broadcom Ltd <support@broadcom.com>
 
 
- Bolt SQA Release v1.22, 7th November 2016
+ Bolt SQA Release v1.23, 28th November 2016
 ------------------------------------------
 
 ....
@@ -187,40 +187,16 @@ arm-linux-ld: error: no memory region specified for loadable section `.bss'
 
 ''''
 
- Upgrade to v1.22 criteria
+ Upgrade to v1.23 criteria
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-link:http://jira.broadcom.com/browse/SWBOLT-2060[SWBOLT-2060] Add OEM_FUNC_LEGACY_GIC_BYPASS call to 64 bit PSCI code.
+link:http://jira.broadcom.com/browse/SWBOLT-2095[SWBOLT-2095] Fixed regression that broke 7439 USB/BDC for Android in BOLT previous v1.22. ^[red silver-background]#blocker#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-2067[SWBOLT-2067] Add missing USB3.0 clocks (if applicable) to the Device Tree usb-phy node. The usb-phy device-tree node was only specifying the USB2.0 clocks and needed to include the USB3.0 clocks for controllers that have XHCI. ^[red silver-background]#blocker#^
-
-link:http://jira.broadcom.com/browse/SWBOLT-2065[SWBOLT-2065] Added a version number to the FSBL info struct passed to SSBL.
-
-link:http://jira.broadcom.com/browse/SWBOLT-1942[SWBOLT-1942] Allow more frequency scaling steps for the CPU. Requires an updated Linux.
-
-link:http://jira.broadcom.com/browse/SWBOLT-2036[SWBOLT-2036] DRAM parts whose sizes are not power of 2 can now be integrated.
-
-link:http://jira.broadcom.com/browse/SWBOLT-2030[SWBOLT-2030] Reworked avs and dvfs config commands. ^[yellow silver-background]#major#^
-
-link:http://jira.broadcom.com/browse/SWBOLT-2061[SWBOLT-2061] Store PSCI base address in AON_SYSTEM_DATA_RAM[10] for recovery on S3 wakeup. ^[red silver-background]#blocker#^
-
-link:http://jira.broadcom.com/browse/SWBOLT-2056[SWBOLT-2056] Support ARM B53 family of chips (7260, 7271, 7268) Power Profile Maps. ^[yellow silver-background]#major#^
-
-link:http://jira.broadcom.com/browse/SWBOLT-2037[SWBOLT-2037] Support for BCM97268LC6L has been added.
-
-link:http://jira.broadcom.com/browse/SWBOLT-2048[SWBOLT-2048] Trust Zone: Add a new option to the tz command to allow loading of the Secure Monitor. ^[yellow silver-background]#major#^
-
-link:http://jira.broadcom.com/browse/SWBOLT-2047[SWBOLT-2047] USB: Add support for USB Type-C PD control of device mode into the build configuration script. ^[yellow silver-background]#major#^
-
-link:http://jira.broadcom.com/browse/SWBOLT-2054[SWBOLT-2054] USB: Update usb-brcm-common-init.c to get latest fixes: (1) Set up AEQ to finalize equalization values later during training time to avoid training on LFPS with some devices. (2) Renable FSM after resetting the PH.
-
-link:http://jira.broadcom.com/browse/SWBOLT-2055[SWBOLT-2055] Update DDR4 memsysinitlib of 7260a0 to v3.1.0.8. Combined with an upcoming Linux (TBD), 7260a0 platforms with DDR4 can now have S3 warm and cold boot support. ^[yellow silver-background]#major#^
-
-link:http://jira.broadcom.com/browse/SWBOLT-2066[SWBOLT-2066] Update for correct 7260a0 USB DRD support. ^[red silver-background]#blocker#^
+link:http://jira.broadcom.com/browse/SWBOLT-2062[SWBOLT-2062] Limitation on the 2GB of installed DRAM has been lifted from BCM7260, BCM7268 and BCM7271. ^[yellow silver-background]#major#^
 
  Broadcom FAE access
 ~~~~~~~~~~~~~~~~~~~~
-http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.22%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.23%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
 
 
  Documentation

@@ -185,10 +185,11 @@ static int fastboot_flash_write_sparse_image(const char *devname,
 {
 	int res = BOLT_OK;
 	int chunk_hdr_offset;
-	unsigned int byte_cnt, amtcopy;
+	unsigned int byte_cnt, amtcopy, limit, offset;
 	unsigned long long curr_write_offset;
 	unsigned long long curr_write_offset_org;
 	unsigned char *curr_read_ptr;
+	unsigned char fill_staging_buffer[DATA_MAX_SIZE];
 	unsigned int remaining_chunks;
 	int fd;
 	sparse_header_t *s_header;
@@ -284,15 +285,29 @@ static int fastboot_flash_write_sparse_image(const char *devname,
 			break;
 		case CHUNK_TYPE_FILL:
 			byte_cnt = (c_header->chunk_sz * s_header->blk_sz);
-			curr_read_ptr = ((unsigned char *)c_header) + s_header->chunk_hdr_sz;
 			/* save a copy of the original curr_write_offset as we
 			 * need it to compute the offset for next chunk */
 			curr_write_offset_org = curr_write_offset;
+			curr_read_ptr = ((unsigned char *)c_header) + s_header->chunk_hdr_sz;
 
-			while (byte_cnt >= FILL_MAX_SIZE)
+			limit = FILL_MAX_SIZE;
+			if (byte_cnt > DATA_MAX_SIZE) {
+				limit = DATA_MAX_SIZE;
+				os_memset(fill_staging_buffer, 0, DATA_MAX_SIZE);
+				offset = 0;
+				while (limit != 0) {
+					os_memcpy(fill_staging_buffer+offset, curr_read_ptr, FILL_MAX_SIZE);
+					limit -= FILL_MAX_SIZE;
+					offset += FILL_MAX_SIZE;
+				}
+				limit = DATA_MAX_SIZE;
+				curr_read_ptr = fill_staging_buffer;
+			}
+
+			while (byte_cnt >= limit)
 			{
-				amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, FILL_MAX_SIZE);
-				if (amtcopy != FILL_MAX_SIZE) {
+				amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, limit);
+				if (amtcopy != limit) {
 					os_printf("Failed to fill image. Remaining chunk: %d\n", remaining_chunks);
 					res = BOLT_ERR_IOERR;
 					goto exit;
@@ -1454,6 +1469,13 @@ static void getvar_slot_suffixes(char *cmd_var, char *response)
 	}
 }
 
+static void getvar_slot_count(char *cmd_var, char *response)
+{
+	if (has_boot_commander()) {
+		os_sprintf(response, "2");
+	}
+}
+
 static void getvar_slot_successful(char *cmd_var, char *response)
 {
 	struct eio_boot eio;
@@ -1573,6 +1595,9 @@ static const struct getvar_dispatch getvar_dispatch[] = {
 	}, {
 		.name = "slot-retry-count:",
 		.cb = getvar_slot_retry_count,
+	}, {
+		.name = "slot-count",
+		.cb = getvar_slot_count,
 	},
 };
 
@@ -2114,15 +2139,20 @@ static int cb_active_slot(struct fastboot_info *info)
 		return res;
 	}
 
-	if (!os_strcmp(cmd_var, BOOT_SLOT_0_SUFFIX) && !os_strcmp(cmd_var, BOOT_SLOT_1_SUFFIX)) {
+	if (!os_strcmp(cmd_var, BOOT_SLOT_0_SUFFIX) &&
+		!os_strcmp(cmd_var, BOOT_SLOT_1_SUFFIX) &&
+		!os_strcmp(cmd_var, "a") &&
+		!os_strcmp(cmd_var, "b")) {
 		os_printf("Error: invalid slot-suffix\n");
 		res = fastboot_tx_write_str("FAILinvalid slot-suffix");
 		return res;
 	}
 
-	if (!os_strcmp(cmd_var, BOOT_SLOT_0_SUFFIX)) {
+	if (!os_strcmp(cmd_var, BOOT_SLOT_0_SUFFIX) ||
+		!os_strcmp(cmd_var, "a")) {
 		slot = 0;
-	} else if (!os_strcmp(cmd_var, BOOT_SLOT_1_SUFFIX)) {
+	} else if (!os_strcmp(cmd_var, BOOT_SLOT_1_SUFFIX) ||
+		!os_strcmp(cmd_var, "b")) {
 		slot = 1;
 	}
 	if (slot == -1) {

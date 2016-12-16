@@ -201,14 +201,8 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	enum bootpath boot_path, int slot)
 {
 	int bootargs_buflen = 0;
-	char *serialno_propname = "androidboot.serialno";
-	int append_serialno = 1; /*default always append serialno property*/
 	char dt_add_cmd[BOOT_ARGS_SIZE+64];
-
-	os_sprintf(dt_add_cmd, "dt add node / firmware");
-	bolt_docommands(dt_add_cmd);
-	os_sprintf(dt_add_cmd, "dt add node /firmware android");
-	bolt_docommands(dt_add_cmd);
+	char *env_verity_pub_key;
 
 	bootargs_buflen = os_sprintf(bootargs_buf, "%s", cmdline);
 
@@ -216,44 +210,30 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add node /firmware android");
 	bolt_docommands(dt_add_cmd);
-
-	/* Check if existing kernel cmdline already has the property we need
-	 * to auto-generate here.  If so, do not append auto-gen params */
-	if (os_strstr(cmdline, serialno_propname)) {
-		DLOG("'%s' is found in cmdline - won't append new one\n",
-			serialno_propname);
-		append_serialno = 0;
-	}
-	if (append_serialno) {
-		if (get_serial_no()) {
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android serialno s '%s'", get_serial_no());
-			bolt_docommands(dt_add_cmd);
-		} else {
-			os_printf("No valid BOARD_SERIAL env-var to setup 'serialno'\n");
-		}
-	}
-
+	os_sprintf(dt_add_cmd, "dt add prop /firmware/android serialno s '%s'", get_serial_no());
+	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android hardware s '%s'", get_hardware_name());
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android bootreason s '%s'", aon_reset_string());
 	bolt_docommands(dt_add_cmd);
+
 	if (boot_path != BOOTPATH_LEGACY) {
-		os_sprintf(dt_add_cmd, "dt add prop /firmware/android slot_suffix s '%s'",
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android slot_suffix s '_%s'",
 			slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 		bolt_docommands(dt_add_cmd);
 
-		/* *** avb integration *** disable verity mode always here, only bolt E2 has it supported.
-		*/
-		os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "disabled");
-		bolt_docommands(dt_add_cmd);
-		/* *** avb integration *** report that this is an -eng build to allow not needing to pass a valid hash
-		                           key to the android-verity loader, note that this is hardcoded and is independent
-		                           of the actual android build type.
-		*/
-		bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " buildvariant=eng");
+		env_verity_pub_key = env_getenv("AB_VERITY_PUB_KEY");
+		if (env_verity_pub_key) {
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
+			bolt_docommands(dt_add_cmd);
+			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " buildvariant=userdebug");
+		        bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " veritykeyid=%s", env_verity_pub_key);
+		} else {
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "disabled");
+			bolt_docommands(dt_add_cmd);
+			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " buildvariant=eng");
+		}
 
-		/* populate the device-mapper root information for standard mode.
-		*/
 		if ((boot_path == BOOTPATH_AB_SYSTEM) && (la != NULL)) {
 			char *p = NULL;
 			char partname[64];
@@ -266,12 +246,12 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 			if (p != NULL) {
 				*p = '.';
 			}
-			os_sprintf(partname, "%s%s",
+			os_sprintf(partname, "%s_%s",
 				BOOT_SLOT_SYSTEM_PREFIX, slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 			ptn = fastboot_flash_find_ptn(partname);
 			if (ptn != NULL) {
-		        bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
-					       " root=/dev/dm-0 dm=\"system none ro,0 1 android-verity PARTUUID=%s\"", ptn->uuid);
+			        bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
+						       " root=/dev/dm-0 dm=\"system none ro,0 1 android-verity PARTUUID=%s\"", ptn->uuid);
 			} else {
 				os_printf("device '%s', PARTUUID for '%s' failed -- aborting boot.\n", la->la_device, partname);
 				fastboot_flash_dump_ptn();
@@ -288,12 +268,12 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
     *  Read an ELF file (main routine)
     *
     *  Input parameters:
-	 *       bootmode - boot mode to apply (legacy, a/b-system).
-	 *       slot - slot to be used when in a/b-system mode.
+    *      bootmode - boot mode to apply (legacy, a/b-system).
+    *      slot - slot to be used when in a/b-system mode.
     *  	   fsctx - context
     *  	   ref   - open file handle
     *  	   la    - loader args
-    *       kernelsize - returned size of kernel image when valid
+    *      kernelsize - returned size of kernel image when valid
     *
     *  Return value:
     *  	   0 if ok
@@ -301,7 +281,7 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
     ********************************************************************* */
 
 static int imgload_internal(enum bootpath boot_path, int slot, fileio_ctx_t *fsctx,
-									void *ref, bolt_loadargs_t *la, int32_t *kernelsize)
+			void *ref, bolt_loadargs_t *la, int32_t *kernelsize)
 {
 	struct img_hdr hdr;
 	int n, m;
@@ -433,7 +413,7 @@ static void boot_path_set_env(enum bootpath boot_path)
 }
 
 static struct eio_boot eio_commander;
-static enum bootpath select_boot_path(int *slot)
+static enum bootpath select_boot_path(int *slot, int selected)
 {
 	int fd=-1;
 	char *fb_flashdev_mode_str;
@@ -463,10 +443,17 @@ static enum bootpath select_boot_path(int *slot)
 				flash_devname, ret);
 		goto ret_legacy;
 	}
-	DLOG("Read %d bytes from commander, magic %x. \n", ret, eio->magic);
+	DLOG("Read %d bytes from commander, magic %x (sel: %d). \n", ret, eio->magic, selected);
 
 	if (slot != NULL) {
 		*slot = -1;
+		if (selected) {
+			/* this is a re-entry in this function for the purpose of booting up, we do not apply
+			 * the slot selection in this case, it must be the one we picked prior.
+			 */
+			*slot = eio->current;
+			goto ret_ab_system;
+		}
 		if (eio->magic == EIO_BOOT_MAGIC) {
 			if (eio->current < EIO_BOOT_NUM_ALT_PART) {
 				if (eio->slot[eio->current].boot_ok) {
@@ -494,7 +481,7 @@ static enum bootpath select_boot_path(int *slot)
 			} else {
 				/* no valid slot marked.  enter fastboot mode for flashing. */
 				goto ret_ab_bl_recovery;
-         }
+			}
 		} else {
 			/* empty commander, seed with default data. */
 			eio->current = 0;
@@ -645,9 +632,9 @@ static int bolt_imgload(bolt_loadargs_t *la)
 		if (!os_strncmp(boot_path_env, "legacy", os_strlen("legacy"))) {
 			/* fall back to legacy. */
 		} else if (!os_strncmp(boot_path_env, "ab_android", os_strlen("ab_android"))) {
-			boot_path = select_boot_path(&slot);
+			boot_path = select_boot_path(&slot, 1);
 		} else if (!os_strncmp(boot_path_env, "ab_recovery", os_strlen("ab_recovery"))) {
-			boot_path = select_boot_path(&slot);
+			boot_path = select_boot_path(&slot, 1);
 			if (boot_path != BOOTPATH_LEGACY) {
 				boot_path = BOOTPATH_AB_SYSTEM_RECOVERY;
 			}
@@ -899,7 +886,7 @@ int android_get_boot_partition(ui_cmdline_t *cmd,
 	/* determine if this will be a legacy boot or a a|b update
 	 * boot.
 	 */
-	boot_path = select_boot_path(&slot);
+	boot_path = select_boot_path(&slot, 0);
 
 	/* Read and clear the boot reason register */
 	boot_reason = boot_reason_reg_get();
@@ -1031,7 +1018,7 @@ int android_get_boot_partition(ui_cmdline_t *cmd,
 		 */
 		boot_dev = env_getenv("FB_DEVICE_TYPE");
 		boot_path_set_env(boot_path);
-		os_sprintf(boot_partition, "%s.boot%s",
+		os_sprintf(boot_partition, "%s.boot_%s",
 			boot_dev ? boot_dev : BOOT_SLOT_DEV_DEFAULT,
 			slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 	}
