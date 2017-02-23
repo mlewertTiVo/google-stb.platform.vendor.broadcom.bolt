@@ -762,7 +762,8 @@ sub do_secpatch($$$$)
 	patch_ufs_metadata(\$image, $offset,
 			$has_avs, $has_bfw, $has_memsys, $avs);
 
-	write_binfile($fname, $image);
+	write_binfile($fname, $image)
+		if (! cfg_is("CFG_ZEUS5_0"));
 }
 
 
@@ -783,6 +784,7 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 	my $meta = "BOLT-META:";
 	my $file_bbl = "security/" . $arg_family . "/bbl-" . $list_bbls[$i] . ".bin";
 	my $file_bfw = "security/" . $arg_family . "/bfw-" . $list_bfws[$i] . ".bin";
+	my $file_key = "security/" . $arg_family . "/key0.bin";
 
 	# do as a matched/compatible set
 	if ( (! -f $file_bbl) || (! -f $file_bfw)) {
@@ -806,6 +808,7 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 	my $cmd = "$arg_tool -z $arg_zeusver -i $bolt -o $arg_odir/$bname";
 	my $sub_bbl = "-t bbl -p $file_bbl -i $bolt";
 	my $sub_bfw = "-t bfw -p $file_bfw -i $arg_odir/$bname";
+	my $sub_key = "-t key -p $file_key -i $arg_odir/$bname";
 
 	$r = do_shell("$cmd $sub_bbl");
 	print "\n$r"
@@ -814,6 +817,12 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 	$r = do_shell("$cmd $sub_bfw");
 	print "\n$r"
 		if ($arg_debug);
+
+	if (-f $file_key) {
+		$r = do_shell("$cmd $sub_key");
+		print "\n$r"
+			if ($arg_debug);
+	}
 
 	if ($arg_keep == 1) {
 		$r = do_shell("cp $arg_odir/$bname $arg_odir/last.bin");

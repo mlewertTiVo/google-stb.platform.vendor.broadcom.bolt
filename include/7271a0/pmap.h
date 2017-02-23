@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2016, Broadcom
+ *     Copyright (c) 2012-2017, Broadcom
  *     All Rights Reserved
  *     Confidential Property of Broadcom
  *
@@ -20,13 +20,8 @@
 #ifndef BCHP_PMAP_PRIV_H__
 #define BCHP_PMAP_PRIV_H__
 
-/* Private power resource IDs */
-enum pmaps {
-	PMap0,
-	PMap1,
-	PMap2,
-	PMapMax,
-} pmaps;
+#define AVS_RDB_DATE 20161213 /* %y%m%d */
+#define AVS_RDB_TIME 1200 /* %h%m */
 
 struct pmapParameters {
 	uint16_t ndiv_int;
@@ -40,10 +35,17 @@ struct pmapParameters {
 	char *desc;
 } pmapParameters;
 
-static const struct pmapParameters pmapTable[PMapMax] = {
-	{167,	3,	2,	3,	4,	6,	10,	0,	"PMap0"},
-	{194,	3,	4,	5,	6,	8,	10,	0,	"PMap1"},
-	{194,	3,	3,	4,	5,	8,	10,	0,	"PMap2"},
+#ifndef AVS_ONCE
+#define AVS_ONCE
+static const struct pmapParameters pmapTable[] = {
+	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
+	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 0, .desc = "PMap0"},
+	{ .ndiv_int = 194, .pdiv = 3, .mdiv_p0 = 4, .mdiv_p1 = 5, .mdiv_p2 = 6,
+	  .mdiv_p3 = 8, .mdiv_p4 = 10, .num_domains = 0, .desc = "PMap1"},
+	{ .ndiv_int = 194, .pdiv = 3, .mdiv_p0 = 3, .mdiv_p1 = 4, .mdiv_p2 = 5,
+	  .mdiv_p3 = 8, .mdiv_p4 = 10, .num_domains = 0, .desc = "PMap2"},
 };
 
+static const int PMAP_MAX = sizeof(pmapTable)/sizeof(pmapTable[0]);
+#endif
 #endif

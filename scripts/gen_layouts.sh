@@ -1,13 +1,11 @@
 #!/bin/bash
 # ***************************************************************************
-# *     Copyright (c) 2012-2015, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
-# *
-# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-# * 
+# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+#
+# THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
 # ***************************************************************************
 
 #
@@ -19,10 +17,10 @@
 # an array of STRA,STRB,HEX as follows:
 #
 #my @configs = (
-#	["zeus", "bbl", 0x000096F0], 
-#	["zeus", "bfw", 0x00020000], 
-#	["zeus42", "bbl", 0x000096F0], 
-#	["zeus42", "bfw", 0x00020000], 
+#	["zeus", "bbl", 0x000096F0],
+#	["zeus", "bfw", 0x00020000],
+#	["zeus42", "bbl", 0x000096F0],
+#	["zeus42", "bfw", 0x00020000],
 #);
 #
 # STRA is derived from the file name
@@ -67,12 +65,13 @@ function find_section() {
 
 echo "#!/usr/bin/perl -w"
 echo "my @configs = ("
-for f in config/layout*.cfg 
+for f in config/layout*.cfg
 do
  Z=$(sed "s/config\/layout//g;s/.cfg//g;s/-//g;" <<< "$f")
  if [[ ${#Z} -le 0 ]]; then
   Z="zeus"
  fi
+ find_section $f "KEY" $Z
  find_section $f "BBL" $Z
  find_section $f "BFW" $Z
  find_section $f "FSBL" $Z

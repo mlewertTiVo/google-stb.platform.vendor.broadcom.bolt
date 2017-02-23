@@ -1,0 +1,2178 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Environment variables.</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(3);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1>Environment variables.</h1>
+<span id="author">Broadcom Ltd</span><br />
+<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_system_start">1.  System start</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_sysinit">1.1.  SYSINIT</h3>
+<div class="paragraph"><p>The <strong>CFG_SYSINIT</strong> string as defined in <em>config/stdbuild.cfg</em>
+(if value is not <em>off</em>) is run as a BOLT command at startup.</p></div>
+<div class="paragraph"><p>The default string is configured to try to load a batch file
+from a USB memory stick:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/* autoboot a script from USB memory stick */
+ config SYSINIT           "\"waitusb -t=0 -d='USB Disk' &amp;&amp; batch usbdisk0:sysinit.txt\""</code></pre>
+</div></div>
+<div class="paragraph"><p>This is a handy feature to enable BOLT commands to be done automatically without
+rebuilding BOLT but by simply changing the sysinit.txt script on a USB memory
+stick e.g. via a PC text editing program.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code># This is sysinit.txt
+#
+ifconfig eth0 -auto
+boot 192.168.0.42:vmlinuz-initrd-7445a0
+#
+# pad to 2Kb
+###################################
+###################################
+...
+...</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>...
+...
+AUTOBOOT [waitusb -t=0 -d='USB Disk' &amp;&amp; batch -loader=raw usbdisk0:sysinit.txt]
+usb: new device connected to bus 1 hub 1 port 1
+usb: resetting device on bus 1 hub 1 port 1
+usb: found Mass-Storage Device 13fe:1a00
+USBMASS: Unit 0 connected
+Loader:raw Filesys:fat Dev:usbdisk0 File:sysinit.txt Options:(null)
+Loading: .
+ 2048 bytes read
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-5B-93-8A, ipaddr 192.168.0.40, mask 255.255.255.0
+        gateway 192.168.0.42, nameserver not set
+Loader:zimg Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7445a0 Options:(null)
+Reading 5272936 bytes from zImage...........
+Starting program at 0x00008000 (DTB @ 0x00001000)
+...
+...</code></pre>
+</div></div>
+<div class="paragraph"><p>The <strong>SYSINIT</strong> environment variable has the effect, if set and zero,
+of preventing the build time <strong>CFG_SYSINIT</strong> command(s) from running.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p SYSINIT 0
+BOLT&gt; reboot</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>CPU 0123
+BCM74450031
+PRID74450031
+v1.09
+...
+...
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+BOLT&gt;</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Note the missing <em>AUTOBOOT</em> line.
+</p>
+</li>
+</ul></div>
+<div class="sect3">
+<h4 id="_user_overrides">1.1.1.  User overrides</h4>
+<div class="paragraph"><p>If CTRL-I is pressed when BOLT (SSBL) is starting, it will ignore
+<strong>SYSINIT</strong> and allow <em>AUTOBOOT</em> to once again be enabled.</p></div>
+<div class="paragraph"><p>If CTRL-C is pressed when BOLT (SSBL) is starting, like
+the <strong>SYSINIT</strong> environment variable, it prevents <strong>CFG_SYSINIT</strong>
+command(s) from running.</p></div>
+<div class="listingblock">
+<div class="title">Examples</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p SYSINIT 1
+BOLT&gt; reboot
+...
+...
+RESET CAUSE: 0x000200 software_master (1 of 21 possible causes)
+******************************************
+System initialization forced via Ctrl-I
+******************************************
+
+CS0: SFDP SPI, 16MB, 64kB blocks, 256B pages
+CS1: ONFI NAND, 4096MB, 2048kB blocks, 8192B page, 46B OOB, BCH-40 (1KB sector)
+...
+...
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+AUTOBOOT [waitusb -t=0 -d='USB Disk' &amp;&amp; batch usbdisk0:sysinit.txt]</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; unsetenv SYSINIT
+BOLT&gt; reboot
+...
+...
+RESET CAUSE: 0x000200 software_master (1 of 21 possible causes)
+******************************************
+******************************************
+Automatic startup canceled via Ctrl-C
+******************************************
+
+CS0: SFDP SPI, 16MB, 64kB blocks, 256B pages
+CS1: ONFI NAND, 4096MB, 2048kB blocks, 8192B page, 46B OOB, BCH-40 (1KB sector)
+...
+...
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_startup">1.2.  STARTUP</h3>
+<div class="paragraph"><p>After <strong>CFG_SYSINIT</strong>, the environment variable <em>STARTUP</em> is read
+and run as a BOLT command.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p STARTUP "show devices"
+BOLT&gt; reboot
+CPU 0123
+BCM74450031
+PRID74450031
+v1.09
+...
+...
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+AUTOBOOT [waitusb -t=0 -d='USB Disk' &amp;&amp; batch usbdisk0:sysinit.txt]
+USB device matching &lt;USB Disk&gt; not found!
+Device Name          Description
+-------------------  ---------------------------------------------------------
+              uart0  16550 DUART at 0xf040ab00 channel 0
+               mem0  Memory
+        flash0.bolt  SPI flash @ CS0: 0x00000000-0x00100000 (1024KB)
+      flash0.macadr  SPI flash @ CS0: 0x00100000-0x00110000 (64KB)
+       flash0.nvram  SPI flash @ CS0: 0x00110000-0x00120000 (64KB)
+      flash0.kernel  SPI flash @ CS0: 0x00120000-0x00520000 (4MB)
+     flash0.devtree  SPI flash @ CS0: 0x00520000-0x00530000 (64KB)
+      flash0.splash  SPI flash @ CS0: 0x00530000-0x005B0000 (512KB)
+             flash0  SPI flash @ CS0: 0x00000000-0x01000000 (16MB)
+     flash1.rootfs0  NAND flash @ CS1: 0x00000000-0x80000000 (2048MB)
+     flash1.rootfs1  NAND flash @ CS1: 0x80000000-0x100000000 (2048MB)
+             flash1  NAND flash @ CS1: 0x00000000-0x100000000 (4096MB)
+              sata0  SATA3 AHCI Device
+              sata1  SATA3 AHCI Device
+               eth0  SYSTEMPORT Internal Ethernet at 0xf04a0000
+              mdio0  SF2 MDIO at 0xf0b403c0
+BOLT&gt;</code></pre>
+</div></div>
+<div class="sect3">
+<h4 id="_user_overrides_2">1.2.1.  User overrides</h4>
+<div class="paragraph"><p>If CTRL-C is pressed when BOLT (SSBL) is starting then
+<em>STARTUP</em> is bypassed and not done.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_batch_command">2.  Batch command</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The following environment variables apply to the <em>batch</em> command.</p></div>
+<div class="sect2">
+<h3 id="_sysinit_tag">2.1.  SYSINIT_TAG</h3>
+<div class="paragraph"><p>Set if the <em>tag</em> batch command is encountered.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_batch_dbg">2.2.  BATCH_DBG</h3>
+<div class="paragraph"><p>If set and non-zero it enables <em>batch</em> command debugging.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+0 - No debug
+</p>
+</li>
+<li>
+<p>
+1 - General debug
+</p>
+</li>
+<li>
+<p>
+2 - Debug output on tag match
+</p>
+</li>
+<li>
+<p>
+3 - General and tag match
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code># This is sysinit.txt
+printenv
+tag TAGGY
+show devices
+tagsave
+tag TAGGY
+# pad to 2Kb
+###################################
+###################################
+...
+...</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv BATCH_DBG 3
+*** command status = 0
+
+BOLT&gt;  batch  192.168.0.42:sysinit.txt
+Loader:raw Filesys:tftp Dev:eth0 File:192.168.0.42:sysinit.txt Options:(null)
+Loading: .
+ 2048 bytes read
+{BATCH} &lt;# This is sysinit.txt&gt;
+{BATCH} &lt;printenv&gt;
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOOT_CONSOLE uart0
+...
+...
+           BATCH_DBG 3
+{BATCH} &lt;tag TAGGY&gt;
+{BATCH} Registering tag &lt;TAGGY&gt;
+{BATCH} &lt;show devices&gt;
+Device Name          Description
+-------------------  ---------------------------------------------------------
+              uart0  16550 DUART at 0xf040ab00 channel 0
+               mem0  Memory
+        flash0.bolt  SPI flash @ CS0: 0x00000000-0x00100000 (1024KB)
+      flash0.macadr  SPI flash @ CS0: 0x00100000-0x00110000 (64KB)
+...
+...
+       tcpfastboot0  TCP Fastboot (port 1234)
+        tcpconsole0  TCP Console (port 23)
+{BATCH} &lt;tagsave&gt;
+{BATCH} Saving tag...
+{BATCH} &lt;tag TAGGY&gt;
+{BATCH} Terminating batch file due to matching tags...
+
+BOLT&gt; printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOOT_CONSOLE uart0
+...
+...
+         SYSINIT_TAG TAGGY
+           BATCH_DBG 3
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_splash">3.  Splash</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_splash_2">3.1.  SPLASH</h3>
+<div class="paragraph"><p>Read only. Set by BOLT to inform if the splash screen feature was
+enabled in the build (<strong>ENABLE</strong>) or not (<strong>DISABLE</strong>).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_no_splash">3.2.  NO_SPLASH</h3>
+<div class="paragraph"><p>If the <strong>NO_SPLASH</strong> environment variable is defined (to any value) then
+the splash screen will not be started.</p></div>
+<div class="sect3">
+<h4 id="_user_overrides_3">3.2.1.  User overrides</h4>
+<div class="paragraph"><p>If CTRL-S is pressed when BOLT (SSBL) is starting, it will not start
+the splash screen.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_system">4.  System</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_boot_console">4.1.  BOOT_CONSOLE</h3>
+<div class="paragraph"><p>Read only. Reports the current console device e.g. <em>uart0</em>. Use of the BOLT
+<em>set console</em> command will update this.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_boardname">4.2.  BOARDNAME</h3>
+<div class="paragraph"><p>Read only. Reports the current board name string.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_chip_family_id">4.3.  CHIP_FAMILY_ID</h3>
+<div class="paragraph"><p>Read only. Contains the chip ID register value, read as a hexadecimal number.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_version">4.4.  VERSION</h3>
+<div class="paragraph"><p>Read only. The BOLT version.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_buildtag">4.5.  BUILDTAG</h3>
+<div class="paragraph"><p>Read only. The BOLT build tag (git commit ID), if applicable.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_memorysize">4.6.  MEMORYSIZE</h3>
+<div class="paragraph"><p>Read only. The total memory for the current board.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_dram_lt_n_gt__size">4.7.  DRAM&lt;N&gt;_SIZE</h3>
+<div class="paragraph"><p>Read only. Set after executing the BOLT <em>info</em> command. Reports
+the total memory for each DDR (MEMC).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_prompt">4.8.  PROMPT</h3>
+<div class="paragraph"><p>The current BOLT prompt. Defaults to "BOLT&gt; "</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv PROMPT "Smoke me a kipper&gt; "
+Smoke me a kipper&gt; d 0x8000 4
+00008000  e0bb078d                             ....
+*** command status = 0
+Smoke me a kipper&gt;</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_cmd_echo">4.9.  CMD_ECHO</h3>
+<div class="paragraph"><p>If set, echo all commands to the console device.
+Each command is then prefixed by <em>{CMD}</em>.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; d -w 0xf0404000 4
+f0404000  74450031                             1.Et
+*** command status = 0
+
+BOLT&gt; setenv CMD_ECHO 1
+*** command status = 0
+
+BOLT&gt; d -w 0xf0404000 4
+{CMD} &lt;d -w 0xf0404000 4&gt;
+f0404000  74450031                             1.Et
+*** command status = 0
+BOLT&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_device_tree">5.  Device Tree</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_dt_address">5.1.  DT_ADDRESS</h3>
+<div class="paragraph"><p>Points to the the address of the current Device Tree BOLT should reference.
+You can load in another Device Tree and set DT_ADDRESS to point to it.
+Note that you should run <em>dt sane</em> to check it and make sure DT_SIZE
+is updated.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+Device eth0:  hwaddr 00-10-18-B5-C3-78, ipaddr 192.168.0.23, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+*** command status = 0
+
+BOLT&gt; load -addr=0x10000000 -raw 192.168.0.42:master.dtb
+Loader:raw Filesys:tftp Dev:eth0 File:192.168.0.42:master.dtb Options:(null)
+Loading: .
+ 7405 bytes read
+Entry address is 0x10000000
+*** command status = 7405
+
+BOLT&gt; dt sane
+DTB @ 0x7822000
+DTB reported size 0xb2df @ 0x7822000
+*** command status = 0
+
+BOLT&gt; setenv DT_ADDRESS 0x10000000
+*** command status = 0
+
+BOLT&gt; dt sane
+DTB @ 0x10000000
+DTB reported size 0x1ced @ 0x10000000</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_dt_size">5.2.  DT_SIZE</h3>
+<div class="paragraph"><p>The size of the current Device Tree BOLT references.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_dt_off">5.3.  DT_OFF</h3>
+<div class="paragraph"><p>The <em>dt off</em> and <em>dt on</em> commands change this variable. It may also be
+modified independently of those commands. If set to <em>1</em> then both the
+<em>dt bolt</em> command and the silent <em>dt bolt</em> command done just before
+Linux boots is not done.</p></div>
+<div class="paragraph"><p>Note the "DT_OFF: bypass device tree modification" line below:</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv DT_OFF 1
+*** command status = 0
+
+BOLT&gt; boot 192.168.0.42:vmlinuz-initrd-7445d0
+Loader:zimg Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7445d0 Options:(null)
+Reading 8106808 bytes from zImage...........
+DT_OFF: bypass device tree modification
+Closing network 'eth0'
+Starting program at 0x8000 (DTB @ 0x7822000)
+
+Uncompressing Linux... done, booting the kernel.</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_networking">6.  Networking</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_eth_off">6.1.  ETH_OFF</h3>
+<div class="paragraph"><p>If defined it will prevent Ethernet device initialization and function. Requires
+a reboot after being enabled or disabled to take effect.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p ETH_OFF 1
+*** command status = 0
+BOLT&gt; reboot
+...
+...
+
+...
+...
+BOLT&gt; ifconfig eth0 -auto
+Could not activate device eth0: Error
+*** command status = -1</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_eth_aneg_timeout">6.2.  ETH_ANEG_TIMEOUT</h3>
+<div class="paragraph"><p>If defined, it overrides the default timeout value, 8 (eight) seconds, on
+auto-negotiation. Further, if the overridden value is differet from
+the default 8 seconds, informative message is printed out.</p></div>
+<div class="paragraph"><p>Getting a DHCP address will time out after around 8 seconds (or, any
+overridden timeout value) if network cable is not plugged in. If no DHCP
+replies while network connection is okay, timing out from the DHCP request
+happens much later.</p></div>
+<div class="paragraph"><p>Auto-negotiation should complete less than 4 seconds in most cases, sometimes
+even much shorter than that. But, it can be extended depending on various
+reasons, including the link partner. Careful consideration is required when
+reducing the timeout.</p></div>
+<div class="paragraph"><p>Defining 0 (zero) removes timeout, meaning endless auto-negotiation attempts.</p></div>
+<div class="paragraph"><p>Please note that it has not effect on USB-Ethernet dongles at the moment.
+It has effect only on GENET and SYSTEMPORT based Ethernet ports.
+Whether your interested Ethernet port is based on GENET or SYSTEMPORT can be
+checked via the "show devices" command on the BOLT command prompt.</p></div>
+<div class="paragraph"><p>The following example checks whether ETH_ANEG_TIMEOUT can affect eth0, and
+sets the auto-negotiation timeout to 10 (ten) seconds before sending out
+DHCP request for eth0.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; show devices
+...
+BOLT&gt; setenv ETH_ANEG_TIMEOUT 10
+*** command status = 0
+BOLT&gt; ifconfig eth0 -auto
+...</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_net">6.3.  NET_*</h3>
+<div class="paragraph"><p>These environment variables report the current Ethernet device
+configuration status. Although writable, you should not modify
+these values as it will either have no effect, or unintended effects.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+NET_DEVICE
+</p>
+</li>
+<li>
+<p>
+NET_DOMAIN
+</p>
+</li>
+<li>
+<p>
+NET_GATEWAY
+</p>
+</li>
+<li>
+<p>
+NET_IPADDR
+</p>
+</li>
+<li>
+<p>
+NET_NAMESERVER
+</p>
+</li>
+<li>
+<p>
+NET_NETMASK
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+Device eth0:  hwaddr 00-10-18-B5-C3-78, ipaddr 192.168.0.23, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+*** command status = 0
+
+BOLT&gt; printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOOT_CONSOLE uart0
+              ...
+              ...
+         ETH0_HWADDR 00:10:18:B5:C3:78
+          NET_DEVICE eth0
+          NET_DOMAIN localdomain
+          NET_IPADDR 192.168.0.23
+         NET_NETMASK 255.255.255.0
+         NET_GATEWAY 0.0.0.0
+      NET_NAMESERVER 0.0.0.0
+              ...
+              ...
+          DT_ADDRESS 7822000
+             DT_SIZE b2df
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -off
+Device eth0 has been deactivated.
+*** command status = 0
+BOLT&gt; printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOOT_CONSOLE uart0
+              ...
+              ...
+          DT_ADDRESS 7822000
+             DT_SIZE b2df
+*** command status = 0</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_boot">6.4.  BOOT_*</h3>
+<div class="paragraph"><p>These environment variables report the current Ethernet device
+DHCP status. Although writable, you should not modify
+these values as it will either have no effect, or unintended effects.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+BOOT_FILE
+</p>
+</li>
+<li>
+<p>
+BOOT_OPTIONS
+</p>
+</li>
+<li>
+<p>
+BOOT_SCRIPT
+</p>
+</li>
+<li>
+<p>
+BOOT_SERVER
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>The example shows the value of BOOT_FILE in BOLT, after a
+Linux PC based DHCP server initialization file had been modified
+and the server started to provide IP addresses to BOLT on a local
+LAN:</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-style: italic"><span style="color: #9A1900"># http://dhcp-dns-server.sourceforge.net</span></span>
+<span style="color: #009900">BootFileName</span><span style="color: #990000">=</span>vmlinuz-initrd-7445d0</tt></pre></div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+Device eth0:  hwaddr 00-10-18-B5-C3-78, ipaddr 192.168.0.23, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+*** command status = 0
+
+BOLT&gt; printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOOT_CONSOLE uart0
+              ...
+              ...
+           BOOT_FILE vmlinuz-initrd-7445d0
+              ...
+          NET_DEVICE eth0
+          NET_DOMAIN localdomain
+          NET_IPADDR 192.168.0.23
+         NET_NETMASK 255.255.255.0
+         NET_GATEWAY 0.0.0.0
+      NET_NAMESERVER 0.0.0.0
+*** command status = 0</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_net_tftp_blksize">6.5.  NET_TFTP_BLKSIZE</h3>
+<div class="paragraph"><p>Change the default TFTP block size. Values may be from
+512 (default) to 16384 (maximum). Note that some TFTP
+servers may not support the non-default block size.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_eth0_hwaddr">6.6.  ETH0_HWADDR</h3>
+<div class="paragraph"><p>The MAC address of the principal Ethernet device. This is set by the
+<em>macprog</em> BOLT command and saved to flash in the <em>flash0.macadr</em>
+partition. It may be overridden by your own value but a reboot is
+required to pick that new value up. It can be restored to the value
+in <em>flash0.macadr</em> by <em>unsetenv ETH0_HWADDR</em> and another reboot.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_misc">7.  Misc</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_zimage_end">7.1.  ZIMAGE_END</h3>
+<div class="paragraph"><p>Set after loading a Linux zImage format file. It records the end of
+the zImage as stored in the header of that image.</p></div>
+<div class="paragraph"><p><a href="http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html#d0e309">http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html#d0e309</a></p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; load 192.168.0.42:vmlinuz-initrd-7445d0
+Loader:zimg Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7445d0 Options:(null)
+Loading: Reading 8106808 bytes from zImage...........
+ 8106744 bytes read
+Entry address is 0x8000
+*** command status = 8106744
+
+BOLT&gt; printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOOT_CONSOLE uart0
+              ...
+              ...
+          ZIMAGE_END 7c3338
+*** command status = 0</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_fat_dbg">7.2.  FAT_DBG</h3>
+<div class="paragraph"><p>Minimal FAT file system debug. Set to any value to enable it.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_genet_driver">8.  GENET driver</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The ETH&lt;n&gt;_&lt;item&gt; environment variables (where &lt;n&gt; is the GENET instance)
+reflect the driver configuration for each GENET device BOLT knows about.</p></div>
+<div class="paragraph"><p>By default the values are derived from those given to the <em>enet</em> script
+command, but they can be overridden by a user setting them and rebooting to
+pick up the changes.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Not all chips have GENET, some have other types of Ethernet device drivers.</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">Its not recommended to set these environment variables by hand.</td>
+</tr></table>
+</div>
+<div class="sect2">
+<h3 id="_eth_lt_n_gt__speed">8.1.  ETH&lt;n&gt;_SPEED</h3>
+<div class="paragraph"><p>The PHY speed, in Mbits per second.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+10
+</p>
+</li>
+<li>
+<p>
+100
+</p>
+</li>
+<li>
+<p>
+1000
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_eth_lt_n_gt__phy">8.2.  ETH&lt;n&gt;_PHY</h3>
+<div class="paragraph"><p>The PHY type.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+INT - (1) internal PHY
+</p>
+</li>
+<li>
+<p>
+MII - (2) 10/100 MII (18-wire interface)
+</p>
+</li>
+<li>
+<p>
+RGMII - (4) 14-wire RGMII interface.
+</p>
+</li>
+<li>
+<p>
+RGMII_NO_ID - (6) same as above, but disable phase shift on TXC clock
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>The following types only have meaning for Device Tree
+and are not valid for physical devices:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+RVMII - (3) 14-wire RGMII interface.
+</p>
+</li>
+<li>
+<p>
+RGMII_IBS - (5) 14-wire RGMII interface.
+</p>
+</li>
+<li>
+<p>
+MOCA - (7) MoCA
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Note that the value of &lt;_PHY&gt; is case sensitive.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_eth_lt_n_gt__phyaddr">8.3.  ETH&lt;n&gt;_PHYADDR</h3>
+<div class="paragraph"><p>The address of the PHY. Either a number or a specific
+string parameter.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+probe - probe for an EXTERNAL phy address.
+</p>
+</li>
+<li>
+<p>
+noprobe - set to 32
+</p>
+</li>
+<li>
+<p>
+&lt;value&gt; - set to &lt;value&gt;
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Note that the value of &lt;_PHYADDR&gt; is case sensitive.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_eth_lt_n_gt__mdio_mode">8.4.  ETH&lt;n&gt;_MDIO_MODE</h3>
+<div class="paragraph"><p>The MDIO configuration.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+0 - standard MDIO is not available e.g. connected to a BCM3383.
+</p>
+</li>
+<li>
+<p>
+1 - (default) standard MDIO is available (ethernet PHY)
+</p>
+</li>
+<li>
+<p>
+boot - BOLT configure it only e.g. linked to an ethernet switch.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Note that this applies only to the physical device BOLT can use,
+not the Device Tree entries as that will result in undefined values.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_usb_driver">9.  USB driver</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_usbmode">9.1.  USBMODE</h3>
+<div class="paragraph"><p>Set the USB initialization mode. This is the runtime counterpart and
+override to the "config USB_STARTMODE" build time setting in
+<em>config/stdbuild.cfg</em>. The "USBMODE Values" below are the same as
+those <em>USB_STARTMODE</em> uses:</p></div>
+<div class="tableblock">
+<table rules="all"
+width="25%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 1. USBMODE Values</caption>
+<col width="50%" />
+<col width="50%" />
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">Disabled</p></td>
+<td align="left" valign="top"><p class="table">0</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">Available</p></td>
+<td align="left" valign="top"><p class="table">1</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">On demand</p></td>
+<td align="left" valign="top"><p class="table">2</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="paragraph"><p>If <em>USBMODE</em> is set then BOLT will print out the build time
+<em>USB_STARTMODE</em> and the environment variable override <em>USBMODE</em>
+as BOLT boots, e.g.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>Override USB start mode 1 -&gt; 0</code></pre>
+</div></div>
+<div class="sect3">
+<h4 id="_disabled">9.1.1.  Disabled</h4>
+<div class="paragraph"><p>USB is switched fully off with no opportunity to enable it.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_available">9.1.2.  Available</h4>
+<div class="paragraph"><p>USB is started at boot time and is on, if the chip and build
+configuration support it. USB may then be de-initialized and
+re-initialized, e.g.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; usb exit
+*** command status = 0
+BOLT&gt; usb init
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+*** command status = 0</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_on_demand">9.1.3.  On demand</h4>
+<div class="paragraph"><p>This is the inverse of "Available" - USB is not started at boot
+time, but may be later on, e.g.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; usb exit
+USB has not been initialized.
+*** command status = -1
+BOLT&gt; usb init
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+*** command status = 0</code></pre>
+</div></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_usbdt">9.2.  USBDT</h3>
+<div class="paragraph"><p>A debug flag to dump out the Device Tree USB configuration
+as BOLT starts.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">This is independent of the <em>USBMODE</em> setting.</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p USBDT 1
+*** command status = 0
+BOLT&gt; reboot
+
+...
+...
+USB Controller 0, caps:0xf0470000 ctrl:0xf0470200 ipp:0x1 ioc:0x1 device mode:0
+  Port - type: ehci, addr: 0xf0470300, enabled
+  Port - type: ehci, addr: 0xf0470500, enabled
+  Port - type: ohci, addr: 0xf0470400, enabled
+  Port - type: ohci, addr: 0xf0470600, enabled
+  Port - type: xhci, addr: 0xf0471000, enabled
+USB Controller 1, caps:0xf0480000 ctrl:0xf0480200 ipp:0x1 ioc:0x1 device mode:0
+  Port - type: ehci, addr: 0xf0480300, enabled
+  Port - type: ehci, addr: 0xf0480500, enabled
+  Port - type: ohci, addr: 0xf0480400, enabled
+  Port - type: ohci, addr: 0xf0480600, enabled
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+AUTOBOOT [waitusb -t=0 -d='USB Disk' &amp;&amp; batch usbdisk0:sysinit.txt]
+USB device matching &lt;USB Disk&gt; not found!
+BOLT&gt;</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_usb_select">9.3.  USB_SELECT</h3>
+<div class="paragraph"><p>This override bitmask allows combinations of OHCI, EHCI, XHCI and BDC
+USB drivers to be selectively disabled and also removed from
+Device Tree so Linux will also not be able to use them.</p></div>
+<div class="tableblock">
+<table rules="all"
+width="10%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 2. USB_SELECT Bitmasks</caption>
+<col width="50%" />
+<col width="50%" />
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">USB_SELECT_MASK_OHCI</p></td>
+<td align="left" valign="top"><p class="table">1</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">USB_SELECT_MASK_EHCI</p></td>
+<td align="left" valign="top"><p class="table">2</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">USB_SELECT_MASK_XHCI</p></td>
+<td align="left" valign="top"><p class="table">4</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">USB_SELECT_MASK_BDC</p></td>
+<td align="left" valign="top"><p class="table">8</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p USBDT 1
+*** command status = 0
+BOLT&gt; reboot
+...
+...
+USB Controller 0, caps:0xf0470000 ctrl:0xf0470200 ipp:0x1 ioc:0x1 device mode:0
+  Port - type: ehci, addr: 0xf0470300, enabled
+  Port - type: ehci, addr: 0xf0470500, enabled
+  Port - type: ohci, addr: 0xf0470400, enabled
+  Port - type: ohci, addr: 0xf0470600, enabled
+  Port - type: xhci, addr: 0xf0471000, enabled
+USB Controller 1, caps:0xf0480000 ctrl:0xf0480200 ipp:0x1 ioc:0x1 device mode:0
+  Port - type: ehci, addr: 0xf0480300, enabled
+  Port - type: ehci, addr: 0xf0480500, enabled
+  Port - type: ohci, addr: 0xf0480400, enabled
+  Port - type: ohci, addr: 0xf0480600, enabled
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+AUTOBOOT [waitusb -t=0 -d='USB Disk' &amp;&amp; batch usbdisk0:sysinit.txt]
+USB device matching &lt;USB Disk&gt; not found!</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">Only enable OHCI</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p USB_SELECT 1
+*** command status = 0
+BOLT&gt; reboot
+...
+...
+USB Controller 0, caps:0xf0470000 ctrl:0xf0470200 ipp:0x1 ioc:0x1 device mode:0
+  Port - type: ehci, addr: 0xf0470300, disabled
+  Port - type: ehci, addr: 0xf0470500, disabled
+  Port - type: ohci, addr: 0xf0470400, enabled
+  Port - type: ohci, addr: 0xf0470600, enabled
+  Port - type: xhci, addr: 0xf0471000, disabled
+USB Controller 1, caps:0xf0480000 ctrl:0xf0480200 ipp:0x1 ioc:0x1 device mode:0
+  Port - type: ehci, addr: 0xf0480300, disabled
+  Port - type: ehci, addr: 0xf0480500, disabled
+  Port - type: ohci, addr: 0xf0480400, enabled
+  Port - type: ohci, addr: 0xf0480600, enabled
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+AUTOBOOT [waitusb -t=0 -d='USB Disk' &amp;&amp; batch usbdisk0:sysinit.txt]</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_usbipp">9.4.  USBIPP</h3>
+<div class="paragraph"><p>Override the value for USB <em>ipp</em> previously setup at build time.
+This feature is mainly for debugging USB signal polarity issues
+on customer boards that have not yet been fully described by the
+BOLT configuration script. Use 0 for active low, 1 for active high
+and 2 to allow a board strap to control the polarity.</p></div>
+<div class="listingblock">
+<div class="title">Example of a build time ipp value</div>
+<div class="content">
+<pre><code>dt autogen -node usb -ipp 0 -ioc 1</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p USBIPP 1
+*** command status = 0
+BOLT&gt; reboot
+...
+...
+USB init: envar USBIPP override usb@f0470200: ipp = 1
+USB init: envar USBIPP override usb-phy@f0470200: ipp = 1
+USB init: envar USBIPP override usb@f0480200: ipp = 1
+USB init: envar USBIPP override usb-phy@f0480200: ipp = 1
+...
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv -p USBIPP 0
+*** command status = 0
+BOLT&gt; reboot
+...
+...
+USB init: envar USBIPP override usb@f0470200: ipp = 0
+USB init: envar USBIPP override usb-phy@f0470200: ipp = 0
+USB init: envar USBIPP override usb@f0480200: ipp = 0
+USB init: envar USBIPP override usb-phy@f0480200: ipp = 0
+...
+USB @ 0xf0470200: IPP is active high, IOC is negative polarity
+USB @ 0xf0480200: IPP is active high, IOC is negative polarity</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_usbioc">9.5.  USBIOC</h3>
+<div class="paragraph"><p>Override the value for USB <em>ioc</em> previously setup at build time.
+This is similar to the <em>USBIPP</em> environment variable.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv -p USBIOC 1
+*** command status = 0
+BOLT&gt; reboot
+...
+...
+USB init: envar USBIOC override usb@f0470200: ioc = 1
+USB init: envar USBIOC override usb-phy@f0470200: ioc = 1
+USB init: envar USBIOC override usb@f0480200: ioc = 1
+USB init: envar USBIOC override usb-phy@f0480200: ioc = 1
+...
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv -p USBIOC 0
+*** command status = 0
+BOLT&gt; reboot
+...
+...
+USB init: envar USBIOC override usb@f0470200: ioc = 0
+USB init: envar USBIOC override usb-phy@f0470200: ioc = 0
+USB init: envar USBIOC override usb@f0480200: ioc = 0
+USB init: envar USBIOC override usb-phy@f0480200: ioc = 0
+...
+USB @ 0xf0470200: IPP is active low, IOC is positive polarity
+USB @ 0xf0480200: IPP is active low, IOC is positive polarity</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">You know if you&#8217;ve got the <em>ioc</em> polarity wrong
+as BOLT will print out messages like the ones below</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="title">Getting IOC wrong</div>
+<div class="content">
+<pre><code>USB: Bus 0 Hub 1 port 1 in overcurrent overcurrent change...
+USB: Bus 1 Hub 1 port 1 in overcurrent overcurrent change...
+USB: Bus 2 Hub 1 port 1 in overcurrent state... not re-enabling power
+USB: Bus 3 Hub 1 port 1 in overcurrent state... not re-enabling power
+USB: Bus 4 Hub 1 port 1 in overcurrent overcurrent change...
+USB: Bus 5 Hub 1 port 1 in overcurrent overcurrent change...
+USB: Bus 6 Hub 1 port 1 in overcurrent state... not re-enabling power
+USB: Bus 7 Hub 1 port 1 in overcurrent state... not re-enabling power</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_board_serial">9.6.  BOARD_SERIAL</h3>
+<div class="paragraph"><p>Applies only to the USB BDC driver. If an external USB master
+requests the STB USB serial number string, it will return
+this value. If not set it will default to:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>"S/N: #######"</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_usbeth">9.7.  USBETH</h3>
+<div class="paragraph"><p>Add a single entry to the USB Ethernet device scan table so
+that it can be identified.</p></div>
+<div class="paragraph"><p>As long as the BOLT driver supports the device, a device with
+an unknown (to BOLT) VID and PID can be incorporated into
+BOLT without rebuilding it.</p></div>
+<div class="listingblock">
+<div class="title">Scan table in ssbl/usb/usbeth.c</div>
+<div class="content">
+<pre><code>static const int ID_TBL[] = {
+        ...
+        ...
+        0x0423, 0x000c, NETMATE, BELKIN_CATC, (int)&amp;catc_if,
+        ...
+        ...</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The values have to be comma separated with no spaces between them.</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv -p USBETH 0x0423,0x000c,0x02,0x06</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_usbeth_trace">9.8.  USBETH_TRACE</h3>
+<div class="paragraph"><p>Enable trace debug of the USB Ethernet driver. Set to any value to enable.</p></div>
+<div class="listingblock">
+<div class="title">Enable trace for a device already plugged in</div>
+<div class="content">
+<pre><code>BOLT&gt; usb exit
+BOLT&gt; setenv USBETH_TRACE x
+BOLT&gt; usb init
+BOLT&gt; ifconfig eth1 -auto</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">This envar has to be set before a USB Ethernet device has been
+enumerated, i.e. plugged in, or the USB stack brought up (see the
+<em>usb init</em> and <em>usb exit</em> BOLT commands).</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_ehcioff">9.9.  EHCIOFF</h3>
+<div class="paragraph"><p>If set to any value, disables the EHCI portion of the BOLT USB driver.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_ohcioff">9.10.  OHCIOFF</h3>
+<div class="paragraph"><p>If set to any value, disables the OHCI portion of the BOLT USB driver.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_bdcoff">9.11.  BDCOFF</h3>
+<div class="paragraph"><p>If set to any value, disables the BDC portion of the BOLT USB driver.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_bdc_vendev">9.12.  BDC_VENDEV</h3>
+<div class="paragraph"><p>If BDCOFF is <em>not</em> set and BDC_VENDEV set to any value other than
+0xffffffff (-1), then during startup the USB vendor:device pair the
+BDC driver responds with is changed to the value in BDC_VENDEV.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_bdc_dbg">9.13.  BDC_DBG</h3>
+<div class="paragraph"><p>Enable debug of the BDC driver. The option bitmask selects what
+parts of the driver are to be debugged:</p></div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="50%" />
+<col width="50%" />
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_CMD</p></td>
+<td align="left" valign="top"><p class="table">0x00000001</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_BD_QUEUE</p></td>
+<td align="left" valign="top"><p class="table">0x00000002</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_BD_RING</p></td>
+<td align="left" valign="top"><p class="table">0x00000004</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_BD_STATS</p></td>
+<td align="left" valign="top"><p class="table">0x00000008</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_PSC1</p></td>
+<td align="left" valign="top"><p class="table">0x00000010</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_PSC2</p></td>
+<td align="left" valign="top"><p class="table">0x00000020</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_CTL_STATE</p></td>
+<td align="left" valign="top"><p class="table">0x00000040</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_CTL_DATA</p></td>
+<td align="left" valign="top"><p class="table">0x00000080</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_CTL_SETUP</p></td>
+<td align="left" valign="top"><p class="table">0x00000100</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_CTL_IN</p></td>
+<td align="left" valign="top"><p class="table">0x00000200</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_CTL_OUT</p></td>
+<td align="left" valign="top"><p class="table">0x00000400</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_CTL_STATUS</p></td>
+<td align="left" valign="top"><p class="table">0x00000800</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_BULK_IN</p></td>
+<td align="left" valign="top"><p class="table">0x00001000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_BULK_IN2</p></td>
+<td align="left" valign="top"><p class="table">0x00002000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_BULK_OUT</p></td>
+<td align="left" valign="top"><p class="table">0x00004000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_BULK_OUT2</p></td>
+<td align="left" valign="top"><p class="table">0x00008000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_EVENT1</p></td>
+<td align="left" valign="top"><p class="table">0x00010000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_EVENT2</p></td>
+<td align="left" valign="top"><p class="table">0x00020000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_EVENT3</p></td>
+<td align="left" valign="top"><p class="table">0x00040000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_EVENT4</p></td>
+<td align="left" valign="top"><p class="table">0x00080000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_INIT1</p></td>
+<td align="left" valign="top"><p class="table">0x00100000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_INIT2</p></td>
+<td align="left" valign="top"><p class="table">0x00200000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_GEN1</p></td>
+<td align="left" valign="top"><p class="table">0x01000000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_GEN2</p></td>
+<td align="left" valign="top"><p class="table">0x02000000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_GEN3</p></td>
+<td align="left" valign="top"><p class="table">0x04000000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_DB</p></td>
+<td align="left" valign="top"><p class="table">0x08000000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_LPBK_MODE</p></td>
+<td align="left" valign="top"><p class="table">0x40000000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">DBG_FUNC_TRACE</p></td>
+<td align="left" valign="top"><p class="table">0x80000000</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_usbdbg">9.14.  USBDBG</h3>
+<div class="paragraph"><p>If set to any value, enable USB initialization debug ouput.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; usb exit
+*** command status = 0
+BOLT&gt; setenv USBDBG x
+*** command status = 0
+BOLT&gt; usb init
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+ - OHCI controller at 0xF0470400
+ - OHCI controller at 0xF0470600
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+ - OHCI controller at 0xF0480400
+ - OHCI controller at 0xF0480600
+*** command status = 0</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_usbserialtest">9.15.  USBSERIALTEST</h3>
+<div class="paragraph"><p>If set to any value and if a USB serial device is plugged in,
+enables the <em>test uart</em> command to echo characters to and from
+the selected USB uart to the current BOLT console.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usbmass_info">9.16.  USBMASS_INFO</h3>
+<div class="paragraph"><p>If set to any value, prints USB memory stick/disk size on
+opening it.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usbmousetest">9.17.  USBMOUSETEST</h3>
+<div class="paragraph"><p>If set to any value, prints out stats for any mouse device connected.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; setenv USBMOUSETEST 1
+*** command status = 0
+BOLT&gt; Mouse: [  ] X:127 Y:69 Wheel:0
+Mouse: [  ] X:127 Y:98 Wheel:0
+Mouse: [  ] X:102 Y:27 Wheel:0
+Mouse: [  ] X:9 Y:2 Wheel:0
+Mouse: [  ] X:15 Y:-6 Wheel:0
+Mouse: [  ] X:10 Y:-2 Wheel:0
+Mouse: [  ] X:-2 Y:-4 Wheel:0
+Mouse: [  ] X:-9 Y:-11 Wheel:0
+Mouse: [  ] X:-10 Y:-15 Wheel:0
+unsetenv  USBMOUSETEST
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">10.  Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

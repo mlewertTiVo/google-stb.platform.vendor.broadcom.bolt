@@ -134,7 +134,7 @@ void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 	}
 }
 #elif defined(CONFIG_BCM7260A0) || \
-	defined(CONFIG_BCM7268A0) || \
+	defined(CONFIG_BCM7268) || \
 	defined(CONFIG_BCM7271)
 /* Workaround based on HWBCM7268-85 and HW7271-242 */
 void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
@@ -158,6 +158,41 @@ void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 
 		/* reset shadow mode 2 */
 		mdio_set_clr_bits(mdio, phy[i], 0x1f, 0x0000, 0x0004);
+	}
+}
+#elif defined(CONFIG_BCM7278A0)
+/* Workaround based on HW7278-359 */
+void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
+{
+	int i;
+
+	for (i = 0; i < cnt; i++) {
+		/* AFE_RXCONFIG_2
+		 * +1 RCAL codes for RL centering for both LT/HT conditions
+		 */
+		mii_write_misc(mdio, phy[i], 0x0038, 0x0002, 0xd003);
+
+		/* DSP_TAP10
+		 * Cut master bias current by 2% to compensate for RCAL offset
+		 */
+		mii_write_misc(mdio, phy[i], 0x000a, 0x0000, 0x791b);
+
+		/* AFE_HPF_TRIM_OTHERS
+		 * Improve hybrid leakage
+		 */
+		mii_write_misc(mdio, phy[i], 0x003a, 0x0000, 0x10e3);
+
+		/* rx_on_tune 8 -> 0xf */
+		mii_write_misc(mdio, phy[i], 0x0021, 0x0002, 0x87f6);
+
+		/* 100BaseTx EEE bandiwdth */
+		mii_write_misc(mdio, phy[i], 0x0022, 0x0002, 0x017d);
+
+		/* Enable ffe zero detection for Vitesse interoperability */
+		mii_write_misc(mdio, phy[i], 0x0026, 0x0002, 0x0015);
+
+		/* Reset R_CAL/RC_CAL engine */
+		r_rc_cal_reset(mdio, phy[i]);
 	}
 }
 #endif

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -19,10 +19,19 @@ void bcm7260a0_patch_mpm(void);
 static inline void bcm7260a0_patch_mpm(void) { }
 #endif
 
-#if defined(CONFIG_BCM7260) || defined(CONFIG_BCM7268) || defined(CONFIG_BCM7271)
+#if defined(CONFIG_BCM7260) || \
+	defined(CONFIG_BCM7268) || \
+	defined(CONFIG_BCM7271) || \
+	defined(CONFIG_BCM7278A0)
 void orion_hack_early_bus_cfg(void);
 #else
 static inline void orion_hack_early_bus_cfg(void) { }
+#endif
+
+#if defined(CONFIG_BCM7278A0)
+void dtu_preparation(unsigned int num_memc);
+#else
+static inline void dtu_preparation(unsigned int num_memc) { }
 #endif
 
 void hack_power_down_cpus(void);

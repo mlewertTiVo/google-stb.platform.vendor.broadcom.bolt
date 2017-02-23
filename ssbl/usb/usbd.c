@@ -61,12 +61,20 @@ int usb_create_pipe(usbdev_t *dev, int epaddr, int mps, int flags)
 	if (!pipe)
 		return -1;
 
+	flags |= ((dev->ud_rport & UP_RPORT_MASK) << UP_RPORT_SHIFT) |
+		 ((dev->ud_route & UP_ROUTE_MASK) << UP_ROUTE_SHIFT);
+	if (dev->ud_flags & UD_FLAG_LOWSPEED)
+		flags |= UP_TYPE_LOWSPEED;
+	else if (dev->ud_flags & UD_FLAG_HIGHSPEED)
+		flags |= UP_TYPE_HIGHSPEED;
+	else if (dev->ud_flags & UD_FLAG_SUPRSPEED)
+		flags |= UP_TYPE_SUPRSPEED;
+	if (dev->ud_flags & UD_FLAG_HUB)
+		flags |= UP_TYPE_HUB;
 	pipe->up_flags = flags;
 	pipe->up_num = pipeidx;
 	pipe->up_mps = mps;
 	pipe->up_dev = dev;
-	if (dev->ud_flags & UD_FLAG_LOWSPEED)
-		flags |= UP_TYPE_LOWSPEED;
 	pipe->up_hwendpoint = UBEPTCREATE(dev->ud_bus,
 					  dev->ud_address,
 					  USB_ENDPOINT_ADDRESS(epaddr),
@@ -196,7 +204,7 @@ void usb_destroy_device(usbdev_t *dev)
 }
 
 /*  *********************************************************************
-    *  usb_create_device(bus,speed)
+    *  usb_create_device(bus,speed,rport,route)
     *
     *  Create a new USB device.  This device will be set to
     *  communicate on address zero (default address) and will be
@@ -207,12 +215,14 @@ void usb_destroy_device(usbdev_t *dev)
     *  Input parameters:
     *	bus - bus to create device on
     *	speed - device speed...hubs tell us these things
+    *	rport - root port #
+    *	route - hub tier route
     *
     *  Return value:
     *	usb device structure, or NULL
     ********************************************************************* */
 
-usbdev_t *usb_create_device(usbbus_t *bus, int speed)
+usbdev_t *usb_create_device(usbbus_t *bus, int speed, int rport, int route)
 {
 	usbdev_t *dev;
 	int pipeflags;
@@ -228,14 +238,18 @@ usbdev_t *usb_create_device(usbbus_t *bus, int speed)
 	dev->ud_address = 0;	/* default address */
 	dev->ud_parent = NULL;
 	dev->ud_flags = 0;
+	dev->ud_rport = rport;
+	dev->ud_route = route;
 
 	/*
 	 * Adjust things based on the target device speed
 	 */
 
 	pipeflags = UP_TYPE_CONTROL;
-
-	if (speed == LS) {
+	if (speed == SS) {
+		pipeflags |= UP_TYPE_SUPRSPEED;
+		dev->ud_flags |= UD_FLAG_SUPRSPEED;
+	} else if (speed == LS) {
 		pipeflags |= UP_TYPE_LOWSPEED;
 		dev->ud_flags |= UD_FLAG_LOWSPEED;
 	} else if (speed == HS) {
@@ -454,7 +468,8 @@ int usb_wait_request(usbreq_t *ur)
 			usb_poll(ur->ur_dev->ud_bus);
 			bolt_usleep(10);
 			if (--to <= 0) {
-				xprintf("USB: Transfer timed out!\n");
+				xprintf("USB: Transfer timed out! (ur=%p)\n",
+					ur);
 				ur->ur_status = BOLT_ERR_TIMEOUT;
 				ur->ur_inprogress = 0;
 				ur->ur_dev->ud_flags |= UD_FLAG_ERROR;
@@ -627,12 +642,17 @@ int usb_new_address(usbbus_t *bus)
 
 int usb_set_address(usbdev_t *dev, int address)
 {
-	int res;
+	int res = 0;
 	int idx;
 	usbpipe_t *pipe;
 
-	res =
-	    usb_simple_request(dev, 0x00, USB_REQUEST_SET_ADDRESS, address, 0);
+	/* For SS devices, address is generated and set by controller. But the
+	   driver uses this address for endpoint sync */
+	if (!(dev->ud_flags & UD_FLAG_USB30BUS)) {
+		res =
+		    usb_simple_request(dev, 0x00, USB_REQUEST_SET_ADDRESS,
+					address, 0);
+	}
 
 	if (res == 0) {
 		/*
@@ -675,6 +695,8 @@ int usb_set_ep0mps(usbdev_t *dev, int mps)
 
 	pipe = dev->ud_pipes[0];
 
+	if (dev->ud_flags & UD_FLAG_SUPRSPEED)
+		mps = (1 << mps);
 	if (pipe && pipe->up_hwendpoint)
 		UBEPTSETMPS(dev->ud_bus, pipe->up_hwendpoint, mps);
 
@@ -1096,7 +1118,7 @@ void usb_initroot(usbbus_t *bus)
 	 * Create a device for the root hub.
 	 */
 
-	dev = usb_create_device(bus, 0);
+	dev = usb_create_device(bus, 0, 0, 0);
 	bus->ub_roothub = dev;
 
 	/*

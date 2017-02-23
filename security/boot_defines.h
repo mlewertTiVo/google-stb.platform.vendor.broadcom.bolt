@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2016, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -12,10 +10,31 @@
 #ifndef __BOOT_DEFINES_H__
 #define __BOOT_DEFINES_H__
 
+#include "../fsbl/fsbl.h"
 #include <stdint.h>
 #include <compiler.h>
 
-#if CFG_ZEUS4_2
+#if CFG_ZEUS5_0
+
+#define BOOT_PARAMETER_OFFSET                   (0x00000040)
+#define BOOT_PARAMETER_SIZE                     (0x00000160)
+
+#define BFW2_IMAGE_FLASH_OFFSET                 (BFW_TEXT_OFFS)
+#define BFW1_IMAGE_FLASH_OFFSET                 (0x00100000)
+#define BFW_SIGNATURE_OFFSET                    (0x00038018)
+#define BFW_KEY3_OFFSET                         (0x00038118)
+#define BFW_AUTHENTICATION_METHOD               (0x00038344)
+
+#define AVS2_IMAGE_FLASH_OFFSET                 (AVS_TEXT_OFFS)
+#define AVS1_IMAGE_FLASH_OFFSET                 (0x00139000)
+
+#define MEMSYS2_IMAGE_FLASH_OFFSET              (MEMSYS_TEXT_OFFS)
+#define MEMSYS1_IMAGE_FLASH_OFFSET              (0x0013E000)
+#define MEMSYS_PARAMETER_OFFSET                 (MEMSYSFW_SIZE)
+#define MEMSYS_SIGNATURE_OFFSET                 (MEMSYSFW_SIZE+0x14)
+#define MEMSYS_KEY4_OFFSET                      (MEMSYSFW_SIZE+0x118)
+
+#elif CFG_ZEUS4_2
 
 #define BOOT_PARAMETER_OFFSET                   (0x00000040)
 #define BOOT_PARAMETER_SIZE                     (0x00000100)
@@ -78,9 +97,6 @@
 #define BFW_USE_EMMC_DATA_PART                  0x0
 #define AVS_USE_EMMC_DATA_PART                  0x0
 #define MEMSYS_USE_EMMC_DATA_PART               0x0
-#define BFW_EMMC_DATA_PART_ADDR                 0x4000000
-#define AVS_EMMC_DATA_PART_ADDR                 0x4100000
-#define MEMSYS_EMMC_DATA_PART_ADDR              0x4200000
 
 #define BFW_2ND_PART_OFFSET                     (0x20000)
 #define	BFW_LOADFROMDRAM                        0x00
@@ -166,8 +182,32 @@
 #define PARAM_CTRL_WORD_ENABLE_MASK             0x80000000
 #define PARAM_CTRL_MEMSYS_DISABLE_SHIFT         21
 
+#if CFG_ZEUS5_0
 /* boot param for second image  */
-#if CFG_ZEUS4_2
+#define PARAM_2ND_BFW_PART                      0x0000008C
+#define PARAM_2ND_BFW_PART_OFFSET               0x00000090
+#define PARAM_2ND_BFW_CTRL                      0x00000094
+#define PARAM_2ND_AVS_PART                      0x00000098
+#define PARAM_2ND_AVS_PART_OFFSET               0x0000009C
+#define PARAM_2ND_AVS_CTRL                      0x000000A8
+#define PARAM_2ND_MEMSYS_PART                   0x000000AC
+#define PARAM_2ND_MEMSYS_PART_OFFSET            0x000000B0
+#define PARAM_2ND_MEMSYS_CTRL                   0x000000B8
+
+/* boot param for first image  */
+#define PARAM_1ST_BFW_PART                      0x000000BC
+#define PARAM_1ST_BFW_PART_OFFSET               0x000000C0
+#define PARAM_1ST_BFW_CTRL                      0x000000C4
+#define PARAM_1ST_AVS_PART                      0x000000C8
+#define PARAM_1ST_AVS_PART_OFFSET               0x000000CC
+#define PARAM_1ST_AVS_CTRL                      0x000000D8
+#define PARAM_1ST_MEMSYS_PART                   0x000000DC
+#define PARAM_1ST_MEMSYS_PART_OFFSET            0x000000E0
+#define PARAM_1ST_MEMSYS_CTRL                   0x000000E8
+#define PARAM_DTU_ENABLE                        0x000000FC
+
+#elif CFG_ZEUS4_2
+/* boot param for second image  */
 #define PARAM_2ND_BFW_PART                      0x0000006C
 #define PARAM_2ND_BFW_PART_OFFSET               0x00000070
 #define PARAM_2ND_BFW_CTRL                      0x00000074
@@ -188,8 +228,10 @@
 #define PARAM_1ST_MEMSYS_PART                   0x000000BC
 #define PARAM_1ST_MEMSYS_PART_OFFSET            0x000000C0
 #define PARAM_1ST_MEMSYS_CTRL                   0x000000C8
+#define PARAM_DTU_ENABLE                        0x000000DC
 
 #else
+/* boot param for second image  */
 #define PARAM_2ND_BFW_PART                      0x00000B74
 #define PARAM_2ND_BFW_PART_OFFSET               0x00000B78
 #define PARAM_2ND_BFW_CTRL                      0x00000B7C
@@ -207,7 +249,12 @@
 #endif
 
 /* boot param for SSBL */
-#if CFG_ZEUS4_2
+#if CFG_ZEUS5_0
+#define PARAM_SSBL_SIZE                         0x0000004C
+#define PARAM_SSBL_PART                         0x000000EC
+#define PARAM_SSBL_PART_OFFSET                  0x000000F0
+#define PARAM_SSBL_CTRL                         0x00000100
+#elif CFG_ZEUS4_2
 #define PARAM_SSBL_SIZE                         0x0000004C
 #define PARAM_SSBL_PART                         0x000000CC
 #define PARAM_SSBL_PART_OFFSET                  0x000000D0
@@ -220,7 +267,7 @@
 #endif
 
 /* board param for AVS */
-#if CFG_ZEUS4_2
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 #define PARAM_AVS_PARAM_0                       0x000000D4
 #define PARAM_AVS_PARAM_1                       0x000000E4
 #define PARAM_AVS_PARAM_1_PMAP_MASK             0x1F
@@ -413,7 +460,7 @@ void handle_boot_err(uint32_t err_code);
 void check_return_val(uint32_t val, uint32_t reg,
 			uint32_t bit2set, uint32_t err_code);
 
-#if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
 uint32_t sec_bfw_load_impl(image_info *info, uint32_t pagelist);
 #else
 uint32_t bseck_reload(void);

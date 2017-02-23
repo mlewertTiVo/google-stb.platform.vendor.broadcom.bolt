@@ -14,7 +14,7 @@
 
 #include <fsbl-common.h>
 #include <board_types.h>
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 #include <fsbl-pmap.h>
 #endif
 
@@ -24,7 +24,7 @@ const struct boards_nvm_list nvm_boards
 	.n_boards = ARRAY_SIZE(board_types) |
 		(FSBLINFO_CURRENT_VERSION << FSBLINFO_VERSION_SHIFT),
 	.board_types = board_types,
-#if defined(DVFS_SUPPPORT)
+#if defined(DVFS_SUPPORT)
 	.n_pmaps = ARRAY_SIZE(pmapTable),
 	.pmap_table = pmapTable,
 #else

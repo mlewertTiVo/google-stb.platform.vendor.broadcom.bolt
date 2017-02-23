@@ -33,6 +33,8 @@ int		arch_pte_type(bool first_level, uint32_t pte);
 void		arch_call_bolt_main(unsigned int new_stack_pointer);
 const char	*arch_get_cpu_bootname(void);
 int		arch_booted64(void);
+void		arch_abort_enable(void);
+void		arch_abort_disable(void);
 
 /* common */
 uint32_t	arch_getticks(void);

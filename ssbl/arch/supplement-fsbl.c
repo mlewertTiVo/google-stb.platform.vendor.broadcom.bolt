@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,7 +8,7 @@
  ***************************************************************************/
 
 /* FSBL (First Stage BootLoader) and SSBL (Second Stage BootLoader) are
- * two main parts of BOLT. As the names imply, SSBL starts before FSBL
+ * two main parts of BOLT. As the names imply, FSBL starts before SSBL
  * does. FSBL also sets up many critical data structures and passes them
  * to SSBL. If required, SSBL adjusts them before progressing further.
  *
@@ -26,8 +24,6 @@
  * of a newer BOLT release can be taken.
  */
 
-#include "supplement-fsbl.h"
-
 #include <arch-mmu.h>
 #include <arch_ops.h>
 #include <arm.h>
@@ -35,10 +31,22 @@
 #include <board.h>
 #include <common.h>
 #include <ddr.h>
+#include <supplement-fsbl.h>
 
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef CFG_EMULATION
+void supplement_fsbl_pagetable(uint32_t *pt1)
+{
+	/* do nothing */
+}
+
+uint32_t supplement_fsbl_shmoover(void)
+{
+	return 0;
+}
+#else
 /* construct_dram_pages -- builds up page table for installed DRAM
  *
  * Please note this should be called before setting up the guard page
@@ -184,3 +192,31 @@ void supplement_fsbl_pagetable(uint32_t *pt1)
 	assure_sram_pages(pt1);
 }
 
+/* supplement_fsbl_shmoover -- retrieves Shmoo (memsysinitlib) version
+ *
+ * Requires: fsbl_info version 2 or higher
+ *
+ * Shmoo runs in FSBL, and becomes unavailable by the time the control
+ * moves to SSBL. Because figuring out the version information of
+ * Shmoo that ran in FSBL is extremely difficult (if not impossible),
+ * FSBL passes the version information via 'struct fsbl_info'.
+ *
+ * Returns:
+ *  0 if Shmoo version is not available
+ *  Shmoo version in 32-bit unsigned integer otherwise
+ */
+uint32_t supplement_fsbl_shmoover(void)
+{
+	struct fsbl_info *info;
+
+	info = board_info();
+	if (info == NULL) /* should never happen though */
+		return 0;
+
+	/* available only 'fsbl_info' version 2 or higher */
+	if (2 > FSBLINFO_VERSION(info->n_boards))
+		return 0;
+
+	return info->shmoo_ver;
+}
+#endif

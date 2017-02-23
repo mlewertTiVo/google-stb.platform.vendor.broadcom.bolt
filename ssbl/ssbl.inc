@@ -70,7 +70,6 @@ endif
 
 ifeq ($(CFG_USB),1)
 SSBL_S += \
-	ssbl/usb/ohci.c \
 	ssbl/usb/usbd.c \
 	ssbl/usb/usbdebug.c \
 	ssbl/usb/usbdevs.c \
@@ -81,8 +80,18 @@ SSBL_S += \
 	ssbl/usb/usbmass.c \
 	ssbl/usb/usbserial.c \
 	ssbl/usb/usbdt.c \
-	ssbl/usb/ehci.c \
 	ssbl/usb/usb-brcm-common-init.c
+
+ifeq ($(CFG_USB_EHCI_OHCI),1)
+SSBL_S += \
+	ssbl/usb/ohci.c \
+	ssbl/usb/ehci.c
+endif
+
+ifeq ($(CFG_USB_XHCI),1)
+SSBL_S += \
+	ssbl/usb/xhci.c
+endif
 
 ifeq ($(CFG_USB_BDC),1)
 SSBL_S += \
@@ -108,6 +117,7 @@ SSBL_S += \
 	ssbl/arch/board_update.c \
 	ssbl/arch/common_init.c \
 	ssbl/arch/exchandler.c \
+	ssbl/arch/supplement-fsbl.c \
 	thirdparty/disarm.c-0.11.c \
 	ssbl/dev/dev_16550_uart.c \
 	ssbl/dev/dev_mem.c \
@@ -241,11 +251,6 @@ endif
 ifeq ($(S_UNITTEST),y)
 SSBL_S += \
 	ssbl/main/bolt_aegis.c
-endif
-
-ifeq ($(CFG_EMULATION),)
-SSBL_S += \
-	ssbl/arch/supplement-fsbl.c
 endif
 
 ifeq ($(CFG_TRUSTZONE_CMD),1)

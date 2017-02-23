@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,9 +10,24 @@
 #ifndef __AON_DEFS_H__
 #define __AON_DEFS_H__
 
-#include <common.h>
 #include <bchp_aon_ctrl.h>
+#include <bchp_common.h>
+#include <common.h>
 #include <compiler.h>
+
+#ifdef BCHP_DDR34_PHY_CONTROL_REGS_0_REG_START
+#include <bchp_ddr34_phy_control_regs_0.h>
+#ifdef BCHP_DDR34_PHY_CONTROL_REGS_0_PRIMARY_REVISION
+#define DDRPHY_VER BCHP_DDR34_PHY_CONTROL_REGS_0_PRIMARY_REVISION_MAJOR_DEFAULT
+#else
+#define DDRPHY_VER BCHP_DDR34_PHY_CONTROL_REGS_0_REVISION_MAJOR_DEFAULT
+#endif
+#endif
+
+#ifdef BCHP_DDR34_PHY_COMMON_REGS_0_REG_START
+#include <bchp_ddr34_phy_common_regs_0.h>
+#define DDRPHY_VER BCHP_DDR34_PHY_COMMON_REGS_0_PRIMARY_REVISION_MAJOR_DEFAULT
+#endif
 
 /* Magic number in upper 16-bits */
 #define BRCMSTB_S3_MAGIC_MASK                   0xffff0000
@@ -40,6 +55,11 @@ enum {
 	 * 1=64 bit boot, 0=32 bit boot.
 	 */
 	S3_FLAG_BOOTED64		= (1 << 4),
+	/*
+	 * Modification of this bit reserved for bootloader only.
+	 * 1=restore DTU state map, 0=do not restore.
+	 */
+	S3_FLAG_DTU		= (1 << 5),
 };
 
 #define BRCMSTB_HASH_LEN		(128 / 8) /* 128-bit hash */
@@ -55,7 +75,12 @@ enum {
 #define AON_REG_AVS_FLAGS			11
 /* spare: a whole 4 registers! */
 #define AON_REG_MEMSYS_STATE			16
+#if DDRPHY_VER == 0x48
+/* Revision H (0x48 in ASCII) requires 86 of 32-bit registers */
+#define MEMSYS_STATE_LEN			86
+#else
 #define MEMSYS_STATE_LEN			80
+#endif
 
 #define AON_REG_ADDR(idx)			((volatile uint32_t *) \
 		REG_ADDR(BCHP_AON_CTRL_SYSTEM_DATA_RAMi_ARRAY_BASE + (idx) * 4))
@@ -75,6 +100,9 @@ enum {
  * brcmstb_bootloader_scratch_table::num_entries is adjusted accordingly
  */
 #define BRCMSTB_SCRATCH_BUF_SIZE	(256 * 1024)
+#define BRCMSTB_DTU_STATE_MAP_ENTRIES	(8*1024)
+#define BRCMSTB_DTU_CONFIG_ENTRIES	(512)
+#define BRCMSTB_DTU_COUNT		(2)
 
 struct brcmstb_bootloader_scratch_table {
 	/* System page size, in KB; likely 4 (i.e., 4KB) */
@@ -90,6 +118,11 @@ struct brcmstb_bootloader_scratch_table {
 		uint32_t lower;
 	} entries[];
 } __packed;
+
+struct brcmstb_bootloader_dtu_table {
+	uint32_t	dtu_state_map[BRCMSTB_DTU_STATE_MAP_ENTRIES];
+	uint32_t	dtu_config[BRCMSTB_DTU_CONFIG_ENTRIES];
+};
 
 struct brcmstb_s3_params {
 	/* scratch memory for bootloader */
@@ -122,6 +155,7 @@ struct brcmstb_s3_params {
 	uint32_t spare[70];
 
 	uint8_t descriptors[IMAGE_DESCRIPTORS_BUFSIZE];
+	struct brcmstb_bootloader_dtu_table dtu[BRCMSTB_DTU_COUNT];
 } __packed;
 
 #endif /* __AON_DEFS_H__ */

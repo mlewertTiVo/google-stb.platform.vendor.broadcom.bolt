@@ -1,0 +1,71 @@
+/***************************************************************************
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ *
+ ***************************************************************************/
+#ifndef CFG_NOSHMOO
+ #error !CFG_NOSHMOO - why are you building with this then?
+#endif
+
+#include <lib_types.h>
+#include <fsbl-common.h>
+
+/* not in include path
+*/
+#include <../../fsbl/fsbl.h>
+
+
+/* In shmoo/memsys-$(FAMILY).c
+  - for (full) emulation it can be a dummy function.
+  - for bringup it can be hard wired.
+  - no shmooing or memsysinit for FSBL only emulation.
+*/
+#if defined(CFG_FULL_EMULATION) || defined(CFG_EMULATION)
+void memsys_init_all(int x) {
+
+}
+#else
+extern void memsys_init_all(int x);
+#endif
+
+uint32_t memsys_load(void)
+{
+	puts("NOMEMSYS");
+	return 0;
+}
+
+void set_loud_shmoo(void)
+{
+}
+
+
+/* replacements for real shmoo functions. Keep this fn is sync with
+ with the one in fsbl-shmoo.c
+*/
+void shmoo_load(void) {
+	/* struct board_nvm_info is now loaded
+	by nvm_load() in fsbl-board.c */
+}
+
+struct ddr_info *shmoo_ddr_by_index(uint32_t d) {
+	return NULL;
+}
+
+void shmoo_set(const struct ddr_info *ddr, bool warm_boot) {
+	if (warm_boot)
+		sys_die(DIE_WARM_BOOT_NOT_SUPPORTED, "warm boot not supported");
+	__puts("MEMSYS #");
+	putchar('0' + ddr->which);
+	memsys_init_all(ddr->which);
+	puts(" DONE");
+}
+
+void shmoo_menu(struct board_nvm_info *nvm) {
+}
+
+void print_shmoo_version(void) {
+	puts("NOSHMOO");
+}

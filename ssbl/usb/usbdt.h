@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -27,8 +25,10 @@ struct usb_controller_list {
 		uint32_t disabled;
 		uint32_t ctrl_regs;
 		uint32_t caps_regs;
+		uint32_t xhci_ec_regs;
 		uint32_t ipp;
 		uint32_t ioc;
+		uint32_t has_xhci;
 		uint32_t device_mode;
 		int port_cnt;
 		struct usb_port {

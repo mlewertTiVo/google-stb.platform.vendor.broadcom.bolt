@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2016, Broadcom
+ *     Copyright (c) 2012-2017, Broadcom
  *     All Rights Reserved
  *     Confidential Property of Broadcom
  *
@@ -17,14 +17,30 @@
 *
 ***************************************************************************/
 
-#ifndef FSBL_PMAP_H__
-#define FSBL_PMAP_H__
+#ifndef BCHP_FSBL_PMAP_PRIV_H__
+#define BCHP_FSBL_PMAP_PRIV_H__
+
+#define AVS_RDB_DATE 20161208 /* %y%m%d */
+#define AVS_RDB_TIME 1214 /* %h%m */
 
 const struct pmap_entry pmapTable[]
 	__attribute__ ((section(".pmaptable") unused)) = {
-	{ {167,	 3,	 2 }, {0,	 0,	 0 } },
-	{ {194,	 3,	 4 }, {0,	 0,	 0 } },
-	{ {194,	 3,	 3 }, {0,	 0,	 0 } },
+#if defined(CONFIG_BCM7268)
+	{
+		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 2 },
+		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 9 },
+		.sysif_mdiv = 4,
+	},
+	{
+		.cpu = { .ndiv = 194, .pdiv = 3, .mdiv = 4 },
+		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 11 },
+		.sysif_mdiv = 4,
+	},
+	{
+		.cpu = { .ndiv = 194, .pdiv = 3, .mdiv = 3 },
+		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
+		.sysif_mdiv = 4,
+	},
 };
-
+#endif
 #endif

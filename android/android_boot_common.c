@@ -32,8 +32,8 @@
 
 /* Register index into AON_SYSTEM_DATA_RAM. */
 #define AON_REG_ANDROID_RESTART_CAUSE   9
-#define AON_REG_ANDROID_RESTART_TIME    10
-#define AON_REG_ANDROID_RESTART_TIME_N  11
+#define AON_REG_ANDROID_RESTART_TIME    4
+#define AON_REG_ANDROID_RESTART_TIME_N  5
 
 /* BOLT environment variable names for Android recovery/boot images */
 #define ENV_ANDROID_RECOVERY_IMG	"ANDROID_RECOVERY_IMG"
@@ -43,7 +43,6 @@
 #define ANDROID_KERNEL_PAGE_SIZE 0x1000
 
 /* See bootimg.h in Android source code for the full definition */
-#define BOOT_MAGIC	"ANDROID!"
 #define BOOT_MAGIC_SIZE	8
 #define BOOT_NAME_SIZE	16
 
@@ -183,15 +182,15 @@ char *get_hardware_name()
     *  gen_bootargs(la,bootargs_buf,cmdline,boot_path,slot)
     *
     *  Generate bootargs for kernel/android:
-	 *     - append additional arguments if applicable.
-	 *     - create and populate '/firmware/android/xxx' device-tree nodes.
+    *     - append additional arguments if applicable.
+    *     - create and populate '/firmware/android/xxx' device-tree nodes.
     *
     *  Input parameters:
-	 *       la - loader context.
-    *  	   bootargs_buf - pointer to the buffer for holding bootargs
-    *  	   cmdline - the kernel command line to be added to bootargs_buf
-	 *       boot_path - whether we boot legacy or a|b update
-	 *       slot - for non legacy boot path, the slot index to use
+    *       la - loader context.
+    *  	    bootargs_buf - pointer to the buffer for holding bootargs
+    *  	    cmdline - the kernel command line to be added to bootargs_buf
+    *       boot_path - whether we boot legacy or a|b update
+    *       slot - for non legacy boot path, the slot index to use
     *
     *  Return value:
     *  	   int - bootarg length generated from the calling this function
@@ -215,6 +214,8 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android hardware s '%s'", get_hardware_name());
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android bootreason s '%s'", aon_reset_string());
+	bolt_docommands(dt_add_cmd);
+	os_sprintf(dt_add_cmd, "dt add prop /firmware/android wificountrycode s '00'");
 	bolt_docommands(dt_add_cmd);
 
 	if (boot_path != BOOTPATH_LEGACY) {
@@ -421,6 +422,8 @@ static enum bootpath select_boot_path(int *slot, int selected)
 	struct eio_boot *eio = &eio_commander;
 	int ret;
 
+	os_memset(eio, 0, sizeof(*eio));
+
 	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
 	if (!fb_flashdev_mode_str) {
 		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
@@ -443,7 +446,8 @@ static enum bootpath select_boot_path(int *slot, int selected)
 				flash_devname, ret);
 		goto ret_legacy;
 	}
-	DLOG("Read %d bytes from commander, magic %x (sel: %d). \n", ret, eio->magic, selected);
+	DLOG("Read %d bytes from commander, magic %x (%s, sel: %d). \n",
+		ret, eio->magic, (eio->magic == EIO_BOOT_MAGIC)?"good":"BAD", selected);
 
 	if (slot != NULL) {
 		*slot = -1;
@@ -484,6 +488,7 @@ static enum bootpath select_boot_path(int *slot, int selected)
 			}
 		} else {
 			/* empty commander, seed with default data. */
+			os_memset(eio, 0, sizeof(*eio));
 			eio->current = 0;
 			os_sprintf(eio->slot[0].suffix, "%s", BOOT_SLOT_0_SUFFIX);
 			os_sprintf(eio->slot[1].suffix, "%s", BOOT_SLOT_1_SUFFIX);
@@ -511,6 +516,14 @@ ret_ab_bl_recovery:
 	return BOOTPATH_AB_BOOTLOADER_RECOVERY;
 
 ret_ab_system:
+	{
+		char *env_verity_pub_key = env_getenv("AB_VERITY_PUB_KEY");
+		if (!env_verity_pub_key && !eio->slot[eio->current].boot_ok) {
+			DLOG("Marking slot %d as booted, no dm-verity enforcement. \n", eio->current);
+			eio->slot[eio->current].boot_ok = 1;
+			bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+		}
+	}
 	if (fd >= 0)
 		bolt_close(fd);
 	if (slot != NULL) {

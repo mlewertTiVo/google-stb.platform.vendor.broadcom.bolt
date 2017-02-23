@@ -1,0 +1,1802 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title> Options for a 3rd stage bootloader</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(3);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1> Options for a 3rd stage bootloader</h1>
+<span id="author">Broadcom Ltd</span><br />
+<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_introduction">1.  Introduction</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Regular updates for security, fixes or new features are a fact of life in
+increasingly complex embedded systems. Direct or indirect interdependency
+between disparate software components can also be a feature or an
+emergent property of such systems.</p></div>
+<div class="paragraph"><p>Given the nature of these systems, strategies for updating <strong>all</strong> software
+components should be factored into the design.</p></div>
+<div class="paragraph"><p>Bootloaders have generally been the one component to require the least
+number of updates, often hard wired to never be updated at all. Mitigation
+strategies have involved function and/or data patch tables, hacks incorporated
+into the main OS the bootloader executes, or mini-bootloaders glued onto an OS
+image.</p></div>
+<div class="paragraph"><p>Often it is wiser to have an extra step in the execution chain where the original
+bootloader starts a newer (downloaded) version of itself (or any dedicated updatable
+code) that would now be responsible for starting the main OS, instead of the original
+bootloader. This is often called a "Third Stage BootLoader" (TSBL).</p></div>
+<div class="paragraph"><p>This document deals with the issues of, and how to implement a TSBL using BOLT as
+with a few careful choices the majority of the SSBL source code can do double duty
+as a TSBL.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">BOLT provides the Device Tree ARM Linux requires. This couples
+versions of BOLT and Linux together. By using a TSBL most of the
+coupling issues between BOLT and Linux resolve themselves.</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_flash_layout_for_update">2.  Flash layout for update</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>For improved reliability systems should have multiple application images
+(e.g. TSBL + OS + rootfs) that the primary bootloader can choose from.
+Priority in most schemes is given to the newest image that passes validity
+(signing) test(s) and decrypts properly, with fallback to earlier versions
+should any newer image fail to pass the tests.</p></div>
+<div class="paragraph"><p>This ensures there is always some form of backup should an update fail. Some
+systems also have a separate emergency <em>recovery</em> image that is only used
+to get an application image should none prove to be valid.</p></div>
+<div class="tableblock">
+<table rules="all"
+width="60%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 1. Example simplified flash map #1</caption>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+<thead>
+<tr>
+<th align="left" valign="top">Partition      </th>
+<th align="left" valign="top">Role           </th>
+<th align="left" valign="top">Updatable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">BOLT</p></td>
+<td align="left" valign="top"><p class="table">FSBL+SSBL</p></td>
+<td align="left" valign="top"><p class="table">N</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">IMAGE0</p></td>
+<td align="left" valign="top"><p class="table">TSBL+OS+rootfs</p></td>
+<td align="left" valign="top"><p class="table">Y</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">IMAGE1</p></td>
+<td align="left" valign="top"><p class="table">TSBL+OS+rootfs</p></td>
+<td align="left" valign="top"><p class="table">Y</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">IMAGE2</p></td>
+<td align="left" valign="top"><p class="table">TSBL+OS+rootfs</p></td>
+<td align="left" valign="top"><p class="table">Y</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">RECOVERY</p></td>
+<td align="left" valign="top"><p class="table">TSBL+OS+rootfs</p></td>
+<td align="left" valign="top"><p class="table">N</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="tableblock">
+<table rules="all"
+width="60%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 2. Example simplified flash map #2</caption>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+<thead>
+<tr>
+<th align="left" valign="top">Partition      </th>
+<th align="left" valign="top">Role                   </th>
+<th align="left" valign="top">Updatable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">BOLT</p></td>
+<td align="left" valign="top"><p class="table">FSBL+SSBL</p></td>
+<td align="left" valign="top"><p class="table">N</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">TSBL</p></td>
+<td align="left" valign="top"><p class="table">TSBL</p></td>
+<td align="left" valign="top"><p class="table">Y</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">IMAGE</p></td>
+<td align="left" valign="top"><p class="table">OS+rootfs</p></td>
+<td align="left" valign="top"><p class="table">Y</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">RECOVERY</p></td>
+<td align="left" valign="top"><p class="table">OS+rootfs (+TSBL)</p></td>
+<td align="left" valign="top"><p class="table">N</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The recovery image could incorporate a TSBL, or
+if not it <strong>must</strong> be reliant on <strong>not</strong> requiring one.</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_call_sequence">3.  Call sequence</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The FSBL is located in the on-chip SRAM. It does not use DDR memory for its
+own purposes but does copy data over to it for use by the SSBL. After FSBL
+jumps to SSBL, the SSBL can then decide which TSBL to load and run. SSBL/TSBL
+won&#8217;t fit into SRAM so typically the TSBL uses a non-overlapping (with respect
+to SSBL) area of DDR memory. Once TSBL is running, the SSBL memory area may be
+recovered, though caveats may apply if other memory used by SSBL is not also
+relocated (see the "SSBL memory usage" section below).</p></div>
+<div class="tableblock">
+<table rules="all"
+width="30%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">Order</p></td>
+<td align="left" valign="top"><p class="table">Binary</p></td>
+<td align="left" valign="top"><p class="table">Location</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">1</p></td>
+<td align="left" valign="top"><p class="table">FSBL</p></td>
+<td align="left" valign="top"><p class="table">SRAM</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">2</p></td>
+<td align="left" valign="top"><p class="table">SSBL</p></td>
+<td align="left" valign="top"><p class="table">DDR</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">3</p></td>
+<td align="left" valign="top"><p class="table">TSBL</p></td>
+<td align="left" valign="top"><p class="table">DDR</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">4</p></td>
+<td align="left" valign="top"><p class="table">Linux</p></td>
+<td align="left" valign="top"><p class="table">DDR</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ssbl_memory_usage">4.  SSBL memory usage</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>As well as executable code and data that the compiler generates to make the
+final SSBL binary, there are other data areas that are present in DDR memory.</p></div>
+<div class="tableblock">
+<table rules="all"
+width="90%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 3. Typical SSBL layout in DDR</caption>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<thead>
+<tr>
+<th align="left" valign="top">Type                        </th>
+<th align="left" valign="top">Data type        </th>
+<th align="left" valign="top">cfg file or generated defines                                  </th>
+<th align="left" valign="top">Range (typ)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">FSBL info area</p></td>
+<td align="left" valign="top"><p class="table">struct fsbl_info</p></td>
+<td align="left" valign="top"><p class="table">SSBL_BOARDINFO, SSBL_BOARDINFO_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x06ffc000 - 0x07000000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">MMU 1st level page table</p></td>
+<td align="left" valign="top"><p class="table">ARM mmu</p></td>
+<td align="left" valign="top"><p class="table">SSBL_PAGE_TABLE, SSBL_PAGE_TABLE_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x07000000 - 0x07004000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">MMU 2st level page table(s)</p></td>
+<td align="left" valign="top"><p class="table">ARM mmu</p></td>
+<td align="left" valign="top"><p class="table">SSBL_PAGE_TABLE + SSBL_PAGE_TABLE_SIZE, SSBL_PAGE_TABLE_2_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x07004000 - 0x07008000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">SSBL</p></td>
+<td align="left" valign="top"><p class="table">compiled code+data</p></td>
+<td align="left" valign="top"><p class="table">SSBL_RAM_ADDR, SSBL_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x07008000 - 0x07078000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">HEAP</p></td>
+<td align="left" valign="top"><p class="table">data</p></td>
+<td align="left" valign="top"><p class="table">SSBL_RAM_ADDR+SSBL_SIZE, HEAP_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x07100000 - 0x09100000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">STACK</p></td>
+<td align="left" valign="top"><p class="table">data</p></td>
+<td align="left" valign="top"><p class="table">SSBL_RAM_ADDR+SSBL_SIZE+HEAP_SIZE, STACK_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x09100000 - 0x09200000</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="tableblock">
+<table rules="all"
+width="100%"
+frame="border"
+cellspacing="0" cellpadding="4">
+<caption class="title">Table 4. Other areas</caption>
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<col width="25%" />
+<thead>
+<tr>
+<th align="left" valign="top">Type         </th>
+<th align="left" valign="top"> Data type         </th>
+<th align="left" valign="top">cfg file or generated defines                                                   </th>
+<th align="left" valign="top">Range (typ)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left" valign="top"><p class="table">SPLASH</p></td>
+<td align="left" valign="top"><p class="table">data</p></td>
+<td align="left" valign="top"><p class="table">Top of DDR memory</p></td>
+<td align="left" valign="top"><p class="table"></p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">PSCI</p></td>
+<td align="left" valign="top"><p class="table">compiled code+data</p></td>
+<td align="left" valign="top"><p class="table">PSCI_BASE, PSCI_BASE+PSCI_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x06400000 - 0x06410000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">64 bit Linux</p></td>
+<td align="left" valign="top"><p class="table">compiled code+data</p></td>
+<td align="left" valign="top"><p class="table">BOOT_START_ADDRESS/BOOT_START_ADDRESS_ZIMAGE, BOOT_START_ADDRESS+BOOT_AREA_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x00080000 - 0x02080000</p></td>
+</tr>
+<tr>
+<td align="left" valign="top"><p class="table">32 bit Linux</p></td>
+<td align="left" valign="top"><p class="table">compiled code+data</p></td>
+<td align="left" valign="top"><p class="table">BOOT_START_ADDRESS, BOOT_START_ADDRESS+BOOT_AREA_SIZE</p></td>
+<td align="left" valign="top"><p class="table">0x00008000 - 0x02008000</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_fsbl_info_area">4.1.  FSBL info area</h3>
+<div class="paragraph"><p>This area is populated by the FSBL and consists of build and runtime
+configuration and a list of available boards, all for use by the SSBL.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_mmu_areas">4.2.  MMU areas</h3>
+<div class="paragraph"><p>This is where the ARM page tables are located. The FSBL is responsible
+for setting up the basic page tables. SSBL may then further modify them.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_ssbl_heap_and_stack">4.3.  SSBL, HEAP and STACK</h3>
+<div class="paragraph"><p>The SSBL binary is loaded and it then sets up the HEAP and STACK.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_splash">4.4.  Splash</h3>
+<div class="paragraph"><p>If enabled, splash picture and audio memory are allocated by the SSBL or TSBL
+from the top of (32 bit address mode) visible memory downwards.</p></div>
+<div class="paragraph"><p>Some memory controllers split the DDR into 32 bit visible and LPAE/40 bit memory
+section so BOLT can see a portion of each for the SHMOO (memsys) process even
+though the actual memory on board is more than a 32 bit address can access.
+32 bit Linux, which if LPAE support is enabled, can see all available DDR memory.
+64 bit Linux can naturally see all DDR memory.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_psci">4.5.  PSCI</h3>
+<div class="paragraph"><p>If PSCI is supported then the TSBL could load a new version over the original
+SSBL version.</p></div>
+<div class="paragraph"><p>If the PSCI is relocated by the TSBL then VBAR_EL3 (64 bit system
+bootstrap) or MVBAR (32 bit system bootstrap) has to be updated to point to the
+new PSCI.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">For an aarch64 boot mode VBAR_EL3 can only be accessed at EL3. The old PSCI
+code has to be modified with an extra function (or some other code overlaid at the
+original PSCI base address) for a new value of VBAR_EL3 to be successfully set.
+See: <a href="http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500e/CIHHJABD.html">http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0500e/CIHHJABD.html</a></td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">For an aarch32 boot mode MVBAR should be set like VBAR_EL3 is in the 64 bit code,
+though you can do it if the cpu is running in EL1 secure mode. MVBAR should never be set
+if EL3 is in aarch64 mode.</td>
+</tr></table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_making_a_tsbl">5.  Making a TSBL</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>As previously indicated we can use the SSBL codebase to implement a TSBL. There are
+two parts to this: (a) Implement some SSBL source code changes so SSBL can
+pass control over to TSBL, (b) Edit build time variables so the SSBL can run
+elsewhere in memory as a TSBL.</p></div>
+<div class="paragraph"><p>The process is to build BOLT twice. Once to get the primary FSBL+SSBL i.e. BOLT,
+then build again after editing build time variables to get ssbl.bin which will
+now be the TSBL.</p></div>
+<div class="paragraph"><p>For a TSBL it must be decided if the other non-SSBL areas are required to be moved or
+the original ones just referenced.</p></div>
+<div class="paragraph"><p>The other areas (FSBL info area, MMU page tables) may have to be moved
+e.g. because Linux may be loaded over the SSBL location, and such could
+happen if a very large Linux initrd is required and this was not factored
+into the original system design, i.e. the SSBL was not located higher in
+memory. You also could have have been supplied with an FSBL binary but not
+the source code to effect a change at where the FSBL info area should be
+placed.</p></div>
+<div class="sect2">
+<h3 id="_process_checklist">5.1.  Process checklist</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Map out and make sure you know where everything in memory is supposed to go.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Make sure no specified memory regions overlap, unless this is intended.
+</p>
+</li>
+<li>
+<p>
+Where in memory should the TSBL be located?
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Is SSBL properly shut down before jumping to the TSBL?
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+All device drivers in SSBL should be shutdown and any
+other activity (e.g. DMA) stopped before launching the TSBL. Failure
+to do so may cause system instability and/or crashes.
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Does the FSBL info area need to be relocated?
+</p>
+</li>
+<li>
+<p>
+Do the MMU page tables need to be relocated?
+</p>
+</li>
+<li>
+<p>
+Have fixups (e.g. pointer references, individual MMU page entries) been done
+for relocated items?
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Is another 4KiB secondary page table required for TSBL code? (see:
+ <em>set_ssbl_page()</em> in <em>ssbl/arch/ssbl_main.c</em>)
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+Is PSCI going to be upgradable, i.e. loaded by TSBL?
+</p>
+</li>
+<li>
+<p>
+Is the splash screen in SSBL, TSBL or both?
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_worked_example">6.  Worked example</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>We&#8217;ll use a BCM7271A0 BOLT v1.21 source tree and modify it so the
+TSBL will use the existing FSBL info area, MMU and load PSCI
+instead of SSBL.</p></div>
+<div class="sect2">
+<h3 id="_ssbl_build">6.1.  SSBL build</h3>
+<div class="sect3">
+<h4 id="_differentiating_ssbl_vs_tsbl_builds">6.1.1.  Differentiating SSBL Vs. TSBL builds</h4>
+<div class="paragraph"><p>Add a build time flag so we can tell the code what we intend
+to make.</p></div>
+<div class="listingblock">
+<div class="title">config/layout-zeus42-stub.cfg</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>@@ -71,6 +71,7 @@ gset SSBL_PAGE_TABLE_2_SIZE  0x400
+ gset SSBL_PAGE_TABLE_2       $SSBL_PAGE_TABLE+$SSBL_PAGE_TABLE_SIZE
+ gset SSBL_PAGE_TABLE_2_SRAM  $SSBL_PAGE_TABLE_2+$SSBL_PAGE_TABLE_2_SIZE
+ gset SSBL_RAM_ADDR           0x07008000
++gset IS_TSBL                 0
+
+ #  BOLT currently uses a 32 bit memory space
+ # and the 'device' (ebi &amp; rdb) regions span</tt></pre></div></div>
+</div>
+<div class="sect3">
+<h4 id="_ssbl_entry_point">6.1.2.  SSBL entry point</h4>
+<div class="paragraph"><p>The FSBL jumps to the very start of the SSBL binary image with ARM register <em>r0</em>
+containing the address of <em>struct fsbl_info</em>.</p></div>
+<div class="paragraph"><p>To make our TSBL we&#8217;ll need to modify SSBL to be able to pass
+<em>struct fsbl_info</em> to TSBL was well. Below is a patch that
+adds <em>struct fsbl_info</em> to the <em>bolt_launch()</em> function - which
+is part of the core BOLT loader code. This means we can use
+it via the <em>boot</em> command or in code via the <em>bolt_boot()</em>
+function.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">Please use the <em>bolt_boot()</em> API call for booting
+a TSBL as we get the benefit of proper SSBL shutdown,
+which is important for system stability. Just jumping
+directly from SSBL to TSBL is <strong>not recommended</strong>.</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="title">ssbl/arch/arm-launch.S</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>@@ -35,11 +35,11 @@ DECLARE_INITVAR(mem_textreloc)
+ # r0 - start address for jump
+ # r1 - architecture i.d.  (0)
+ # r2 - ATAGS pointer (unused.) ATAGS can be at addr 0x100 as well. (0)
+ #     Default for BOLT is DTB only, we don't support ATAGS.
+ #
+-# r3 is unused
++# r3 - is fsbl_info, to be loaded into r0 before boot.
+
+ ENTRY_PROC(bolt_launch)
+        /* use SRAM stack as this goes bye-bye on pop.
+         we could also save into other registers...
+         if careful!
+@@ -48,15 +48,18 @@ ENTRY_PROC(bolt_launch)
+        push    {r0-r3}
+        bl              clear_all_d_cache
+        pop     {r4-r7}
+        bl              invalidate_all_i_cache
+        bl              disable_caches
+-       mov     r0, r4
++       # In case we're booting a 3rd stage SSBL (TSBL)
++       # put r3 (struct fsbl_info *) into r0
++       # as it needs that info, Linux should ignore r0.
++       mov     r0, r7
+        mov     r1, r5
+        mov     r2, r6
+        mov     r3, r7
+-       mov     pc, r0
++       mov     pc, r4
+ END_PROC(bolt_launch)
+
+ ENTRY_PROC(bolt_launch_bsu)
+        push    {lr}
+        push    {r0-r3}</tt></pre></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Normally ARM register <em>r3</em> is unused in BOLT and not currently important
+for Linux startup.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>Now we need to wire up the <em>board_info()</em> function (which returns a pointer to
+<em>struct fsbl_info</em>) into <em>bolt_start()</em> - which eventually calls <em>bolt_launch()</em>.</p></div>
+<div class="paragraph"><p>BOLT is designed so that non-code areas of memory are marked with the ARM "XN"
+page table flag bit to avoid problems with prefetching and executing memory
+it should not be allowed to. TSBL will be loaded into an area of non-executable
+memory so we have to remove the "XN" bit to avoid generating an ARM exception
+or other type of protection fault.</p></div>
+<div class="paragraph"><p>As noted in the comments in the patch below you should align the TSBL so
+it starts on a MMU page boundary.</p></div>
+<div class="listingblock">
+<div class="title">ssbl/main/boot.c</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>@ -202,14 +202,35 @@ int bolt_go(bolt_loadargs_t *la)
+         */
+ #ifdef STUB64_START
+        if (!(la-&gt;la_flags &amp; LOADFLG_DIRECT_CALL))
+                return psci_boot(la-&gt;la_flags, la-&gt;la_entrypt, p.dt_address);
+ #endif
++       {
++               unsigned int base = ALIGN_TO(la-&gt;la_entrypt, _MB(1));
++               unsigned int size =
++                       ALIGN_UP_TO(la-&gt;la_entrypt + la-&gt;la_maxsize - base,
++                               _MB(1));
++               /*
++                * Inform user as a double check on where
++                * its expecting the executable code to be.
++                */
++               xprintf("Mark executable: %x - %x\n", base, base + size);
++
++               /*
++                * This could be for TSBL or Linux. You should align a
++                * TSBL to a SECTION (1MiB) address unless you make a
++                * new 2nd level table with 4KiB entries to mark only
++                * TSBL code as executable (as SSBL does for itself),
++                * which would be preferable if ITCH is enabled.
++                */
++               arch_mark_executable(base, size, true);
++       }
++
+        bolt_set_aon_bootmode(0); /* Used for S3 to say how we first booted. */
+        xprintf("32 bit direct boot...\n");
+        bolt_start(la-&gt;la_entrypt, 0xffffffff,
+-               (unsigned int)p.dt_address, 0);
++               (unsigned int)p.dt_address, (unsigned long)board_info());
+
+        /* In the remote event a non-BSU app saved
+         * BOLT state for a return.
+         */
+        return BOLT_OK;</tt></pre></div></div>
+</div>
+<div class="sect3">
+<h4 id="_differences_in_ssbl_vs_tsbl_startup">6.1.3.  Differences in SSBL Vs. TSBL startup</h4>
+<div class="paragraph"><p>For our case where we are using the existing MMU page tables
+in generic BOLT (no security) we don&#8217;t need to do anything
+extra for TSBL apart from marking memory used by PSCI as
+executable and uncached.</p></div>
+<div class="paragraph"><p>If an extra 4KiB secondary page table is required to cover
+the TSBL .text segment more modifications would have to be
+done, see: <em>set_ssbl_page()</em> in <em>ssbl/arch/ssbl_main.c</em>.</p></div>
+<div class="listingblock">
+<div class="title">ssbl/arch/ssbl_main.c</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>@@ -241,11 +241,11 @@ static void set_ssbl_page(uint32_t *pt_1st, uint32_t _fdata)
+        /* remove XN from code area */
+        arch_mark_executable(SSBL_RAM_ADDR, _fdata-SSBL_RAM_ADDR, true);
+ }
+
+
+-#ifdef STUB64_START /* aarch64/smm(smc) &amp; PSCI32 support */
++#if defined(STUB64_START) &amp;&amp; IS_TSBL
+
+ /* Use the pre-processor to stringify the name
+ */
+ #define _SMM_VAR(odir, modname) _binary_ ## odir ## _smm_64_bin_ ## modname
+ #define SMM_VAR(odir, modname) _SMM_VAR(odir, modname)
+@@ -305,18 +305,37 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
+                sec_enable_debug_ports();
+
+        puts("PINMUX");
+        board_pinmux();
+
++       /*
++        * For TSBL just turn on the MMU as the page tables have
++        * already been setup for us by the 2nd stage SSBL.
++        */
++       if (IS_TSBL) {
++               __puts("TSBL @ ");
++               writehex(SSBL_RAM_ADDR);
++               puts("");
++               goto third_stage_continue;
++       }
++
+        __noisy_flush_caches();
+
+        pt_1st = (uint32_t *)get_pagetable_location();
+        supplement_fsbl_pagetable(pt_1st);
+        /* The whole DDR area was marked XN by FSBL, or assured by
+         * supplement_fsbl_pagetable().
+         */
+-#ifdef STUB64_START
++       arch_mark_executable(SRAM_ADDR, SRAM_LEN, false);
++       set_ssbl_page(pt_1st, _fdata);
++
++third_stage_continue:
++       __puts("MMU ");
++       enable_caches();
++       puts("ON");
++
++#if defined(STUB64_START) &amp;&amp; IS_TSBL
+        __puts("CLR PSCI MEM @ ");
+        writehex(PSCI_BASE);
+        memset((void *)PSCI_BASE, 0, PSCI_SIZE);
+        puts(" OK");
+
+@@ -333,17 +352,10 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
+        arch_mark_uncached(PSCI_BASE,  SECTION_SIZE);
+        puts(" OK");
+
+        dsb(); /* make sure its there before we call it */
+ #endif
+-       arch_mark_executable(SRAM_ADDR, SRAM_LEN, false);
+-       set_ssbl_page(pt_1st, _fdata);
+-
+-       __puts("MMU ");
+-       enable_caches();
+-       puts("ON");
+-
+        __noisy_flush_caches();
+
+        mem_bottomofmem = (unsigned long)_fsbl_info;
+        __puts("_fbss  "); writehex(_fbss); puts("");
+        __puts("_ebss  "); writehex(_ebss); puts("");</tt></pre></div></div>
+</div>
+<div class="sect3">
+<h4 id="_psci_2">6.1.4.  PSCI</h4>
+<div class="paragraph"><p>The penultimate step before we build the primary BOLT is to prevent calling
+PSCI from the SSBL.</p></div>
+<div class="listingblock">
+<div class="title">ssbl/main/psci.c</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>@@ -23,6 +23,9 @@ void bolt_psci_init(void)
+ #ifdef STUB64_START
+        unsigned long b0, r0, r1;
+
++       if (!IS_TSBL)
++               return;
++
+        /* TBD: get nr_* from the RDB e.g. HIF_CONTINUATION or
+         * HIF_CPUBIUCTRL_CPU_RESET_CONFIG_REG. We can then use it
+         * for the EL3 stack calcs in 'calc_per_cpu_stack'
+@@ -54,6 +57,9 @@ void bolt_psci_init(void)
+ int psci_boot(unsigned int la_flags, long la_entrypt, void *dt_address)
+ {
+ #ifdef STUB64_START
++       if (!IS_TSBL)
++               return BOLT_ERR;
++
+        if (la_flags &amp; LOADFLG_APP64) {
+                bolt_set_aon_bootmode(S3_FLAG_PSCI_BOOT | S3_FLAG_BOOTED64);
+                xprintf("64 bit PSCI boot...\n");</tt></pre></div></div>
+<div class="listingblock">
+<div class="title">ssbl/ui/ui_misccmds.c</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>@@ -178,6 +178,9 @@ static int ui_cmd_psci(ui_cmdline_t *cmd, int argc, char *argv[])
+        const char *x;
+        unsigned long r0_back, r0, r1 = 0, r2 = 0, r3 = 0;
+
++       if (!IS_TSBL)
++               return BOLT_ERR;
++
+        /* Only r0 is required, the rest
+         * depends on the feature requested.
+         */</tt></pre></div></div>
+<div class="paragraph"><p>Now the primary BOLT can be built. After flashing the binary and rebooting
+it should start up OK, but without any PSCI initialization messages.</p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_tsbl_build">6.2.  TSBL build</h3>
+<div class="sect3">
+<h4 id="_relocating_the_ssbl">6.2.1.  Relocating the SSBL</h4>
+<div class="paragraph"><p>The TSBL should be placed at a location where it will not interfere
+with anything else. Using the BOLT <em>info</em> command we get a mostly
+complete picture (excluding SPLASH, PSCI and flash staging buffer)
+of what SSBL uses.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; info
+========================================================================
+     CPU speed: 1503MHz
+DDR0 Frequency: 1600MHz, 8Gx16 phy:32   80000000 @ 00000000
+DDR0 Actual frequency: 1590MHz, ratio 0.993
+  Total memory: 2048MB
+   Boot Device: SPI
+SDIO:
+ controller 0, TYPE: NODEVICE
+ controller 1, TYPE: EMMC
+
+BSP version: '4.1.5'
+Total memory used by BOLT: 0x06FFC000 - 0x09200000 (35667968)
+FSBL info area:            0x06FFC000 - 0x06FFC044 (68)
+Page table base:           0x07000000
+Text (code) segment:       0x07008100 - 0x07034000 (179968)
+Initialized Data:          0x07034000 - 0x07053588 (128392)
+BSS Area:                  0x07053588 - 0x07054D80 (6136)
+Local Heap:                0x07100000 - 0x09100000 (33554432)
+Stack Area:                0x09100000 - 0x09200000 (1048576)
+
+BOLT driver build information:
+LDR:     ELF   1; RAW   1; SREC  1; ZIMG  1
+UI:      LEVEL 3; MIN   0
+FS:      FAT   1; FAT32 1
+NET:     STACK 1; ENET  1; TCP   1
+USB:     STACK 1; ETH   1; DISK  1; SERIAL   1; HID 1
+FLASH:   NAND
+========================================================================
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p>SSBL spans 0x06FFC000 to 0x09200000. Let us select 0x09300000 as the
+TSBL base address and enable the TSBL build.</p></div>
+<div class="listingblock">
+<div class="title">config/layout-zeus42-stub.cfg</div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>@@ -70,7 +70,8 @@ gset SSBL_PAGE_TABLE_SIZE    0x4000
+ gset SSBL_PAGE_TABLE_2_SIZE  0x400
+ gset SSBL_PAGE_TABLE_2       $SSBL_PAGE_TABLE+$SSBL_PAGE_TABLE_SIZE
+ gset SSBL_PAGE_TABLE_2_SRAM  $SSBL_PAGE_TABLE_2+$SSBL_PAGE_TABLE_2_SIZE
+-gset SSBL_RAM_ADDR           0x07008000
++gset SSBL_RAM_ADDR           0x09300000
+-gset IS_TSBL                 0
++gset IS_TSBL                 1
+
+ #  BOLT currently uses a 32 bit memory space
+ # and the 'device' (ebi &amp; rdb) regions span</tt></pre></div></div>
+<div class="paragraph"><p>After re-making BOLT the TSBL is the file <em>objs/7271a0/ssbl.bin</em></p></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_booting_tsbl">6.3.  Booting TSBL</h3>
+<div class="paragraph"><p>The TSBL can be booted programmatically, or from the BOLT commandline
+which is handy during development.</p></div>
+<div class="sect3">
+<h4 id="_example_tsbl_boot">6.3.1.  Example TSBL boot</h4>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot -nopsci -raw -addr=0x09300000 -max=0x70000 192.168.0.42:ssbl.bin
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-AD-C3-03, ipaddr 192.168.0.32, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+Loader:raw Filesys:tftp Dev:(null) File:192.168.0.42:ssbl.bin Options:(null)
+..............
+Closing network 'eth0'
+Starting program at 0x9300000 (DTB @ 0x771e000)
+
+Mark executable: 9300000 - 9400000
+32 bit direct boot...
+SSBL
+SEC: jtag debug status: 000000af
+PINMUX
+TSBL @ 09300000
+MMU ON
+CLR PSCI MEM @ 06400000 OK
+INSTALL psci32@06400000 OK
+CACHE FLUSH OK
+_fbss  0934b528
+_ebss  0934cd00
+_end   0934cd20
+HEAP @ 09400000
+STACK @ 0b500000
+ARCH: CONFIG OK
+CLR BSS 0934b528 to 0934cd00 OK
+CLR SRAM  OK
+CACHE FLUSH OK
+CPU CLKSET OK
+GO!
+PSCI: Init...
+PSCI: config @ 06401b00 cpus:4 cpu idx:0
+cpu 0 state:5
+cpu 1 state:0
+cpu 2 state:0
+cpu 3 state:0
+PSCI: v0.2
+...
+...
+...
+AUTOBOOT [waitusb -t=0 -d='USB Disk' &amp;&amp; batch usbdisk0:sysinit.txt]
+USB device matching &lt;USB Disk&gt; not found!
+BOLT&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p>The <em>info</em> command shows that we really are in the TSBL as it
+spans 0x09300100 to 0x0B500000. Note that the <em>FSBL info area</em>
+and <em>Page table base</em> have not changed from SSBL.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; info
+========================================================================
+     CPU speed: 1503MHz
+DDR0 Frequency: 1600MHz, 8Gx16 phy:32   80000000 @ 00000000
+DDR0 Actual frequency: 1590MHz, ratio 0.993
+  Total memory: 2048MB
+   Boot Device: SPI
+SDIO:
+ controller 0, TYPE: NODEVICE
+ controller 1, TYPE: EMMC
+
+BSP version: '4.1.5'
+Total memory used by BOLT: 0x06FFC000 - 0x0B500000 (72368128)
+FSBL info area:            0x06FFC000 - 0x06FFC044 (68)
+Page table base:           0x07000000
+Text (code) segment:       0x09300100 - 0x0932C000 (179968)
+Initialized Data:          0x0932C000 - 0x0934B528 (128296)
+BSS Area:                  0x0934B528 - 0x0934CD20 (6136)
+Local Heap:                0x09400000 - 0x0B400000 (33554432)
+Stack Area:                0x0B400000 - 0x0B500000 (1048576)
+
+BOLT driver build information:
+LDR:     ELF   1; RAW   1; SREC  1; ZIMG  1
+UI:      LEVEL 3; MIN   0
+FS:      FAT   1; FAT32 1
+NET:     STACK 1; ENET  1; TCP   1
+USB:     STACK 1; ETH   1; DISK  1; SERIAL   1; HID 1
+FLASH:   NAND
+========================================================================
+*** command status = 0
+BOLT&gt;</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_tsbl_booting_linux">6.3.2.  TSBL booting Linux</h4>
+<div class="paragraph"><p>TSBL can boot Linux, just like the original BOLT SSBL.</p></div>
+<div class="listingblock">
+<div class="title">Example</div>
+<div class="content">
+<pre><code>BOLT&gt; boot 192.168.0.42:vmlinuz-initrd-7271a0-32
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-AD-C3-03, ipaddr 192.168.0.32, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+Loader:zimg Filesys:tftp Dev:(null) File:192.168.0.42:vmlinuz-initrd-7271a0-32 Options:(null)
+Reading 8082328 bytes from zImage...........
+Closing network 'eth0'
+Starting program at 0x8000 (DTB @ 0x9a1e000)
+
+32 bit PSCI boot...
+PSCI: DTB @ 09a1e000, Linux entry @ 00008000
+...
+...
+...</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tsbl_and_s3">7.  TSBL and S3</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The path from an S3 warm boot back to Linux is from the FSBL
+(via PSCI if it exists) to the Linux re-entry vector. TSBL
+is not involved at all, at least directly.</p></div>
+<div class="paragraph"><p>If a fixup between wakeup and Linux is required e.g. to fix a bug,
+then the TSBL can be used indirectly if it is responsible for
+loading PSCI, as PSCI could be patched with the bugfix instead.
+This means Linux need not be hacked with difficult to maintain
+patch sets.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">PSCI is currently only present in BOLT for 64 bit cpus
+at the moment.</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_an_example_of_calling_the_em_bolt_boot_em_function">8.  An example of calling the <em>bolt_boot()</em> function</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Below is some demo code on how to load a binary blob from flash.
+This does not include any signature checks or decryption  - which
+should be factored into a real products design.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-style: italic"><span style="color: #9A1900">/*</span></span>
+<span style="font-style: italic"><span style="color: #9A1900"> * Demo load from a reference board flash.</span></span>
+<span style="font-style: italic"><span style="color: #9A1900"> * flash0.kernel  SPI flash @ CS0: 0x00120000-0x00F70000 (15MB)</span></span>
+<span style="font-style: italic"><span style="color: #9A1900"> */</span></span>
+<span style="font-weight: bold"><span style="color: #000080">#define</span></span> LOADER_IMAGE_PARTITION  <span style="color: #FF0000">"flash0.kernel"</span>
+<span style="font-weight: bold"><span style="color: #000080">#define</span></span> <span style="font-weight: bold"><span style="color: #000000">LOADER_IMAGE_MEM_ADDR</span></span>   <span style="color: #990000">(</span>SSBL_RAM_ADDR<span style="color: #990000">)</span>
+<span style="font-weight: bold"><span style="color: #000080">#define</span></span> <span style="font-weight: bold"><span style="color: #000000">LOADER_IMAGE_LEN</span></span>        <span style="color: #990000">(</span>SSBL_SIZE<span style="color: #990000">)</span>
+
+<span style="color: #009900">void</span> <span style="font-weight: bold"><span style="color: #000000">custom_main</span></span><span style="color: #990000">(</span><span style="color: #009900">void</span><span style="color: #990000">)</span>
+<span style="color: #FF0000">{</span>
+        <span style="color: #009900">int</span> rc<span style="color: #990000">;</span>
+        <span style="color: #008080">bolt_loadargs_t</span> la<span style="color: #990000">;</span>
+
+        la<span style="color: #990000">.</span>la_filename  <span style="color: #990000">=</span> NULL<span style="color: #990000">;</span>
+        la<span style="color: #990000">.</span>la_filesys   <span style="color: #990000">=</span> <span style="color: #FF0000">"raw"</span><span style="color: #990000">;</span>
+        la<span style="color: #990000">.</span>la_device    <span style="color: #990000">=</span> LOADER_IMAGE_PARTITION<span style="color: #990000">;</span>
+        la<span style="color: #990000">.</span>la_options   <span style="color: #990000">=</span> NULL<span style="color: #990000">;</span> <span style="font-style: italic"><span style="color: #9A1900">/* no cmdline "chosen" args */</span></span>
+        la<span style="color: #990000">.</span>la_flags     <span style="color: #990000">=</span> LOADFLG_EXECUTE <span style="color: #990000">|</span> LOADFLG_SPECADDR <span style="color: #990000">|</span> LOADFLG_DIRECT_CALL<span style="color: #990000">;</span>
+        la<span style="color: #990000">.</span>la_offs      <span style="color: #990000">=</span> <span style="color: #993399">0</span><span style="color: #990000">;</span>
+        la<span style="color: #990000">.</span>la_address   <span style="color: #990000">=</span> LOADER_IMAGE_MEM_ADDR<span style="color: #990000">;</span>
+        la<span style="color: #990000">.</span>la_maxsize   <span style="color: #990000">=</span> LOADER_IMAGE_LEN<span style="color: #990000">;</span>
+        la<span style="color: #990000">.</span>la_entrypt   <span style="color: #990000">=</span> LOADER_IMAGE_MEM_ADDR<span style="color: #990000">;</span>
+
+        rc <span style="color: #990000">=</span> <span style="font-weight: bold"><span style="color: #000000">bolt_boot</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"raw"</span><span style="color: #990000">,</span> <span style="color: #990000">&amp;</span>la<span style="color: #990000">);</span>
+        <span style="font-weight: bold"><span style="color: #000000">err_msg</span></span><span style="color: #990000">(</span><span style="color: #FF0000">"failed to boot TSBL, error = %d"</span><span style="color: #990000">,</span> rc<span style="color: #990000">);</span>
+<span style="color: #FF0000">}</span></tt></pre></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">On BOLT builds with PSCI the <em>LOADFLG_DIRECT_CALL</em> flag added
+to <em>la.la_flags</em> above prevents booting the code via PSCI, which
+is the default boot method. Booting via PSCI would also start us in
+HYP instead  of SVC mode and for TSBL would also mess up passing
+<em>struct fsbl_info</em> properly.</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_device_tree_only_changes">9.  Device Tree only changes</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This can be an alternative or additional to TSBL.</p></div>
+<div class="paragraph"><p>If a new Linux version requires a Device Tree different in some way to that provided by the
+original bootloader and there are <strong>no other changes at all</strong> required of the bootloader then
+the Linux CONFIG_ARM_APPENDED_DTB configuration
+<span class="footnote"><br />[<a href="porting_bolt_to_customer_platforms.html#_building_linux_with_an_appended_dtb">porting_bolt_to_customer_platforms.html#_building_linux_with_an_appended_dtb</a>]<br /></span>
+could be used. This does currently require porting the BOLT code (specifically, the SSBL) to
+your platform to be able to generate the new Device Tree via the "dt bolt;dt show" command
+pair, though you don&#8217;t have to ship the code - just the generated Device Tree appended to
+a Linux binary.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Even though an appended DTB may seem to require less initial effort, it lacks the future
+proofing flexibility of the TSBL solution that can run code as well as providing a Device Tree.
+Choose carefully, <em>very</em> carefully!</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">10. Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

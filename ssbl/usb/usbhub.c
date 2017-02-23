@@ -45,8 +45,14 @@ static int usbhub_detach(usbdev_t *dev);
     *  Hub-specific data structures
     ********************************************************************* */
 
-#define UHUB_MAX_DEVICES	8
+#define USB3_HUB_CCS		1
+#define USB3_HUB_PED		(1 << 1)
+#define USB3_HUB_PR		(1 << 4)
+#define USB3_HUB_PP		(1 << 9)
+#define USB3_HUB_PS_SHIFT	10
+#define USB3_HUB_PS_MASK	0xf
 
+#define UHUB_MAX_DEVICES	8
 #define UHUB_FLG_NEEDSCAN	1
 
 typedef struct usbhub_softc_s {
@@ -144,9 +150,11 @@ static int usbhub_ireq_callback(usbreq_t *ur)
 static int usbhub_get_hub_descriptor(usbdev_t *dev, usb_hub_descr_t *dscr,
 				     int idx, int maxlen)
 {
+	uint32_t wVal = (dev->ud_flags & UD_FLAG_SUPRSPEED) ? 0x2A00 : 0x2900;
+
 	return usb_std_request(dev, 0xA0,
-			       USB_HUBREQ_GET_DESCRIPTOR,
-			       0x2900, 0, (uint8_t *) dscr, maxlen);
+				USB_HUBREQ_GET_DESCRIPTOR,
+				wVal, 0, (uint8_t *) dscr, maxlen);
 }
 
 /*  *********************************************************************
@@ -178,7 +186,7 @@ static int usbhub_get_hub_status(usbdev_t *dev, usb_hub_status_t *status)
     *  usbhub_get_port_status(dev,port,status)
     *
     *  Obtain the port status for a particular port from
-    *  device.
+    *  device. For USB 3.0, speed representation is driver specific.
     *
     *  Input parameters:
     *	dev - usb device
@@ -192,12 +200,64 @@ static int usbhub_get_hub_status(usbdev_t *dev, usb_hub_status_t *status)
 static int usbhub_get_port_status(usbdev_t *dev, int port,
 				  usb_port_status_t *status)
 {
-	return usb_std_request(dev,
-			       0xA3,
-			       0,
-			       0,
-			       port,
-			       (uint8_t *) status, sizeof(usb_port_status_t));
+	int res, spd;
+	uint16_t curr, change;
+
+	res = usb_std_request(dev,
+			      0xA3,
+			      0,
+			      0,
+			      port,
+			      (uint8_t *) status, sizeof(usb_port_status_t));
+	if (dev->ud_flags & UD_FLAG_SUPRSPEED) {
+		curr = GETUSBFIELD((status), wPortStatus);
+		change = GETUSBFIELD((status), wPortChange);
+		change &= USB_PORT_FEATURE_C_MASK;
+		spd = (curr >> USB3_HUB_PS_SHIFT) & USB3_HUB_PS_MASK;
+		curr = (curr & USB3_HUB_CCS) | (curr & USB3_HUB_PED) |
+			(curr & USB3_HUB_PR) | ((curr & USB3_HUB_PP) >> 1);
+		/*  root hub vs downstream hub...different interpretation */
+		if (dev->ud_parent)
+			curr |= USB_PORT_STATUS_SUPRSPD;
+		else {
+			switch (spd) {
+			case 2:
+				curr |= USB_PORT_STATUS_LOWSPD;
+				break;
+			case 3:
+				curr |= USB_PORT_STATUS_HIGHSPD;
+				break;
+			case 4:
+				curr |= USB_PORT_STATUS_SUPRSPD;
+				break;
+			default:
+				break;
+			}
+		}
+		PUTUSBFIELD((status), wPortStatus, curr);
+		PUTUSBFIELD((status), wPortChange, change);
+	}
+
+	return res;
+}
+
+/*  *********************************************************************
+    *  usbhub_set_hub_depth(dev, depth)
+    *
+    *  Set hub depth for SS hub.
+    *  device.
+    *
+    *  Input parameters:
+    *	dev - usb device
+    *	depth - tier level
+    *
+    *  Return value:
+    *	transfer status
+    ********************************************************************* */
+
+static int usbhub_set_hub_depth(usbdev_t *dev, int depth)
+{
+	return usb_simple_request(dev, 0x20, 0x0C, depth, 0);
 }
 
 /*  *********************************************************************
@@ -246,9 +306,11 @@ static void usbhub_queue_intreq(usbdev_t *dev, usbhub_softc_t *softc)
 static int usbhub_attach(usbdev_t *dev, usb_driver_t *drv)
 {
 	usb_device_status_t devstatus;
+	usb_device_descr_t *devdscr;
 	usb_config_descr_t *cfgdscr;
 	usb_endpoint_descr_t *epdscr;
 	usbhub_softc_t *softc;
+	uint16_t ver;
 
 	/*
 	 * Remember the driver dispatch.
@@ -260,6 +322,17 @@ static int usbhub_attach(usbdev_t *dev, usb_driver_t *drv)
 	memset(softc, 0, sizeof(usbhub_softc_t));
 	softc->uhub_imsg = KMALLOC(8, DMA_BUF_ALIGN);
 	dev->ud_private = softc;
+	if (dev->ud_parent) {	/* only for downstrean hubs */
+		dev->ud_tier = dev->ud_parent->ud_tier + 1;
+		dev->ud_flags |= UD_FLAG_HUB;
+	} else
+		dev->ud_flags |= UD_FLAG_ROOTHUB;
+
+	/* Check if USB 3.0 hub */
+	devdscr = &dev->ud_devdescr;
+	ver = GETUSBFIELD(devdscr, bcdUSB);
+	if (ver >= 0x0300)
+		dev->ud_flags |= UD_FLAG_SUPRSPEED;
 
 	/*
 	 * Dig out the data from the configuration descriptor
@@ -298,6 +371,10 @@ static int usbhub_attach(usbdev_t *dev, usb_driver_t *drv)
 	 */
 
 	softc->uhub_nports = softc->uhub_descr.bNumberOfPorts;
+
+	/* For SS hubs, set tier depth */
+	if ((dev->ud_flags & UD_FLAG_SUPRSPEED) && dev->ud_tier)
+		usbhub_set_hub_depth(dev, (dev->ud_tier-1));
 
 	/*
 	 * Open the interrupt pipe
@@ -350,8 +427,8 @@ static int usbhub_detach(usbdev_t *dev)
 		deldev = hub->uhub_devices[idx];
 		if (deldev) {
 			console_log
-			    ("USB: Removing device attached to bus %d hub %d port %d",
-			     dev->ud_bus->ub_num, dev->ud_address, idx + 1);
+			    ("USB: Removing device on bus %d hub %d port %d",
+			     dev->ud_bus->ub_num, (dev->ud_tier+1), idx + 1);
 			if (deldev->ud_drv) {
 				(*(deldev->ud_drv->udrv_detach)) (deldev);
 			} else {
@@ -360,7 +437,7 @@ static int usbhub_detach(usbdev_t *dev)
 					    ("USB: Detached device on bus %d hub %d port %d "
 					     "has no methods",
 					     dev->ud_bus->ub_num,
-					     dev->ud_address, idx + 1);
+					     (dev->ud_tier+1), idx + 1);
 				}
 			}
 			usb_destroy_device(deldev);
@@ -523,7 +600,7 @@ static void usbhub_reset_device(usbdev_t *dev, int port,
 	usb_delay_ms(dev->ud_bus, USB_DEV_ACCESS_WAIT);
 
 	console_log("usb: resetting device on bus %d hub %d port %d",
-		    dev->ud_bus->ub_num, dev->ud_address, port);
+		    dev->ud_bus->ub_num, (dev->ud_tier+1), port);
 	usbhub_set_port_feature(dev, port, USB_PORT_FEATURE_RESET);
 	usbhub_get_port_status(dev, port, portstatus);
 
@@ -537,6 +614,89 @@ static void usbhub_reset_device(usbdev_t *dev, int port,
 
 	usb_delay_ms(dev->ud_bus, USB_HUB_RESET_WAIT);
 	usbhub_clear_port_feature(dev, port, USB_PORT_FEATURE_C_PORT_RESET);
+}
+
+/*  *********************************************************************
+    *  usbhub_setup_device(dev,ps,idx)
+    *
+    *  Sets up a new device.
+    *
+    *  Input parameters:
+    *	dev - hub device
+    *	ps  - current port status
+    *	idx - port number
+    *
+    *  Return value:
+    *	pointer to new device
+    ********************************************************************* */
+
+static usbdev_t *usbhub_setup_device(usbdev_t *dev, uint16_t ps, int idx)
+{
+	int spd;
+	usbdev_t *newdev;
+	char *st;
+	int rport = 0, route = 0;
+
+	if (ps & USB_PORT_STATUS_SUPRSPD) {
+		spd = SS;
+		st = "Super";
+	} else if (ps & USB_PORT_STATUS_HIGHSPD) {
+		spd = HS;
+		st = "high";
+	} else if (ps & USB_PORT_STATUS_LOWSPD) {
+		spd = LS;
+		st = "low";
+	} else {
+		spd = FS;
+		st = "full";
+	}
+	console_log(
+		"USB: New %s speed device connected to bus %d hub %d port %d",
+		st,
+		dev->ud_bus->ub_num,
+		(dev->ud_tier+1),
+		idx+1);
+
+	/*
+	 * Set up device info devices under hubs for USB 3.0 bus
+	 * and high speed.
+	 */
+
+	if (dev->ud_parent) {
+		if (dev->ud_bus->ub_flags & UB_FLG_USB30) {
+			rport = dev->ud_rport;
+			route = dev->ud_route |
+				((idx+1) << ((dev->ud_tier-1)*4));
+		} else if ((dev->ud_flags & UD_FLAG_USB20BUS) &&
+			   ((spd == FS) || (spd == LS))) {
+			if (dev->ud_flags & UD_FLAG_HIGHSPEED) {
+				rport = idx + 1;
+				route = dev->ud_address;
+			} else { /* use parent HS info */
+				rport = dev->ud_rport;
+				route = dev->ud_route;
+			}
+		}
+	} else {
+		rport = idx;
+		route = 0;
+	}
+
+	/*
+	 * Create a device for this port and link it.
+	 */
+
+	newdev = usb_create_device(dev->ud_bus,
+				   spd,
+				   rport,
+				   route);
+	newdev->ud_parent = dev;
+	if (dev->ud_bus->ub_flags & UB_FLG_USB30)
+		newdev->ud_flags |= UD_FLAG_USB30BUS;
+	else if (dev->ud_bus->ub_flags & UB_FLG_USB20)
+		newdev->ud_flags |= UD_FLAG_USB20BUS;
+
+	return newdev;
 }
 
 /*  *********************************************************************
@@ -560,7 +720,6 @@ static void usbhub_scan_ports(usbdev_t *dev, void *arg)
 	int idx;
 	int res;
 	int len;
-	int spd;
 	uint8_t *buf;
 	usbdev_t *newdev;
 	usb_driver_t *newdrv = 0;
@@ -569,7 +728,6 @@ static void usbhub_scan_ports(usbdev_t *dev, void *arg)
 	usb_config_descr_t cfgdescr;
 	unsigned int powerondelay;
 	static int ocd = 10;	/* overcurrent counter */
-	char *st;
 
 	if (!IS_HUB(dev))
 		return;		/* should not happen.  */
@@ -623,7 +781,7 @@ static void usbhub_scan_ports(usbdev_t *dev, void *arg)
 		if (usb_noisy > 0) {
 			printf
 			    ("USB: Explore: Bus %d Hub %d port %d status %04X changed %04X\n",
-			     dev->ud_bus->ub_num, dev->ud_address, idx + 1,
+			     dev->ud_bus->ub_num, (dev->ud_tier+1), (idx+1),
 			     current, changed);
 			usb_dbg_dumpportstatus(idx + 1, &portstatus, 1);
 		}
@@ -642,7 +800,7 @@ static void usbhub_scan_ports(usbdev_t *dev, void *arg)
 		    || (current & USB_PORT_STATUS_OVERCUR)) {
 
 			printf("USB: Bus %d Hub %d port %d in overcurrent ",
-				dev->ud_bus->ub_num, dev->ud_address, (idx + 1));
+				dev->ud_bus->ub_num, (dev->ud_tier+1), (idx+1));
 
 			if ((ocd == 0) || (current & USB_PORT_STATUS_OVERCUR)) {
 				printf("state... not re-enabling power\n");
@@ -694,33 +852,7 @@ static void usbhub_scan_ports(usbdev_t *dev, void *arg)
 				 * The device connection is stable.
 				 */
 
-				if (current & USB_PORT_STATUS_HIGHSPD) {
-					spd = HS;
-					st = "high";
-				} else if (current & USB_PORT_STATUS_LOWSPD) {
-					spd = LS;
-					st = "low";
-				} else {
-					spd = FS;
-					st = "full";
-				}
-				console_log("USB: New %s speed device connected to bus %d hub %d port %d",
-					    st,
-					    dev->ud_bus->ub_num,
-					    dev->ud_address, idx+1);
-
-				if ((dev->ud_flags & UD_FLAG_HIGHSPEED) &&
-				   !(current & USB_PORT_STATUS_HIGHSPD)) {
-					console_log("USB: Lower speed devices not supported under high speed hub", st);
-					goto done;
-				}
-
-				/*
-				 * Create a device for this port.
-				 */
-
-				newdev =
-				    usb_create_device(dev->ud_bus, spd);
+				newdev = usbhub_setup_device(dev, current, idx);
 
 				/*
 				 * Get the device descriptor.
@@ -829,7 +961,7 @@ cfg_desc_err:
 
 				if (newdrv) {
 					/* remember driver dispatch in device */
-					dev->ud_drv = newdrv;
+					newdev->ud_drv = newdrv;
 					(*(newdrv->udrv_attach))
 						(newdev, newdrv);
 					newdrv = NULL;
@@ -842,9 +974,15 @@ cfg_desc_err:
 				 * The device has been DISCONNECTED.
 				 */
 
+				if (dev->ud_flags & UD_FLAG_SUPRSPEED) {
+					usbhub_clear_port_feature(
+						dev,
+						idx + 1,
+						USB_PORT_FEATURE_C_LINK_STATE);
+				}
 				console_log
 				    ("USB: Device disconnected from bus %d hub %d port %d",
-				     dev->ud_bus->ub_num, dev->ud_address,
+				     dev->ud_bus->ub_num, (dev->ud_tier+1),
 				     idx + 1);
 
 				/*
@@ -876,7 +1014,7 @@ cfg_desc_err:
 							     "has no methods",
 							     dev->
 							     ud_bus->ub_num,
-							     dev->ud_address,
+							     (dev->ud_tier+1),
 							     idx + 1);
 						}
 					}

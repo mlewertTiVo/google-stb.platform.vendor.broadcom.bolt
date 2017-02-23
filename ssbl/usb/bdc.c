@@ -1036,6 +1036,14 @@ static void bdc_handle_events(void *arg)
 	bdc_sr_t *evp;
 	bdc_softc *softc = (bdc_softc *) arg;
 
+	/* BDC is clock-gated while in host mode during DRD operation.
+	   So, access regsiters only when in device mode */
+	if (softc->drd_status) {
+		val = DEV_RD(softc->drd_status);
+		if (G_DRD_STATE(val) != DEV_MODE)
+			return;
+	}
+
 	val = BDC_READCSR(softc, R_BDC_SRRINT0);
 	if (val & M_SRRINT_IP) {
 		/* check if something to deq srrint0(eqp != dqp)...
@@ -1116,6 +1124,7 @@ static void bdc_probe(bolt_driver_t *drv, unsigned long probe_a,
 			bdc_change_vendev(softc, vendev);
 		}
 		if (bdc_start(softc, base)) {
+			softc->drd_status = probe_b;
 			xsprintf(descr, "%s at 0x%08x",
 				drv->drv_description, base);
 			bolt_attach(drv, softc, NULL, descr);
@@ -1131,9 +1140,9 @@ static void bdc_probe(bolt_driver_t *drv, unsigned long probe_a,
 	KUFREE(softc);
 }
 
-int usb_init_bdc(physaddr_t base)
+int usb_init_bdc(physaddr_t base, physaddr_t ctrl)
 {
-	bolt_add_device((bolt_driver_t *) &bdc_drv, base, 0, 0);
+	bolt_add_device((bolt_driver_t *) &bdc_drv, base, ctrl, 0);
 
 	return 0;
 }

@@ -20,6 +20,13 @@
 
 #include "boot_defines.h"
 
+#ifndef BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR
+/* use BCHP_BSP_GLB_CONTROL_GLB_DWNLD_STATUS */
+#define BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR BCHP_BSP_GLB_CONTROL_GLB_DWNLD_STATUS
+#define BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR_DISASTER_RECOVER_MASK \
+	BCHP_BSP_GLB_CONTROL_GLB_DWNLD_STATUS_DISASTER_RECOVER_MASK
+#endif
+
 #ifndef CFG_EMULATION
 
 uint32_t sec_get_aon_boot_status(int reg_idx_shift)
@@ -107,7 +114,7 @@ int select_image(image_info *info)
 			aon_value = AON_FW_TYPE_AVS;
 			boot_status_shift = BOOT_AVS_STATUS_SHIFT;
 			break;
-#if CFG_ZEUS4_2
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	case IMAGE_TYPE_MEMSYS:
 			image_name_ptr = "MEMSYS:";
 			image_offset = PARAM_1ST_MEMSYS_PART_OFFSET;
@@ -127,15 +134,6 @@ int select_image(image_info *info)
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &= ~AON_FW_TYPE_MASK;
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |= aon_value;
 
-	/* If error is set due to eMMC data partition,
-	 * clear the error so that we can try to boot from boot partition.
-	 */
-	aon_value = REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
-	if (aon_value & AON_EMMC_DATA_PART_BOOT) {
-		REG(BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR) &=
-			~BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR_DISASTER_RECOVER_MASK;
-		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &= ~BOOT_BSP_RESET_MASK;
-	}
 #ifdef CFG_FULL_EMULATION
 	/* no sec in generic emulation */
 	disaster = 0;
@@ -180,7 +178,7 @@ int select_image(image_info *info)
 		sys_die(DIE_BOOT_2ND_IMAGE_FAILED, "Boot 2nd image failed");
 	}
 
-#if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	/* select 2nd image if boot 1st image failed or
 	 * 1st image does not exist
 	 */
@@ -204,7 +202,7 @@ int select_image(image_info *info)
 			part_ptr = (uint32_t *) (SRAM_ADDR+PARAM_2ND_AVS_PART);
 			ctrl_ptr = (uint32_t *) (SRAM_ADDR+PARAM_2ND_AVS_CTRL);
 		}
-#if CFG_ZEUS4_2
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 		else {
 			image_ptr = (uint32_t *)(SRAM_ADDR+
 				PARAM_2ND_MEMSYS_PART_OFFSET);
@@ -293,14 +291,18 @@ void sec_init(void)
 
 	dst = (uint32_t *) (BOOT_PARAMETER_OFFSET+SRAM_ADDR);
 	/* if bseck is enabled, then get the boot params from BSP */
-	if (CFG_ZEUS4_2 && otp_val) {
+	if ((CFG_ZEUS4_2 || CFG_ZEUS5_0) && otp_val) {
 		if (sec_get_bootparam(dst)) /* get boot params from BSP */
 			sys_die(DIE_GET_BOOT_PARAM_FAILED,
 				"Get boot param failed");
 		return;
 	}
 
+#if CFG_ZEUS5_0
+	ret = load_from_flash(dst, SEC_PARAM_OFFSET_FLASH, BOOT_PARAMETER_SIZE);
+#else
 	ret = load_from_flash(dst, BOOT_PARAMETER_OFFSET, BOOT_PARAMETER_SIZE);
+#endif
 	if (ret < 0)
 		sys_die(DIE_BOOT_PARAMETER_READ_FAILURE,
 			"boot parameter read failure");
@@ -318,7 +320,7 @@ void sec_bfw_load(bool warm_boot)
 {
 #ifdef BFW_LOAD
 	uint32_t ret;
-#if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	uint32_t *page_table = 0;
 	uint32_t bfw_buffer_addr;
 	int bypass_emmc_data_part = 1;
@@ -346,7 +348,7 @@ void sec_bfw_load(bool warm_boot)
 	}
 #endif
 
-#if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	if (g_info.flash.cs == 1 || bypass_emmc_data_part != 1) {
 		__puts("using page list, ");
 #if CFG_PM_S3
@@ -382,7 +384,7 @@ void sec_bfw_load(bool warm_boot)
 #ifdef SECURE_BOOT
 void sec_set_memc(struct fsbl_info *info)
 {
-#if !CFG_ZEUS4_2
+#if !(CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	return;
 #else
 	uint32_t memsys_ctrl;
@@ -425,7 +427,7 @@ void sec_verify_memsys(void)
 	uint32_t flash_offs = MEMSYS_TEXT_OFFS;
 	size_t len = MEMSYS_SIZE;
 	struct board_type *b = get_tmp_board();
-#if CFG_ZEUS4_2
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	image_info info;
 
 	info.image_type = IMAGE_TYPE_MEMSYS;

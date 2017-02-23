@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -23,34 +23,42 @@
 #include "usb-brcm-common-init.h"
 
 
-/*  *********************************************************************
-    *  Chip specific headers
-    ********************************************************************* */
-#include "bchp_usb_ohci.h"
-#include "bchp_usb_ehci.h"
-
-
-/*  *********************************************************************
-    *  USB register (offsets)
-    ********************************************************************* */
-/* a few EHCI register offsets */
-#define R_EHCI_USBCMD    0x10
-
-/* a few OHCI register offsets */
-#define R_OHCI_CONTROL         0x04
-#define R_OHCI_CMDSTAT         0x08
-#define R_OHCI_HcRhDescriptorA 0x48
-#define R_OHCI_HcRhDescriptorB 0x4c
-
+#include "bchp_usb_ctrl.h"
 /*
  * We keep track of the pointers to USB buses here.
- * One entry in this array per USB bus (the Opti controller
- * on the SWARM has two functions, so it's two buses)
+ * Set max of 12 for 4 OHCI, 4 EHCI and 4 XHCI ports
  */
-#define USB_MAX_BUS 8
+#define USB_MAX_BUS 12
 static usbbus_t *usb_buses[USB_MAX_BUS];
 
 static int in_poll, in_daemon, initdone, usb_buscnt;
+
+
+
+/*  *********************************************************************
+    *  usb_add_bus(arg)
+    *
+    *  Add a bus to the bus array. Check to make sure we don't exceed
+    *  the max number of buses. Return 0 on success and -1 if
+    *  we exceed the max number of buses.
+    *
+    *  Input parameters:
+    *	bus - pointer to bus to add
+    *
+    *  Return value:
+    *	0  - Success
+    *   -1 - Failure
+    ********************************************************************* */
+
+static int usb_add_bus(usbbus_t *bus)
+{
+	if (usb_buscnt == (USB_MAX_BUS - 1)) {
+		err_msg("USB: Error, exceeded max number of Buses\n");
+		return -1;
+	}
+	usb_buses[usb_buscnt++] = bus;
+	return 0;
+}
 
 
 /*  *********************************************************************
@@ -106,17 +114,71 @@ static void usb_bolt_timer(void *arg)
 }
 
 /*  *********************************************************************
-    *  usb_init_one_ehci(addr)
+    *  usb_init_one_xhci(addr)
     *
-    *  Initialize one EHCI controller.
+    *  Initialize one XHCI controller.
     *
     *  Input parameters:
-    *	addr - physical address of OHCI registers
+    *	addr - physical address of XHCI registers
     *
     *  Return value:
     *	0 if ok
     *	else error
     ********************************************************************* */
+#if CFG_USB_XHCI
+static int usb_init_one_xhci(uint32_t addr)
+{
+	usbbus_t *bus;
+	int res;
+
+	if (env_getenv("USBDBG"))
+		printf(" - XHCI controller at 0x%08X\n", addr);
+
+	bus = UBCREATE(&xhci_driver, addr);
+	if (bus == NULL) {
+		printf("USB: Could not create XHCI driver structure ");
+		printf("for controller at 0x%08X\n", addr);
+		return -1;
+	}
+
+	bus->ub_num = usb_buscnt;
+
+	res = UBSTART(bus);
+
+	if (res != 0) {
+		printf("USB: Could not init XHCI controller at 0x%08X\n", addr);
+		UBSTOP(bus);
+		return -1;
+	} else {
+		if (usb_add_bus(bus)) {
+			UBSTOP(bus);
+			return -1;
+		}
+		usb_initroot(bus);
+	}
+
+	return 0;
+}
+#else
+static int usb_init_one_xhci(uint32_t addr)
+{
+	return 0;
+}
+#endif
+
+/*  *********************************************************************
+    *  usb_init_one_ehci(addr)
+    *
+    *  Initialize one EHCI controller.
+    *
+    *  Input parameters:
+    *	addr - physical address of EHCI registers
+    *
+    *  Return value:
+    *	0 if ok
+    *	else error
+    ********************************************************************* */
+#if CFG_USB_EHCI_OHCI
 static int usb_init_one_ehci(uint32_t addr)
 {
 	usbbus_t *bus;
@@ -141,13 +203,21 @@ static int usb_init_one_ehci(uint32_t addr)
 		UBSTOP(bus);
 		return -1;
 	} else {
-		usb_buses[usb_buscnt++] = bus;
+		if (usb_add_bus(bus)) {
+			UBSTOP(bus);
+			return -1;
+		}
 		usb_initroot(bus);
 	}
 
 	return 0;
 }
-
+#else
+static int usb_init_one_ehci(uint32_t addr)
+{
+	return 0;
+}
+#endif
 
 /*  *********************************************************************
     *  usb_init_one_ohci(addr)
@@ -161,17 +231,11 @@ static int usb_init_one_ehci(uint32_t addr)
     *	0 if ok
     *	else error
     ********************************************************************* */
+#if CFG_USB_EHCI_OHCI
 static int usb_init_one_ohci(uint32_t addr)
 {
-	uint32_t reg;
 	usbbus_t *bus;
 	int res;
-
-	/* Root Hub setup - Choose individual power and OCD modes */
-	reg = DEV_RD(addr + R_OHCI_HcRhDescriptorA);
-	reg |= 0x900;
-	DEV_WR(addr + R_OHCI_HcRhDescriptorA, reg);
-	DEV_WR(addr + R_OHCI_HcRhDescriptorB, 0xfe0000);
 
 	if (env_getenv("USBDBG"))
 		printf(" - OHCI controller at 0x%08X\n", addr);
@@ -191,32 +255,21 @@ static int usb_init_one_ohci(uint32_t addr)
 		UBSTOP(bus);
 		return -1;
 	} else {
-		usb_buses[usb_buscnt++] = bus;
+		if (usb_add_bus(bus)) {
+			UBSTOP(bus);
+			return -1;
+		}
 		usb_initroot(bus);
 	}
 
 	return 0;
 }
-
-
-/*  *********************************************************************
-    *  usb_reset_ohci()
-    ********************************************************************* */
-static void usb_reset_ohci(uint32_t addr)
+#else
+static int usb_init_one_ohci(uint32_t addr)
 {
-	DEV_WR(addr + R_OHCI_CMDSTAT, BCHP_USB_OHCI_HcCommandStatus_HCR_MASK);
-	DEV_WR(addr + R_OHCI_CONTROL, 0);
+	return 0;
 }
-
-
-/*  *********************************************************************
-    *  usb_reset_ehci()
-    ********************************************************************* */
-static void usb_reset_ehci(uint32_t addr)
-{
-	DEV_WR(addr + R_EHCI_USBCMD, 0);
-	DEV_WR(addr + R_EHCI_USBCMD, BCHP_USB_EHCI_USBCMD_HCRESET_MASK);
-}
+#endif
 
 
 /*  *********************************************************************
@@ -233,22 +286,11 @@ static void usb_reset_ehci(uint32_t addr)
     ********************************************************************* */
 int usb_exit(void)
 {
-	struct usb_port *port;
-	int x;
-	int y;
+	int idx;
 
-	for (x = 0; x < usb_clist.cnt; x++) {
-		if (usb_clist.ctrls[x].disabled)
-			continue;
-		port = &usb_clist.ctrls[x].ports[0];
-		for (y = 0; y < usb_clist.ctrls[x].port_cnt; y++, port++)
-			if (!port->disabled) {
-				if (port->type == USB_PORT_TYPE_OHCI)
-					usb_reset_ohci(port->regs);
-				else if (port->type == USB_PORT_TYPE_EHCI)
-					usb_reset_ehci(port->regs);
-			}
-	}
+	for (idx = 0; idx < usb_buscnt; idx++)
+		if (usb_buses[idx])
+			UBRESET(usb_buses[idx]);
 	return 0;
 }
 
@@ -269,9 +311,11 @@ int usb_exit(void)
 static int usb_system_init(void)
 {
 	struct usb_port *port;
+	uint32_t ctrl;
 	int x;
 	int y;
 	int ehci_enabled = 1, ohci_enabled = 1, bdc_enabled = 1;
+	int xhci_enabled = 1;
 	static const char *ipp_msgs[] = {
 		"active high",
 		"active low",
@@ -285,6 +329,9 @@ static int usb_system_init(void)
 
 	initdone = 1;
 	usb_buscnt = 0; /* reset count so we can scan again. */
+
+	if (env_getenv("XHCIOFF"))
+		xhci_enabled = 0;
 
 	if (env_getenv("EHCIOFF"))
 		ehci_enabled = 0;
@@ -308,10 +355,20 @@ static int usb_system_init(void)
 		}
 		for (y = 0; y < usb_clist.ctrls[x].port_cnt; y++) {
 			port = &usb_clist.ctrls[x].ports[y];
+#ifdef BCHP_USB_CTRL_USBD_DRD_STATUS
+			ctrl = usb_clist.ctrls[x].ctrl_regs +
+				(BCHP_USB_CTRL_USBD_DRD_STATUS -
+					BCHP_USB_CTRL_SETUP);
+#else
+			ctrl = 0;
+#endif
 
 			/* Port init */
 			if (!port->disabled) {
-				if (port->type == USB_PORT_TYPE_EHCI) {
+				if (port->type == USB_PORT_TYPE_XHCI) {
+					if (xhci_enabled)
+						usb_init_one_xhci(port->regs);
+				} else if (port->type == USB_PORT_TYPE_EHCI) {
 					if (ehci_enabled)
 						usb_init_one_ehci(port->regs);
 				} else if (port->type == USB_PORT_TYPE_OHCI) {
@@ -320,7 +377,7 @@ static int usb_system_init(void)
 				} else if (port->type == USB_PORT_TYPE_BDC) {
 					if (bdc_enabled &&
 						usb_clist.ctrls[x].device_mode)
-						usb_init_bdc(port->regs);
+						usb_init_bdc(port->regs, ctrl);
 				}
 			}
 		}
@@ -354,10 +411,6 @@ static int usb_system_exit(void)
 
 static int ui_cmd_usb_start(ui_cmdline_t *cmd, int argc, char *argv[])
 {
-	if (cmd_sw_isset(cmd, "-o"))
-		ohcidebug++;
-	if (cmd_sw_isset(cmd, "-oo"))
-		ohcidebug += 2;
 	if (cmd_sw_isset(cmd, "-u"))
 		usb_noisy++;
 	if (cmd_sw_isset(cmd, "-uu"))
@@ -516,11 +569,6 @@ int usb_board_init(struct usb_controller_list *clist)
 	struct brcm_usb_common_init_params params;
 	int x;
 
-	/* Disable XHCI so 3.0 devices will be recognized as 2.0
-	 * devices by BOLT.
-	 */
-	params.has_xhci = 0;
-
 	for (x = 0; x < clist->cnt; x++) {
 		struct usb_controller *ctl = &clist->ctrls[x];
 
@@ -530,6 +578,8 @@ int usb_board_init(struct usb_controller_list *clist)
 		params.device_mode = ctl->device_mode;
 		params.ioc = ctl->ioc;
 		params.ipp = ctl->ipp;
+		params.has_xhci = ctl->has_xhci;
+		params.xhci_ec_regs = ctl->xhci_ec_regs;
 		brcm_usb_common_init(&params);
 	}
 

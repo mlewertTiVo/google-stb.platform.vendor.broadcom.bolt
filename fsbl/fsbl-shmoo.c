@@ -40,34 +40,29 @@ static struct memsys_info *mcb_subtable = NULL;
 
 /* loadable shmoo code */
 static const struct memsys_interface *gmemsys;
-static int gloud_shmoo;
+static bool gloud_shmoo;
 
 
 /* ------------------------------------------------------------------------- */
 
 void set_loud_shmoo(void)
 {
-	gloud_shmoo = 1;
+	gloud_shmoo = true;
 	puts(" [shmoo messages on]");
 }
 
-
-static void print_shmoo_version(void)
+static void print_shmoo_version(memsys_version_t *shmoo_ver)
 {
-	memsys_version_t v;
-
-	gmemsys->get_version(&v);
-
-	report_hex("@SHMOO ", v.version);
+	report_hex("@SHMOO ", shmoo_ver->version);
 
 	__puts(" BLD:");
-	__puts(v.build_ver);
+	__puts(shmoo_ver->build_ver);
 
 	__puts(" HW:");
-	__puts(v.hw_ver_str);
+	__puts(shmoo_ver->hw_ver_str);
 
-	__puts(" V:");
-	__puts(v.ver_str);
+	__puts(" shmoo_ver:");
+	__puts(shmoo_ver->ver_str);
 
 #if 0 /* debug */
 	__puts(" EDIS:");
@@ -141,20 +136,7 @@ static int is_valid_mcb(struct memsys_info *mi)
 	return 1;
 }
 
-
-static int wrap_putchar(char c)
-{
-	putchar((int)c);
-	return 0;
-}
-
-static int wrap_delay_us(uint32_t us)
-{
-	udelay(us);
-	return 0;
-}
-
-static void print_shmoo_error(memsys_error_t *e)
+void print_shmoo_error(memsys_error_t *e)
 {
 	unsigned int idx;
 
@@ -174,101 +156,27 @@ static void print_shmoo_error(memsys_error_t *e)
 	}
 }
 
-
-static void do_shmoo(const struct ddr_info *ddr, uint32_t *mcb, bool warm_boot)
-{
-	uint32_t ret;
-	int memc = ddr->which;
-	const struct memsys_params *p = &shmoo_params[memc];
-	memsys_top_params_t params;
-	memsys_system_callbacks_t cb;
-
-	__puts(" MEMSYS-");
-	putchar('0' + memc);
-	report_hex("@ @ ", p->memc_reg_base);
-	putchar(' ');
-
-	memset(&params, 0, sizeof(params));
-	memset(&cb, 0, sizeof(cb));
-
-	cb.delay_us = wrap_delay_us,
-	cb.putchar = wrap_putchar,
-	cb.get_time_us = get_time_us,
-
-	params.version = MEMSYS_FW_VERSION;
-	params.edis_info = (EDIS_NPHY) | ((EDIS_OFFS) << 4);
-
-	params.mem_test_size_bytes = _KB(128);
-	params.phys_mem_test_base = _MB(ddr->base_mb);
-
-	params.phys_memc_reg_base = p->memc_reg_base;
-	params.phys_phy_reg_base  = p->phy_reg_base;
-	params.phys_shim_reg_base = p->shim_reg_base;
-	params.phys_edis_reg_base = p->edis_reg_base;
-	params.saved_state_base = (uint32_t *)MEMSYS_STATE_REG_ADDR(memc);
-	params.callbacks = &cb;
-	params.mcb_addr = (const uint32_t *)mcb;
-
-	params.options = MEMSYS_OPTION_SAVE_PHY_STATE |
-			MEMSYS_OPTION_PREP_PHY_FOR_STANDBY |
-			MEMSYS_OPTION_PHY_LOW_POWER_AT_STANDBY;
-
-	if (!gloud_shmoo)
-		params.options |= MEMSYS_OPTION_CONSOLE_OUTPUT_DISABLED;
-
-	if (warm_boot)
-		params.options |= MEMSYS_OPTION_WARM_BOOT;
-
-	ret = gmemsys->init(&params);
-	if (ret != 0) {
-		__puts("\nMEMSYS ERROR: ");
-		writehex(ret);
-		puts("\n");
-		print_shmoo_error(&params.error);
-		sec_memsys_set_status(0); /* bad */
-		/* Does not return */
-	}
-
-	sec_memsys_set_status(1); /* success */
-}
-
-
-/* ------------------------------------------------------------------------- */
-
-#if 0 /* debug */
-void dump_shmoo(uint32_t *src, uint32_t words)
-{
-	int a;
-
-	crlf();
-	for (a = 0; a < words; a++) {
-		report_hex("@ ", (uint32_t)a);
-		report_hex(" - ", (uint32_t)src[a]);
-	}
-	crlf();
-}
-#endif
-
-
-/* ------------------------------------------------------------------------- */
-
-void memsys_load(void)
+uint32_t memsys_load(void)
 {
 	uint32_t *dst = (uint32_t *)MEMSYS_SRAM_ADDR;
+	memsys_version_t v;
 
 	gmemsys = (const struct memsys_interface *)dst;
 
 	if (gmemsys->signature != BOARD_MSYS_MAGIC)
 		memsys_die(DIE_BAD_BOARD_MSYS_MAGIC, "bad ms");
 
-	gloud_shmoo = 0;
+	gloud_shmoo = false;
 	gmemsys->setup();
-	print_shmoo_version();
+	gmemsys->get_version(&v);
+	print_shmoo_version(&v);
 
 	mcb_table = gmemsys->shmoo_data;
 
 	__puts("MCB: F");
 	(mcb_table) ? puts("IX") : puts("LEX");
+
+	return v.version;
 }
 
 
@@ -427,6 +335,7 @@ void shmoo_set(const struct ddr_info *ddr, bool warm_boot)
 	uint32_t *template, *dst = (uint32_t *)SHMOO_SRAM_ADDR;
 	uint32_t bytes, *v, *scratch, count = 0, csum = 0;
 	static uint32_t *v_saved = NULL;
+	uint32_t options = 0;
 
 	if (gmemsys->shmoo_data) {
 		__puts("*");
@@ -521,7 +430,12 @@ void shmoo_set(const struct ddr_info *ddr, bool warm_boot)
 	report_hex("@@ ", (uint32_t)scratch);
 	report_hex("@ <= ", (uint32_t)v_saved);
 
-	do_shmoo(ddr, scratch, warm_boot);
+	if (!gloud_shmoo)
+		options |= SHMOO_OPTION_DISABLE_CONSOLE;
+	if (warm_boot)
+		options |= SHMOO_OPTION_WARMBOOT;
+
+	do_shmoo(gmemsys, ddr, scratch, options);
 }
 
 
@@ -599,4 +513,3 @@ void shmoo_menu(struct board_nvm_info *nvm)
 }
 
 #endif	/* CFG_EMULATION || CFG_NOSHMOO */
-

@@ -128,18 +128,20 @@ endif
 
 # -------- security version --------
 ifeq ($(CFG_ZEUS4_1),1)
-ZEUS_VER:=zeus41
+   ZEUS_VER:=zeus41
 endif
 ifeq ($(CFG_ZEUS4_2),1)
-ZEUS_VER:=zeus42
+   ZEUS_VER:=zeus42
+   ifneq ($(STUB64_START),)
+      ZEUS_VER:=$(ZEUS_VER)stub
+   endif
+endif
+ifeq ($(CFG_ZEUS5_0),1)
+   ZEUS_VER:=zeus50
 endif
 
 ifeq ($(ZEUS_REVOCATION),1)
-ZEUS_VER:=$(ZEUS_VER)revoc
-endif
-
-ifneq ($(STUB64_START),)
-ZEUS_VER:=$(ZEUS_VER)stub
+   ZEUS_VER:=$(ZEUS_VER)revoc
 endif
 
 # ----------------------------------
@@ -288,7 +290,7 @@ $(ODIR)/psci32.bin: $(ODIR)/psci32.elf $(ODIR)/psci32.asm
 
 ################################################################################
 
-$(ODIR)/fsbl.o: $(FSBL_O) $(ODIR)/fsbl.lds $(BSL) $(ASL) $(LIBGCC)
+$(ODIR)/fsbl.o: $(FSBL_O) $(ODIR)/fsbl.lds $(BSL) $(ASL) $(LIBGCC) $(LIB_MEMSYS_SUPP)
 	$(call pretty_print,LD,$@)
 	$(Q)$(LD) $(LDFLAGS) --gc-sections -T $(ODIR)/fsbl.lds -o $@ $(filter-out %.lds, $^)
 

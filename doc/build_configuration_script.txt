@@ -291,6 +291,7 @@ Commands that are enacted at build time.
     cset
     dt autogen
     dts
+    dtsinclude
     gset
     i2cbus
     ldfile
@@ -777,10 +778,11 @@ prevented from being programmed ('-').
  dts
 ~~~~
 Usage: dts <FILE> <LOAD ADDRESS>
+       dts -include <FILE>
 
 Note: Select a Device Tree file to be used by BOLT.
 
-See also: n/a
+See also: dtsinclude
 
 Example:
 ----
@@ -794,6 +796,27 @@ will incorporate into its build.
 The 'dt bolt' user interface command, or
 launching a program will modify this file
 based on runtime values.
+
+
+dtsinclude
+~~~~
+Usage: dtsinclude -file <FILE>
+       dts -include <FILE>
+
+Note: Indicates that Device Tree fragments need to be included by the
+family DTS file specified by the "dts" command.
+
+See also: dts
+
+Example:
+----
+dtsinclude -file config/foo.dts
+----
+
+Choose a Device Tree source file (*.dts) that BOLT
+will include within the Device Tree source file specified by the
+"dts" command. Using this option allows including several Device Tree sources
+fragments which can override the family's DTS file.
 
 
 

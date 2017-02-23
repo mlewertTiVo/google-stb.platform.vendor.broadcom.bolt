@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -18,6 +18,7 @@
 #include "fsbl-clock.h"
 #include "fsbl-hacks.h"
 #include "fsbl-pm.h"
+#include "fsbl-dtu.h"
 #include "boot_defines.h"
 
 #include <bchp_common.h>
@@ -143,9 +144,11 @@ void fsbl_main(void)
 	int en_avs_thresh;
 #ifndef SECURE_BOOT
 	int bypass_avs;
-#ifdef DVFS_SUPPPORT
+	struct boards_nvm_list *nvm_boards;
+#ifdef DVFS_SUPPORT
 	struct clock_divisors cpu_clks;
 	struct clock_divisors scb_clks;
+	uint8_t sysif_mdiv;
 #endif
 #endif
 	uint32_t mhl_power;
@@ -197,7 +200,7 @@ void fsbl_main(void)
 
 	sec_init(); /* send out memsys_ready_for_init and get boot parameter */
 
-#if !CFG_ZEUS4_2
+#if !(CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	sec_bfw_load(warm_boot);
 #endif
 
@@ -256,19 +259,30 @@ void fsbl_main(void)
 	do_shmoo_menu = board_select(&info, SHMOO_SRAM_ADDR);
 
 #ifndef SECURE_BOOT
-	/* save PMap data, or will be overwritten by loading Shmoo */
+	/* save PMap data, or will be overwritten by loading Shmoo
+	 *
+	 * At SHMOO_SRAM_ADDR, 'struct boards_nvm_list' has been loaded
+	 * from the '.boards' flash partition.  The pointer to the table
+	 * of available PMap's has to be converted into FSBL's address
+	 * space from the flash partition address space.
+	 */
+	nvm_boards = (struct boards_nvm_list *) SHMOO_SRAM_ADDR;
+	nvm_boards->pmap_table = (struct pmap_entry *)
+		((physaddr_t)SHMOO_SRAM_ADDR +
+			(physaddr_t)nvm_boards->pmap_table);
 	pmap_id = FSBL_HARDFLAG_PMAP_ID(info.saved_board.hardflags);
 	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD)
 		/* board default PMap ID as it is overridden */
 		pmap_id = AVS_PMAP_ID(info.board_types[info.board_idx].avs);
-	if (pmap_id >= info.n_pmaps)
+	if (pmap_id >= nvm_boards->n_pmaps)
 		pmap_id = 0; /* fall back to PMap ID #0 */
-#ifdef DVFS_SUPPPORT
-	cpu_clks = info.pmap_table[pmap_id].cpu;
-	scb_clks = info.pmap_table[pmap_id].scb;
+#ifdef DVFS_SUPPORT
+	cpu_clks = nvm_boards->pmap_table[pmap_id].cpu;
+	scb_clks = nvm_boards->pmap_table[pmap_id].scb;
+	sysif_mdiv = nvm_boards->pmap_table[pmap_id].sysif_mdiv;
 #endif
 #else /* SECURE BOOT */
-#if CFG_ZEUS4_2
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	pmap_id =  DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1) &
 			PARAM_AVS_PARAM_1_PMAP_MASK;
 #endif
@@ -277,7 +291,7 @@ void fsbl_main(void)
 	/* CAUTION: load memsys *before* shmoo data. We may
 	use FIXed MCB tables, so allow an override. */
 	sec_verify_memsys();
-	memsys_load();
+	info.shmoo_ver = memsys_load();
 	shmoo_load();
 
 #ifdef SECURE_BOOT
@@ -306,12 +320,12 @@ void fsbl_main(void)
 	info.avs_err = avs_err;
 
 #ifndef SECURE_BOOT
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 	/* If AVS was bypassed or failed to start, it could not set
 	 * SCB and CPU speeds. We are on our own.
 	 */
 	if (bypass_avs || !avs_en)
-		apply_dvfs_clocks(cpu_clks, scb_clks);
+		apply_dvfs_clocks(cpu_clks, scb_clks, sysif_mdiv);
 #endif
 #endif
 
@@ -334,10 +348,13 @@ void fsbl_main(void)
 			puts("-");
 		}
 	}
+	dtu_preparation(b->nddr);
 
 	sec_memsys_region_disable();
 
 	sec_scramble_sdram(warm_boot);
+
+	dtu_load(b, warm_boot);
 
 	/*
 	 * Only 16 bit of AON_SYSTEM_DATA[0] is used to check s3 warm boot in
@@ -346,7 +363,7 @@ void fsbl_main(void)
 	 */
 	restore_val = AON_REG(AON_REG_MAGIC_FLAGS);
 
-#if CFG_ZEUS4_2
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	if (warm_boot)
 		AON_REG(AON_REG_MAGIC_FLAGS) = BRCMSTB_S3_MAGIC;
 
@@ -361,7 +378,7 @@ void fsbl_main(void)
 	}
 
 	if (warm_boot)
-		fsbl_finish_warm_boot(restore_val);
+		fsbl_finish_warm_boot(restore_val, b->nddr);
 
 	fsbl_setup_mmu(b);
 
@@ -433,7 +450,7 @@ void *copy_code(void)
 	getchar();
 	getchar();
 #else
-#if (CFG_ZEUS4_2 || CFG_ZEUS4_1)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	struct fsbl_flash_partition flash;
 	uint32_t ctrl_word, flash_offs, ssbl_size;
 

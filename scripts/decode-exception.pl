@@ -431,7 +431,7 @@ sub report_is_bolt_address_sane($)
 
 	# BOLT normal access may be one of:
 	# * From SSBL_PAGE_TABLE to stacktop.
-	# * Flash/EBI @ 0xe0000000 (BOLT_TEXT_ADDR) to += ~256MiB
+	# * Flash/EBI @ BOLT_TEXT_ADDR to += ~256MiB
 	# * RDB (BCHP_PHYSICAL_OFFSET): BCHP_REGISTER_START to BCHP_REGISTER_END
 	# * SRAM
 
@@ -450,8 +450,8 @@ sub report_is_bolt_address_sane($)
 				"", "", "", 0);
 	notski($rc, "SSBL program code", $ssbl_start, $ssbl_end);
 
-	# EBI, hard wired for now.
-	my $ebi_base = 0xE0000000;
+	# EBI
+	my $ebi_base = cfg_value("BOLT_TEXT_ADDR");
 	my $ebi_top = $ebi_base + 256 * (1024 * 1024);
 
 	$rc = __address_sane($addr, $ebi_base, $ebi_top,

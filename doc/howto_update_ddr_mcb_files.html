@@ -1,0 +1,1048 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Using an FAE supplied <em>.mcb</em> file for your DDR</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(4);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1>Using an FAE supplied <em>.mcb</em> file for your DDR</h1>
+<span id="author">Broadcom Ltd</span><br />
+<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>This text applies to the standard BOLT release using
+the <em>flexible</em> configuration where multiple MCB data
+(to support lots of DDRs) is stored in the SHMOO
+subsection of BOLT.</p></div>
+<div class="paragraph"><p>For the <em>fixed</em> configuration where only a small subset
+(equal to the number of DDR controllers on the chip) is
+stored in the MEMSYS subsection of BOLT please see the
+<em>ddr</em> command entry in doc/build_configuration_script.txt.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_example_sequence">1.  Example sequence</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+Find out which shmoo you are currently using. Look
+in your config file for the line <em>gset MEMC_REV</em>
+The associated text is a subdirectory of shmoo,
+e.g. For 7364a0, it is <em>B150_F002</em>. So, <em>shmoo/B150_F002/mcb/</em>
+will show you associated mcb files. The memc IP block may
+be used in many different chips, so its shared this way.
+</p>
+</li>
+<li>
+<p>
+Drop your mcb file in with all the others. Please note that
+the file name format is of the form:
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>  {family}_{SPEED}MHz_{PHY}b_dev{SIZE}{G|M}x{WIDTH}_{STD_NAME}_le.mcb</code></pre>
+</div></div>
+<div class="paragraph"><p>e.g.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>  7364A0_1067MHz_16b_dev4Gx16_DDR3-2133N_le.mcb
+  7364A0_800MHz_16b_dev4Gx8_DDR3-1600K_le.mcb</code></pre>
+</div></div>
+<div class="paragraph"><p>The build system needs MCB files to be named like the above to be
+able to pick them up and parse the numbers in them. Rename your mcb
+file to this format, if required. <em>common</em> at the {family} position
+is a special name for MCB&#8217;s that can be shared by multiple families.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The shmoo build process takes the contents of these files and
+creates mcb-{family}.c which condenses all the available ones down
+into a single C file for BOLT to build in, e.g. for 7364a0 that is
+the file <em>shmoo/B150_F002/mcb-7364a0.c</em>. Please note that the
+existence of a family specific mcb-{family}.c prevents mcb-common.c
+from being included in the family BOLT build.
+</p>
+</li>
+<li>
+<p>
+Make a new (or update an existing) mcb-{family}.c
+</p>
+</li>
+<li>
+<p>
+Rebuild BOLT to pick up the changes.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>e.g.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make distclean
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make ddr_update <span style="color: #009900">FAMILY</span><span style="color: #990000">=</span>7364a0 <span style="color: #009900">MEMC_REV</span><span style="color: #990000">=</span>B150_F002
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make 7364a0</tt></pre></div></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_another_example_using_7445d0">2. Another example (using 7445d0)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>From config/family-7445d0.cfg:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>...
+...
+ gset MEMC_REV B130_F001
+...
+...</code></pre>
+</div></div>
+<div class="paragraph"><p>This tells you you the specific shmoo is in the shmoo/B130_F001 directory.
+B130 = memc revision, F001 = phy revision.</p></div>
+<div class="paragraph"><p>Re-create the mcb-7445d0.c file so BOLT knows about it, then rebuild BOLT:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make clean
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make ddr_update <span style="color: #009900">FAMILY</span><span style="color: #990000">=</span>7445d0 <span style="color: #009900">MEMC_REV</span><span style="color: #990000">=</span>B130_F001
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make 7445d0</tt></pre></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">As seen in the previous examples you may need to do a <em>make clean</em>
+or a <em>make distclean</em> before <em>make ddr_update</em> to see a change in the
+specific mcb-$(FAMILY).c file.</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dual_memsys_alternate_memsys">3. Dual MEMSYS (alternate MEMSYS)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>To support DDR4 at runtime as well as DDR3 on Broadcom reference boards
+we have split the section reserved in BOLT for the MEMSYS code (and
+optional MCB data) into two sub-sections. MEMC_REV is the lower,
+MEMC_ALT is the upper sub-section.</p></div>
+<div class="paragraph"><p>We can now select a completely different SHMOO (memsysinitlib.a)
+code library, its path is set in MEMC_ALT instead of MEMC_REV in
+the chip family configuration file.</p></div>
+<div class="paragraph"><p>For the default build it does not mean it selects MCB files in
+the shmoo/${MEMC_ALT}/mcb directory. Currently they are still a
+common resource and still located in the shmoo/${MEMC_REV}/mcb
+directory or a sub-directory of that.</p></div>
+<div class="paragraph"><p>As there may be MCBs with identical selection parameters
+(clock, phy width, ddr data bus width) for both the DDR3 and DDR4 we
+have to differentiate them to avoid parameter clashes, and the
+possibility of ending up using the wrong MCB. The way we do this
+is to use the script <em>ddr</em> command flag <em>-custom</em> for DDR4.</p></div>
+<div class="paragraph"><p>e.g.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>[board MY_DDR4_BOARD chip.7445d0]
+ ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+ ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+ ddr -n 2 -size_mb 1024 -base_mb 2048 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4</code></pre>
+</div></div>
+<div class="paragraph"><p>Please refer to the <em>ddr</em> command <span class="footnote"><br />[<a href="build_configuration_script.html#_ddr">build_configuration_script.html#_ddr</a>]<br /></span>
+on how to specify (and the limitations) of using the <em>-custom</em> parameter. After adding a
+custom MCB do <em>make ddr_update</em> before re-making BOLT.</p></div>
+<div class="paragraph"><p>The selection of which MEMSYS is on a per board basis and controlled at build time via the <em>memsys</em>
+script configuration command <span class="footnote"><br />[<a href="build_configuration_script.html#_memsys">build_configuration_script.html#_memsys</a>]<br /></span>. It is
+strongly recommended that you review the documentation for that command.</p></div>
+<div class="sect2">
+<h3 id="_for_secure_builds_secure_boot_y">3.1.   For secure builds (SECURE_BOOT=y)</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+The MCBs are placed in the MEMSYS section of BOLT (instead of the SHMOO section)
+via the <em>-fixed</em> flag to the <em>ddr</em> script command.
+</p>
+</li>
+<li>
+<p>
+The generated memsys.bin file is only the <em>lower</em> portion,
+i.e. it includes MEMC_REV, but not the MEMC_ALT SHMOO code library.
+</p>
+</li>
+<li>
+<p>
+A board configuration that requires MEMC_ALT must be re-arranged to use
+MEMC_REV (i.e. replace the memsysinitlib.a) and any custom MCBs for DDR4
+renamed to comply with the standard naming convention for MCBs.
+</p>
+</li>
+<li>
+<p>
+References to MEMC_ALT in the chip family configuration file must be removed,
+i.e. remove the <em>gset MEMC_ALT &#8230;</em> line.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_an_example_of_moving_memc_alt_into_memc_rev">3.2.  An example of moving MEMC_ALT into MEMC_REV</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> mv shmoo/B130_F001_DDR4/lib/memsysinitlib<span style="color: #990000">.</span>a shmoo/B130_F001/lib/memsysinitlib<span style="color: #990000">.</span>a
+
+ <span style="font-style: italic"><span style="color: #9A1900"># Get rid of DDR3 MCBs</span></span>
+ rm shmoo/B130_F001/mcb<span style="color: #990000">/*.</span>mcb
+
+ <span style="font-style: italic"><span style="color: #9A1900"># Move and rename the DDR4 MCBs so we can get rid of the '-custom' flag</span></span>
+ <span style="font-style: italic"><span style="color: #9A1900"># Note that use of the '-custom' flag for secure boot is prohibited.</span></span>
+ mv shmoo/B130_F001/mcb<span style="color: #990000">/</span>7445d0<span style="color: #990000">/*.</span>mcb shmoo/B130_F001/mcb
+ mv shmoo/B130_F001/mcb/ddr4_1067MHz_32b_dev4Gx16_DDR4-2133R_le<span style="color: #990000">.</span>mcb shmoo/B130_F001/mcb<span style="color: #990000">/</span>7445D0_1067MHz_32b_dev4Gx16_DDR4-2133R_le<span style="color: #990000">.</span>mcb
+ mv shmoo/B130_F001/mcb/ddr4_1200MHz_32b_dev4Gx16_DDR4-2400R_le<span style="color: #990000">.</span>mcb shmoo/B130_F001/mcb<span style="color: #990000">/</span>7445D0_1200MHz_32b_dev4Gx16_DDR4-2400R_le<span style="color: #990000">.</span>mcb</tt></pre></div></div>
+<div class="paragraph"><p>Edit the chip family config file to use <em>-fixed</em> instead of <em>-custom</em>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>--- a/config/family-7445d0.cfg
++++ b/config/family-7445d0.cfg
+- gset MEMC_ALT B130_F001_DDR4
+- memsys alt
+- ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+- ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
+
++ ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -fixed -
++ ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -fixed -</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">We also edit out all but one [board] section of interest and make sure
+we only have two <em>ddr</em> commands in that file.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>If memsysinitlib.a plus the MCBs increases image size, make room:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>--- a/config/layout-zeus42.cfg
++++ b/config/layout-zeus42.cfg
+@@ -29,7 +29,7 @@
+  # AVS firmware data
+  section -name AVS    -off 0x00051000 -size 0x00004000
+  # MEMSYS (32KiB + 32KiB alternate)
+- section -name MEMSYS -off 0x00055000 -size 0x00006600
++ section -name MEMSYS -off 0x00055000 -size     0x00006f80
+  section -name MEMSYS_ALT -off 0x0005D000 -size 0x00006df0
+  # MCB data + board infos &lt;= 0x6000
+  section -name SHMOO  -off 0x00065000 -size 0x00001000</code></pre>
+</div></div>
+<div class="paragraph"><p>Now rebuild:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make ddr_update <span style="color: #009900">FAMILY</span><span style="color: #990000">=</span>7445d0 <span style="color: #009900">MEMC_REV</span><span style="color: #990000">=</span>B130_F001
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make 7445d0</tt></pre></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">An alternate to replacing shmoo/${MEMC_REV} files is to populate
+shmoo/${MEMC_ALT} with DDR4 MCBs, include file(s) and set
+MEMC_REV in your chip family config file to point to it.</td>
+</tr></table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">4. Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

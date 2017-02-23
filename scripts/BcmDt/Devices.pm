@@ -211,18 +211,29 @@ sub output_default($)
 	my $default = shift;
 	my $t = '';
 	my %formatters = (
+		# each formatter must be an array of three.
 		"hex" => [ '<', '0x%x', '>' ],
 		"dec" => [ '<', '%d', '>' ],
 		"phandle" => [ '<', '&%s', '>' ],
 		"string" => [ '"', '%s', '"' ],
+		"bool" => [ '', '', '',],
 	);
 
 	my @keys = sort keys %$default;
 	foreach (@keys) {
 		my $x = $default->{"$_"};
 		my $fmt;
+		my $simple_string = "ARRAY" ne ref $x;
+		# Booleans are a special case, handle them here.
+		if (!$simple_string && $x->[0] eq 'bool') {
+		    $t .= "$_;\n" if $x->[1];
+		    next;
+		}
 		$t .= sprintf("%s = ", $_);
-		if ("ARRAY" eq ref $x) {
+		if ($simple_string) {
+			$fmt = join('', @{$formatters{"string"}});
+			$t .= sprintf($fmt, $x);
+		} else {
 			$t .= $formatters{"$x->[0]"}[0];
 			if ("ARRAY" eq ref $x->[1]) {
 				my ($join, $i);
@@ -242,9 +253,6 @@ sub output_default($)
 				$t .= sprintf($formatters{"$x->[0]"}[1], $x->[1]);
 			}
 			$t .= $formatters{"$x->[0]"}[2];
-		} else {
-			$fmt = join('', @{$formatters{"string"}});
-			$t .= sprintf($fmt, $x);
 		}
 		$t .= ";\n";
 	}
@@ -684,6 +692,8 @@ sub start_uart_body($$$$$$)
 	$t .= sprintf("reg = <%s>;\n", $reg_addrs);
 	$t .= sprintf("reg-names = \"%s\";\n", $reg_names);
 	$t .= output_interrupt_prop($rh, \@intrs);
+	$t .= "fifo-size = <0x20>;\n";
+	$t .= "auto-flow-control;\n";
 	return $t;
 }
 
@@ -804,6 +814,8 @@ sub add_bsc($$$$)
 
 	my %default = ("compatible" => "brcm,brcmstb-i2c",
 		        '#interrupt-cells' => [ "dec", 1 ],
+			"#address-cells" => [ "dec", 1 ],
+			"#size-cells" => [ "dec", 0 ],
 		      );
 
 	my @clk_frequency = (390000) x $n;
@@ -915,7 +927,15 @@ sub add_usb_v2($$$$$)
 		$t .= sprintf("%s;\n", 'ranges');
 		my ($xhci_start, $xhci_size) 
 			= get_reg_range($rh, "${pre}_XHCI");
-		$t .= "has_xhci;\n" if $xhci_start;
+		if ($xhci_start) {
+		    my ($ehci_start, $ehci_size)
+			= get_reg_range($rh, "${pre}_EHCI");
+		    if ($ehci_start) {
+			$t .= "has_xhci;\n";
+		    } else {
+			$t .= "has_xhci_only;\n";
+		    }
+		}
 		$t .= "};\n";
 		if ($dt) {
 			$dt->add_node(DevTree::node->new($t));
@@ -1724,17 +1744,33 @@ sub add_clocks($$$$)
 
 	$dt->add_node(DevTree::node->new($t));
 
+	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
+	my $chip = sprintf("%x", BcmUtils::get_chip_family_id($bchp_defines));
+	my $chip_rev = sprintf("%c",
+		((BcmUtils::get_chip_family_rev($bchp_defines) >> 4) & 0xf) +
+		ord('a'));
+	my $clks_file = "config/clks-" . "$chip${chip_rev}0" . ".plx";
+
+	my $cpu_clk_div_clocks = [ 'cpupll' ];
+	# We want phandles for these clocks inside brcm,brcmstb-cpu-clk-div.
+	# But only if there's a clocks file for our chip.
+	if (-f $clks_file) {
+		push(@$cpu_clk_div_clocks, ('cpu_mdiv_ch0', 'cpu_ndiv_int',
+						'sw_scb'));
+	}
 	my %cpuclk_default = (compatible => 'brcm,brcmstb-cpu-clk-div',
+		'clock-names' => [ 'string', $cpu_clk_div_clocks ],
+		'clocks' => [ 'phandle', $cpu_clk_div_clocks ],
 		'#clock-cells' => [ 'dec', 0 ],
-		'clocks' => [ 'phandle', 'cpupll' ],
 		);
+
 	override_default(\%cpuclk_default, $info);
 
 	my $beg = bphysaddr($rh,
 		$bchp_defines->{BCHP_HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG});
 
-	$t = sprintf("cpuclkdiv: cpu-clk-div\@0 {\n");
-	insert_label("cpuclkdiv", "cpu-clk-div\@0");
+	$t = sprintf("cpuclkdiv : cpu_clk_div\@0 {\n");
+	insert_label("cpuclkdiv", "cpu_clk_div\@0");
 	$t .= output_default(\%cpuclk_default);
 	$t .= sprintf("reg = <0x%x 0x4>;\n", $beg);
 	if (exists $info->{'-cpu-div-table'}) {
@@ -2366,15 +2402,26 @@ sub add_nand($$$$$)
 sub add_gic($$$)
 {
 	my ($dt, $rh, $n_gic) = @_;
+	my $bchp_defines = $rh->{rh_defines};
 
 	return if (!$n_gic);
 
-	my $t = sprintf("intc: interrupt-controller\@ffd00000 {\n");
+	my $t = sprintf("intc: interrupt-controller");
+	if ($bchp_defines->{"BCHP_PHYSICAL_OFFSET"} == 0x08000000) {
+		$t .= sprintf("\@00200000 {\n");
+	} else {
+		$t .= sprintf("\@ffd00000 {\n");
+	}
 	$t .= sprintf("compatible = \"arm,cortex-a15-gic\";\n");
 	$t .= sprintf("interrupt-controller;\n");
 	$t .= sprintf("#interrupt-cells = <0x3>;\n");
-	$t .= sprintf("reg = <0x00 0xffd01000 0x00 0x1000>,\n");
-	$t .= sprintf("<0x00 0xffd02000 0x00 0x2000>;\n");
+	if ($bchp_defines->{"BCHP_PHYSICAL_OFFSET"} == 0x08000000) {
+		$t .= sprintf("reg = <0x00 0x00201000 0x00 0x1000>,\n");
+		$t .= sprintf("<0x00 0x00202000 0x00 0x2000>;\n");
+	} else {
+		$t .= sprintf("reg = <0x00 0xffd01000 0x00 0x1000>,\n");
+		$t .= sprintf("<0x00 0xffd02000 0x00 0x2000>;\n");
+	}
 	$t .= "reg-names = \"dist\", \"cpu\";\n";
 	$t .= "};\n";
 	$dt->add_node(DevTree::node->new($t));
@@ -2634,16 +2681,28 @@ sub add_smpboot($$)
 	$dt->add_node($smpboot_node);
 }
 
-sub add_systemport($$$$)
+sub add_systemport($$$$$)
 {
-	my ($dt, $rh, $info, $l2_intr) = @_;
-	my ($i, $str, $intr);
+	my ($dt, $rh, $n_systemport, $info, $l2_intr) = @_;
+	my ($i, $num, $str, $intr);
 	my $bchp_defines = $rh->{rh_defines};
+	my $tmp = sprintf("BCHP_SYSTEMPORTLITE_%d_TOPCTRL_REG_START", $n_systemport - 1);
+	my $is_lite = defined($bchp_defines->{$tmp}) ? 1 : 0;
+	my ($prefix, $bchp_prefix);
+
+	if ($is_lite eq 1 and $n_systemport > 1) {
+		$prefix = "SYSTEMPORTLITE";
+		$bchp_prefix = sprintf("%s_%d", $prefix, $n_systemport - 1);
+	} else {
+		$prefix = "SYSTEMPORT";
+		$bchp_prefix = $prefix;
+	}
 
 	my %default = ("compatible" => [ 'string',
-			[ sprintf("brcm,systemport-v%d.%02d",
-			$bchp_defines->{BCHP_SYSTEMPORT_TOPCTRL_REV_CNTL_SYS_PORT_REV_DEFAULT} >> 8,
-			$bchp_defines->{BCHP_SYSTEMPORT_TOPCTRL_REV_CNTL_SYS_PORT_REV_DEFAULT} & 0xff),
+			[ sprintf("brcm,%s-v%d.%02d",
+			lc($prefix),
+			$bchp_defines->{"BCHP_".$bchp_prefix."_TOPCTRL_REV_CNTL_SYS_PORT_REV_DEFAULT"} >> 8,
+			$bchp_defines->{"BCHP_".$bchp_prefix."_TOPCTRL_REV_CNTL_SYS_PORT_REV_DEFAULT"} & 0xff),
 			"brcm,systemport" ] ],
 		       "device_type" => "network",
 		       "fixed-link" => [ 'dec', [ 0, 1, 1000, 0, 0 ] ],
@@ -2657,39 +2716,61 @@ sub add_systemport($$$$)
 		      );
 
 	override_default(\%default, $info);
-	return if ($info->{'-choose'} && !$info->{'-choose'}->[0]);
-	my ($beg, $size)
-		= get_reg_range_from_regexp($rh, "^BCHP_SYSTEMPORT_");
-	my @intr_prop;
-	for ($i = 0; $i < 2; $i++) {
-		my $intr_name = sprintf('SYSTEMPORT_%s', $i);
-		$intr = find_l1_interrupt($bchp_defines, $intr_name);
-		last if !defined $intr;
-		push @intr_prop, { "irq" => $intr, "name" => lc($intr_name), };
+
+	for ($num = 0; $num < $n_systemport; $num++) {
+		next if ($info->{'-choose'} && !$info->{'-choose'}->[$num]);
+		my ($inst_name, $wol_name);
+		my @intr_prop;
+
+		if ($n_systemport > 1 and $is_lite eq 1) {
+			$inst_name = sprintf("SYSTEMPORTLITE_%d", $num);
+			$intr = find_l1_interrupt($bchp_defines, $inst_name);
+			push @intr_prop, { "irq" => $intr, "name" => lc($prefix), };
+
+			# Wake-on-LAN interrupt names do not include "LITE" in their
+			# name
+			$wol_name = sprintf("SYSTEMPORT_%d", $num);
+		} else {
+			$inst_name = $prefix;
+			for ($i = 0; $i < 2; $i++) {
+				my $intr_name = sprintf($inst_name.'_%s', $i);
+				$intr = find_l1_interrupt($bchp_defines, $intr_name);
+				last if !defined $intr;
+				push @intr_prop, { "irq" => $intr, "name" => lc($intr_name), };
+			}
+			$wol_name = $prefix;
+		}
+
+		# GR_BRIDGE is not necessarily located within the SYSTEMPORLITE_*
+		# register range, so just exclude it here
+		my ($beg, $size)
+			= get_reg_range_from_regexp($rh,
+						    "^BCHP_".$inst_name."_(?!GR_BRIDGE)");
+
+		my $nintrs = scalar @intr_prop;
+
+		my $t = '';
+		my $ext_t = '';
+		my $int_t = '';
+		my $unit = sprintf("ethernet\@%x", $beg);
+		my $label = sprintf("enet_%d", $num);
+		$t .= sprintf("%s: %s {\n", $label, $unit);
+		insert_label($label, $unit);
+		$t .= output_default(\%default);
+		$t .= sprintf("%s = <0x%x 0x%x>;\n", 'reg', $beg, $size);
+		if (@intr_prop) {
+			$intr = find_l2_interrupt($bchp_defines, uc($l2_intr), "WOL_$wol_name");
+			push @intr_prop, { "irq" => $intr,
+					   "name" => "wol_".lc($wol_name),
+					   "parent_intc" => $l2_intr . "_intc" };
+		}
+		$t .= output_interrupt_prop($rh, \@intr_prop);
+		$t .= "};\n";
+
+		$dt->add_node(DevTree::node->new($t));
+
+		add_reference_alias($dt, sprintf("eth%d", $num), $label);
 	}
-
-	my $nintrs = scalar @intr_prop;
-
-	my $t = '';
-	my $ext_t = '';
-	my $int_t = '';
-	my $unit = sprintf("ethernet\@%x", $beg);
-	$t .= sprintf("enet_0: %s {\n", $unit);
-	insert_label("enet_0", $unit);
-	$t .= output_default(\%default);
-	$t .= sprintf("%s = <0x%x 0x%x>;\n", 'reg', $beg, $size);
-	if (@intr_prop) {
-		$intr = find_l2_interrupt($bchp_defines, uc($l2_intr), "WOL_SYSTEMPORT");
-		push @intr_prop, { "irq" => $intr,
-				   "name" => "wol_systemport",
-				   "parent_intc" => $l2_intr . "_intc" };
-	}
-	$t .= output_interrupt_prop($rh, \@intr_prop);
-	$t .= "};\n";
-
-	$dt->add_node(DevTree::node->new($t));
-
-	add_reference_alias($dt, "eth0", "enet_0");
 }
 
 sub add_pmu($$)
@@ -2769,32 +2850,55 @@ sub add_sf2_mdio($$$$$)
 	return $t;
 }
 
-sub output_switch_port_layout($$)
+sub output_switch_port_layout($$$)
 {
-	my ($dt, $port_layout) = @_;
+	my ($dt, $port_layout, $label) = @_;
 	my $t = '';
 	my %default = (
 		"#address-cells" => [ 'dec', 1 ],
 		"#size-cells" => [ 'dec', 0 ],
-		"reg" => [ 'dec' , [ 0, 0 ] ],
 	);
 	my @keys = keys %$port_layout;
 	my $count = 0;
 
-	$t .= "switch\@0 {\n";
+	$t .= "$label {\n";
+
+	# Old-style DSA binding
+	if ($label eq "switch\@0") {
+		$default{reg} = [ 'dec', [ 0, 0 ] ],
+	}
+
 	$t .= output_default(\%default);
 	foreach (sort @keys) {
 		if (defined $port_layout->{$_}) {
-			my $port_label = sprintf("switch_port%d", $_);
+			my $port_label;
+
+			if ($label eq "switch\@0") {
+				$port_label = sprintf("switch_port%d", $_);
+			} else {
+				$port_label = sprintf("sw_port%d", $_);
+			}
 			my $port_unit = sprintf("port\@%x", $_);
 			$t .= sprintf("%s: %s {\n", $port_label, $port_unit);
 			insert_label($port_label, $port_unit);
 			$t .= sprintf("reg = <%d>;\n", $_);
 			$t .= sprintf("label = \"%s\";\n", $port_layout->{"$_"});
+
+			# ASP port needs Broadcom tags
+			if ($port_layout->{"$_"} eq "asp") {
+				$t .= "brcm,use-bcm-hdr;\n";
+			}
+
+			# With the new binding, the CPU phandle is associated
+			# with the port directly, not at the top-level, the old
+			# one just ignores the property, so it does not hurt
+			# adding it
+			if ($port_layout->{"$_"} eq "cpu") {
+				$t .= "ethernet = <&enet_0>;\n";
+			}
 			$t .= "};\n";
 
-			add_reference_alias($dt, sprintf("switch_port%d", $_),
-					    sprintf("switch_port%d", $_));
+			add_reference_alias($dt, $port_label, $port_label);
 		}
 	}
 	$t .= "};\n";
@@ -2875,10 +2979,22 @@ sub add_sf2($$$)
 		0 => "gphy",
 		1 => "rgmii_1",
 		2 => "rgmii_2",
-		7 => "moca",
 		8 => "cpu",
 	);
-	$t .= output_switch_port_layout($dt, \%switch_port_layout);
+
+	$chipid = sprintf("%x", $chipid);
+
+	if ($chipid eq "7445") {
+		$switch_port_layout{7} = "moca";
+	} else {
+		$switch_port_layout{5} = "wifi";
+		$switch_port_layout{7} = "asp";
+	}
+
+	# Do it once for the old binding
+	$t .= output_switch_port_layout($dt, \%switch_port_layout, "switch\@0");
+	# and another time with the new binding
+	$t .= output_switch_port_layout($dt, \%switch_port_layout, "ports");
 
 	$t .= "};\n";
 
@@ -3376,9 +3492,9 @@ sub add_pwm($$$$$)
 	}
 }
 
-sub add_wlan($$$$)
+sub add_wlan($$$$$)
 {
-	my ($dt, $rh, $n, $info) = @_;
+	my ($dt, $rh, $n, $info, $l2_intr) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
 
@@ -3387,9 +3503,17 @@ sub add_wlan($$$$)
 	);
 	my ($base, $size) = get_reg_range_from_regexp($rh, "^BCHP_WLAN");
 	my $intr_name = "WLAN_D2H";
-	my %intr_prop = (
-		"irq" => find_l1_interrupt($bchp_defines, $intr_name),
-		"name" => $intr_name,
+	my @intr_prop = (
+		# L1 interrupt
+		{ "irq" => find_l1_interrupt($bchp_defines, $intr_name),
+		  "name" => $intr_name,
+		},
+		# Wake-on-LAN/AON interrupt
+		{
+		  "irq" => find_l2_interrupt($bchp_defines, uc($l2_intr), "WLAN"),
+		  "name" => "wlan_wol",
+		  "parent_intc" => uc($l2_intr)."_intc",
+		},
 	);
 	my $t = "";
 
@@ -3399,11 +3523,108 @@ sub add_wlan($$$$)
 		$t .= sprintf("%s: %s {\n", $label, $unit);
 		$t .= output_default(\%defaults);
 		$t .= sprintf("reg = <0x%x 0x%x>;\n", $base, $size);
-		$t .= output_interrupt_prop($rh, \%intr_prop);
+		$t .= output_interrupt_prop($rh, \@intr_prop);
 		$t .= "};\n";
 
 		add_reference_alias($dt, $label, $label);
 
+		$dt->add_node(DevTree::node->new($t));
+	}
+}
+
+sub add_v3d_mmu($$$$)
+{
+	my ($dt, $rh, $n, $info) = @_;
+	my $bchp_defines = $rh->{rh_defines};
+	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
+	my %defaults = (
+		"compatible" => [ 'string',
+		[ sprintf("brcm,bcm%x-v3d", $chipid),
+		sprintf("brcm,v3d-v%d.%d.%d.%d",
+		$bchp_defines->{BCHP_V3D_HUB_CTL_IDENT1_TVER_DEFAULT},
+		$bchp_defines->{BCHP_V3D_HUB_CTL_IDENT1_REV_DEFAULT},
+		$bchp_defines->{BCHP_V3D_HUB_CTL_IDENT3_IPREV_DEFAULT},
+		0) ]]
+	);
+	my $t = "";
+
+	for (my $i = 0; $i < $n; $i++) {
+		my ($base, $size) = get_reg_range($rh, "BCHP_V3D_MMUC");
+		my $label = sprintf("gpu_mmu%d\n", $i);
+		my $unit = sprintf("gpu-mmu\@%x\n", $base);
+		$t .= sprintf("%s: %s {\n", $label, $unit);
+		$t .= output_default(\%defaults);
+		$t .= "};\n";
+
+		add_reference_alias($dt, $label, $label);
+
+		$dt->add_node(DevTree::node->new($t));
+	}
+}
+
+sub add_dtu_map($$$)
+{
+	my ($dt, $rh, $num) = @_;
+	my $bchp_defines = $rh->{rh_defines};
+	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
+	my %default = (
+		"compatible" => [ 'string',
+			[
+				sprintf("brcm,bcm%x-memc-dtu-map", $chipid),
+				sprintf("brcm,memc-dtu-map-v%d.%d.%d.%d",
+					$bchp_defines->{BCHP_MEMC_DTU_CONFIG_0_REV_ID_MAJOR_REV_ID_DEFAULT},
+					$bchp_defines->{BCHP_MEMC_DTU_CONFIG_0_REV_ID_MINOR_REV_ID_DEFAULT},
+					$bchp_defines->{BCHP_MEMC_DTU_CONFIG_0_REV_ID_ALL_LAYER_ID_DEFAULT},
+					$bchp_defines->{BCHP_MEMC_DTU_CONFIG_0_REV_ID_METAL_LAYER_ID_DEFAULT}),
+				'brcm,brcmstb-memc-dtu-map',
+				'syscon' ]
+			],
+	);
+
+
+	for (my $i = 0; $i < $num; $i++) {
+		my ($reg, $size)
+			= get_reg_range($rh, "BCHP_MEMC_DTU_MAP_STATE_$i");
+
+		$default{'reg'} = [ 'hex' , [ $reg, $size ] ];
+
+		my $t = sprintf("memc_dtu_map$i: syscon\@%x {\n", $reg);
+		$t .= output_default(\%default);
+		$t .= "};";
+
+		$dt->add_node(DevTree::node->new($t));
+	}
+}
+
+sub add_dtu_config($$$)
+{
+	my ($dt, $rh, $num) = @_;
+	my $bchp_defines = $rh->{rh_defines};
+	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
+	my %default = (
+		"compatible" => [ 'string',
+			[
+				sprintf("brcm,bcm%x-memc-dtu-config", $chipid),
+				sprintf("brcm,memc-dtu-config-v%d.%d.%d.%d",
+					$bchp_defines->{BCHP_MEMC_DTU_CONFIG_0_REV_ID_MAJOR_REV_ID_DEFAULT},
+					$bchp_defines->{BCHP_MEMC_DTU_CONFIG_0_REV_ID_MINOR_REV_ID_DEFAULT},
+					$bchp_defines->{BCHP_MEMC_DTU_CONFIG_0_REV_ID_ALL_LAYER_ID_DEFAULT},
+					$bchp_defines->{BCHP_MEMC_DTU_CONFIG_0_REV_ID_METAL_LAYER_ID_DEFAULT}),
+				'brcm,brcmstb-memc-dtu-config',
+				'syscon' ]
+			],
+	);
+
+
+	for (my $i = 0; $i < $num; $i++) {
+		my ($reg, $size)
+			= get_reg_range($rh, "BCHP_MEMC_DTU_CONFIG_$i");
+
+		$default{'reg'} = [ 'hex' , [ $reg, $size ] ];
+
+		my $t = sprintf("memc_dtu_config$i: syscon\@%x {\n", $reg);
+		$t .= output_default(\%default);
+		$t .= "};";
 		$dt->add_node(DevTree::node->new($t));
 	}
 }
@@ -3443,7 +3664,7 @@ sub gen_clocks_prop
 	my $str1 = "clock-names = " . join(", ", @b) . ";";
 
 	# change genet clock names to generic
-	$str1 =~ s/\b(sw_genet(?:|wol|eee))\d\b/$1/g;
+	$str1 =~ s/\b(sw_genet(?:|mux|wol|eee))\d\b/$1/g;
 
 	# change usb clock names to generic.  For the case of
 	# usb-phy, do some ad hoc renaming.
@@ -3712,6 +3933,14 @@ sub merge_clocks_file($$$)
 	# Add the brcm-clocks node and its many subnodes.
 	my $str = $rh->{clks};
 
+	# Insert sw_scb skeleton, so we can reference it by phandle.
+	my $sw_scb =<<'STOP';
+		sw_scb : sw_scb {
+			compatible = "fixed-clock";
+			#clock-cells = <0x0>;
+		};
+STOP
+
 	# Insert a synthetic clock
 	my $upg_clock =<<'STOP';
 		upg_fixed : upg_fixed {
@@ -3720,8 +3949,11 @@ sub merge_clocks_file($$$)
 			clock-frequency = <27000000>;
 		};
 STOP
-	# Insert the synthetic clock right after the 'ranges;'
-	$str =~ s/ranges;\n/ranges;\n\n$upg_clock/sm;
+
+	my $injected_clocks = "$upg_clock\n$sw_scb";
+
+	# Insert the injected clocks right after the 'ranges;'
+	$str =~ s/ranges;\n/ranges;\n\n$injected_clocks/sm;
 
 	my $clks = DevTree::node->new($str);
 	$rdb->add_node($clks);

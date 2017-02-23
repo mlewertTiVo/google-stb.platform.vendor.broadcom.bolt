@@ -60,13 +60,11 @@
 #define MDIO_USB2	0
 #define MDIO_USB3	(1 << 31)
 
-#define USB_CTRL_SETUP_CONDITIONAL_BITS (	\
+#define USB_CTRL_SETUP_ENDIAN_BITS (	\
 		USB_CTRL_MASK(SETUP, BABO) |	\
 		USB_CTRL_MASK(SETUP, FNHW) |	\
 		USB_CTRL_MASK(SETUP, FNBO) |	\
-		USB_CTRL_MASK(SETUP, WABO) |	\
-		USB_CTRL_MASK(SETUP, IOC)  |	\
-		USB_CTRL_MASK(SETUP, IPP))
+		USB_CTRL_MASK(SETUP, WABO))
 
 #ifdef __LITTLE_ENDIAN
 #define ENDIAN_SETTINGS ( \
@@ -206,14 +204,26 @@ static void usb3_unfreeze_aeq(uintptr_t ctrl_base)
 
 static void usb3_pll_54Mhz(uintptr_t ctrl_base)
 {
-#if defined(CONFIG_BCM7271A0) || defined(CONFIG_BCM7268A0) || \
-	defined(CONFIG_BCM7364)
+
+	/* Only needed for newer B53 based SoC's */
+#if defined(CONFIG_BCM7260A0) ||	\
+	defined(CONFIG_BCM7364A0) ||	\
+	defined(CONFIG_BCM7366C0) ||	\
+	defined(CONFIG_BCM7445D0) ||	\
+	defined(CONFIG_BCM7364B0) ||	\
+	defined(CONFIG_BCM74371A0) ||	\
+	defined(CONFIG_BCM7445E0) ||	\
+	defined(CONFIG_BCM7250B0) ||	\
+	defined(CONFIG_BCM7439B0)
+
+	return;
+
+#else
+
 	/*
-	 * On the 7271a0 and 7268a0, the reference clock for the
+	 * On newer B53 SoC's, the reference clock for the
 	 * 3.0 PLL has been changed from 50MHz to 54MHz so the
-	 * PLL needs to be reprogramed. Later chips will have
-	 * the PLL programmed correctly on power-up.
-	 * See SWLINUX-4006.
+	 * PLL needs to be reprogramed. See SWLINUX-4006.
 	 *
 	 * On the 7364C0, the reference clock for the
 	 * 3.0 PLL has been changed from 50MHz to 54MHz to
@@ -222,12 +232,6 @@ static void usb3_pll_54Mhz(uintptr_t ctrl_base)
 	 */
 	uint32_t ofs;
 	int ii;
-
-#if defined(CONFIG_BCM7364)
-	/* Only for 7364C0 and later */
-	if ((BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID) & 0xff) < 0x20)
-		return;
-#endif
 
 	/* set USB 3.0 PLL to accept 54Mhz reference clock */
 	USB_CTRL_UNSET(ctrl_base, USB30_CTL1, phy3_pll_seq_start);
@@ -420,7 +424,8 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 		USB_CTRL_SET(ctrl, USB30_CTL1, usb3_ipp);
 #endif
 
-#if !defined(CONFIG_BCM74371A0) && !defined(CONFIG_BCM7364)
+#if !defined(CONFIG_BCM74371A0) && !defined(CONFIG_BCM7364) && \
+	defined(BCHP_USB_CTRL_SETUP_ss_ehci64bit_en_MASK)
 	/*
 	 * HW7439-637: 7439a0 and its derivatives do not have large enough
 	 * descriptor storage for this.
@@ -445,10 +450,13 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	if (params->has_xhci)
 		usb3_phy_workarounds(ctrl);
 
-	/* Setup the endian bits */
 	reg = DEV_RD(USB_CTRL_REG(ctrl, SETUP));
-	reg &= ~USB_CTRL_SETUP_CONDITIONAL_BITS;
+
+#ifdef BCHP_USB_CTRL_SETUP_BABO_MASK
+	/* Setup the endian bits */
+	reg &= ~USB_CTRL_SETUP_ENDIAN_BITS;
 	reg |= ENDIAN_SETTINGS;
+#endif
 
 #if defined(CONFIG_BCM7364)
 	if ((BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID) == 0x73640000))
@@ -473,12 +481,17 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 #endif
 
 	/* Override the default OC and PP polarity */
+	reg &= ~(USB_CTRL_MASK(SETUP, IOC) | USB_CTRL_MASK(SETUP, IPP));
+	if (params->ipp == 1)
+		reg |= USB_CTRL_MASK(SETUP, IPP);
 	if (params->ioc)
 		reg |= USB_CTRL_MASK(SETUP, IOC);
-	if ((params->ipp == 1) && ((reg & USB_CTRL_MASK(SETUP, IPP)) == 0)) {
+
+	/* determine if we're changing the state of the IPP bit */
+	if ((reg & USB_CTRL_MASK(SETUP, IPP)) ^
+		(DEV_RD(USB_CTRL_REG(ctrl, SETUP)) & USB_CTRL_MASK(SETUP, IPP)))
 		change_ipp = 1;
-		reg |= USB_CTRL_MASK(SETUP, IPP);
-	}
+
 	DEV_WR(USB_CTRL_REG(ctrl, SETUP), reg);
 
 	/*

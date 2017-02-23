@@ -1,5 +1,5 @@
 ################################################################################
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 #  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 #  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -46,7 +46,6 @@ SINGLE_BOARD		:=
 SECURE_BOOT		:= n
 S_UNITTEST		:= n # For internal testing ONLY should be set to n normally
 S_UNITTEST_AUTOFLASH	:= n # For internal testing ONLY should be set to n normally
-DUMMY_SECURITY		:= n # For chip bringup/testing without a real asl or bsl
 
 # Documentation
 DOC_S			:=$(wildcard doc/*.txt)
@@ -63,8 +62,11 @@ OPTIONS	:= BFW_LOAD=$(BFW_LOAD) \
 		BFW_HASH_LOCK=$(BFW_HASH_LOCK) \
 		SECURE_BOOT=$(SECURE_BOOT) \
 		S_UNITTEST=$(S_UNITTEST) \
-		S_UNITTEST_AUTOFLASH=$(S_UNITTEST_AUTOFLASH) \
-		DUMMY_SECURITY=$(DUMMY_SECURITY)
+		S_UNITTEST_AUTOFLASH=$(S_UNITTEST_AUTOFLASH)
+
+ifneq ($(DUMMY_SECURITY),)
+OPTIONS += CFG_DUMMY_SECURITY=$(DUMMY_SECURITY)
+endif
 
 # Catch the case where the family changed
 # but not the saved cfg - use the default cfg
@@ -265,14 +267,14 @@ doc: $(patsubst %.txt,%.html,$(DOC_S)) $(DOC_S)
 
 emu: famcheck $(TOP_TARGETS)
 	$(Q)$(MAKE) $(FAMILY) -f Makefile.Bolt emu_fsbl CFG_EMULATION=1 \
-		CFG_BOARDDEFAULT=1 DUMMY_SECURITY=y \
+		CFG_BOARDDEFAULT=1 CFG_DUMMY_SECURITY=y \
 		--no-print-directory
 
 # Like 'emu' this is for pre-bringup and you have to specify the
 # chip family as well, e.g. make fullemu FAMILY=7271a0
 fullemu: famcheck $(TOP_TARGETS)
 	$(Q)$(MAKE) $(FAMILY) -f Makefile.Bolt emu_bolt CFG_FULL_EMULATION=1 \
-		CFG_BOARDDEFAULT=1 DUMMY_SECURITY=y \
+		CFG_BOARDDEFAULT=1 CFG_DUMMY_SECURITY=y \
 		--no-print-directory
 
 clean: famcheck

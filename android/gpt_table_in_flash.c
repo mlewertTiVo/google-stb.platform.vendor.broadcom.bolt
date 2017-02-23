@@ -321,16 +321,16 @@ static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry)
 		ptn.flags = (le64_to_cpu(entry->attributes));
 
 		len = 0;
-		len += os_sprintf(ptn.uuid + len, "%x%x%x%x-",
+		len += os_sprintf(ptn.uuid + len, "%02x%02x%02x%02x-",
 			entry->unique_partition_guid.b[3], entry->unique_partition_guid.b[2],
 			entry->unique_partition_guid.b[1], entry->unique_partition_guid.b[0]);
-		len += os_sprintf(ptn.uuid + len, "%x%x-",
+		len += os_sprintf(ptn.uuid + len, "%02x%02x-",
 			entry->unique_partition_guid.b[5], entry->unique_partition_guid.b[4]);
-		len += os_sprintf(ptn.uuid + len, "%x%x-",
+		len += os_sprintf(ptn.uuid + len, "%02x%02x-",
 			entry->unique_partition_guid.b[7], entry->unique_partition_guid.b[6]);
-		len += os_sprintf(ptn.uuid + len, "%x%x-",
+		len += os_sprintf(ptn.uuid + len, "%02x%02x-",
 			entry->unique_partition_guid.b[8], entry->unique_partition_guid.b[9]);
-		len += os_sprintf(ptn.uuid + len, "%x%x%x%x%x%x",
+		len += os_sprintf(ptn.uuid + len, "%02x%02x%02x%02x%02x%02x",
 			entry->unique_partition_guid.b[10], entry->unique_partition_guid.b[11],
 			entry->unique_partition_guid.b[12], entry->unique_partition_guid.b[13],
 			entry->unique_partition_guid.b[14], entry->unique_partition_guid.b[15]);

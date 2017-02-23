@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -11,24 +9,48 @@
 
 #include "fsbl.h"
 
-
 #if USE_FIRST_IMAGES
 #define FIRST_IMAGE_ENABLE 0x80000000
 #else
 #define FIRST_IMAGE_ENABLE 0
 #endif
 
-
 __attribute__ ((section(".init.sec_params")))
 uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
-#if CFG_ZEUS4_2
+#if CFG_ZEUS5_0
+	[0x00] = 0x00008b00,
+	[0x01] = 0x00000000,
+	[0x02] = 0x00000000,
+	[0x03] = SSBL_SIZE,
+	/* 0x04 -> 0x13 */
+	[0x14] = BFW_TEXT_OFFS, /* 0xEA50 */
+	[0x15] = 0x00000800,
+	[0x16] = 0x00000000,
+	[0x17] = AVS_TEXT_OFFS, /* 0xEA5C */
+	[0x18] = AVS_CODE_SIZE,
+	[0x19] = AVS_DATA_SIZE,
+	[0x1a] = 0x00000800,
+	[0x1b] = 0x00000000,
+	[0x1c] = MEMSYS_TEXT_OFFS, /* 0xEA70 */
+	[0x1d] = MEMSYS_SIZE,
+	[0x1e] = 0x00000800,
+	[0x1f] = 0x00000000,
+	/* 0x20 -> 0x2d */
+	[0x2c] = SSBL_TEXT_OFFS, /* 0xEAB0 */
+	[0x2d] = 0x00000000,
+	[0x2e] = 0x00000000,
+	[0x2f] = 0x80000000,
+	[0x30] = 0x00000800, /* 0xEAC0 */
+	/* 0x31 -> 0x56 */
+	[0x57] = 0x00000000, /* 0xEB5C */
+#elif CFG_ZEUS4_2
 #if (USE_FIRST_IMAGES == 0)
 	/* Zeus 4.2 BSECK-SHMOO integration document v1.12, sec 2.3, page 9 */
 	[0x00] = 0x00008aa0,
 	[0x01] = 0x00000000,
 	[0x02] = 0x00000000,
 	[0x03] = SSBL_SIZE,
-	/* 0x01 -> 0x0b */
+	/* 0x04 -> 0x0b */
 	[0x0c] = BFW_TEXT_OFFS,
 	[0x0d] = 0x00000800,
 	[0x0e] = 0x00000000,
@@ -61,7 +83,11 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x24] = SSBL_TEXT_OFFS, /* D0 */
 	[0x25] = 0x00000000,
 	[0x26] = 0x00000000,
+#if CFG_ZEUS4_2_1
+	[0x27] = 0x80000000,
+#else
 	[0x27] = 0x00000000,
+#endif
 	[0x28] = 0x00000800, /* E0 */
 	[0x29] = 0x00000000,
 	[0x2a] = 0x00000000,
@@ -121,7 +147,11 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x24] = SSBL_TEXT_OFFS, /* D0 */
 	[0x25] = 0x00000000,
 	[0x26] = SSBL_RAM_ADDR,
+#if CFG_ZEUS4_2_1
+	[0x27] = 0x80000000,
+#else
 	[0x27] = 0x00000000,
+#endif
 	[0x28] = BOLT_PART_SIZE>>10, /* E0 */
 	[0x29] = 0x00000000,
 	[0x2a] = 0x00000000,

@@ -1,0 +1,1587 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Release changelog</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(1);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1>Release changelog</h1>
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_v1_26">1.  v1.26</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2199">SWBOLT-2199</a> Correct PMap values for 7260A0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2193">SWBOLT-2193</a> Fix missing Ethernet PHY clock reference in BOLT provided Device Tree for Linux' Ethernet PHY driver to correctly enable it.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2185">SWBOLT-2185</a> Fixed crash on BCM97437SV.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2160">SWBOLT-2160</a> Fixed splash code so that it can compile properly for 7268B0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2205">SWBOLT-2205</a> Fixed splash code so that it can compile properly for 7271B0. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access">1.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.26%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_25">2.  v1.25</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2137">SWBOLT-2137</a> Add DT entries to identify vc5 MMU to DRM/GEM framework.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2092">SWBOLT-2092</a> Add support for 7268B0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2134">SWBOLT-2134</a> Added Device Tree props to serial node that allows hardware flow control to be enabled.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2106">SWBOLT-2106</a> Added preliminary support for 7278a0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2128">SWBOLT-2128</a> Adjusted 64 bit monitor load address to give TZOS more space.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2145">SWBOLT-2145</a> Bug fixed to prevent marking false bad blocks. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2133">SWBOLT-2133</a> Clocks added for Linux 4.1-1.6 brcmstb-cpufreq.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1822">SWBOLT-1822</a> Enabled DTU in 7271b0, 7268b0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2132">SWBOLT-2132</a> For DT node "sw_scb", fixed spelling of property "#clock-cells".</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2088">SWBOLT-2088</a> Implemented pmaps for 7268B0 / 7271B0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2157">SWBOLT-2157</a> Reconfigured TrustZone memory layout for 16MB footprint. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2144">SWBOLT-2144</a> S3 is now supported for 7268b0/7271b0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2172">SWBOLT-2172</a> SAFE_CLK_MODE is updated when requesting AVS to change CPU speed.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2168">SWBOLT-2168</a> Support new style Devicetree binding for Ethernet switches using the DSA subsystem. Ref: <a href="https://git.kernel.org/cgit/linux/kernel/git/davem/net-next.git/commit/?id=8c5ad1d6179df31eea1b736c88296db6e3ffd25d">https://git.kernel.org/cgit/linux/kernel/git/davem/net-next.git/commit/?id=8c5ad1d6179df31eea1b736c88296db6e3ffd25d</a>.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2135">SWBOLT-2135</a> Supported low-speed devices through the usb-hubs. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2136">SWBOLT-2136</a> Systems with MACH related Shmoo failures should try version 2.1.1.0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2151">SWBOLT-2151</a> Updated voltage margin levels for 7268B0 &amp; 7271B0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_2">2.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.25%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_24">3.  v1.24</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2092">SWBOLT-2092</a> Add support for 7268B0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1955">SWBOLT-1955</a> Add support for 7271B0.</p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_3">3.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.24%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_23">4.  v1.23</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2095">SWBOLT-2095</a> Fixed regression that broke 7439 USB/BDC for Android in BOLT previous v1.22. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2062">SWBOLT-2062</a> Limitation on the 2GB of installed DRAM has been lifted from BCM7260, BCM7268 and BCM7271. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_4">4.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.23%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_22">5.  v1.22</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2060">SWBOLT-2060</a> Add OEM_FUNC_LEGACY_GIC_BYPASS call to 64 bit PSCI code.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2067">SWBOLT-2067</a> Add missing USB3.0 clocks (if applicable) to the Device Tree usb-phy node. The usb-phy device-tree node was only specifying the USB2.0 clocks and needed to include the USB3.0 clocks for controllers that have XHCI. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2065">SWBOLT-2065</a> Added a version number to the FSBL info struct passed to SSBL.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1942">SWBOLT-1942</a> Allow more frequency scaling steps for the CPU. Requires an updated Linux.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2036">SWBOLT-2036</a> DRAM parts whose sizes are not power of 2 can now be integrated.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2030">SWBOLT-2030</a> Reworked avs and dvfs config commands. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2061">SWBOLT-2061</a> Store PSCI base address in AON_SYSTEM_DATA_RAM[10] for recovery on S3 wakeup. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2056">SWBOLT-2056</a> Support ARM B53 family of chips (7260, 7271, 7268) Power Profile Maps. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2037">SWBOLT-2037</a> Support for BCM97268LC6L has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2048">SWBOLT-2048</a> Trust Zone: Add a new option to the tz command to allow loading of the Secure Monitor. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2047">SWBOLT-2047</a> USB: Add support for USB Type-C PD control of device mode into the build configuration script. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2054">SWBOLT-2054</a> USB: Update usb-brcm-common-init.c to get latest fixes: (1) Set up AEQ to finalize equalization values later during training time to avoid training on LFPS with some devices. (2) Renable FSM after resetting the PH.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2055">SWBOLT-2055</a> Update DDR4 memsysinitlib of 7260a0 to v3.1.0.8. Combined with an upcoming Linux (TBD), 7260a0 platforms with DDR4 can now have S3 warm and cold boot support. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2066">SWBOLT-2066</a> Update for correct 7260a0 USB DRD support. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_5">5.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.22%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_21">6.  v1.21</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2013">SWBOLT-2013</a> AVS now dynamically detects remote oscillators that have been powered down. Currently for 7260a0 only.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1563">SWBOLT-1563</a> Ability to generate Device Tree offline.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1976">SWBOLT-1976</a> Add Devicetree support for the new Linux spi-nor + spi master driver.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1962">SWBOLT-1962</a> Added BCM97364SFFDR4 board.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1881">SWBOLT-1881</a> Added provisional support for the 7260a0. Note that this version of BOLT should not be used for 7260a0 productization. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1961">SWBOLT-1961</a> Added support for 7364c0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2004">SWBOLT-2004</a> Added support for BCM972604DV.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2003">SWBOLT-2003</a> Added support for BCM972604USFF.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1985">SWBOLT-1985</a> Fix BOLT to allow temperatures below 0 Celsius in the over-temperature monitor.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1992">SWBOLT-1992</a> Improved Shmoo stability with Hynix AFR DDR4 for BCM7250, BCM7364, BCM7366, BCM7439 and BCM7445. All users of prior DDR4 versions should update to this version. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1883">SWBOLT-1883</a> Improvement to EPHY per Ethernet QA specifications for 7271a0, 7268a0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1986">SWBOLT-1986</a> New AVS firmware v0.3.9.x to allow 6 more mailbox registers to be accessible by the host CPU on 7271/7268, for DVFS purposes. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1946">SWBOLT-1946</a> Prevent BOLT hanging when SATA cable is removed after disk accesses.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1997">SWBOLT-1997</a> Remove the <em>auto-cmd12</em> property from the sdhci Devicetree node if it is used for eMMC to prevent interrupt timeouts in Linux when accessing the RPMB partition.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1811">SWBOLT-1811</a> Report the baseline DDR clock speed and ratio to target speed in the BOLT <em>info</em> command. This can be used to obtain the spread spectrum percentage, though not any clock derating that may be present.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1990">SWBOLT-1990</a> SSBL NAND flash driver robustness update to poll and crc check up to all three ONFI parameter pages. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1977">SWBOLT-1977</a> Support for BCM97204SV has been added. BCM972604SV can host BCM72603.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1971">SWBOLT-1971</a> Support for BCM97250CD2_V10 has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2002">SWBOLT-2002</a> Support for BCM972604C, BCM972604D and BCM972604T have been added. The boards can host BCM972603.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2008">SWBOLT-2008</a> Support for BCM97260USFF has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1993">SWBOLT-1993</a> Support for BCM97271_4L has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2005">SWBOLT-2005</a> The BCM4366 Wi-Fi device on the BCM97449SCWM is powered up via couple of voltage regulators controlled by two GPIO lines: gpio_097 and gpio_098. Add the configuration of voltage regulation to the board config so that the Wi-Fi device can be enumerated in Linux.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2009">SWBOLT-2009</a> Use 1% DDR Spread Spectrum Clock MCBs for 7271a0 and 7268a0.</p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_6">6.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.21%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_20">7.  v1.20</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1810">SWBOLT-1810</a> Add support for upgradable BFW/AVS/MEMSYS firmware sets. This feature is disabled in the BOLT non-secure distribution. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1935">SWBOLT-1935</a> Enabled 1080i video splash that affected audio. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1960">SWBOLT-1960</a> Enabled UHS SDR50 mode on a selection of 7445e0 boards that can have SD cards switching between 1.8V and 3.3V.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1968">SWBOLT-1968</a> Fix pin muxing to add pullups so SD card interface works on 7268a0 DV/VMS boards and 7271a0 DV board.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1938">SWBOLT-1938</a> Fixed a devicetree problem for chips (such as the BCM7250B0) that do not have consecutive BSC (I2C) devices.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1939">SWBOLT-1939</a> Get BOLT SATA driver for 7271a0 and 7268a0 up and running.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1905">SWBOLT-1905</a> Getting a DHCP address times out after around 8 seconds if network cable is not plugged in. For more information, please refer to the ETH_ANEG_TIMEOUT section <em>of doc/envars.txt</em>.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1920">SWBOLT-1920</a> LPDDR4 Memsys FW with preliminary S3 support, but other S3 changes are still needed for 7271/7268.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1804">SWBOLT-1804</a> Provided AVS v0.3.6 firmware for 7268a0 that has initial support for DVFS.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1802">SWBOLT-1802</a> Provided AVS v0.3.6 firmware for 7271a0 that has initial support for DVFS.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1889">SWBOLT-1889</a> Removed support for 7366b0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1959">SWBOLT-1959</a> Some chips have an alternate pin muxing path for SDIO/eMMC devices. This feature can also require an enable/select bit set in a register as well to determine which path to route to (default or alternate) even though a configuration script <em>pmux</em> command selected which path to use. BOLT will now detect any use of the alternate pin muxing in the configuration script <em>pmux</em> command and select the right register and bit to change, if required. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1936">SWBOLT-1936</a> Support a single AVS power domain in a normally dual domain. For in 7271a0 and 7268a0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1944">SWBOLT-1944</a> Support for BCM97445S_EXT24D has been added.</p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_7">7.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.20%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_19">8.  v1.19</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1893">SWBOLT-1893</a> AVS update to set the CPU offset voltage before adding margins and applying limits. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1907">SWBOLT-1907</a> Add Devicetree support for the new Linux spi-nor + spi master driver.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1886">SWBOLT-1886</a> Add a board strap option for USB IPP setting to the <em>usb</em> configuration script command.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1743">SWBOLT-1743</a> Add documentation about the Device Tree generation process.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1919">SWBOLT-1919</a> Added generic-ohci, generic-ehci and generic-xhci to end of "compatible" property for the ohci, ehci and xhci nodes in device tree.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1897">SWBOLT-1897</a> Added support for BCM97268DV.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1899">SWBOLT-1899</a> Existing board configurations may fail to build, which is intended with this change. The build failure should be resolved with a stricter PINMUX function name(s). <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1904">SWBOLT-1904</a> Fix unorrectable read errors when reading an erased NAND page.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1906">SWBOLT-1906</a> Release notes for older BOLT versions have been added to doc/changelog.txt.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1911">SWBOLT-1911</a> Support for BCM97268USFF4L and BCM97268USFFA4L has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1912">SWBOLT-1912</a> Support for BCM97268VMS has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1913">SWBOLT-1913</a> Support for BCM97445S_EXT24 has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1914">SWBOLT-1914</a> Support for REV09 (4GB of memory) of BCM97252SGW has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1825">SWBOLT-1825</a> The GEN and ODIR make variables in BOLT can now be specified on the make command line to select non-default directory locations.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1909">SWBOLT-1909</a> With large 64 bit numbers xprintf might crash due to a stack based buffer overflow.</p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_8">8.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.19%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_18">9.  v1.18</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1922">SWBOLT-1922</a> Upgraded BFW to version 4.1.5 for 7250b0, 7268a0, 7271a0, 7364a0, 7364b0, 7366b0, 7366c0, 7439b0, 7445d0 and 7445e0 chip families. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_9">9.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.18%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_17">10.  v1.17</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1866">SWBOLT-1866</a> Added Device Tree node for 7271a0 WLAN. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1916">SWBOLT-1916</a> Upgraded BFW to version 4.1.4 for 7250b0, 7268a0, 7271a0, 7364a0, 7364b0, 7366b0, 7366c0, 7439b0, 7445d0 and 7445e0 chip families. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_10">10.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.17%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_16">11.  v1.16</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1871">SWBOLT-1871</a> Upgraded BFW to version 4.1.3 for 7250b0, 7268a0, 7271a0, 7364a0, 7364b0, 7366c0, 7439b0, 7445d0 and 7445e0 chip families. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_11">11.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.16%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_15">12.  v1.15</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1895">SWBOLT-1895</a> Allow regular (no-AON) GPIOs to wake up system from S2. This is incompatible with Linux versions 4.1-1.0 and 3.14-1.13.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1861">SWBOLT-1861</a> Implemented BOLT extensions for TrustZone loader. Additional code to complete current TZ support in v1.15. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_12">12.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.15%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_14">13.  v1.14</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1884">SWBOLT-1884</a> Added clock to USB bdc node in device tree for 7271 and 7268 Linux.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1895">SWBOLT-1895</a> Allow regular (no-AON) GPIOs to wake up system from S2.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1847">SWBOLT-1847</a> Changed splash image loading for with updated splash generator since URSR 15.4 and later.  Also compatible with previous URSR versions.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1892">SWBOLT-1892</a> Enable 7271a0 BDC driver. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1844">SWBOLT-1844</a> Fixes and improvements to USB 3.0 PHY for all chips. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1861">SWBOLT-1861</a> Implemented BOLT extensions for TrustZone loader. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1879">SWBOLT-1879</a> USB 3.0 fixes for 7271a0, 7268a0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1874">SWBOLT-1874</a> Updated AVS firmware v0.3.2 to use new CPU offsets on 7271a0, 7268a0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1867">SWBOLT-1867</a> Updated memsys 2.2.0.18 to improve LPDDR4 performance for 7271a0, 7268a0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_13">13.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.14%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_12">14.  v1.12</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1636">SWBOLT-1636</a> Support 7271a0 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p>New chip.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1803">SWBOLT-1803</a> Support 7268a0 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p>New chip.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1858">SWBOLT-1858</a> Add BFW 4.0.3 to 7250/7364/7366/7439/7445 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p>Updated BFW for Broadcom and selected customers only.</p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_14">14.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.12%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_11">15.  v1.11</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1757">SWBOLT-1757</a> BOLT&#8217;s ssbl_main function misbehaves if VERBOSE_DEBUG is not defined <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p>The toolchain may decide to put a functions parameters on the stack instead of
+using registers, and this may cause a crash in the ssbl_main() function as it
+directly changes the stack pointer.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1792">SWBOLT-1792</a> CLONE - Enable write-pairing for 7439b0 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p>Improve the memory copy speed for 7439bx chips.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1838">SWBOLT-1838</a> Remove splashgen generated headers at release package <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p>Customers will now have to always use the Broadcom reference software
+<em>splashgen</em> app to generate the correct data for the BOLT splash screen.</p></div>
+<div class="paragraph"><p>This removes the presumption that the splash configuration data (<em>reg</em> and <em>rdc</em>
+and header files) were applicable to customer platforms as well as Broadcom
+reference boards.</p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_15">15.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.11%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_10">16.  v1.10</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1785">SWBOLT-1785</a> fsbl does not read NAND flash bad block indicator correctly <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+FSBL booting from a NAND device did not correctly read Spare Area Byte 0.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1765">SWBOLT-1765</a> Update Shmoo to v1.2.1.0 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+DDR3: Minor workaround for Read-Enable logic, recommended, but not mandatory.
+</p>
+</li>
+<li>
+<p>
+DDR4: Reliability improvements to Read Enable shmoo. Strongly encouraged to take this if you are using Micron parts.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1776">SWBOLT-1776</a> build error on 7439b0 using dtgen for iicc <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Please take this release if you require Devicetree I2C nodes. A regression caused the <em>dt autogen bsc</em> script command to fail.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1715">SWBOLT-1715</a> Update write-pairing whitelist <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+May improve BOLT and Linux memory copy speed on 3390b0, 7250b0, 7364a0, 7364b0 and 74371a0 chips.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1766">SWBOLT-1766</a> eMMC driver in FSBL to load BFW from DATA rather than BOOT partition <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Not used in Generic BOLT. May be used in secure BOLT, depending upon security vendor requirements.
+</p>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_16">16.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.10%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_09">17.  v1.09</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1736">SWBOLT-1736</a> audio splash in bolt plays continuously with no option to play once <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please see the section on splash screen in the porting guide for more information.</code></pre>
+</div></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_17">17.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.09%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_08">18.  v1.08</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1695">SWBOLT-1695</a> Disable SPI NOR flash quad-lane mode due to reboot/flash device dependancy <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1469">SWBOLT-1469</a> support SPI-NOR 4-lane 81MHz <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>If you require SPI quad IO mode please read the included porting guide for important information regarding this feature.
+If you have BOLT v1.07, please upgrade to v1.08 or switch off quad mode until you need it and can verify its correct operation.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1683">SWBOLT-1683</a> AVS firmware hangs after over-temp reset <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>If you are using AVS fimware v0.3.x then you shall upgrade. For earlier firmwares please contact your FAE.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1692">SWBOLT-1692</a> Add build-time option for boost profile to 7250b0 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Adds back the built time option to speed up the 7250b0 cpu to 1.7GHz.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1699">SWBOLT-1699</a> Update to memsysinitlib v1.2.0.8 for DDR4 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Fixes a bug that could cause noise during DDR4 Read Enable, which under some conditions could cause shmoo failure.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1697">SWBOLT-1697</a> assure mapping correct guard page and only valid SRAM range in page table <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Prevents GISB timeouts and crashes when using older versions of FSBL from BOLT 1.00 or earlier.</code></pre>
+</div></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_18">18.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.08%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_07">19.  v1.07</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1608">SWBOLT-1608</a> Splash does not set up reserved area correctly on chips with &gt;1G DRAM in 32-bit space <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>This fixes an issue with DDR smaller than the maximum (chip specific) 32-bit DDR physical address size/window.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1337">SWBOLT-1337</a> Remove obsolete memory and cma-dev DT entries <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>This removes the '-cma' option for the 'dt autogen memory' script command.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1618">SWBOLT-1618</a> When sdio0 is used for eMMC, sdio1 is incorrectly configured if it is SDCARD <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>This fixes an issue where the Devicetree properties of sdio0 were erroneously copied to sdio1.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1614">SWBOLT-1614</a> Coverity Defect ID:88465  RESOURCE_LEAK  Function=ui_cmd_connect()  Product=97445bolt <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1612">SWBOLT-1612</a> Coverity Defect ID:91846  RESOURCE_LEAK  Function=bdc_probe()  Product=97445bolt <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Coverity fixes.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1640">SWBOLT-1640</a> Update Shmoo to v1.2.0.0 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release for the latest DDR3 and DDR4 support.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1625">SWBOLT-1625</a> 1.7GHz CPU speed for 7438S and 7439S <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Set the cpu speed to 1.7GHz instead of 1.5GHz for 7439b0 and all its variants.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1631">SWBOLT-1631</a> DT: Add a 27Mhz fixed-clock for UPG clock domain <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>This inserts a 27Mhz clock named upg_fixed into the list of (Devicetree only) clocks. This is a "fixed-clock" device. This node will appear on all chips that have clock trees associated with them.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1469">SWBOLT-1469</a> support SPI-NOR 4-lane 81MHz <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Add quad read support to the SPI driver in SSBL.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1622">SWBOLT-1622</a> Set SCB=277MHz to avoid SAFE_CLK_MODE for 73649 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>This change improves 73649 performance by avoiding having to enter SAFE_CLK_MODE.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1209">SWBOLT-1209</a> Hardware accelerated SHA256 in Bolt <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Add a 'sha' command to BOLT SSBL.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1489">SWBOLT-1489</a> Integrate box #0 RTS for all chips <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Replace all box mode (RTS) files, for all supported chips, with just box mode #0 - for use only by BOLT. Note that the "rts -set=N" command will still pass a (non-zero) box mode to NEXUS (via Linux/Devicetree.)</code></pre>
+</div></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_19">19.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.07%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_06">20.  v1.06</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1454">SWBOLT-1454</a> Configuring power profile based on MHL power capabilities <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release for 7250b0 based dongle products that utilize MHL to power them.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1561">SWBOLT-1561</a> USB: Add DT and .cfg support for USB device mode <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1539">SWBOLT-1539</a> usb device mode support <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1628">SWBOLT-1628</a> USB: correct USB GISB errors for 74371a0 family <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release for the (Android targeted) device mode USB drivers and Linux Devicetree suppport on 7439b0.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1602">SWBOLT-1602</a> Update memsyslib to v1.1.1.11 for DDR4 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release for the latest DDR4 support on 7439b0 7366b0 7366c0 7445d0 and 7445e0.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1585">SWBOLT-1585</a> Enable USB 3.0 SSC on both ports <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release if you require SSC support in USB.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1577">SWBOLT-1577</a> Bolt dev_genet.c mac filter issue <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Make IOCTL_ETHER_SETHWADDR for GENET functional.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1600">SWBOLT-1600</a> RTS: Enable GENET1 in box mode 1 settings <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Fixes GENET_1 access for 7439b0 using box mode 1.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1578">SWBOLT-1578</a> GPHY: updates to previous IEEE fixes <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Applies to 7364a0 7364b0 7250b0 74371a0 7439b0 7366b0 7366c0 and 7445e0 chip families.</code></pre>
+</div></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_20">20.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.06%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_05">21.  v1.05</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1557">SWBOLT-1557</a> CLONE - First MDIO read/write after power-up may not work <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1537">SWBOLT-1537</a> Hold GPHY_RESET for 60 micro seconds <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1560">SWBOLT-1560</a> Do not pull-up write-protect pin for SD slots without write-protect feature <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1568">SWBOLT-1568</a> GPL exception should be added to usb-brcm-common-init.c <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1573">SWBOLT-1573</a> Refresh MCB&#8217;s <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>DDR4 MEMSYS code or MCBs above version v1.1.1.8 (v1.1.1.12) are not backward compatible.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1551">SWBOLT-1551</a> Block box #0 from being selected <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Box mode #0 is for exclusive use by BOLT and must not be user selectable.</code></pre>
+</div></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_21">21.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.05%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_04">22.  v1.04</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1506">SWBOLT-1506</a> Update device tree / clock trees to use CPU PLL MDIV for CPU freq scaling <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Help Linux to retain CPU clock rate across S3. Please take this release if you experience the system appearing to slow down after S3.</code></pre>
+</div></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_22">22.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.04%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_03">23.  v1.03</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1395">SWBOLT-1395</a> read data mismatch from eMMC flash along with g-zip decompress operation <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release if you are using the BOLT eMMC driver.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1466">SWBOLT-1466</a> Add 7364 B0 Support. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>This is the first BOLT release to feature the 7364b0 chip.</code></pre>
+</div></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1509">SWBOLT-1509</a> Add support for BCM97252SSFFE <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1420">SWBOLT-1420</a> Add support for BCM972502DGL_V10 <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_23">23.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.03%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_02">24.  v1.02</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+Critical bug fixes or feature additions, ordered by reported severity.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+SWBOLT-1471: 7445e0 bringup
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>This is the first BOLT release to feature the 7445e0 chip.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1289: remove support for 7439a0
+</p>
+</li>
+<li>
+<p>
+SWBOLT-1440: BOLT: remove support for 7145a0
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> The 7439a0 and 7145a0 will not longer be
+supported in BOLT from this release onwards.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1500: update to memsyslib 1.1.1.4
+</p>
+</li>
+<li>
+<p>
+SWBOLT-1501: Update DDR4 MCBS for 7250b0,7364a0/b0 and 7439b0
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>You must take this release if you are using DDR4.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1511: AVS firmware fails on over-temp reset.
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> This fixes an issue on an overtemperature reset
+where the AVS reports an incorrect fail status.</code></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><code> Please take this release if you are using the
+following chips: 7250b0 7364a0 7366b0 7366c0 74371a0 7439b0 7445d0 7445e0</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1429: [PT UHD] BOLT build error with -fstack-protector-all compile flag
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> Please take this release if you require gcc
+stack protection/monitoring features in BOLT.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1266: Audio at Bootup time (BOLT)
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> Please take this release if you want PCM audio
+support when SPLASH screen has been enabled.
+ This is for 7439b0 at the moment. Other chips have
+the infrastructure, but have not yet been verified.
+See the porting guide for more details.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1502: DDR3 was configured for 97366SV_DDR4
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> Please take this release if you have a Broadcom 97366SV
+reference board with DDR4.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1453: Implement RTS for box #13 of 7445
+</p>
+</li>
+<li>
+<p>
+SWBOLT-1517: BCM973649C61 board crashes when trying to boot Linux
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> Please take this release if you were previously using BOLT v1.01
+for chips with GENET but no 'eth0' device configured for your board.</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_24">24.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.02%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_01">25.  v1.01</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+Critical bug fixes or feature additions, ordered by reported severity.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+SWBOLT-1433: USB: Add USB support in 7439B1
+</p>
+</li>
+<li>
+<p>
+SWBOLT-1419: Activate USB on 7439B1 while not on B0
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release to enable USB for 7439b1 as the
+previous BOLT release v1.00 disabled it for 7439b0.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1479  Update box #1 RTS for 74371
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release if you use USB3.0 on 74371a0</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1451: Instruction RAC should be disabled
+</p>
+</li>
+<li>
+<p>
+SWBOLT-1465: Guard Page is in the wrong VA location
+</p>
+</li>
+<li>
+<p>
+SWBOLT-1474: GISB timeouts observed in Bolt
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_25">25.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.01%22%20ORDER%20BY%20Severity">Here</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_v1_00">26.  v1.00</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+Critical bug fixes or feature additions, ordered by reported severity.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+SWBOLT-1042: NAND performance (prefetch, cache mode, DMA)
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>NAND DMA has been switched on by default in this release.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1455: NAND write slow after implementation of DMA read
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> Please take this release if you require improved NAND write
+performance (from 3MB/s to ~6MB/s.)</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1408: Implement RTS for box #6 of 7364
+</p>
+</li>
+<li>
+<p>
+SWBOLT-1425: Implement RTS for box #6 of 7439 B0
+</p>
+</li>
+<li>
+<p>
+SWBOLT-1434: Implement box #5 for 7439 B0
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>Please take this release if you use the above NEXUS box modes.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1415: Add support for BCM7366C0
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>This is the first BOLT release to feature the 7366c0 chip.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1406: Splash screen on RF Output (74371a0)
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> Please note that the above feature is limited to the
+74371a0 at the moment.</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+SWBOLT-1422: Fix NULL mdio_mode handling
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code> This fixes the configuration script 'enet' command for where the
+'mdio_mode' has not been specified.</code></pre>
+</div></div>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_broadcom_fae_access_26">26.1.  Broadcom FAE access</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.00%22%20ORDER%20BY%20Severity">http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.00%22%20ORDER%20BY%20Severity</a></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">27.  Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2017, Broadcom.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

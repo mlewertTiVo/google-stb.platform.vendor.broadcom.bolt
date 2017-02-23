@@ -70,6 +70,15 @@ static inline void rdb_write(uint64_t reg, uint32_t value)
 	*(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET) = value;
 }
 
+static inline uint64_t rdb_read64(uint64_t reg)
+{
+	return *(volatile uint64_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET);
+}
+
+static inline void rdb_write64(uint64_t reg, uint64_t value)
+{
+	*(volatile uint64_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET) = value;
+}
 
 /* stub-uart */
 void uart_init(void);

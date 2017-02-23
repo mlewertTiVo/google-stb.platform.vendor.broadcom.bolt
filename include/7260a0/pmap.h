@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2016, Broadcom
+ *     Copyright (c) 2012-2017, Broadcom
  *     All Rights Reserved
  *     Confidential Property of Broadcom
  *
@@ -20,17 +20,8 @@
 #ifndef BCHP_PMAP_PRIV_H__
 #define BCHP_PMAP_PRIV_H__
 
-/* Private power resource IDs */
-enum pmaps {
-	PMap0,
-	PMap1,
-	PMap2,
-	PMap3,
-	PMap4,
-	PMap5,
-	PMap6,
-	PMapMax,
-} pmaps;
+#define AVS_RDB_DATE 20161124 /* %y%m%d */
+#define AVS_RDB_TIME 1157 /* %h%m */
 
 struct pmapParameters {
 	uint16_t ndiv_int;
@@ -44,14 +35,25 @@ struct pmapParameters {
 	char *desc;
 } pmapParameters;
 
-static const struct pmapParameters pmapTable[PMapMax] = {
-	{167,	3,	2,	3,	4,	6,	10,	1,	"PMap0"},
-	{167,	3,	3,	4,	6,	8,	10,	1,	"PMap1"},
-	{167,	3,	3,	4,	6,	8,	10,	1,	"PMap2"},
-	{167,	3,	3,	4,	6,	8,	10,	1,	"PMap3"},
-	{167,	3,	2,	3,	4,	6,	10,	2,	"PMap4"},
-	{167,	3,	2,	3,	4,	6,	10,	2,	"PMap5"},
-	{167,	3,	2,	3,	4,	6,	10,	2,	"PMap6"},
+#ifndef AVS_ONCE
+#define AVS_ONCE
+static const struct pmapParameters pmapTable[] = {
+	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
+	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap0"},
+	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 3, .mdiv_p1 = 4, .mdiv_p2 = 6,
+	  .mdiv_p3 = 8, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap1"},
+	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 3, .mdiv_p1 = 4, .mdiv_p2 = 6,
+	  .mdiv_p3 = 8, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap2"},
+	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 3, .mdiv_p1 = 4, .mdiv_p2 = 6,
+	  .mdiv_p3 = 8, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap3"},
+	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
+	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 2, .desc = "PMap4"},
+	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
+	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 2, .desc = "PMap5"},
+	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
+	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 2, .desc = "PMap6"},
 };
 
+static const int PMAP_MAX = sizeof(pmapTable)/sizeof(pmapTable[0]);
+#endif
 #endif

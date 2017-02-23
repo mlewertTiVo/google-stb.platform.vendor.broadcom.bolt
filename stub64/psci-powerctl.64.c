@@ -13,6 +13,7 @@
 
 #include <bchp_common.h>
 #include <bchp_cntcontrolbase.h>
+#include <bchp_hif_continuation.h>
 #include <bchp_hif_cpubiuctrl.h>
 #include <bchp_sun_top_ctrl.h>
 
@@ -87,15 +88,14 @@ static int wait_bit_clr(uint64_t reg, uint32_t mask)
 
 void set_cpu_boot_addr(unsigned int cpu, uint64_t boot_addr)
 {
-	uint32_t base, lo, hi;
+	uint32_t base;
 
-	/* Low 32 bits address + 8 bits high address */
-	lo = (uint32_t) (boot_addr        & 0x00000000ffffffffULL);
-	hi = (uint32_t)((boot_addr >> 32) & 0x00000000000000ffULL);
-
-	/* 2 x 32 bit registers per entry:
+	/* 2 x 32 bit registers per entry, or:
 	 * HIF_CONTINUATION_STB_BOOT_HI_ADDR0	07:00
 	 * HIF_CONTINUATION_STB_BOOT_ADDR0	31:00
+	 *
+	 * 1 x 64 bit register per entry:
+	 * HIF_CONTINUATION_STB_BOOT_ADDR0	39:00
 	 */
 	base = BCHP_HIF_CONTINUATION_REG_START + (cpu << 3);
 
@@ -108,8 +108,14 @@ void set_cpu_boot_addr(unsigned int cpu, uint64_t boot_addr)
 		puts("");
 	}
 
-	rdb_write(base, hi);
-	rdb_write(base + sizeof(uint32_t), lo);
+#ifndef BCHP_HIF_CONTINUATION_STB_BOOT_HI_ADDR0
+	rdb_write64(base, boot_addr);
+#else
+	/* high 8 bits address */
+	rdb_write(base, (uint32_t)((boot_addr >> 32) & 0x00000000000000ffULL));
+	base += sizeof(uint32_t); /* and, low 32 bits address */
+	rdb_write(base, (uint32_t) (boot_addr        & 0x00000000ffffffffULL));
+#endif
 	BARRIER64();
 }
 

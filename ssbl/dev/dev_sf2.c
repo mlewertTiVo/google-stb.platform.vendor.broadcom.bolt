@@ -188,7 +188,8 @@ static void sf2_sgphy_init(int phy_id)
 	reg = BDEV_RD(BCHP_SWITCH_REG_SPHY_CNTRL);
 	reg |= BCHP_SWITCH_REG_SPHY_CNTRL_phy_reset_MASK;
 	reg &= ~(BCHP_SWITCH_REG_SPHY_CNTRL_ext_pwr_down_MASK |
-		BCHP_SWITCH_REG_SPHY_CNTRL_iddq_bias_MASK);
+		BCHP_SWITCH_REG_SPHY_CNTRL_iddq_bias_MASK |
+		BCHP_SWITCH_REG_SPHY_CNTRL_iddq_global_pwr_MASK);
 
 	/* Set phy ID (only makes sense in qphy case */
 	reg &= ~(BCHP_SWITCH_REG_SPHY_CNTRL_phy_phyad_MASK);

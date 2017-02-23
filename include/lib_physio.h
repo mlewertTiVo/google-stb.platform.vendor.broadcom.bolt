@@ -27,6 +27,7 @@
 
 #ifndef __ASSEMBLER__
  #define BPHYSADDR(x) ((uint32_t)(x) | BCHP_PHYSICAL_OFFSET)
+ #define BPHYSADDR64(x) ((uint64_t)(x) | (uint64_t)BCHP_PHYSICAL_OFFSET)
  #define REG_CAST	PHYSIO_CAST_U32
  #define REG(reg)	PHYSIO_REG_U32(reg)
  typedef uint32_t	physaddr_t;
@@ -38,7 +39,8 @@
 
 #define DEV_RD(x) PHYSIO_MEM_U32(x)
 #define DEV_WR(x, y) do { PHYSIO_MEM_U32(x) = (y); } while (0)
-
+#define DEV_RD64(x) PHYSIO_MEM_U64(x)
+#define DEV_WR64(x, y) do { PHYSIO_MEM_U64(x) = (y); } while (0)
 
 #define DEV_UNSET(x, y) do { DEV_WR((x), DEV_RD(x) & ~(y)); } while (0)
 #define DEV_SET(x, y) do { DEV_WR((x), DEV_RD(x) | (y)); } while (0)
@@ -56,6 +58,8 @@
 #define BDEV_UNSET_RB(x, y) do { BDEV_UNSET((x), (y)); BDEV_RD(x); } while (0)
 #define BDEV_WR_RB(x, y) do { BDEV_WR((x), (y)); BDEV_RD(x); } while (0)
 
+#define BDEV_RD64(x) (DEV_RD64(BVIRTADDR(x)))
+#define BDEV_WR64(x, y) do { DEV_WR64(BVIRTADDR(x), (y)); } while (0)
 
 #define BDEV_F_MASK(reg, field)\
 		(BCHP_##reg##_##field##_MASK)

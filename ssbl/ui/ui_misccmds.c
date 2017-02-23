@@ -7,27 +7,27 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_queue.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
+#include <ui_command.h>
 
-#include "iocb.h"
-#include "device.h"
-#include "console.h"
-#include "error.h"
-#include "ioctl.h"
-#include "devfuncs.h"
-#include "env_subr.h"
-#include "ui_command.h"
-#include "bolt.h"
-#include "bsp_config.h"
-#include "common.h"
-#include "reboot.h"
-#include "fsbl-common.h"
-#include "board.h"
-
+#include <avs_bsu.h>
+#include <board.h>
+#include <bolt.h>
+#include <bsp_config.h>
+#include <common.h>
+#include <console.h>
+#include <devfuncs.h>
+#include <device.h>
+#include <env_subr.h>
+#include <error.h>
+#include <fsbl-common.h>
+#include <iocb.h>
+#include <ioctl.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_queue.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <reboot.h>
 
 static int ui_cmd_reboot(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_info(ui_cmdline_t *cmd, int argc, char *argv[]);
@@ -210,6 +210,8 @@ static int ui_cmd_info(ui_cmdline_t *cmd, int argc, char *argv[])
 	xprintf
 	    ("========================================================================\n");
 	bolt_config_info(1);
+	xprintf("\n");
+	avs_info_print();
 	xprintf
 	    ("========================================================================\n");
 
