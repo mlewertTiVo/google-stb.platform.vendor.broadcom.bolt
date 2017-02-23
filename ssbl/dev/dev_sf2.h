@@ -60,6 +60,19 @@
 	BCHP_SWITCH_CORE_CTL_IMP_RX_BCST_EN_MASK
 #endif
 
+#ifndef BCHP_SWITCH_REG_LED_0_CNTRL_sel_no_link_encode_SHIFT
+#define BCHP_SWITCH_REG_LED_0_CNTRL_sel_no_link_encode_SHIFT \
+	BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL_sel_no_link_encode_SHIFT
+#define BCHP_SWITCH_REG_LED_0_CNTRL_sel_10m_encode_SHIFT \
+	BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL_sel_10m_encode_SHIFT
+#define BCHP_SWITCH_REG_LED_0_CNTRL_sel_100m_encode_SHIFT \
+	BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL_sel_100m_encode_SHIFT
+#define BCHP_SWITCH_REG_LED_0_CNTRL_sel_1000m_encode_SHIFT \
+	BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL_sel_1000m_encode_SHIFT
+#define BCHP_SWITCH_REG_LED_0_CNTRL_no_link_encode_SHIFT \
+	BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_no_link_encode_SHIFT
+#endif
+
 
 void bcm_sf2_init(void);
 mdio_info_t *bcm_sf2_mdio_init(void);

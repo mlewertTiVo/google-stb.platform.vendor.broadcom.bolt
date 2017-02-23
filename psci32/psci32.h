@@ -57,22 +57,6 @@ struct psci_cfg {
 	struct per_cpu *cpu;
 } __attribute__((aligned(64)));
 
-
-static inline uint32_t rdb_read(uint32_t reg)
-{
-	return *(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET);
-}
-
-static inline void rdb_write(uint32_t reg, uint32_t value)
-{
-	*(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET) = value;
-}
-
-
-/* uart */
-void uart_init(void);
-void uart_putc(int c);
-
 /* minilib */
 void __puts(const char *s);
 int puts(const char *s);
@@ -85,9 +69,68 @@ void *memset(void *s, int c, size_t n);
 void writeint(int n);
 void msg_cpu(const char *s, unsigned int cpu /* cpu+cluster index */);
 void hexdump(uint32_t mem, int numitems);
+void report_hex(const char *msg, uint32_t hexnum);
+
+static inline uint32_t rdb_read(uint32_t reg)
+{
+	return *(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET);
+}
+
+static inline void rdb_write(uint32_t reg, uint32_t value)
+{
+	*(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET) = value;
+}
+
+static inline uint64_t rdb_read64(uint32_t reg)
+{
+	/* The strd and ldrd instructions MUST start
+	 * with an even register, followed by its odd
+	 * numbered counterpart. Enforce this
+	 * against any toolchain weirdness.
+	 */
+	register uint64_t value asm("r2");
+
+	reg |= BCHP_PHYSICAL_OFFSET;
+
+	/* check register is u64 aligned in the RDB */
+	if (reg & 0x7)
+		report_hex("ALIGN!R64", reg);
+
+	__asm__ __volatile__(
+		"ldrd   %0, [%1]\n"
+		: "=r" (value)  /* outputs */
+		: "r" (reg)     /* inputs */
+	);
+
+	return value;
+}
+
+static inline void rdb_write64(uint32_t reg, uint64_t value)
+{
+	register uint64_t okvalue asm("r2");
+
+	/* 'value' should conform to the ARM EABI but may not
+	 * use even register pairs, so we go full paranoia
+	 * and make it so.
+	 */
+	okvalue = value;
+	reg |= BCHP_PHYSICAL_OFFSET;
+	if (reg & 0x7)
+		report_hex("ALIGN!W64", reg);
+
+	__asm__ __volatile__(
+		"strd   %0, [%1]\n"
+		:                               /* outputs */
+		: "r" (okvalue), "r" (reg)      /* inputs */
+	);
+}
+
+/* uart */
+void uart_init(void);
+void uart_putc(int c);
 
 /* powerctl */
-void set_cpu_boot_addr(unsigned int cpu, uint32_t boot_addr);
+void set_cpu_boot_addr(unsigned int cpu, uint64_t boot_addr);
 uint32_t cpu_enable(unsigned int cpu, int en);
 uint32_t power_up_cpu(unsigned int cpu);
 uint32_t power_down_cpu(unsigned int cpu);

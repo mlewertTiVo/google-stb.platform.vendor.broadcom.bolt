@@ -15,6 +15,8 @@
 #ifndef _ANDROID_TYPES_H_
 #define _ANDROID_TYPES_H_
 
+#define BOOT_MAGIC        "ANDROID!"
+
 /* from arch/arm/include/asm/types.h */
 typedef unsigned short umode_t;
 

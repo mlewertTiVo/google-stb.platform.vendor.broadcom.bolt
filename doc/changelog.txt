@@ -6,6 +6,78 @@
 Release changelog
 =================
 
+ v1.26
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2199[SWBOLT-2199] Correct PMap values for 7260A0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2193[SWBOLT-2193] Fix missing Ethernet PHY clock reference in BOLT provided Device Tree for Linux' Ethernet PHY driver to correctly enable it.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2185[SWBOLT-2185] Fixed crash on BCM97437SV.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2160[SWBOLT-2160] Fixed splash code so that it can compile properly for 7268B0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2205[SWBOLT-2205] Fixed splash code so that it can compile properly for 7271B0. ^[red silver-background]#blocker#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.26%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.25
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2137[SWBOLT-2137] Add DT entries to identify vc5 MMU to DRM/GEM framework.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2092[SWBOLT-2092] Add support for 7268B0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2134[SWBOLT-2134] Added Device Tree props to serial node that allows hardware flow control to be enabled.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2106[SWBOLT-2106] Added preliminary support for 7278a0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2128[SWBOLT-2128] Adjusted 64 bit monitor load address to give TZOS more space.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2145[SWBOLT-2145] Bug fixed to prevent marking false bad blocks. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2133[SWBOLT-2133] Clocks added for Linux 4.1-1.6 brcmstb-cpufreq.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1822[SWBOLT-1822] Enabled DTU in 7271b0, 7268b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2132[SWBOLT-2132] For DT node "sw_scb", fixed spelling of property "#clock-cells".
+
+link:http://jira.broadcom.com/browse/SWBOLT-2088[SWBOLT-2088] Implemented pmaps for 7268B0 / 7271B0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2157[SWBOLT-2157] Reconfigured TrustZone memory layout for 16MB footprint. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2144[SWBOLT-2144] S3 is now supported for 7268b0/7271b0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2172[SWBOLT-2172] SAFE_CLK_MODE is updated when requesting AVS to change CPU speed.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2168[SWBOLT-2168] Support new style Devicetree binding for Ethernet switches using the DSA subsystem. Ref: https://git.kernel.org/cgit/linux/kernel/git/davem/net-next.git/commit/?id=8c5ad1d6179df31eea1b736c88296db6e3ffd25d.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2135[SWBOLT-2135] Supported low-speed devices through the usb-hubs. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2136[SWBOLT-2136] Systems with MACH related Shmoo failures should try version 2.1.1.0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2151[SWBOLT-2151] Updated voltage margin levels for 7268B0 & 7271B0. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.25%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.24
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2092[SWBOLT-2092] Add support for 7268B0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-1955[SWBOLT-1955] Add support for 7271B0.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.24%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.23
 ------
 
@@ -659,6 +731,6 @@ http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%2
 
  Appendix: Copyright Info
 -------------------------
-Copyright (C) 2016, Broadcom.
+Copyright (C) 2017, Broadcom.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.

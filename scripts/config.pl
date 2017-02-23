@@ -18,7 +18,7 @@ use BcmDt::Board;
 my $P = basename $0;
 
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 # *
 # *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -66,6 +66,7 @@ my @configs = (
 	       "CMA_DEF_ALIGN",
 	       "CPU_COHERENT_DMA",
 	       "CUSTOM_CODE",
+	       "DUMMY_SECURITY",
 	       "ELF_LDR",
 	       "EMBEDDED_PIC",
 	       "EMMC_FLASH",
@@ -116,10 +117,13 @@ my @configs = (
 	       "USB_HID",
 	       "USB_SERIAL",
 	       "USB_STARTMODE",
+	       "USB_EHCI_OHCI",
+	       "USB_XHCI",
 	       "VENDOR_EXTENSIONS",
 	       "ZEUS4_1",
 	       "ZEUS4_2",
 	       "ZEUS4_2_1",
+	       "ZEUS5_0",
 	       "ZIMG_LDR",
 	       "ZLIB",
 	);
@@ -551,6 +555,13 @@ sub new($$) {
 	return $s;
 }
 
+package DtsInclude;
+sub new($$) {
+	my ($class, $s) = @_;
+	bless $s, $class;
+	return $s;
+};
+
 package GpioKey;
 sub new($$) {
 	my ($class, $s) = @_;
@@ -788,7 +799,17 @@ sub add($$$) {
 		push @{$s->{i2cbus}}, uc($part);
 	} elsif ($item eq 'ldfile') {
 		push @{$s->{ldfile}}, $part;
+	} elsif ($item eq 'dts_include') {
+		for $r (@{$s->{dts_include}}) {
+			if ($r->{file} eq $part->{file}) {
+				$found = $r = $part;
+				last;
+			}
+		}
+		die("duplicate dtsinclude :$part->{file}\n")
+			if ($found);
 
+		push @{$s->{dts_include}}, $part;
 	} else {
 		die "incorrect value: '" + $item + "'";
 	}
@@ -828,7 +849,7 @@ my %dt_autogen = map {($_,'')}
 	pwm watchdog upg_main_irq upg_main_aon_irq upg_bsc_irq
 	upg_bsc_aon_irq upg_spi_aon_irq nexus_upg_main_irq
 	nexus_upg_main_aon_irq nexus_upg_bsc_irq nexus_upg_bsc_aon_irq
-	nexus_upg_spi_aon_irq wlan/;
+	nexus_upg_spi_aon_irq wlan v3d_mmu/;
 my $Current = Board->new("");
 my $Family = $Current;
 my $ProcessingState = eStateInNone;
@@ -875,6 +896,8 @@ sub get_bchp_info($) {
 		'bchp_sata_top_ctrl.h',
 		'bchp_systemport_topctrl.h',
 		'bchp_systemport_tdma.h',
+		'bchp_systemportlite_?_topctrl.h',
+		'bchp_systemportlite_?_tdma.h',
 		'bchp_switch_acb.h',
 		'bchp_switch_core.h',
 		'bchp_switch_reg.h',
@@ -884,6 +907,7 @@ sub get_bchp_info($) {
 		'bchp_memc_l2_0_?.h',
 		'bchp_memc_l2_1_?.h',
 		'bchp_memc_l2_2_?.h',
+		'bchp_memc_dtu_config_?.h',
 		'bchp_mc_scbarb_?.h',
 		'bchp_irq0.h',
 		'bchp_irq0_aon.h',
@@ -898,6 +922,7 @@ sub get_bchp_info($) {
 		'bchp_timer.h',
 		'bchp_webhif_timer.h',
 		'bchp_watchdog.h',
+		'bchp_v3d_hub_ctl.h',
 		);
 
 	@incs = map { "$arg_rdb_dir/$_" } @incs;
@@ -1308,6 +1333,14 @@ sub cmd_dts($) {
 	}
 }
 
+sub cmd_dtsinclude($) {
+	my ($f) = @_;
+	check_in_family();
+	shift @$f; # drop 'dtsinclude'.
+	my $o = check_opts($f, [qw/file/], []);
+	$Current->add('dts_include', DtsInclude->new($o));
+}
+
 sub cmd_rtsconfig($) {
 	my ($f) = @_;
 	check_in_family();
@@ -1523,7 +1556,7 @@ sub cmd_avs($) {
 	}
 
 	if (defined($o->{pmap})){
-		# TODO: replace 30 with 'PMapMax' of include/${family}/pmap.h
+		# TODO: replace 30 with 'PMAP_MAX' of include/${family}/pmap.h
 		if ($o->{pmap} < 0 || $o->{pmap} > 30) {
 			cfg_error("option for pmap must be [0..30]");
 		}
@@ -1603,7 +1636,7 @@ sub cmd_vreg($)
 	foreach my $gio ("gio", "gio_aon") {
 		my ($reg_first, $bank_size) =
 			BcmDt::Devices::get_reg_range($rh, "BCHP_" . uc($gio));
-		$h_gpio_names{"upg_$gio"} = sprintf("gpio\@%08x", $reg_first);
+		$h_gpio_names{"upg_$gio"} = sprintf("gpio\@%x", $reg_first);
 	}
 
 	# The vreg node will be created at build time; see the 
@@ -1673,7 +1706,7 @@ sub cmd_pcie($) {
 		@pwr = @a;
 	}
 
-	$node = sprintf('pcie@%08x', $rh->{$node} + $rh->{BCHP_PHYSICAL_OFFSET});
+	$node = sprintf('pcie@%x', $rh->{$node} + $rh->{BCHP_PHYSICAL_OFFSET});
 
 	if ($o->{type} eq 'nodevice') {
 		# Turn this into a 'dt cull' operation.
@@ -1746,7 +1779,7 @@ sub cmd_usb_sub($$) {
 		    /^(off|on|dual|typec_pd)$/i);
 
 	$rh = $rh->{rh_defines};
-	my $node = sprintf('usb%s@%08x', $new_style ? "-phy" : "", $usb_start);
+	my $node = sprintf('usb%s@%x', $new_style ? "-phy" : "", $usb_start);
 
 	if ($o->{type} eq 'nodevice') {
 		# Turn this into a 'dt cull' operation.
@@ -1924,6 +1957,7 @@ my %commands = (
 		'ddr' =>	\&cmd_ddr,
 		'dt' =>		\&cmd_dt,
 		'dts' =>	\&cmd_dts,
+		'dtsinclude' =>	\&cmd_dtsinclude,
 		'enet' =>	\&cmd_enet,
 		'gset' =>	\&cmd_gset,
 		'i2cbus' =>	\&cmd_i2cbus,
@@ -3000,17 +3034,20 @@ sub processed_pcie_dma_ranges() {
 
 		# Now we compute the "ranges" vectors.  We used to
 		# do this at PCIe autogeneration time in Devices.pm,
-		# but certain boards' configurations require the 
+		# but certain boards' configurations require the
 		# outbound PCIe location to be moved higher in
 		# PCIe space.
 		#
-		# We start with Four segments, starting at 0xc0000000, 
-		# each with size 128M.  Each outbound window is 
-		# described by a range, currently a 7-tuple. The
-		# numbers in the range are:
+		# For chips with pre-v7 memory map, we start with four
+		# segments, starting at 0xc0000000, each with size 128M.
+		# Starting v7 memory map, two 128M size segments start
+		# at 0x30000000.
 		#
-		# (<pci-info>,  
-		#  <pci-addr-hi>,  <pci-addr-lo>, 
+		# Each outbound window is described by a range,
+		# currently a 7-tuple. The numbers in the range are:
+		#
+		# (<pci-info>,
+		#  <pci-addr-hi>,  <pci-addr-lo>,
 		#  <cpu-addr-hi>,  <cpu-addr-lo>,
 		#  <size-hi>  <size-lo>)
 		#
@@ -3032,6 +3069,14 @@ sub processed_pcie_dma_ranges() {
 			    0x00000000 0xd8000000
 			    0x00000000 0xd8000000
 			    0x00000000 0x08000000/;
+			my @v7r0 = qw/0x02000000
+			    0x00000000 0x30000000
+			    0x00000000 0x30000000
+			    0x00000000 0x08000000/;
+			my @v7r1 = qw/0x02000000
+			    0x00000000 0x38000000
+			    0x00000000 0x38000000
+			    0x00000000 0x08000000/;
 
 			my @ranges;
 			my $chip = $Family->{familyname};
@@ -3044,6 +3089,9 @@ sub processed_pcie_dma_ranges() {
 			} elsif ($chip =~ /^(7445|7439|7366)/ && $num_pcie == 2) {
 				# Each device gets 256M.
 				@ranges = ($i == 0) ? (@r0, @r1) : (@r2, @r3);
+			} elsif ($chip =~ /^(7278)/ && $num_pcie == 2) {
+				# V7 memory map: each device gets 128M.
+				@ranges = ($i == 0) ? @v7r0 : @v7r1;
 			} else {
 				die "$P: need to address PCIe ranges for $chip";
 			}
@@ -3365,7 +3413,7 @@ sub memc_array($$$$)
 		if ($i % 4 == 0) {
 			$out .= "\t";
 		}
-		$out .= sprintf("0x%08x,", $$rts_values[$i]);
+		$out .= sprintf("0x%x,", $$rts_values[$i]);
 		if ($i % 4 == 3) {
 			$out .= "\n";
 		} else {
@@ -3750,6 +3798,12 @@ sub process_dev_tree($)
 	my $num_pwm = $dt_autogen{pwm} ? BcmUtils::get_num_pwm($rh->{rh_defines}) : 0;
 
 	my $num_wlan = $dt_autogen{wlan} ? BcmUtils::get_num_wlan($rh->{rh_defines}) : 0;
+	my $num_v3d_mmu = $dt_autogen{v3d_mmu} ?
+		BcmUtils::get_num_v3d_mmu($rh->{rh_defines}) : 0;
+	my $num_dtu_map = $dt_autogen{dtu} ?
+		BcmUtils::get_num_dtu_map($rh->{rh_defines}) : 0;
+	my $num_dtu_config = $dt_autogen{dtu} ?
+		BcmUtils::get_num_dtu_config($rh->{rh_defines}) : 0;
 
 	map { $dt_autogen{$_} ||= {} } keys %dt_autogen;
 
@@ -3859,8 +3913,8 @@ sub process_dev_tree($)
 
 	BcmDt::Devices::add_sun_top_ctrl($rdb, $rh);
 
-	BcmDt::Devices::add_systemport($rdb, $rh, $dt_autogen{systemport},
-		"aon_pm_l2")
+	BcmDt::Devices::add_systemport($rdb, $rh, $num_sysport,
+		$dt_autogen{systemport}, "aon_pm_l2")
 		if ($num_sysport && !empty($dt_autogen{systemport}));
 	BcmDt::Devices::add_sf2($rdb, $rh, $dt_autogen{sf2_switch})
 		if ($num_sf2_switch && !empty($dt_autogen{sf2_switch}));
@@ -3927,8 +3981,16 @@ sub process_dev_tree($)
 		if ($num_mspi && !empty($dt_autogen{mspi}));
 	BcmDt::Devices::add_pwm($rdb, $rh, $num_pwm, $dt_autogen{pwm}, -f $clks_file)
 		if (!empty($dt_autogen{pwm}) && $num_pwm);
-	BcmDt::Devices::add_wlan($rdb, $rh, $num_wlan, $dt_autogen{wlan})
-		if (!empty($dt_autogen{wlan}) && $num_wlan);
+	BcmDt::Devices::add_wlan($rdb, $rh, $num_wlan, $dt_autogen{wlan},
+		"aon_pm_l2") if (!empty($dt_autogen{wlan}) && $num_wlan);
+
+	BcmDt::Devices::add_v3d_mmu($rdb, $rh, $num_v3d_mmu,
+				    $dt_autogen{v3d_mmu})
+		if (!empty($dt_autogen{v3d_mmu}) && $num_v3d_mmu);
+	BcmDt::Devices::add_dtu_map($rdb, $rh, $num_dtu_map)
+		if (!empty($dt_autogen{dtu}) && $num_dtu_map);
+	BcmDt::Devices::add_dtu_config($rdb, $rh, $num_dtu_config)
+		if (!empty($dt_autogen{dtu}) && $num_dtu_config);
 
 	BcmDt::Devices::add_cpu_clock($dt, $dt_autogen{cpuclock})
 		if (!empty($dt_autogen{cpuclock}));
@@ -3964,6 +4026,13 @@ sub process_dev_tree($)
 	my $include_str = "/include/ \"$src\"\n";
 	$dt_str =~ s!/dts-v1/;!$include_str!;
 	print $fh $dt_str;
+
+	print $fh "/* Device Tree fragments included below -- do not edit. */\n\n";
+	for my $dts_inc (@{$Family->{dts_include}}) {
+		$dt_str = "/include/ \"$dts_inc->{file}\"\n";
+		print $fh $dt_str;
+	};
+
 	close($fh);
 }
 

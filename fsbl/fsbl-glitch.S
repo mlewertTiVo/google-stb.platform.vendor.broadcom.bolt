@@ -60,7 +60,7 @@ ENTRY_PROC(anti_glitch_a)
 	blx		r2
 
 entry_ok:
-#if !defined(CFG_EMULATION) && !defined(CFG_FULL_EMULATION) && defined(CFG_ZEUS4_2)
+#if !defined(CFG_FULL_EMULATION) && (CFG_ZEUS4_2 != 0)
 	ldr		r1,	=g_bsp_version
 	ldr		r8,	[r1]
 	cmp		r8,	#3
@@ -142,7 +142,7 @@ clear_sram:
 	mov  		r3, #0
 	sram_memset	clear2, r1, r2, r3
 
-#if !defined(CFG_EMULATION) && !defined(CFG_FULL_EMULATION) && defined(CFG_ZEUS4_2)
+#if !defined(CFG_FULL_EMULATION) && (CFG_ZEUS4_2 != 0)
 	cmp		r8,	#3
 	bls		call_entry
 

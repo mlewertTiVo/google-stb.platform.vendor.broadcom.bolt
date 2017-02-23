@@ -109,6 +109,8 @@ struct clock_divisors {
 struct pmap_entry {
 	struct clock_divisors cpu;
 	struct clock_divisors scb;
+	uint8_t sysif_mdiv;
+	uint8_t dummy[3]; /* For 4 byte alignment */
 };
 
 struct boards_nvm_list {
@@ -276,7 +278,7 @@ enum {
 #define	FSBLINFO_VERSION(x)		(((x) & FSBLINFO_VERSION_MASK)\
 						>> FSBLINFO_VERSION_SHIFT)
 
-#define FSBLINFO_CURRENT_VERSION	1
+#define FSBLINFO_CURRENT_VERSION	2
 
 /* This is the primary interface between FSBL & SSBL
 */
@@ -299,8 +301,7 @@ struct fsbl_info {
 #ifdef STUB64_START
 	uint32_t psci_base;
 #endif
-	uint32_t n_pmaps;
-	struct pmap_entry *pmap_table;
+	uint32_t shmoo_ver; /* VERSION 2 */
 };
 
 #endif /* __FSBL_COMMON_H__ */

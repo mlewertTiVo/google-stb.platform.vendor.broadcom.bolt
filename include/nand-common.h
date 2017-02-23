@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -14,8 +12,10 @@
 
 #include <bchp_nand.h>
 
-#if (BCHP_NAND_REVISION_MAJOR_DEFAULT < 7) || \
-    (BCHP_NAND_REVISION_MAJOR_DEFAULT >= 7 && BCHP_NAND_REVISION_MINOR_DEFAULT < 1)
+#define NAND_CONTROLLER_REVISION (BCHP_NAND_REVISION_MAJOR_DEFAULT * 0x100 + \
+				  BCHP_NAND_REVISION_MINOR_DEFAULT)
+
+#if NAND_CONTROLLER_REVISION < 0x701
 /* NAND controller 7.0 or lower */
 
 /*

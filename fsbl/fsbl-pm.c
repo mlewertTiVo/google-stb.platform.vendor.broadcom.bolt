@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -12,6 +12,7 @@
 #include <stdbool.h>
 
 #include "fsbl.h"
+#include "fsbl-dtu.h"
 #include "fsbl-pm.h"
 #include "../common/xpt_dma.h"
 #include "boot_defines.h"
@@ -241,7 +242,7 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 	return 0;
 }
 
-void fsbl_finish_warm_boot(uint32_t restore_val)
+void fsbl_finish_warm_boot(uint32_t restore_val, unsigned int nddr)
 {
 	struct brcmstb_s3_params *params;
 	uintptr_t addr;
@@ -273,6 +274,8 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 		puts("S3 params verification failed");
 		handle_boot_err(ERR_S3_PARAM_HASH_FAILED);
 	}
+
+	dtu_enable(nddr);
 
 #ifdef STUB64_START
        /*

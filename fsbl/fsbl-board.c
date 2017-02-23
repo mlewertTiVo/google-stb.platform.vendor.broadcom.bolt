@@ -156,9 +156,6 @@ void load_boards(struct fsbl_info *info, uint32_t dst)
 	info->n_boards = b->n_boards;
 	info->board_types = (struct board_type *)
 			((physaddr_t)(dst) + (physaddr_t)b->board_types);
-	info->n_pmaps = b->n_pmaps;
-	info->pmap_table = (struct pmap_entry *)
-			((physaddr_t)(dst) + (physaddr_t)b->pmap_table);
 #endif
 }
 

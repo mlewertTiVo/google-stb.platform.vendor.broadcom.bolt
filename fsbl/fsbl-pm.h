@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -18,13 +16,13 @@
 #if CFG_PM_S3
 
 bool fsbl_ack_warm_boot(void);
-void fsbl_finish_warm_boot(uint32_t restore_val);
+void fsbl_finish_warm_boot(uint32_t restore_val,  unsigned int nddr);
 
 #else
 
 static inline bool fsbl_ack_warm_boot(void) { return false; }
 
-static inline void fsbl_finish_warm_boot(uint32_t t)
+static inline void fsbl_finish_warm_boot(uint32_t t,  unsigned int nddr)
 {
 	sys_die(DIE_PM_NO_S3_SUPPORT, "no S3 support");
 }

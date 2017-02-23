@@ -21,10 +21,12 @@ DROID_BSU_POSTPATCH := android_postpatch
 ANDROID_TOP_DIR := android
 
 ANDROID_SCRIPTS_DIR := $(ANDROID_TOP_DIR)/scripts
-ANDROID_BOLT_INC_DIR := $(GEN)/$(ANDROID_TOP_DIR)/boltinc
+ANDROID_BOLT_INC_DIR := $(ANDROID_TOP_DIR)/boltinc
+
+ANDROID_INC_GEN_FILES := \
+	$(FAMILY)/config.h
 
 ANDROID_INC_FILES := \
-	$(GEN)/$(FAMILY)/config.h \
 	include/arch.h \
 	include/bitops.h \
 	include/boardcfg.h \
@@ -71,23 +73,25 @@ android_postpatch:
 	$(Q)echo '  Auto-gen include files for Android BSU'
 	$(Q)echo '  ------------------------------------------'
 	$(Q)echo
-	$(Q)echo "  Include files created in: $(ANDROID_BOLT_INC_DIR)"
+	$(Q)echo "  Include files created in: $(GEN)/$(ANDROID_BOLT_INC_DIR)"
 	$(Q)echo "  Do NOT modify auto-gen include files"
 	$(Q)echo
-	$(Q)mkdir -p $(ANDROID_BOLT_INC_DIR)
-	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/$(GEN)/$(FAMILY)/*.h
-	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/include/*.h
-	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/include/$(FAMILY)/*.h
-	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/build/*
-	$(Q)rm -rf $(ANDROID_BOLT_INC_DIR)/thirdparty/*
+	$(Q)mkdir -p $(GEN)/$(ANDROID_BOLT_INC_DIR)
+	$(Q)mkdir -p $(GEN)/$(ANDROID_BOLT_INC_DIR)/$(FAMILY)
+	$(Q)rm -rf $(GEN)/$(ANDROID_BOLT_INC_DIR)/$(FAMILY)/*.h
+	$(Q)rm -rf $(GEN)/$(ANDROID_BOLT_INC_DIR)/include/*.h
+	$(Q)rm -rf $(GEN)/$(ANDROID_BOLT_INC_DIR)/include/$(FAMILY)/*.h
+	$(Q)rm -rf $(GEN)/$(ANDROID_BOLT_INC_DIR)/build/*
+	$(Q)rm -rf $(GEN)/$(ANDROID_BOLT_INC_DIR)/thirdparty/*
 	$(Q)echo "  Copying files..."
 	$(Q)echo
-	$(Q)$(foreach f,$(ANDROID_INC_FILES), cp -pv --parents $f $(ANDROID_BOLT_INC_DIR)/;)
-	$(Q)find $(ANDROID_BOLT_INC_DIR) -name "*.h" -exec sed -i -f $(ANDROID_SCRIPTS_DIR)/sed-h-file-lic.script {} +
-	$(Q)find $(ANDROID_BOLT_INC_DIR) -name "*.mk" -exec sed -i -f $(ANDROID_SCRIPTS_DIR)/sed-mk-file-lic.script {} +
-	$(Q)echo $(FAMILIES) > $(ANDROID_BOLT_INC_DIR)/build-family-list
-	$(Q)$(ANDROID_SCRIPTS_DIR)/strip-hdr.py $(ANDROID_BOLT_INC_DIR)/include/$(FAMILY)
-	$(Q)echo "Files in this directory are auto-generated. Do not modify." > $(ANDROID_BOLT_INC_DIR)/readme.txt
+	$(Q)$(foreach f,$(ANDROID_INC_FILES), cp -pv --parents $f $(GEN)/$(ANDROID_BOLT_INC_DIR)/;)
+	$(Q)$(foreach f,$(GEN)/$(ANDROID_INC_GEN_FILES), cp -pv $f $(GEN)/$(ANDROID_BOLT_INC_DIR)/$(FAMILY);)
+	$(Q)find $(GEN)/$(ANDROID_BOLT_INC_DIR) -name "*.h" -exec sed -i -f $(ANDROID_SCRIPTS_DIR)/sed-h-file-lic.script {} +
+	$(Q)find $(GEN)/$(ANDROID_BOLT_INC_DIR) -name "*.mk" -exec sed -i -f $(ANDROID_SCRIPTS_DIR)/sed-mk-file-lic.script {} +
+	$(Q)echo $(FAMILIES) > $(GEN)/$(ANDROID_BOLT_INC_DIR)/build-family-list
+	$(Q)$(ANDROID_SCRIPTS_DIR)/strip-hdr.py $(GEN)/$(ANDROID_BOLT_INC_DIR)/include/$(FAMILY)
+	$(Q)echo "Files in this directory are auto-generated. Do not modify." > $(GEN)/$(ANDROID_BOLT_INC_DIR)/readme.txt
 	$(Q)echo
 	$(Q)echo '  Done! You can build Android BSU now.'
 

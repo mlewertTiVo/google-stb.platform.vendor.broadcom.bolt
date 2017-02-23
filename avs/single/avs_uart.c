@@ -57,7 +57,7 @@ void setup_chip_for_avs_uart(void)
 	PMUX(SUN_TOP, 9, gpio_011, TP_OUT_23);
 	BDEV_WR_F(SUN_TOP_CTRL_UART_ROUTER_SEL_0, port_2_cpu_sel, 15);
 	BDEV_WR_F(SUN_TOP_CTRL_TEST_PORT_CTRL, encoded_tp_enable, 16);
-#elif defined(CONFIG_BCM7271A0) || defined(CONFIG_BCM7268A0)
+#elif defined(CONFIG_BCM7271) || defined(CONFIG_BCM7268)
 	if (BUILD_FOR_AVS_SV_BOARD) {
 		/* SV boards (UARD on J3202): */
 		/* Requires board mods (remove R2505&R2506, */
@@ -81,6 +81,13 @@ void setup_chip_for_avs_uart(void)
 	PMUX(AON_PIN, 1, aon_gpio_12, ALT_TP_IN_00);
 	PMUX(AON_PIN, 1, aon_gpio_13, ALT_TP_OUT_00);
 	BDEV_WR_F(SUN_TOP_CTRL_UART_ROUTER_SEL_0, port_0_cpu_sel, 11); /*AVS_TOP*/
+	BDEV_WR_F(SUN_TOP_CTRL_TEST_PORT_CTRL, encoded_tp_enable, 16); /*SYS*/
+#elif defined(CONFIG_BCM7278A0)
+	/* SV boards (UART1 on J3202): */
+	/* 7278: Requires board mods (add 0ohm resistors at R2539&R2541) */
+	PMUX(SUN_TOP, 2, gpio_006, TP_IN_18);
+	PMUX(SUN_TOP, 2, gpio_007, TP_OUT_19);
+	BDEV_WR_F(SUN_TOP_CTRL_UART_ROUTER_SEL_0, port_1_cpu_sel, 11); /*AVS_TOP*/
 	BDEV_WR_F(SUN_TOP_CTRL_TEST_PORT_CTRL, encoded_tp_enable, 16); /*SYS*/
 #else
 	/* If not defined then it just won't set anything up */

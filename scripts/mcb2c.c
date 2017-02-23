@@ -577,6 +577,18 @@ static int filter_dir(const struct dirent *de)
 	return 1;
 }
 
+/* does_chip_id_match_filename -- checks if chip ID matches file name
+ *
+ *  The check is done only up to the chip ID portion of the file name.
+ *
+ * Parameter:
+ *  fname   [in] file name to be compared against chip_id
+ *  chip_id [in] chip ID to compare
+ * Returns:
+ *  0 if does not match
+ *  1 if chip_id is NULL
+ *  the number of characters matching in file name otherwise
+ */
 static int does_chip_id_match_filename(const char *fname, const char *chip_id)
 {
 	/* 7445d0 == 7445dx
@@ -599,14 +611,14 @@ static int does_chip_id_match_filename(const char *fname, const char *chip_id)
 
 	last_char = toupper(fname[len-1]);
 	if (last_char == '_')
-		return 1;
+		return len - 1;
 	if (last_char == 'X')
-		return 1;
+		return len - 1;
 
 	if (last_char != chip_id[len-1])
 		return 0;
 
-	return 1;
+	return len;
 }
 
 /* extract_fnames -- re-constructs list of files from "struct dirent *"
@@ -1508,11 +1520,14 @@ static char *find_matching_mcbfile(const char *pattern_mcb, const char *dir_mcb,
 		} else {
 			char *f_mcb; /* excluding chip ID */
 			const char *p_mcb; /* excluding chip ID */
+			size_t len_chip_id_fname;
 
 			/* 7445d0 first, and then 7445dx for 7445d0 */
-			if (!does_chip_id_match_filename(fname, chip_id))
+			len_chip_id_fname =
+				does_chip_id_match_filename(fname, chip_id);
+			if (!len_chip_id_fname)
 				continue;
-			f_mcb = fname + len_chip_id;
+			f_mcb = fname + len_chip_id_fname;
 			p_mcb = pattern + len_chip_id;
 			if (strncasecmp(f_mcb, p_mcb, strlen(p_mcb)))
 				continue;

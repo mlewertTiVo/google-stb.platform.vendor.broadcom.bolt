@@ -931,7 +931,16 @@ sub get_num_nand($)
 sub get_num_systemport($)
 {
 	my $bchp_defines = shift;
-	return defined($bchp_defines->{BCHP_SYSTEMPORT_TOPCTRL_REG_START}) ? 1 : 0;
+	my $count = 0;
+
+	$count++ if defined($bchp_defines->{BCHP_SYSTEMPORT_TOPCTRL_REG_START});
+
+	my $tmp;
+	do {
+		$tmp = sprintf('BCHP_SYSTEMPORTLITE_%d_TOPCTRL_REG_START', $count);
+				$count++ if $bchp_defines->{$tmp};
+	} while ($bchp_defines->{$tmp});
+	return $count;
 }
 
 sub get_num_rf4ce($)
@@ -943,12 +952,22 @@ sub get_num_rf4ce($)
 sub get_num_systemport_queues($)
 {
 	my $bchp_defines = shift;
+	my $n_sysport = get_num_systemport($bchp_defines);
 	my $count = 0;
 	my $tmp;
 	do {
 		$tmp = sprintf('BCHP_SYSTEMPORT_TDMA_DESC_RING_%02d_COUNT', $count);
 		$count++ if $bchp_defines->{$tmp};
 	} while ($bchp_defines->{$tmp});
+
+	return $count if $count ne 0;
+
+	do {
+		$tmp = sprintf('BCHP_SYSTEMPORTLITE_%d_TDMA_DESC_RING_%02d_COUNT',
+				$n_sysport -1, $count);
+		$count++ if $bchp_defines->{$tmp};
+	} while ($bchp_defines->{$tmp});
+
 	return $count;
 }
 
@@ -990,6 +1009,7 @@ sub get_sf2_model_id($)
 sub get_num_systemport_tier_arb($$)
 {
 	my ($bchp_defines, $level) = @_;
+	my $n_sysport = get_num_systemport($bchp_defines);
 	my $count = 0;
 	my $tmp;
 
@@ -998,9 +1018,20 @@ sub get_num_systemport_tier_arb($$)
 		$count++ if $bchp_defines->{$tmp};
 	} while ($bchp_defines->{$tmp});
 
+	return $count if $count ne 0;
+
+	do {
+		$tmp = sprintf('BCHP_SYSTEMPORTLITE_%d_TDMA_TIER_%d_ARBITER_%d_CTRL',
+		$n_sysport - 1, $level, $count);
+		$count++ if $bchp_defines->{$tmp};
+	} while ($bchp_defines->{$tmp});
+
 	# Try the other naming if we did not find anything
 	if ($count == 0) {
 		$tmp = sprintf('BCHP_SYSTEMPORT_TDMA_TIER_%d_ARBITER_CTRL', $level);
+		$count++ if $bchp_defines->{$tmp};
+		$tmp = sprintf('BCHP_SYSTEMPORTLITE_%d_TDMA_TIER_%d_ARBITER_CTRL',
+				$n_sysport -1, $level);
 		$count++ if $bchp_defines->{$tmp};
 	}
 
@@ -1120,12 +1151,47 @@ sub get_num_pwm($)
 	return $count;
 }
 
+sub get_num_dtu_config($)
+{
+	my ($bchp_defines) = @_;
+	my $count = 0;
+
+	while ($bchp_defines->{"BCHP_MEMC_DTU_CONFIG_${count}_REG_START"}) {
+		$count++;
+	}
+
+	return $count;
+}
+
+sub get_num_dtu_map($)
+{
+	my ($bchp_defines) = @_;
+	my $count = 0;
+
+
+	while ($bchp_defines->{"BCHP_MEMC_DTU_MAP_STATE_${count}_REG_START"}) {
+		$count++;
+	}
+
+	return $count;
+}
+
 sub get_num_wlan($)
 {
 	my ($bchp_defines) = @_;
 	my $count = 0;
 
 	$count++ if (defined($bchp_defines->{"BCHP_WLAN_INTF_RGR_BRIDGE_REG_START"}));
+
+	return $count;
+}
+
+sub get_num_v3d_mmu($)
+{
+	my $bchp_defines = shift;
+	my $count = 0;
+
+	$count++ if (defined($bchp_defines->{"BCHP_V3D_MMUC_REG_START"}));
 
 	return $count;
 }
@@ -1138,7 +1204,10 @@ sub mcp_wr_pairing_allowed($)
 	       "7250b0" => "1",
 	       "7260a0" => "1",
 	       "7268a0" => "1",
+	       "7268b0" => "1",
 	       "7271a0" => "1",
+	       "7271b0" => "1",
+	       "7278a0" => "1",
 	       "7364a0" => "1",
 	       "7364b0" => "1",
 	       "7364c0" => "1",

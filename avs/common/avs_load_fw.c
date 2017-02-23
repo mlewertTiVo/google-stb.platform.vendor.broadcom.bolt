@@ -179,7 +179,7 @@ static void avs_ask_margins(struct at_initialization *params)
 	    avs_get_int_number("Vmargin Low", params->margin_low);
 	params->margin_high =
 	    avs_get_int_number("Vmargin High", params->margin_high);
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 	params->cpu_offset =
 	    avs_get_int_number("CPU voltage offset", params->cpu_offset);
 #endif
@@ -195,7 +195,7 @@ static void avs_ask_limits(struct at_initialization *params)
 	    avs_get_int_number("Minimum voltage", params->min_voltage);
 	params->max_voltage =
 	    avs_get_int_number("Maximum voltage", params->max_voltage);
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 	params->min_dvfs_voltage =
 	    avs_get_int_number("Minimum DVFS voltage",
 				params->min_dvfs_voltage);
@@ -212,7 +212,7 @@ static void avs_ask_limits(struct at_initialization *params)
 #define DEFAULT_VMARGIN_LOW  50     /* default low margin in mV */
 #define DEFAULT_VMARGIN_HIGH 100    /* default high margin in mV */
 
-#elif (BCHP_CHIP == 7260)
+#elif (BCHP_CHIP == 7260) /* support moved to AVS firmware */
 /* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
 #define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
 #define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
@@ -220,7 +220,7 @@ static void avs_ask_limits(struct at_initialization *params)
 #define DEFAULT_VMARGIN_HIGH 120    /* default high margin in mV */
 #define DEFAULT_CPU_OFFSET   40     /* default stb to cpu margin in mV*/
 
-#elif (BCHP_CHIP == 7268)
+#elif (BCHP_CHIP == 7268) /* only used for A0 parts */
 /* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
 #define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
 #define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
@@ -228,13 +228,21 @@ static void avs_ask_limits(struct at_initialization *params)
 #define DEFAULT_VMARGIN_HIGH 20     /* default high margin in mV */
 #define DEFAULT_CPU_OFFSET   150    /* default stb to cpu margin in mV*/
 
-#elif (BCHP_CHIP == 7271)
+#elif (BCHP_CHIP == 7271) /* only used for A0 parts */
 /* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
 #define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
 #define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
 #define DEFAULT_VMARGIN_LOW  20     /* default low margin in mV */
 #define DEFAULT_VMARGIN_HIGH 20     /* default high margin in mV */
 #define DEFAULT_CPU_OFFSET   150    /* default stb to cpu margin in mV*/
+
+#elif (BCHP_CHIP == 7278)
+/* dual core: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=20mV VmarginH=20mV */
+#define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
+#define DEFAULT_MAX_VOLTAGE  1035   /* default maximum voltage in mV */
+#define DEFAULT_VMARGIN_LOW  60     /* default low margin in mV */
+#define DEFAULT_VMARGIN_HIGH 60     /* default high margin in mV */
+#define DEFAULT_CPU_OFFSET   80     /* default stb to cpu margin in mV*/
 
 #else
 
@@ -274,13 +282,19 @@ static void avs_get_default_params(struct at_initialization *params)
 	params->extra_delay = DEFAULT_EXTRA_DELAY;
 	params->polling_delay = DEFAULT_POLLING_DELAY;
 
-#ifdef DVFS_SUPPPORT
-	params->cpu_offset = DEFAULT_CPU_OFFSET;
+#ifdef DVFS_SUPPORT
+#if defined(CONFIG_BCM7260A0) || defined(CONFIG_BCM7268A0) || defined(CONFIG_BCM7271A0)
 #define DEFAULT_DVFS_VOLTAGE 900
-	params->min_dvfs_voltage = DEFAULT_DVFS_VOLTAGE;
 #define DEFAULT_SCALING_FACTOR 150 /* 1.5 times */
+#else
+#define DEFAULT_DVFS_VOLTAGE 860
+#define DEFAULT_SCALING_FACTOR 150 /* 1.5 times */
+#endif
+	params->cpu_offset = DEFAULT_CPU_OFFSET;
+	params->min_dvfs_voltage = DEFAULT_DVFS_VOLTAGE;
 	params->slope_adj_factor = DEFAULT_SCALING_FACTOR;
 #endif
+
 	/* Let firmware know if this is a warm boot due to S3 resume */
 	if (fsbl_ack_warm_boot()) {
 		puts("AVS resuming S3...\n");
@@ -295,7 +309,7 @@ static void avs_get_default_params(struct at_initialization *params)
 	params->chip_id = BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
 	params->product_id = BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID);
 
-#ifndef DVFS_SUPPPORT
+#ifndef DVFS_SUPPORT
 	/* Special case: some parts run at 1.7GHz and need extra margin.
 	 * Use this for anything greater than 1.503GHz */
 	if (get_cpu_freq_mhz() > 1503)
@@ -397,7 +411,7 @@ static int load_code(void)
 		/* read the code, data and security params to the buffer */
 		if (emmc_read_fsbl(AVS_SRAM_ADDR,
 			bytes+round_up(data_length)+AVS_PARAM_SIZE,
-			AVS_EMMC_DATA_PART_ADDR, false) != 0)
+			flash_offs, false) != 0)
 			sys_die(DIE_AVS_CODE_LOAD_FROM_EMMC_FAILED,
 				"AVS code load from eMMC failed");
 		/* copy the code to AVS PROG_ARRAY */

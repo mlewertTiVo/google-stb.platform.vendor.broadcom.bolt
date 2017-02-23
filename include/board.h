@@ -14,7 +14,7 @@
 #include "ssbl-common.h"
 #include "lib_string.h"
 #include "arch_ops.h"
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 #include "pmap.h"
 #endif
 
@@ -50,7 +50,7 @@ int                 board_init_current_rts_boxmode(void);
 const sdio_params  *board_sdio(int sdio);
 const gpio_key_params *board_gpio_keys(void);
 const bt_rfkill_params *board_bt_rfkill_gpios(void);
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 unsigned int        board_pmap(void);
 #endif
 

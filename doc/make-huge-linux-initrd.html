@@ -1,0 +1,1343 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Making unfeasibly large initrds</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(4);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1>Making unfeasibly large initrds</h1>
+<span id="author">Broadcom Ltd</span><br />
+<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<span id="revnumber">version 2.1,</span>
+<span id="revdate">August 2015</span>
+<br /><span id="revremark">Information added on avoiding initrd overlap with BMEM / CMA.</span>
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>This document describes the various limitations and caveats involved in using
+initramfs and initrd filesystems with Linux running on ARM processors.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">Whilst we do provide the information on how to do very large
+ram based filesystems (either as a single image initramfs or a separate
+Linux kernel and an initrd loaded into ram) we DO NOT RECOMMEND that
+this path is taken either for development or for production purposes.The
+compromises imposed by the extra RAM consumed by these methods (an
+engineering trade off) must be evaluated by individual customers on a
+case by case basis.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>First, we introduce some description of the memory layout on ARM-based Broadcom
+Set Top Box chips, second, how the bootloader is using that memory, and finally
+how Linux is using that memory and which limitations apply.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_memory_layout_on_arm_based_broadcom_set_top_box_chips">1. Memory layout on ARM-based Broadcom Set Top Box chips</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Most ARM-based chips have one to three memory controllers (MEMC) which map
+physical memory into the CPU memory address space. In a 32-bits mode (without
+LPAE), which is the default after reset, these MEMC controllers can provide up
+to 3GB of directly accessible physical memory, 1GB each.</p></div>
+<div class="paragraph"><p>Note that all chips and/or designs may not use the full range of this
+addressable memory.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_bolt_memory_layout">2. BOLT memory layout</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>BOLT&#8217;s first stage loader (FSBL) executes from an on-chip SRAM, which is mapped
+at 0xfffe_0000, it then copies its second stage loader (SSBL) into the DRAM at
+approximately 112MB (0x00700_0000), sets up a stack at 114MB (0x0904_4800).</p></div>
+<div class="paragraph"><p>BOLT is using a simple 1:1 mapping between physical and virtual addresses to
+greatly simplify the memory view in the system.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_limitations_in_bolt_for_kernel_image_sizes_and_dtb_placement">3. Limitations in BOLT for kernel image sizes and DTB placement</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>BOLT loads Linux kernel images packaged under the <em>zImage</em> format, which requires
+the kernel to be loaded at virtual address 0x0000_8000 by convention. This also
+happens to be physical address 0x0000_8000 due to the 1:1 mapping set up by BOLT.</p></div>
+<div class="paragraph"><p>The Device Tree Blob (DTB) is placed at approximately 117MB (0x0751_f000),
+which means that the total size of a zImage and the resulting decompressed
+Image must not exceed 112MB.  The reason that it requires the sum of size of
+the compressed and uncompressed image is that the Linux decompressor process
+is:</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+compressed image is loaded at 0x8000
+</p>
+</li>
+<li>
+<p>
+check if we will overwrite ourselves when decompressing: yes
+</p>
+</li>
+<li>
+<p>
+copy compressed image to end of 0x8000 + size of decompressed image
+</p>
+</li>
+<li>
+<p>
+decompress image to 0x8000
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p>If it does exceed 112MB, then BOLT needs to be modified to relocate itself as
+well as relocating the DTB.</p></div>
+<div class="paragraph"><p>If such relocation is necessary, there are no real restrictions on where BOLT
+must be located except that it must live within any of the populated memory
+controllers (MEMC 0 through 2). BOLT is not resident in RAM, so overwriting BOLT
+in RAM after Linux has booted is not much of an issue.</p></div>
+<div class="paragraph"><p>Relocating the DTB, on the other hand, has slightly more restrictions, since it
+has to be accessible early during boot by the Linux kernel, and cannot be
+overwritten. Linux also makes sure that the DTB is preserved by reserving the
+memory region where it lives to exclude it from being discarded. It is strongly
+advised not to relocate the DTB in a memory region which is also used for the
+Contiguous Memory Allocator (see below).</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_size_limitations_of_the_linux_kernel_on_arm">4. Size limitations of the Linux kernel on ARM</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>initramfs is a special form of root filesystem which is embedded as a payload in
+the Linux kernel at build time. The initramfs, on ARM ends up in the Linux
+kernel&#8217;s .init section which contains code and data. Note that not all
+architectures have a consistent layout in how they place their initramfs in the
+.init section. Some architectures might create sub-sections (e.g: .init.ramfs)
+though ARM does not do that.</p></div>
+<div class="paragraph"><p>In previous revisions of this document, it said here that the kernel image size
+was limited to 32MB because the ARM Linux kernel must be able to do PC-relative
+jumps to any code in the .init section. This was true prior to Linux 3.1, but
+changes were made that allowed moving the .init section to be after .text, so
+there is no longer such a restriction on initramfs size in Linux 3.1 and newer.</p></div>
+<div class="paragraph"><p>There is a limitation imposed by the kernel boot interface, which is that the
+kernel should live in the first 128MiB of RAM. This limitation comes from
+auto-decompression boot wrapper, which attempts to determine the end address of
+the kernel in RAM before decompression. This address is masked with 0xf800_0000
+to ensure the end result is within 128MiB.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_regions_limitations_specific_to_the_broadcom_set_top_box_kernel">5. Regions limitations specific to the Broadcom Set Top Box kernel</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Broadcom Set Top Box platforms reserve contiguous regions of DRAM to allow the
+Nexus middleware to use these contiguous areas as allocation pools for buffers
+that need to be handed over to HW peripherals that need to work with contiguous
+buffers: Video decoders, GPU, audio decoders, security processors.</p></div>
+<div class="paragraph"><p>In order to increase the likelihood of getting these contiguous allocations to
+succeed, early during boot, Linux reserves these contiguous regions, which
+basically removes these regions from the free amount of physical memory that
+Linux could be otherwise using for user-space programs and its internal
+data-structures.</p></div>
+<div class="paragraph"><p>The Device Tree Blob is another region of memory which needs to be reserved by
+the Linux kernel to ensure DTB usability. In order to avoid fragmenting too much
+the memory, the Linux kernel will try to relocate the DTB at a convenient
+location.</p></div>
+<div class="paragraph"><p>The first region it tries to relocate the DTB in is the range from
+0-0x0000_8000, which allows for a DTB size of 32KiB, though newer DTBs are
+actually larger than this, and they end up being relocated past the end of the
+kernel.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_using_initrd_initial_ram_disk">6. Using initrd (initial RAM disk)</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>initrd is a different, yet similar mechanism to initramfs. It is similar in the
+sense that no particular device drivers are required to access the filesystem,
+it can be mounted immediately after boot. It is different though because it is
+not embedded in the kernel image, and as such, BOLT cooperation is required to
+place the initrd at an appropriate place in RAM, as well as telling the Linux
+kernel where this initrd is located. Note that the initrd memory is not freed
+after kernel boot while the initramfs memory is (because it lives in the .init
+section).</p></div>
+<div class="paragraph"><p>Note that the initrd must not be located in a memory region which is also used
+for CMA or the Device Tree Blob, because the kernel will first proceed to reserve
+memory for the initrd, then for the Device Tree Blob, and then for CMA.</p></div>
+<div class="paragraph"><p>There are no particular size limitations on an initrd except that it must not
+exceed the physical amount of RAM available.</p></div>
+<div class="paragraph"><p>If CONFIG_BLK_DEV_RAM_SIZE is specified, the initrd must fit within the
+specified amount of memory, or CONFIG_BLK_DEV_RAM_SIZE must be bumped up.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tl_dr">7. TL;DR</h2>
+<div class="sectionbody">
+<div class="ulist"><ul>
+<li>
+<p>
+A big ram filesystem may impinge on CMA (NEXUS, BMEM) pre-allocations. You&#8217;ll
+have to cut those allocations and refactor your application memory usage.
+</p>
+</li>
+<li>
+<p>
+We really DO NOT recommend using an initrd over 128MiB in size.
+</p>
+</li>
+<li>
+<p>
+Know where things are and where they will eventually end up. You might get strange
+failures because you&#8217;re decompressing Linux over an initrd, or loading an initrd over
+the BOLT code, or Linux overwriting the Device Tree blob (DTB) Linux needs.
+</p>
+</li>
+</ul></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">Storing a huge initrd or initramfs in nand flash is a REALLY BAD IDEA.
+Use a proper nand aware filesystem to prevent the eventual and inevitable failure.</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">Nand flash may suffer failures (e.g. due to read disturb) at any time and without
+warning. This will lead to either the bricking of your product, resulting in
+end user and/or media reports of your products unreliability, or running recovery
+code (which we hope is not a huge initramfs or initrd image in nand) at too frequent
+an interval, which will impact the end user&#8217;s satisfaction with your product.</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_a_worked_example_for_a_128mib_initrd_on_7445d0">8. A worked example for a 128MiB initrd on 7445d0</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>For this configuration an initrd will be loaded by BOLT first,
+then a Linux zImage will be loaded and booted.</p></div>
+<div class="paragraph"><p>Prerequisites:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+BOLT source code.
+</p>
+</li>
+<li>
+<p>
+Linux 3.8 Reference source code (Linux + uclinux-rootfs.)
+</p>
+</li>
+<li>
+<p>
+Toolchain(s) for the above code.
+</p>
+</li>
+</ul></div>
+<div class="sect2">
+<h3 id="_first_make_a_standard_initramfs">8.1. First make a standard initramfs</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cd stblinux38/uclinux-rootfs
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make vmlinuz-initrd-7445d0</tt></pre></div></div>
+</div>
+<div class="sect2">
+<h3 id="_make_a_128mib_initrd_image">8.2. Make a 128MiB initrd image</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ mkdir initrd
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ fakeroot
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cd initrd
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ cpio -id <span style="color: #990000">&lt;</span> <span style="color: #990000">../..</span>/linux/usr/initramfs_data<span style="color: #990000">.</span>cpio
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ mkdir bloat
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ touch bloat/bigfile
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ dd <span style="font-weight: bold"><span style="color: #0000FF">if</span></span><span style="color: #990000">=</span>/dev/urandom <span style="color: #009900">of</span><span style="color: #990000">=</span>bloat/bigfile <span style="color: #009900">bs</span><span style="color: #990000">=</span><span style="color: #993399">1024</span> <span style="color: #009900">count</span><span style="color: #990000">=</span><span style="color: #993399">120000</span>
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ cd <span style="color: #990000">..</span>
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ genext2fs --block-size <span style="color: #993399">1024</span> -d initrd -b <span style="color: #993399">131072</span> initrd<span style="color: #990000">.</span>ext2
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ <span style="font-weight: bold"><span style="color: #0000FF">exit</span></span>
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cp initrd<span style="color: #990000">.</span>ext2 /tftpboot</tt></pre></div></div>
+<div class="paragraph"><p>On our newer Linux distributions you will have to uncompress
+the initramfs_data.cpio file first:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ <span style="font-weight: bold"><span style="color: #0000FF">pushd</span></span> <span style="color: #990000">..</span>/linux/usr<span style="color: #990000">/</span>
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ gunzip initramfs_data<span style="color: #990000">.</span>cpio<span style="color: #990000">.</span>gz
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ <span style="font-weight: bold"><span style="color: #0000FF">popd</span></span></tt></pre></div></div>
+</div>
+<div class="sect2">
+<h3 id="_configure_for_an_initrd_aware_linux_zimage">8.3. Configure for an initrd aware Linux zImage</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cd <span style="color: #990000">..</span>/linux<span style="color: #990000">/</span>
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make xconfig</tt></pre></div></div>
+<div class="paragraph"><p>Now find the "General setup" section and delete the string
+associated with the "Initramfs source file(s)" entry:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>-CONFIG_INITRAMFS_SOURCE="/home/user/stblinux38/uclinux-rootfs/romfs /home/user/stblinux38/uclinux-rootfs/misc/initramfs.dev"
++CONFIG_INITRAMFS_SOURCE=""</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">As well as "make xconfig" you can also use "make menuconfig" instead,
+ or edit the .config file directly.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_make_an_initrd_aware_linux_zimage">8.4. Make an initrd aware Linux zImage</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make zImage
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cp arch/arm/boot/zImage /tftpboot</tt></pre></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">You should see that zImage is a lot smaller than the original
+vmlinuz-initrd-7445d0 file.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_where_does_everything_go">8.5. Where does everything go?</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make Image
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ ls -l arch/arm/boot/Image
+-rwxrwxr-x <span style="color: #993399">1</span> user user <span style="color: #993399">6540016</span> Jan  <span style="color: #993399">1</span> <span style="color: #993399">00</span><span style="color: #990000">:</span><span style="color: #993399">00</span> arch/arm/boot/Image</tt></pre></div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+The Linux zImage loads at 0x8000 and is <sub>3.5MiB in size, the
+uncompressed Linux is </sub>6.2MiB in size - for this worked example.
+</p>
+</li>
+<li>
+<p>
+The initrd.ext2 is 128MiB in size.
+</p>
+</li>
+<li>
+<p>
+The default BOLT starts at ~112MiB (or 0x06ffc000 in hex) for
+ a 7445d0 build. Ref: SSBL_BOARDINFO in bolt/config/layout-zeus42.cfg.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>We must leave at least a 3.5MiB + 6.2MiB gap between the
+zImage and initrd.ext2 just to be sure Linux decompression
+does not overwrite the initrd.ext2. To be cautious let us
+load the initrd.ext at a 16MiB offset (0x1000000.)</p></div>
+<div class="paragraph"><p>From the above it can be seen that BOLT is in the way of
+the initrd.ext2 file - BOLT will be wiped out when it tries
+to load it.</p></div>
+</div>
+<div class="sect2">
+<h3 id="ref1">8.6.  Put BOLT out of harms way</h3>
+<div class="paragraph"><p>The FSBL in BOLT runs from SRAM and is fine, the SSBL has
+to be put in a place where its not overwritten by loading
+either the zImage or the initrd.ex2. In this example we
+relocate its start to a ~624MiB (0x26ffc000) offset. This
+also takes care of the Device Tree as its in the BOLT heap
+and beyond the new starting address.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span> cd /home/user/bolt
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span> vi config/layout-zeus<span style="color: #993399">42</span><span style="color: #990000">.</span>cfg</tt></pre></div></div>
+<div class="paragraph"><p>Now edit this config file to change the base addresses
+ of the BOLT <em>SSBL</em>:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> diff --git a/config/layout-zeus42.cfg b/config/layout-zeus42.cfg
+index 4ad8da7..f50693e 100644
+--- a/config/layout-zeus42.cfg
++++ b/config/layout-zeus42.cfg
+@@ -38,15 +38,15 @@
+  section -name SSBL   -off 0x0006c000 -size 0x00058000
+
+  # SSBL ddr placements
+- gset  SSBL_BOARDINFO           0x06ffc000
+- gset  SSBL_PAGE_TABLE          0x07000000
++ gset  SSBL_BOARDINFO           0x26ffc000
++ gset  SSBL_PAGE_TABLE          0x27000000
+ # The 1st-level page table maps 4GB worth of virtual address space.
+ # Each 32-bit section entry maps a 1MB region.
+ # (4GB / 1MB) * 4 = 1st-level PT size
+ gset  SSBL_PAGE_TABLE_SIZE      0x4000
+-gset  SSBL_PAGE_TABLE_2         0x07004000
++gset  SSBL_PAGE_TABLE_2         0x27004000
+ gset  SSBL_PAGE_TABLE_2_SIZE    0x4000
+- gset  SSBL_RAM_ADDR            0x07008000
++ gset  SSBL_RAM_ADDR            0x27008000
+
+  #  BOLT currently uses a 32 bit memory space
+  # and the 'device' (ebi &amp; rdb) regions span</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">Newer BOLT (v1.09 or later)</div>
+<div class="content">
+<pre><code>diff --git a/config/layout-zeus42.cfg b/config/layout-zeus42.cfg
+index 634e1e4..e1e60bb 100644
+--- a/config/layout-zeus42.cfg
++++ b/config/layout-zeus42.cfg
+@@ -51,7 +51,7 @@ section -name SSBL   -off 0x0006c000 -size 0x00090000
+ #              |       board info      |
+ #              +-----------------------+ SSBL_PAGE_TABLE - SSBL_BOARDINFO_SIZE
+ #
+-gset SSBL_PAGE_TABLE         0x07000000
++gset SSBL_PAGE_TABLE         0x27000000
+ gset SSBL_BOARDINFO_SIZE     0x4000
+ gset SSBL_BOARDINFO          $SSBL_PAGE_TABLE-$SSBL_BOARDINFO_SIZE
+ # The 1st-level page table maps 4GB worth of virtual address space.
+@@ -61,7 +61,7 @@ gset SSBL_PAGE_TABLE_SIZE    0x4000
+ gset SSBL_PAGE_TABLE_2_SIZE  0x400
+ gset SSBL_PAGE_TABLE_2       $SSBL_PAGE_TABLE+$SSBL_PAGE_TABLE_SIZE
+ gset SSBL_PAGE_TABLE_2_SRAM  $SSBL_PAGE_TABLE_2+$SSBL_PAGE_TABLE_2_SIZE
+-gset SSBL_RAM_ADDR           0x07008000
++gset SSBL_RAM_ADDR           0x27008000
+
+ #  BOLT currently uses a 32 bit memory space
+ # and the 'device' (ebi &amp; rdb) regions span</code></pre>
+</div></div>
+<div class="paragraph"><p>Now remake BOLT:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span> make clean
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span> make <span style="color: #993399">74450</span></tt></pre></div></div>
+<div class="paragraph"><p><span class="big">&#8658; Now re-flash the new BOLT before progressing! &#8656;</span></p></div>
+</div>
+<div class="sect2">
+<h3 id="_configuring_for_the_test">8.7. Configuring for the test</h3>
+<div class="paragraph"><p>This example uses a tftp server at 192.168.0.42 and BOLT setup with
+the static IP address 192.168.0.40. First we load the initrd.ext2 file,
+then boot the separate Linux image.</p></div>
+<div class="paragraph"><p>We have to tell Linux about where the initrd is in memory, so we add
+the "initrd=0x1000000,0x8000000" command line parameter. That is
+specifying the physical start address and size of the initrd.</p></div>
+<div class="paragraph"><p>We have to tell Linux about what its root filesystem is, if it should be
+read-write or read only and the size of ramdisk the initrd is copied to,
+so we add "root=/dev/ram0 rw ramdisk_size=131072 " to the command line.</p></div>
+<div class="paragraph"><p>The <em>ramdisk_size</em> parameter, should be at a minimum, the size in KiB of
+the initrd.ext2 file, or build Linux with the CONFIG_BLK_DEV_RAM_SIZE
+setup to reflect the required size and then the parameter will no
+longer need to be specified on the Linux boot commandline.</p></div>
+<div class="paragraph"><p>Since the initrd may impinges on BMEM or CMA reserved regions we have to
+ensure that there is no overlap with those regions. Any overlap between
+an initrd (ramdisk) and CMA is a failure case. Without ensuring that
+specified BMEM or CMA regions  do not overlap with initrd, the kernel may fail
+to boot up, be unstable, or BMEM/CMA allocations will fail and lead to
+NEXUS failing.</p></div>
+<div class="paragraph"><p>One more parameter that affects available size for an initrd is
+<em>vmalloc</em>, which adjusts vmalloc space.  On systems that use HIGHMEM
+like 32-bit ARM Linux, increasing or decreasing the size of vmalloc also
+shifts the boundary between low (directly mapped kernel RAM) and high
+memory, respective decreasing/increasing the size of lowmem.  Ensure
+that vmalloc is small enough that there will be enough lowmem will be
+available for the initrd, as it cannot be placed in highmem.  <em>vmalloc</em> is the
+simplest way to change the size of the default BMEM/CMA reservation.</p></div>
+<div class="paragraph"><p>Note that the default reserved regions (no bmem or brcm_cma parameters
+provided) may be large enough to overlap.  If you want to ensure that the
+default reservation does not overlap, use a lower <em>vmalloc</em> value.  On
+stblinux-3.14-1.8+, there is the option to manually provide the location of
+BMEM and/or CMA regions using kernel command line parameters
+<em>bmem=&lt;size&gt;@&lt;addr&gt;</em> or <em>brcm_cma=&lt;size&gt;@&lt;addr&gt;</em>.  Providing these parameters
+tuned to your specific use case is the best way to ensure optimal use of
+memory.  Please refer to the STB Linux memory appnote for more information on
+these parameters.</p></div>
+<div class="paragraph"><p>If you think you have an issue then add "earlyprintk debug memblock=debug"
+to the Linux command line and look for early BMEM/CMA allocation failures
+in the console output log.  Alternatively, disable all default reservations by
+providing <em>bmem=0 brcm_cma=0</em> on the Linux command line (stblinux-3.14-1.8+
+only).</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">Its an engineering trade off, by having such a big ramdisk you have
+to scale back how much memory BMEM/CMA can have and hence how much NEXUS
+and your apps get.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_running_the_test">8.8. Running the test</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code> BOLT&gt; ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+ BOLT&gt; load -addr=0x1000000 -max=0x8000000 -raw 192.168.0.42:initrd.ext2
+ BOLT&gt; boot 192.168.0.42:zImage "initrd=0x1000000,0x8000000 root=/dev/ram0 rw ramdisk_size=131072 vmalloc=248m bmem=0"</code></pre>
+</div></div>
+<div class="paragraph"><p>You should see the Linux kernel boot log
+contain something like this snippet:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>...
+...
+Trying to unpack rootfs image as initramfs...
+rootfs image is not initramfs (junk in compressed archive); looks like an initrd
+Freeing initrd memory: 131072K
+
+RAMDISK: ext2 filesystem found at block 0
+RAMDISK: Loading 131072KiB [1 disk] into ram disk...
+...
+...
+EXT4-fs (ram0): couldn't mount as ext3 due to feature incompatibilities
+EXT4-fs (ram0): mounting ext2 file system using the ext4 subsystem
+EXT4-fs warning (device ram0): ext4_update_dynamic_rev:767: updating to rev 1 because of new feature flag, running e2fsck is recommended
+EXT4-fs (ram0): mounted filesystem without journal. Opts: (null)
+...
+...</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_troubleshooting">8.9. Troubleshooting</h3>
+<div class="paragraph"><p>If your kernel gets a very early failure or no output at all check that the
+BOLT SSBL is out of harms way (see <a href="#ref1">Put BOLT out of harms way</a>) as
+either the SSBL code or the Device Tree data may be getting overwritten by
+the loaded kernel, initrd or during the decompression stage of the kernel
+startup sequence.</p></div>
+<div class="paragraph"><p>We have found that incorrect CMA reductions or for a huge initramfs or initrd
+show themselves as specific kinds of Linux kernel boot failure. Note: That may
+change if you use a different kernel (revision) or other kernel configurations.</p></div>
+<div class="paragraph"><p>First, enable all the debug options listed in "Configuring for the test."</p></div>
+<div class="paragraph"><p>For an initrd or initramfs you may see the kernel stalling at the
+line beginning "calling  populate_rootfs", e.g.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>...
+...
+RPC: Registered tcp NFSv4.1 backchannel transport module.
+initcall init_sunrpc+0x0/0x64 returned 0 after 17438 usecs
+calling  pci_apply_final_quirks+0x0/0x124 @ 1
+PCI: CLS 0 bytes, default 64
+initcall pci_apply_final_quirks+0x0/0x124 returned 0 after 2813 usecs
+calling  populate_rootfs+0x0/0x214 @ 1
+&lt;LINUX STALLS HERE&gt;</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">For an initrd you may also see a failure to execute the "init" process.</td>
+</tr></table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">9. Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Version 2.1<br />
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

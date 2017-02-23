@@ -45,29 +45,35 @@ typedef struct usbbus_s {
 } usbbus_t;
 
 #define UB_FLG_NEEDSCAN	1	/* some device on bus needs scanning */
+#define UB_FLG_USB20	2
+#define UB_FLG_USB30	4
 
 /*  *********************************************************************
     *  USB Pipe structure - one of these per unidirectional channel
     *  to an endpoint on a USB device
     ********************************************************************* */
 
-#define UP_TYPE_CONTROL	1
-#define UP_TYPE_BULK	2
-#define UP_TYPE_INTR	4
-#define UP_TYPE_ISOC	8
-
-#define UP_TYPE_IN	128
-#define UP_TYPE_OUT	256
-
-#define UP_TYPE_LOWSPEED 16
-#define UP_TYPE_HIGHSPEED 32
+#define UP_TYPE_CONTROL		1
+#define UP_TYPE_BULK		(1 << 1)
+#define UP_TYPE_INTR		(1 << 2)
+#define UP_TYPE_ISOC		(1 << 3)
+#define UP_TYPE_LOWSPEED	(1 << 4)
+#define UP_TYPE_HIGHSPEED	(1 << 5)
+#define UP_TYPE_SUPRSPEED	(1 << 6)
+#define UP_TYPE_IN		(1 << 7)
+#define UP_TYPE_OUT		(1 << 8)
+#define UP_TYPE_HUB		(1 << 9)	/* this is a hub device */
+#define UP_RPORT_SHIFT		10		/* RH port #        */
+#define UP_RPORT_MASK		0x3		/* ...2 bits, 4 max */
+#define UP_ROUTE_SHIFT		12		/* hub route string */
+#define UP_ROUTE_MASK		0xfffff		/* ...20 bits */
 
 typedef struct usbpipe_s {
 	usb_ept_t *up_hwendpoint;	/* OHCI-specific endpoint pointer */
 	usbdev_t *up_dev;	/* our device info */
 	int up_num;		/* pipe number */
 	int up_mps;		/* max packet size */
-	int up_flags;
+	int up_flags;	/* upper 16 bits used for USB 3.0 stuff */
 } usbpipe_t;
 
 /*  *********************************************************************
@@ -76,11 +82,14 @@ typedef struct usbpipe_s {
     *  refer to a device.
     ********************************************************************* */
 
-enum { FS, LS, HS, LSHS };
+enum { FS, LS, HS, LSHS, SS };
 #define UD_FLAG_HUB	0x0001	/* this is a hub device */
 #define UD_FLAG_ROOTHUB	0x0002	/* this is a root hub device */
 #define UD_FLAG_LOWSPEED 0x0008	/* this is a low speed device */
 #define UD_FLAG_HIGHSPEED 0x0010 /* this is a high speed device */
+#define UD_FLAG_SUPRSPEED 0x0020 /* this is a super speed device */
+#define UD_FLAG_USB20BUS  0x0100
+#define UD_FLAG_USB30BUS  0x0200
 #define UD_FLAG_ERROR    0x8000	/* this device is in error state */
 
 #define UD_MAX_PIPES	32
@@ -92,12 +101,15 @@ struct usbdev_s {
 	usb_driver_t *ud_drv;	/* Driver's methods */
 	usbbus_t *ud_bus;	/* owning bus */
 	int ud_address;		/* USB address */
-	usbpipe_t *ud_pipes[UD_MAX_PIPES];	/* pipes, 0 is the control pipe */
+	usbpipe_t *ud_pipes[UD_MAX_PIPES];	/* pipes, 0 is control pipe */
 	struct usbdev_s *ud_parent;	/* used for hubs */
-	int ud_flags;
+	int ud_rport;		/* root port */
+	int ud_route;		/* used for external hubs */
+	int ud_tier;		/* used for external hubs */
+	int ud_flags;		/* upper 16 bits used for USB 3.0 stuff */
 	void *ud_private;	/* private data for device driver */
 	usb_device_descr_t ud_devdescr;	/* device descriptor */
-	usb_config_descr_t *ud_cfgdescr;	/* config, interface, and ep descrs */
+	usb_config_descr_t *ud_cfgdescr;  /* config, interface, and ep descrs */
 };
 
 /*  *********************************************************************
@@ -156,7 +168,7 @@ typedef struct usbreq_s {
 int usb_create_pipe(usbdev_t * dev, int pipenum, int mps, int flags);
 void usb_destroy_pipe(usbdev_t * dev, int pipenum);
 int usb_set_address(usbdev_t * dev, int addr);
-usbdev_t *usb_create_device(usbbus_t * bus, int lowspeed);
+usbdev_t *usb_create_device(usbbus_t *bus, int lowspeed, int rport, int route);
 void usb_destroy_device(usbdev_t * dev);
 usbreq_t *usb_make_request(usbdev_t * dev, int pipenum, uint8_t * buf,
 			   int length, int flags);
@@ -203,18 +215,19 @@ void usb_initroot(usbbus_t * bus);
     ********************************************************************* */
 
 struct usb_hcdrv_s {
-	usbbus_t *(*hcdrv_create) (physaddr_t regaddr);
-	void (*hcdrv_delete) (usbbus_t *);
-	int (*hcdrv_start) (usbbus_t *);
-	void (*hcdrv_stop) (usbbus_t *);
-	int (*hcdrv_intr) (usbbus_t *);
-	usb_ept_t *(*hcdrv_ept_create) (usbbus_t *, int usbaddr, int eptnum,
-					int mps, int flags);
-	void (*hcdrv_ept_delete) (usbbus_t *, usb_ept_t *);
-	void (*hcdrv_ept_setmps) (usbbus_t *, usb_ept_t *, int mps);
-	void (*hcdrv_ept_setaddr) (usbbus_t *, usb_ept_t *, int addr);
-	void (*hcdrv_ept_cleartoggle) (usbbus_t *, usb_ept_t *);
-	int (*hcdrv_xfer) (usbbus_t *, usb_ept_t * uept, usbreq_t * ur);
+	usbbus_t *(*hcdrv_create)(physaddr_t regaddr);
+	void (*hcdrv_delete)(usbbus_t *);
+	int (*hcdrv_start)(usbbus_t *);
+	void (*hcdrv_stop)(usbbus_t *);
+	int (*hcdrv_intr)(usbbus_t *);
+	usb_ept_t *(*hcdrv_ept_create)(usbbus_t *, int usbaddr, int eptnum,
+				int mps, int flags);
+	void (*hcdrv_ept_delete)(usbbus_t *, usb_ept_t *);
+	void (*hcdrv_ept_setmps)(usbbus_t *, usb_ept_t *, int mps);
+	void (*hcdrv_ept_setaddr)(usbbus_t *, usb_ept_t *, int addr);
+	void (*hcdrv_ept_cleartoggle)(usbbus_t *, usb_ept_t *);
+	int (*hcdrv_xfer)(usbbus_t *, usb_ept_t *uept, usbreq_t *ur);
+	void (*hcdrv_reset)(usbbus_t *);
 };
 
 #define UBCREATE(driver,addr) (*((driver)->hcdrv_create))(addr)
@@ -228,6 +241,7 @@ struct usb_hcdrv_s {
 #define UBEPTSETADDR(bus,ept,addr) (*((bus)->ub_hwdisp->hcdrv_ept_setaddr))(bus,ept,addr)
 #define UBEPTCLEARTOGGLE(bus,ept) (*((bus)->ub_hwdisp->hcdrv_ept_cleartoggle))(bus,ept)
 #define UBXFER(bus,ept,xfer) (*((bus)->ub_hwdisp->hcdrv_xfer))(bus,ept,xfer)
+#define UBRESET(bus) (*((bus)->ub_hwdisp->hcdrv_reset))(bus)
 
 /*  *********************************************************************
     *  Devices - methods for abstracting things that _use_ USB

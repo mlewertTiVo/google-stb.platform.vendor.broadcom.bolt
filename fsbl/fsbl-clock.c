@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -68,7 +68,9 @@ static void adjust_xpt_clocks(void)
 		(1 << BCHP_XPT_PMU_CLK_CTRL_DPCR_DISABLE_SHIFT) |
 		(0 << BCHP_XPT_PMU_CLK_CTRL_XMEMIF_216_DISABLE_SHIFT) |
 		(0 << BCHP_XPT_PMU_CLK_CTRL_XMEMIF_108_DISABLE_SHIFT) |
+#ifdef BCHP_XPT_PMU_CLK_CTRL_XCBUFF_DISABLE_SHIFT
 		(1 << BCHP_XPT_PMU_CLK_CTRL_XCBUFF_DISABLE_SHIFT) |
+#endif
 		(1 << BCHP_XPT_PMU_CLK_CTRL_RSBUFF_DISABLE_SHIFT) |
 		(0 << BCHP_XPT_PMU_CLK_CTRL_FE_DISABLE_SHIFT));
 }
@@ -957,9 +959,9 @@ static void bcm7445e0_clock_init(void)
 }
 #endif /* #if defined(CONFIG_BCM7445E0) */
 
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 /* Guarding with BCHP_CLKGEN_PLL_CPU_DVFS_SM_STATUS is more logical.
- * But, DVFS_SUPPPORT has previously been defined and used.
+ * But, DVFS_SUPPORT has previously been defined and used.
  */
 
 #define MIN_NDIV_DVFS_STATE_MACHINE 50 /* from DVFS PLL state machine doc */
@@ -1039,9 +1041,29 @@ static void run_dvfs_statemachine(unsigned int ndiv_new)
 }
 
 void apply_dvfs_clocks(struct clock_divisors cpu_clks,
-	struct clock_divisors scb_clks)
+	struct clock_divisors scb_clks, uint8_t sysif_mdiv)
 {
+
+#ifdef BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K
+	if (sysif_mdiv > 0)
+		BDEV_WR(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K, sysif_mdiv);
+	dsb();
+#endif
+
 	if (scb_clks.mdiv > 0)
+#if defined(CONFIG_BCM7278)
+		BDEV_WR(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1,
+			RDB_F_DEF(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1,
+				POST_DIVIDER_HOLD_CH1) |
+			RDB_F_DEF(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1,
+				PHASE_OFFSET_CH1) |
+			RDB_F_DEF(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1,
+				CLOCK_DIS_CH1) |
+			RDB_F_NUM(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1,
+				MDIV_CH1, scb_clks.mdiv));
+#elif defined(CONFIG_BCM7260) || \
+	defined(CONFIG_BCM7268) || \
+	defined(CONFIG_BCM7271)
 		BDEV_WR(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_2,
 			RDB_F_DEF(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_2,
 				POST_DIVIDER_HOLD_CH2) |
@@ -1051,6 +1073,9 @@ void apply_dvfs_clocks(struct clock_divisors cpu_clks,
 				CLOCK_DIS_CH2) |
 			RDB_F_NUM(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_2,
 				MDIV_CH2, scb_clks.mdiv));
+#else
+	#error "Please check how and where SCB frequency is configured."
+#endif
 	dsb();
 
 	if (cpu_clks.mdiv > 0)

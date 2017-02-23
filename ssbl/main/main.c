@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -7,46 +7,45 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_queue.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
+#include <bolt.h>
+#include <board.h>
+#include <bsp_config.h>
+#include <chipid.h>
+#include <common.h>
+#include <console.h>
+#include <custom_code.h>
+#include <devfuncs.h>
+#include <device.h>
+#include <devtree.h>
+#include <env_subr.h>
+#include <fsbl-common.h>
+#include <gisb.h>
+#include <initdata.h>
+#include <iocb.h>
+#include <ioctl.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_queue.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <reboot.h>
+#include <splash-api.h>
+#include <timer.h>
+#include <ui_command.h>
+#include <ui_init.h>
+#include <ssbl-common.h>
+#include <ssbl-sec.h>
+#include <supplement-fsbl.h>
+#include <overtemp.h>
 
-#include "iocb.h"
-#include "device.h"
-#include "console.h"
-#include "timer.h"
-#include "devfuncs.h"
-
-#include "env_subr.h"
-#include "ui_command.h"
-#include "ui_init.h"
-
-#include "bolt.h"
-#include "board.h"
-#include "splash-api.h"
-#include "ioctl.h"
-#include "reboot.h"
-
-#include "initdata.h"
-#include "bsp_config.h"
-#include "fsbl-common.h"
-#include "ssbl-common.h"
-#include "devtree.h"
-#include "gisb.h"
-#include "overtemp.h"
-
-#include "bchp_sun_top_ctrl.h"
-#include "chipid.h"
-#include "custom_code.h"
-
-#include "common.h"
-#include "ssbl-sec.h"
-#include "avs_bsu.h" /* for avs_info_print() */
+#include <bchp_sun_top_ctrl.h>
 
 #define WANT_OTP_DECODE 1 /* SWBOLT-263 */
-#include "otp_status.h"
+#include <otp_status.h> /* from gen/ */
+
+#ifdef SECURE_BOOT
+#include <avs_bsu.h> /* for avs_info_print() */
+#endif
 
 /*  *********************************************************************
     *  Constants
@@ -254,11 +253,14 @@ static void say_hello(int blink)
 
 	prod = REG(BCHP_SUN_TOP_CTRL_PRODUCT_ID);
 	fam = REG(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
-	xprintf("SYS_CTRL: product=%04x, family=%04x%02x, strap=%08x, ",
+	xprintf("SYS_CTRL: product=%04x, family=%04x%02x, strap=%08x",
 		chip_id_without_rev(prod),
 		chip_id_without_rev(fam),
 		(fam & CHIPID_REV_MASK) + 0xa0,
 		REG(BCHP_SUN_TOP_CTRL_STRAP_VALUE_0));
+#ifdef BCHP_SUN_TOP_CTRL_STRAP_VALUE_1
+	xprintf(",%08x", REG(BCHP_SUN_TOP_CTRL_STRAP_VALUE_1));
+#endif
 
 	print_otp();
 
@@ -350,6 +352,7 @@ void bolt_start32(unsigned long ept, unsigned long param1,
 void bolt_config_info(int detail)
 {
 	struct fsbl_info *info;
+	uint32_t shmoo_ver;
 
 	board_printinfo();
 
@@ -359,6 +362,16 @@ void bolt_config_info(int detail)
 	xprintf("\n");
 
 	xprintf("BSP version: '%s'\n", sec_get_bsp_version());
+
+	shmoo_ver = supplement_fsbl_shmoover();
+	if (shmoo_ver != 0) {
+		xprintf("SHMOO version: %d.%d.%d.%d [0x%08X]\n",
+			(shmoo_ver >> 24) & 0xff,
+			(shmoo_ver >> 16) & 0xff,
+			(shmoo_ver >> 8) & 0xff,
+			(shmoo_ver >> 0) & 0xff,
+			shmoo_ver);
+	}
 
 	xprintf("Total memory used by BOLT: 0x%08lX - 0x%08lX (%lu)\n",
 		mem_bottomofmem,
@@ -607,11 +620,7 @@ void bolt_main(int a, int b)
 
 	console_init();
 
-	/*
-	 * Set up the exception vectors
-	 */
-
-/* arm    bolt_setup_exceptions(); */
+	arch_abort_enable();
 
 #ifdef S_UNITTEST
 	bolt_aegis_cr_unblock();
@@ -659,8 +668,9 @@ void bolt_main(int a, int b)
 	condition while we wait for the chip to cool down. */
 	bolt_overtemp_init();
 #endif
-	avs_info_print();
-
+#ifdef SECURE_BOOT
+	avs_info_print(); /* not needed in non-secure as FSBL prints it out */
+#endif
 	ui_init();
 
 	board_final_init();

@@ -160,3 +160,11 @@ void msg_cpu(const char *s, unsigned int cpu)
 	writeint(cpu); /* index (cpu+cluster) */
 	__puts(" ");
 }
+
+void report_hex(const char *msg, uint32_t hexnum)
+{
+	__puts(msg);
+	__puts(" ");
+	writehex(hexnum);
+	puts("");
+}

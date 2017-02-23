@@ -32,6 +32,10 @@
 
 #define CRLF "\r\n"
 
+#if CFG_ZEUS5_0
+/* MEMSYS and then MCB/BOARD in the upper 36KiB out of 96KiB */
+#define SHMOO_SRAM_ADDR (SRAM_ADDR + MEMSYS_MCB_OFFSET)
+#else
 #ifdef STUB64_START
 /* Zeus 4.2.1, ARMv8. Currently, no MEMSYS in lower 64KiB
  * so we can shift the SHMOO & BOARD sections down.
@@ -45,6 +49,7 @@
 #define SHMOO_SRAM_ADDR (MEMSYS_SRAM_ADDR + MEMSYS_SIZE)
 #endif
 #endif /* STUB64_START */
+#endif /* CFG_ZEUS5_0 */
 #define AVS_SRAM_ADDR   (MEMSYS_SRAM_ADDR)
 
 /* architecture specific
@@ -149,7 +154,7 @@ void __noreturn memsys_die(const uint16_t die_code, const char *die_string);
 /* shmoo + saved board, memsys.
 */
 void shmoo_load(void);
-void memsys_load(void);
+uint32_t memsys_load(void);
 #if CFG_PM_S3 && !(defined(CFG_NOSHMOO) || defined(CFG_EMULATION))
 void memsys_warm_restart(int num_ddr);
 #else

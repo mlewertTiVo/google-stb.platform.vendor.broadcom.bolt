@@ -1180,14 +1180,27 @@ static int cb_reboot(struct fastboot_info *info)
 	return res;
 }
 
+#define MEM0_DEVICE "mem0"
 static int cb_boot(struct fastboot_info *info)
 {
 	int res;
 	char response[RESPONSE_LEN];
+	int len;
+	char boot_cmd[BOOT_ARGS_SIZE+64]; /* extra 64 bytes for bolt cmd */
 
-	os_sprintf(response, "FAILcommand not suported");
+	android_boot_addloader();
+
+	len = os_sprintf(boot_cmd, "boot -rawfs ");
+	if (!os_strncmp((const char *)FB_FLASH_STAGING_BUFFER, BOOT_MAGIC, os_strlen(BOOT_MAGIC))) {
+		len += os_sprintf(boot_cmd + len, "-loader=img ");
+	}
+	len += os_sprintf(boot_cmd + len, "%s:0x%x", MEM0_DEVICE, FB_FLASH_STAGING_BUFFER);
+
+	os_sprintf(response, "OKAY");
 	res = fastboot_tx_write_str(response);
 
+	DLOG("boot_cmd=%s\n", boot_cmd);
+	bolt_docommands(boot_cmd);
 	return res;
 }
 

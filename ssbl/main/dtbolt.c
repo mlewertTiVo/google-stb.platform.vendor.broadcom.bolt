@@ -181,7 +181,7 @@ static int bolt_populate_nand(void *fdt, struct flash_dev *flash)
 		return FDT_ERR_NOTFOUND;
 
 	/* full rdb address */
-	xsprintf(node, DT_RDB_DEVNODE_BASE_PATH"/nand@%08x",
+	xsprintf(node, DT_RDB_DEVNODE_BASE_PATH"/nand@%x",
 			BREG_PA(NAND));
 	rc = bolt_devtree_node_from_path(fdt, node);
 	if (rc < 0)
@@ -639,7 +639,7 @@ static int bolt_populate_memory_ctls(void *fdt)
 			    ;
 		xsprintf(tmpstr,
 			 DT_RDB_DEVNODE_BASE_PATH
-			 "/memory_controllers/memc@%d/memc-ddr@%08x",
+			 "/memory_controllers/memc@%d/memc-ddr@%x",
 			 ddr->which, BPHYSADDR(base_addr));
 
 		node = bolt_devtree_node_from_path(fdt, tmpstr);
@@ -669,30 +669,36 @@ static int bolt_populate_memory_ctls(void *fdt)
 
 static int bolt_populate_scb_freq(void *fdt)
 {
-	int node;
-	int rc;
+	int brcmstb_clk_node, sw_scb_node, rc;
 
-	rc = bolt_devtree_node_from_path(fdt, DT_RDB_DEVNODE_BASE_PATH
-					 "/brcmstb-clks");
-	if (rc < 0) /* no clock tree (PLX file) */
+	brcmstb_clk_node = bolt_devtree_node_from_path(fdt,
+					DT_RDB_DEVNODE_BASE_PATH
+					"/brcmstb-clks");
+	if (brcmstb_clk_node < 0) /* no clock tree (PLX file) */
 		return BOLT_OK;
 
-	/* delete then create subnode */
-	(void)bolt_devtree_delnode_at(fdt, "sw_scb", rc);
+	sw_scb_node = bolt_devtree_node_from_path(fdt,
+					DT_RDB_DEVNODE_BASE_PATH
+					"/brcmstb-clks/sw_scb");
+	/* Backward compatibility: if the node doesn't exist, create it. */
+	if (sw_scb_node < 0) {
+		rc = bolt_devtree_addnode_at(fdt, "sw_scb", brcmstb_clk_node,
+					&sw_scb_node);
+		if (rc)
+			return rc;
 
-	rc = bolt_devtree_addnode_at(fdt, "sw_scb", rc, &node);
-	if (rc)
-		return rc;
+		rc = bolt_dt_addprop_str(fdt, sw_scb_node, "compatible",
+					"fixed-clock");
+		if (rc)
+			return rc;
 
-	rc = bolt_dt_addprop_str(fdt, node, "compatible", "fixed-clock");
-	if (rc)
-		return rc;
+		rc = bolt_dt_addprop_u32(fdt, sw_scb_node, "#clock-cells", 0);
+		if (rc)
+			return rc;
+	}
 
-	rc = bolt_dt_addprop_u32(fdt, node, "#clocks-cells", 0);
-	if (rc)
-		return rc;
-
-	rc = bolt_dt_addprop_u32(fdt, node, "clock-frequency",
+	/* We re-use the existing node and add the clock frequency. */
+	rc = bolt_dt_addprop_u32(fdt, sw_scb_node, "clock-frequency",
 				 arch_get_scb_freq_hz());
 
 	return rc;
@@ -906,6 +912,8 @@ static char *phystr2std(const char *phy_type)
 		return "rev-mii";
 	else if (!strcmp(phy_type, "MOCA"))
 		return "moca";
+	else if (!strcmp(phy_type, "GMII"))
+		return "gmii";
 
 	warn_msg("unhandled phy_type: %s\n", phy_type);
 	return NULL;
@@ -1063,7 +1071,7 @@ static void bolt_devtree_add_phy(void *fdt, int phandle,
 	char *default_phystr = "ethernet-phy-ieee802.3-c22";
 	char phystr[255];
 	size_t l1, l2;
-	char *compat;
+	char *compat = NULL;
 	int us, phy_phandle;
 	unsigned int needs_gphy_clk = 0;
 	unsigned int broken_ta = 0;
@@ -1139,7 +1147,6 @@ static void bolt_devtree_add_phy(void *fdt, int phandle,
 	phy_phandle = bolt_devtree_set_phandle(fdt, us);
 	bolt_devtree_at_handle_addprop_int(fdt, phandle, "phy-handle",
 					   phy_phandle);
-
 out:
 	KFREE(compat);
 }
@@ -1161,7 +1168,7 @@ static int bolt_populate_moca(void *fdt, uint8_t *macaddr)
 		return BOLT_ERR_INV_PARAM;
 
 	xsprintf(tmpstr,
-		DT_RDB_DEVNODE_BASE_PATH"/bmoca@%08x", BPHYSADDR(m->base));
+		DT_RDB_DEVNODE_BASE_PATH"/bmoca@%x", BPHYSADDR(m->base));
 
 	/* Only do if MoCA node exists.
 	*/
@@ -1357,16 +1364,114 @@ static int bolt_populate_systemport(void *fdt, int enet_instance,
 	return 0;
 }
 
-static int bolt_populate_eth_switch(void *fdt, uint8_t *macaddr)
-{
 #if defined(BCHP_SWITCH_CORE_REG_START) && (NUM_SWITCH_PORTS > 0)
+static int bolt_populate_eth_switch_port(void *fdt, uint8_t *macaddr,
+					 unsigned int port,
+					 const char *alias_stem,
+					 bool first_time)
+{
 	uint32_t data;
 	const enet_params *e;
 	char tmpstr[255];
 	int phandle;
 	char *phy_type, *phy_id;
 	int mdio_node;
+	int rc;
+
+	xsprintf(tmpstr, "%s%d", alias_stem, port);
+	phandle = bolt_devtree_phandle_from_alias(fdt, tmpstr);
+	if (phandle < 0)
+		return 1;
+
+	e = board_enet(port);
+	if (!e) {
+		/* Last port is the CPU port, never mark it as disabled */
+		if (port != NUM_SWITCH_PORTS - 1)
+			bolt_devtree_at_handle_addprop(fdt, phandle,
+				"status", "disabled", strlen("disabled") + 1);
+		return 1;
+	}
+
+	bolt_devtree_at_handle_delprop(fdt, phandle, "fixed-link");
+	bolt_devtree_at_handle_delprop(fdt, phandle, "phy-handle");
+	bolt_devtree_at_handle_delprop(fdt, phandle, "phy-mode");
+
+	/* The MDIO node offset will change as we start patching, so we
+	 * need to re-fetch its offset before each switch port
+	 modification */
+
+	xsprintf(tmpstr,
+		DT_RDB_DEVNODE_BASE_PATH"/switch_top@%x/mdio@%x",
+		BPHYSADDR(BCHP_SWITCH_CORE_REG_START),
+		BCHP_SWITCH_MDIO_REG_START -
+		BCHP_SWITCH_CORE_REG_START);
+
+	mdio_node = bolt_devtree_node_from_path(fdt, tmpstr);
+	if (mdio_node < 0) {
+		xprintf("cannot find %s\n", tmpstr);
+		return mdio_node;
+	}
+
+	phy_id = e->phy_id;
+	if (!phy_id)
+		phy_id = "0";
+
+	data = bolt_enet_get_phy_id(phy_id, e->switch_port);
+	if (enet_needs_fixed_link(e->phy_type, e->mdio_mode))
+		bolt_devtree_add_fixed_link(fdt,
+				phandle, e->switch_port,
+				e->phy_type, e->phy_speed);
+
+	else if (e->phy_type && data != PHY_ID_NONE) {
+		if (e->ethsw && atoi(phy_id) == 0x1e) {
+			phy_id = "0";
+			data = 0;
+		}
+
+		/* Create the PHY the first time, or re-use its existing
+		 * phandle number otherwise
+		 */
+		if (first_time) {
+			bolt_devtree_add_phy(fdt, phandle, e, data, mdio_node,
+					     e->phy_type, e->phy_speed, phy_id);
+		} else {
+			xsprintf(tmpstr,
+				 DT_RDB_DEVNODE_BASE_PATH
+				 "/switch_top@%x/mdio@%x/phy%x: ethernet-phy@%x",
+				 BPHYSADDR(BCHP_SWITCH_CORE_REG_START),
+				 BCHP_SWITCH_MDIO_REG_START -
+				 BCHP_SWITCH_CORE_REG_START,
+				 atoi(phy_id), atoi(phy_id));
+
+			rc = bolt_devtree_phandle_from_path(fdt, tmpstr);
+			if (rc < 0)
+				return rc;
+			bolt_devtree_at_handle_addprop_int(fdt, phandle,
+							   "phy-handle", rc);
+		}
+	}
+
+	phy_type = phystr2std(e->phy_type);
+	bolt_devtree_at_handle_addprop(fdt, phandle,
+			"phy-mode", phy_type, strlen(phy_type) + 1);
+
+	if (first_time && !strcmp(phy_type, "moca")) {
+		if (bolt_populate_moca(fdt, macaddr))
+			return 1;
+	}
+
+	return 0;
+}
+#endif
+
+static int bolt_populate_eth_switch(void *fdt, uint8_t *macaddr)
+{
+#if defined(BCHP_SWITCH_CORE_REG_START) && (NUM_SWITCH_PORTS > 0)
+	const char *aliases[] = { "switch_port", "sw_port" };
 	unsigned int port;
+	char tmpstr[255];
+	int mdio_node;
+	int rc;
 
 	xsprintf(tmpstr, DT_RDB_DEVNODE_BASE_PATH"/switch_top@%x/mdio@%x",
 		BPHYSADDR(BCHP_SWITCH_CORE_REG_START),
@@ -1379,69 +1484,14 @@ static int bolt_populate_eth_switch(void *fdt, uint8_t *macaddr)
 	}
 	bolt_devtree_remove_phy_nodes(fdt, mdio_node);
 
+	/* Populate for the two aliases we need to support */
 	for (port = 0; port < NUM_SWITCH_PORTS; port++) {
-		xsprintf(tmpstr, "switch_port%d", port);
-		phandle = bolt_devtree_phandle_from_alias(fdt, tmpstr);
-		if (phandle < 0)
+		rc = bolt_populate_eth_switch_port(fdt, macaddr, port,
+						   aliases[0], true);
+		rc |= bolt_populate_eth_switch_port(fdt, macaddr, port,
+						    aliases[1], false);
+		if (rc == 1)
 			continue;
-
-		e = board_enet(port);
-		if (!e) {
-			/* Last port is the CPU port, never mark it as disabled */
-			if (port != NUM_SWITCH_PORTS - 1)
-				bolt_devtree_at_handle_addprop(fdt, phandle,
-					"status", "disabled", strlen("disabled") + 1);
-			continue;
-		}
-
-		bolt_devtree_at_handle_delprop(fdt, phandle, "fixed-link");
-		bolt_devtree_at_handle_delprop(fdt, phandle, "phy-handle");
-		bolt_devtree_at_handle_delprop(fdt, phandle, "phy-mode");
-
-		/* The MDIO node offset will change as we start patching, so we
-		 * need to re-fetch its offset before each switch port
-		 modification */
-
-		xsprintf(tmpstr,
-			DT_RDB_DEVNODE_BASE_PATH"/switch_top@%x/mdio@%x",
-			BPHYSADDR(BCHP_SWITCH_CORE_REG_START),
-			BCHP_SWITCH_MDIO_REG_START -
-			BCHP_SWITCH_CORE_REG_START);
-
-		mdio_node = bolt_devtree_node_from_path(fdt, tmpstr);
-		if (mdio_node < 0) {
-			xprintf("cannot find %s\n", tmpstr);
-			return mdio_node;
-		}
-
-		phy_id = e->phy_id;
-		if (!phy_id)
-			phy_id = "0";
-
-		data = bolt_enet_get_phy_id(phy_id, e->switch_port);
-		if (enet_needs_fixed_link(e->phy_type, e->mdio_mode))
-			bolt_devtree_add_fixed_link(fdt,
-					phandle, e->switch_port,
-					e->phy_type, e->phy_speed);
-
-		else if (e->phy_type && data != PHY_ID_NONE) {
-			if (e->ethsw && atoi(phy_id) == 0x1e) {
-				phy_id = "0";
-				data = 0;
-			}
-
-			bolt_devtree_add_phy(fdt, phandle, e, data, mdio_node,
-					e->phy_type, e->phy_speed, phy_id);
-		}
-
-		phy_type = phystr2std(e->phy_type);
-		bolt_devtree_at_handle_addprop(fdt, phandle,
-				"phy-mode", phy_type, strlen(phy_type) + 1);
-
-		if (!strcmp(phy_type, "moca")) {
-			if (bolt_populate_moca(fdt, macaddr))
-				return 1;
-		}
 	}
 #endif
 	return 0;
@@ -1477,7 +1527,7 @@ static void bolt_populate_rf4ce(void *fdt, uint8_t *macaddr)
 	char nodestr[255];
 	int rc = BOLT_OK, sub = 0, node;
 
-	xsprintf(nodestr, DT_RDB_DEVNODE_BASE_PATH"/rf4ce@%08x",
+	xsprintf(nodestr, DT_RDB_DEVNODE_BASE_PATH"/rf4ce@%x",
 			BPHYSADDR(BCHP_RF4CE_CPU_PROG0_MEM_REG_START));
 
 	node = bolt_devtree_node_from_path(fdt, nodestr);
@@ -1908,6 +1958,8 @@ static void bolt_otp_unpopulate(void *fdt)
 		if (OTP_OPTION_SATA0_DISABLE() && OTP_OPTION_SATA1_DISABLE())
 #elif defined(OTP_OPTION_SATA_DISABLE)
 		if (OTP_OPTION_SATA_DISABLE())
+#elif defined(OTP_OPTION_SATA0_DISABLE)
+		if (OTP_OPTION_SATA0_DISABLE())
 #else /* Catch any deviation from the current RDB naming conventions. */
 #error OTP_OPTION_SATA[0|1]_DISABLE without OTP_OPTION_SATA[0|1]_DISABLE
 #endif
@@ -1925,7 +1977,7 @@ static void bolt_otp_unpopulate(void *fdt)
 #if defined(BCHP_PCIE_0_RC_CFG_TYPE1_REG_START) && \
 	defined(OTP_OPTION_PCIE0_DISABLE)
 		if (OTP_OPTION_PCIE0_DISABLE()) {
-			xsprintf(text, "pcie@%08x", BCHP_PHYSICAL_OFFSET +
+			xsprintf(text, "pcie@%x", BCHP_PHYSICAL_OFFSET +
 				BCHP_PCIE_0_RC_CFG_TYPE1_REG_START);
 			rm_nodes(fdt, text, p_root);
 		}
@@ -1934,7 +1986,7 @@ static void bolt_otp_unpopulate(void *fdt)
 #if defined(BCHP_PCIE_1_RC_CFG_TYPE1_REG_START) && \
 	defined(OTP_OPTION_PCIE1_DISABLE)
 		if (OTP_OPTION_PCIE1_DISABLE()) {
-			xsprintf(text, "pcie@%08x", BCHP_PHYSICAL_OFFSET +
+			xsprintf(text, "pcie@%x", BCHP_PHYSICAL_OFFSET +
 				BCHP_PCIE_1_RC_CFG_TYPE1_REG_START);
 			rm_nodes(fdt, text, p_root);
 		}
@@ -2216,7 +2268,7 @@ static int bolt_populate_sdhci(void __maybe_unused *fdt)
 		 * If the DT entry for this controller doesn't exist
 		 * just skip it.
 		 */
-		xsprintf(node, DT_RDB_DEVNODE_BASE_PATH"/sdhci@%08x", regs[x]);
+		xsprintf(node, DT_RDB_DEVNODE_BASE_PATH"/sdhci@%x", regs[x]);
 		sdhci = bolt_devtree_node_from_path(fdt, node);
 		if (sdhci < 0)
 			continue;
@@ -2376,7 +2428,7 @@ static int bolt_populate_bsp(void *fdt)
 		return BOLT_OK;
 
 	/* get node from full rdb address */
-	xsprintf(strnode, DT_RDB_DEVNODE_BASE_PATH"/bsp@%08x",
+	xsprintf(strnode, DT_RDB_DEVNODE_BASE_PATH"/bsp@%x",
 		BREG_PA(BSP_CMDBUF));
 
 	/* NB: return OK in case 'dt autogen bsp' was not
@@ -2548,7 +2600,7 @@ int bolt_devtree_boltset(void *fdt)
 	if (rc)
 		goto out;
 
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 	rc = bolt_dt_addprop_u32(fdt, bolt, "pmap", board_pmap());
 	if (rc)
 		goto out;

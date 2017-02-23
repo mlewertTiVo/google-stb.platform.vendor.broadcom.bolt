@@ -1,0 +1,5266 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Bolt commands</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(1);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1>Bolt commands</h1>
+<span id="author">Broadcom Ltd</span><br />
+<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>A list of available BOLT user interface commands, with examples.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_batch">1.  batch</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>batch &#8230;&#8230;&#8230;&#8230;. Load a batch file into memory and execute it</p></div>
+<div class="sect2">
+<h3 id="_summary">1.1. SUMMARY</h3>
+<div class="paragraph"><p>Load a batch file into memory and execute it.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage">1.2. USAGE</h3>
+<div class="paragraph"><p>batch [-options] host:filename|dev:filename</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes">1.3. NOTES</h3>
+<div class="paragraph"><p>Uses a plain ascii text file containing standard BOLT commands.
+The <em>-loader=</em> option defaults to <em>raw</em> for batch files,
+other options such as <em>elf</em> or <em>zimg</em> could also be
+specified, though pointless to do so.</p></div>
+<div class="paragraph"><p>The <em>batch</em> command has two additional BOLT commands unique
+to it. The <em>tag</em> and <em>tagsave</em> commands.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+tag &lt;string&gt;: Assign &lt;string&gt; to the SYSINIT_TAG environment variable.
+If the tag assigns the same string again then the batch command will exit.
+</p>
+</li>
+<li>
+<p>
+tagsave: Save SYSINIT_TAG. This is equivalent to <em>setenv -p SYSINIT_TAG &lt;string&gt;</em>
+where &lt;string&gt; was previously assigned via the <em>tag</em> command.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_options">1.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-z &#8230;&#8230;&#8230;&#8230;&#8230; Load compressed file
+</p>
+</li>
+<li>
+<p>
+-nz &#8230;&#8230;&#8230;&#8230;.. Load uncompressed file (default)
+</p>
+</li>
+<li>
+<p>
+-tftp &#8230;&#8230;&#8230;&#8230; Load the file using the TFTP protocol
+</p>
+</li>
+<li>
+<p>
+-fatfs &#8230;&#8230;&#8230;.. Load the file from a FAT file system
+</p>
+</li>
+<li>
+<p>
+-rawfs &#8230;&#8230;&#8230;.. Load the file from an unformatted file system
+</p>
+</li>
+<li>
+<p>
+-rawfs &#8230;&#8230;&#8230;.. Load the file from an unformatted file system
+</p>
+</li>
+<li>
+<p>
+-loader=* &#8230;&#8230;.. Specify another loader
+</p>
+</li>
+<li>
+<p>
+-fs=* &#8230;&#8230;&#8230;&#8230; Specify BOLT file system name
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example">1.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>[user@machine]$echo "d 0x100 0x10" &gt; /media/PENDRIVE/test.bat</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; batch -loader=raw usbdisk0:test.bat
+Loader:raw Filesys:fat Dev:usbdisk0 File:test.bat Options:(null)
+Loading: .
+ 13 bytes read
+00000100  FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  ................
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span><span style="color: #009900">$echo</span> <span style="color: #FF0000">"d 0x100 0x10"</span> <span style="color: #990000">&gt;</span> /tftpboot/test<span style="color: #990000">.</span>bat</tt></pre></div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; batch -loader=raw -tftp 192.168.0.42:test.bat
+Loader:raw Filesys:tftp Dev:eth0 File:192.168.0.42:test.bat Options:(null)
+Loading: .
+ 13 bytes read
+00000100  FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF  ................
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_boards">2.  boards</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>boards &#8230;&#8230;&#8230;&#8230; Show supported boards</p></div>
+<div class="sect2">
+<h3 id="_summary_2">2.1. SUMMARY</h3>
+<div class="paragraph"><p>Show supported boards</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_2">2.2. USAGE</h3>
+<div class="paragraph"><p>boards</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_2">2.3. NOTES</h3>
+<div class="paragraph"><p>List which boards this current build of BOLT can select from.</p></div>
+<div class="paragraph"><p>The current board selection is indicated by "*" and "S"
+for the current board index and the (flash) saved one.</p></div>
+<div class="paragraph"><p>In general the board indexes should match, they may not
+if the board index "S" cannot be saved to flash.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_2">2.4. OPTIONS</h3>
+<div class="paragraph"><p>n/a</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_2">2.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boards
+a)      BCM97445SVMB
+b)      BCM97445VMSMB_SFF *S
+c)      BCM97445C
+d)      BCM97445DBS
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_boot">3.  boot</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>boot &#8230;&#8230;&#8230;&#8230;.. Load an executable file into memory and execute it</p></div>
+<div class="sect2">
+<h3 id="_summary_3">3.1. SUMMARY</h3>
+<div class="paragraph"><p>Load an executable file into memory and execute it</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_3">3.2. USAGE</h3>
+<div class="paragraph"><p>boot [-options] host:filename|dev:filename [arg]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_3">3.3. NOTES</h3>
+<div class="paragraph"><p>This command loads and executes a program from a boot device
+By default, <em>boot</em> will load a raw binary at virtual
+address 0x8000 and then jump to that address</p></div>
+<div class="paragraph"><p>If we have a valid Device Tree then it is modified (see the
+<em>dt bolt</em> command) just before the program is run. If the
+Device Tree is not required to be auto-modified by BOLT
+use the <em>dt off</em> command.</p></div>
+<div class="paragraph"><p>See also the <em>dt bolt</em> command.</p></div>
+<div class="paragraph"><p>An optional argument [arg] may be specified. This will be
+put into the Device Tree "chosen" node as the "bootargs"
+property. To specify multiple arguments, enclose them
+in quotes. Use single quotes ('') when your argument has
+double quotes ("") in it, and double quotes when using
+single quotes. Note: You cannot mix quoting styles, or
+if a uniform quoting style is used then all quotes will
+be stripped.</p></div>
+<div class="paragraph"><p>Remember you may also need to quote a BOLT variable that
+you use as an argument, as setenv will remove any
+containing quotes when the variable was defined (see
+<em>setenv</em> command.)</p></div>
+<div class="paragraph"><p>Sidecar apps such as the BSU (Boot Software Updater) require
+the <em>-bsu</em> flag to be specified.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_3">3.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-elf &#8230;&#8230;&#8230;&#8230;. Load the file as an ELF executable
+</p>
+</li>
+<li>
+<p>
+-srec &#8230;&#8230;&#8230;&#8230; Load the file as ASCII S-records
+</p>
+</li>
+<li>
+<p>
+-raw &#8230;&#8230;&#8230;&#8230;. Load the file as a raw binary
+</p>
+</li>
+<li>
+<p>
+-zimg &#8230;&#8230;&#8230;&#8230; Load the file as a zImage binary (default)
+</p>
+</li>
+<li>
+<p>
+-bsu &#8230;&#8230;&#8230;&#8230;. Load a sidecar app
+</p>
+</li>
+<li>
+<p>
+-z &#8230;&#8230;&#8230;&#8230;&#8230; Load gzip-compressed file
+</p>
+</li>
+<li>
+<p>
+-nz &#8230;&#8230;&#8230;&#8230;.. Load uncompressed file
+</p>
+</li>
+<li>
+<p>
+-loader=* &#8230;&#8230;.. Specify BOLT loader name
+</p>
+</li>
+<li>
+<p>
+-tftp &#8230;&#8230;&#8230;&#8230; Load the file using the TFTP protocol
+</p>
+</li>
+<li>
+<p>
+-fatfs &#8230;&#8230;&#8230;.. Load the file from a FAT file system
+</p>
+</li>
+<li>
+<p>
+-rawfs &#8230;&#8230;&#8230;.. Load the file from an unformatted file system
+</p>
+</li>
+<li>
+<p>
+-fs=* &#8230;&#8230;&#8230;&#8230; Specify BOLT file system name
+</p>
+</li>
+<li>
+<p>
+-max=* &#8230;&#8230;&#8230;.. Specify the maximum number of bytes to load (raw and zImage)
+</p>
+</li>
+<li>
+<p>
+-addr=* &#8230;&#8230;&#8230;. Specify the load address (hex) (raw and zImage)
+</p>
+</li>
+<li>
+<p>
+-noclose &#8230;&#8230;&#8230; Don&#8217;t close network link before executing program
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_additional_options_for_arm64">3.5.  Additional options for ARM64</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-32 &#8230;&#8230;&#8230;&#8230;.. Boot a 32 bit app
+</p>
+</li>
+<li>
+<p>
+-64 &#8230;&#8230;&#8230;&#8230;.. Boot a 64 bit app
+</p>
+</li>
+<li>
+<p>
+-nopsci &#8230;&#8230;&#8230;. Don&#8217;t use PSCI to boot app
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_additional_notes_for_arm64">3.6.  Additional notes for ARM64</h3>
+<div class="paragraph"><p>A zImage format file implies a 32 bit binary. An Image or gz compressed
+Image implies a 64 bit binary. The zImage/Image loader may override the
+<em>-32</em> and <em>-64</em> flags, and also automatically select the right 32 or 64
+bit load address, if not specified here. See also BOOT_START_ADDRESS_ZIMAGE
+in the file <em>config/A53.cfg</em>.</p></div>
+<div class="paragraph"><p>The <em>-nopsci</em> option will use the old way of jumping to the Linux entry point
+instead of doing it via PSCI. This is only valid for 32 bit apps.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_3">3.7. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot 10.12.153.131:vmlinuz-initrd-7445a0
+Loader:zimg Filesys:tftp Dev:eth0 File:10.12.153.131:vmlinuz-initrd-7445a0 Options:(null)
+Reading 5857736 bytes from zImage...........
+Starting program at 0x00008000 (DTB @ 0x00001000)
+
+Booting Linux on physical CPU 0x0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot flash0.rootfs:vmlinuz-initrd-7445a0
+Loader:zimg Filesys:raw Dev:flash0.rootfs File:vmlinuz-initrd-7445a0 Options:(null)
+Reading 5857736 bytes from zImage...........
+Starting program at 0x00008000 (DTB @ 0x00001000)</code></pre>
+</div></div>
+<div class="sect3">
+<h4 id="_booting_an_srec_image">3.7.1. Booting an SREC image</h4>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user<span style="color: #990000">]</span><span style="color: #009900">$arm</span>-linux-objcopy -I binary -O srec --adjust-vma<span style="color: #990000">=</span><span style="color: #993399">0x8000</span> vmlinuz-initrd-7366c0 /tftpboot/vmlinuz-initrd-7366c0<span style="color: #990000">.</span>srec
+
+<span style="color: #990000">[</span>user<span style="color: #990000">]</span>$ srec_info /tftpboot/vmlinuz-initrd-7366c0<span style="color: #990000">.</span>srec
+Format<span style="color: #990000">:</span> Motorola S-Record
+Header<span style="color: #990000">:</span> <span style="color: #FF0000">"vmlinuz-initrd-7366c0.srec"</span>
+Execution Start Address<span style="color: #990000">:</span> <span style="color: #993399">00008000</span>
+Data<span style="color: #990000">:</span>   <span style="color: #993399">008000</span> - 65F9BF</tt></pre></div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto; boot -srec 192.168.0.42:vmlinuz-initrd-7366c0.srec
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-00-D3-05, ipaddr 192.168.0.40, mask 255.255.255.0
+        gateway 192.168.0.42, nameserver not set
+Loader:srec Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7366c0.srec Options:(null)
+...
+...
+415645 lines
+Starting program at 0x8000 (DTB @ 0x751a000)
+
+Booting Linux on physical CPU 0x0
+...
+...</code></pre>
+</div></div>
+<div class="paragraph"><p>The <em>srec_info</em> program may be obtained at <a href="http://srecord.sourceforge.net">http://srecord.sourceforge.net</a>
+or do (sudo) <em>yum install srecord</em> if you are running Fedora.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_passing_linux_command_line_args">3.7.2. Passing Linux command line args</h4>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot 192.168.0.42:vmlinuz-initrd-7366c0 'parts="blah" nosmp donkey="kong"'
+...
+# cat /proc/cmdline
+parts="blah" nosmp donkey="kong"</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot  192.168.0.42:vmlinuz-initrd-7366c0 "parts='blah' nosmp donkey='kong'"
+...
+# cat /proc/cmdline
+parts='blah' nosmp donkey='kong'</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot  192.168.0.42:vmlinuz-initrd-7366c0 'parts='blah' nosmp donkey='kong''
+# cat /proc/cmdline
+parts=blah nosmp donkey=kong</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot  192.168.0.42:vmlinuz-initrd-7366c0 "parts="blah" nosmp donkey="kong""
+# cat /proc/cmdline
+parts=blah nosmp donkey=kong</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv ARG "parts='blah' nosmp donkey='kong'"
+BOLT&gt; boot  192.168.0.42:vmlinuz-initrd-7366c0 "$ARG"
+# cat /proc/cmdline
+parts='blah' nosmp donkey='kong'</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv ARG 'parts="blah" nosmp donkey="kong"'
+BOLT&gt; boot  192.168.0.42:vmlinuz-initrd-7366c0 "$ARG"
+# cat /proc/cmdline
+parts=blah nosmp donkey=kong</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv ARG 'parts=\"blah\" nosmp donkey=\"kong\"'
+BOLT&gt; boot  192.168.0.42:vmlinuz-initrd-7366c0 "$ARG"
+# cat /proc/cmdline
+parts="blah" nosmp donkey="kong"</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_booting_a_demo_bsu_image">3.7.3. Booting a demo BSU image</h4>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot -z -elf -noclose -bsu 192.168.0.42:mini.elf.gz
+Loader:elf Filesys:tftp Dev:eth0 File:192.168.0.42:mini.elf.gz Options:(null)
+Starting program at 0x8000 (DTB @ 0x1000)
+
+_main(r0:0x00008000 r1:0xffffffff r2:0x00001000 r3:0x0704e59c)
+BSU @ 0x0704e59c
+Signature is ok
+0       memc #0 0x00a00000 -&gt; 0x07000000 102Mb
+1       memc #0 0x10000000 -&gt; 0x40000000 768Mb
+2       memc #1 0x40000000 -&gt; 0x80000000 1024Mb
+3       memc #2 0x80000000 -&gt; 0xc0000000 1024Mb</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_crc">4.  crc</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>crc &#8230;&#8230;&#8230;&#8230;&#8230; Report the CRC32 for a memory range</p></div>
+<div class="sect2">
+<h3 id="_summary_4">4.1. SUMMARY</h3>
+<div class="paragraph"><p>Report the CRC32 for a memory range</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_4">4.2. USAGE</h3>
+<div class="paragraph"><p>crc [options]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_4">4.3. NOTES</h3>
+<div class="paragraph"><p>This command computes the crc32 for a contiguous memory range.
+For an equivalent Linux tool please install <em>libarchive-zip-perl</em>
+e.g. sudo apt-get install libarchive-zip-perl</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_4">4.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-offset=* &#8230;&#8230;.. Start address
+</p>
+</li>
+<li>
+<p>
+-size=* &#8230;&#8230;&#8230;. Size, in bytes
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_4">4.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@localhost<span style="color: #990000">]</span>$ ls -l /tftpboot/vmlinuz-initrd-7445d0
+-rwxrwxr-x <span style="color: #993399">1</span> user user <span style="color: #993399">6882136</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">00</span><span style="color: #990000">:</span><span style="color: #993399">00</span> /tftpboot/vmlinuz-initrd-7445d0
+
+<span style="color: #990000">[</span>user@localhost<span style="color: #990000">]</span>$ /usr/bin/crc<span style="color: #993399">32</span> /tftpboot/vmlinuz-initrd-7445d0
+7685f4dc</tt></pre></div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; load 192.168.0.42:vmlinuz-initrd-7445d0
+Loader:zimg Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7445d0 Options:(null)
+Loading: Reading 6882136 bytes from zImage...........
+ 6882072 bytes read
+Entry address is 0x8000
+*** command status = 0
+
+BOLT&gt; crc -offset=0x8000 -size=6882136
+crc: 0x8000 to 0x698358 =  0x7685f4dc
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p>Note the value <em>7685f4dc</em> matches for both the Linux PC development side
+and the BOLT command for the actual size of 6882136 bytes.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_d">5.  d</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>d &#8230;&#8230;&#8230;&#8230;&#8230;.. Dump memory.</p></div>
+<div class="sect2">
+<h3 id="_summary_5">5.1. SUMMARY</h3>
+<div class="paragraph"><p>Dump memory.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_5">5.2. USAGE</h3>
+<div class="paragraph"><p>d [-b|-h|-w|-q] [addr [length]]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_5">5.3. NOTES</h3>
+<div class="paragraph"><p>This command displays data from memory as bytes, halfwords, words,
+or quadwords.  ASCII text, if present, will appear to the right of
+the hex data.  The dump command remembers the previous word size,
+dump length and last displayed address, so you can enter <em>d</em> again
+to continue a previous dump request.</p></div>
+<div class="paragraph"><p>For the ARM architecture, if caching is enabled then a data cache
+flush &amp; invalidate is performed if the -p' option is used.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_5">5.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-b &#8230;&#8230;&#8230;&#8230;&#8230; Dump memory as bytes
+</p>
+</li>
+<li>
+<p>
+-h &#8230;&#8230;&#8230;&#8230;&#8230; Dump memory as halfwords (16-bits)
+</p>
+</li>
+<li>
+<p>
+-w &#8230;&#8230;&#8230;&#8230;&#8230; Dump memory as words (32-bits)
+</p>
+</li>
+<li>
+<p>
+-q &#8230;&#8230;&#8230;&#8230;&#8230; Dump memory as quadwords (64-bits)
+</p>
+</li>
+<li>
+<p>
+-p &#8230;&#8230;&#8230;&#8230;&#8230; Address is an uncached physical address
+</p>
+</li>
+<li>
+<p>
+-v &#8230;&#8230;&#8230;&#8230;&#8230; Address is a kernel virtual address
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_5">5.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; d -b 0x800 8
+00000800  00 3C AE 51 00 D6 DC 23                          .&lt;.Q...#
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; d -w 0x800 8
+00000800  51AE3C00 23DCD600                    .&lt;.Q...#
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dir">6.  dir</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dir &#8230;&#8230;&#8230;&#8230;&#8230; List the directory of a FAT file system</p></div>
+<div class="sect2">
+<h3 id="_summary_6">6.1. SUMMARY</h3>
+<div class="paragraph"><p>List the directory of a FAT file system</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_6">6.2. NOTES</h3>
+</div>
+<div class="sect2">
+<h3 id="_usage_6">6.3. USAGE</h3>
+<div class="paragraph"><p>dir device-name[:path][filename]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_6">6.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dir usbdisk0
+***          Patriot Memory    (7744 MB, lbs=512) ***
+      &lt;DIR&gt;     BOOTDISK
+      &lt;DIR&gt;     BOOTPROG
+      &lt;DIR&gt;     SYSLINUX
+      117044    bolt.bin.zip
+     3458120    VMLINUZ.BIN
+      350804    BOLT.BIN
+     5188904    ETH.TGZ
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_phandle">7.  dt phandle</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt phandle &#8230;&#8230;.. Get or set the phandle associated with an existing node</p></div>
+<div class="sect2">
+<h3 id="_summary_7">7.1. SUMMARY</h3>
+<div class="paragraph"><p>Print the phandle number associated with a node, or create
+and then print a new phandle for the node if it did not
+previously exist.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_7">7.2. NOTES</h3>
+<div class="paragraph"><p>If this command has to create a new phandle it first finds
+the maximum existing phandle number and increments it by
+one to always create a unique phandle value.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_7">7.3. USAGE</h3>
+<div class="paragraph"><p>dt phandle [full path]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_7">7.4. EXAMPLE</h3>
+<div class="paragraph"><p>Automatic creation of a phandle and returning its value:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt show serial@f040ab00
+DTB @ 0x7822000
+/dts-v1/;
+
+/               serial@f040ab00 {
+                        clock-frequency = &lt;0x4d3f640&gt;;
+                        compatible = "ns16550a";
+                        reg-io-width = &lt;0x4&gt;;
+                        reg-shift = &lt;0x2&gt;;
+                        reg = &lt;0xf040ab00 0x20&gt;;
+                        interrupts = &lt;0x0 0x4b 0x4&gt;;
+                        interrupt-names = "upg_uart0";
+                        current-speed = &lt;0x1c200&gt;;
+                };
+*** command status = 0
+
+BOLT&gt; dt phandle /rdb/serial@f040ab00
+DTB @ 0x7822000
+/rdb/serial@f040ab00 phandle = 0x80 (128)
+*** command status = 0
+
+BOLT&gt; dt show serial@f040ab00
+DTB @ 0x7822000
+/dts-v1/;
+
+/               serial@f040ab00 {
+                        linux,phandle = &lt;0x80&gt;;
+                        phandle = &lt;0x80&gt;;
+                        clock-frequency = &lt;0x4d3f640&gt;;
+                        compatible = "ns16550a";
+                        reg-io-width = &lt;0x4&gt;;
+                        reg-shift = &lt;0x2&gt;;
+                        reg = &lt;0xf040ab00 0x20&gt;;
+                        interrupts = &lt;0x0 0x4b 0x4&gt;;
+                        interrupt-names = "upg_uart0";
+                        current-speed = &lt;0x1c200&gt;;
+                };
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p>Getting an existing phandle:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt show interrupt-controller@ffd00000
+DTB @ 0x7822000
+/dts-v1/;
+
+/       interrupt-controller@ffd00000 {
+                compatible = "arm,cortex-a15-gic";
+                interrupt-controller;
+                #interrupt-cells = &lt;0x3&gt;;
+                reg = &lt;0x0 0xffd01000 0x0 0x1000 0x0 0xffd02000 0x0 0x2000&gt;;
+                reg-names = "dist", "cpu";
+                linux,phandle = &lt;0x1&gt;;
+                phandle = &lt;0x1&gt;;
+        };
+*** command status = 0
+
+BOLT&gt; dt phandle /interrupt-controller@ffd00000
+DTB @ 0x7822000
+/interrupt-controller@ffd00000 phandle = 0x1 (1)
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_off">8.  dt off</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt off &#8230;&#8230;&#8230;&#8230; Disable the silent <em>dt bolt</em> command that happens
+                    just before the <em>boot</em> command executes.</p></div>
+<div class="sect2">
+<h3 id="_summary_8">8.1. SUMMARY</h3>
+<div class="paragraph"><p>Gate the operating of the <em>dt bolt</em> command. Once this command
+has completed then all further <em>dt bolt</em> commands are aborted,
+including the silent <em>dt bolt</em> that happens in the <em>boot</em> command.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_8">8.2. NOTES</h3>
+<div class="paragraph"><p>The environment variable DT_OFF will be set to 1.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_8">8.3. USAGE</h3>
+<div class="paragraph"><p>dt off</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_8">8.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt off
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_on">9.  dt on</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt on &#8230;&#8230;&#8230;&#8230;. (Re-)enable the silent <em>dt bolt</em> command that
+                    happens just before the <em>boot</em> command executes.</p></div>
+<div class="sect2">
+<h3 id="_summary_9">9.1. SUMMARY</h3>
+<div class="paragraph"><p>Allow the operating of the <em>dt bolt</em> command. If a previous <em>dt bolt</em>
+or <em>dt off</em> command has been done then a further <em>dt bolt</em> command
+(or the silent <em>dt bolt</em> that happens in the <em>boot</em> command) will be
+aborted unless you do a prior <em>dt on</em> command.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_9">9.2. NOTES</h3>
+<div class="paragraph"><p>The environment variable DT_OFF will be removed if it exists. At startup
+the default is to allow the <em>dt bolt</em> command to operate once, until
+another <em>dt on</em> command is done.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_9">9.3. USAGE</h3>
+<div class="paragraph"><p>dt on</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_9">9.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt on
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_bolt">10.  dt bolt</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt bolt &#8230;&#8230;&#8230;.. Modify an existing DTB (Device Tree) in memory.</p></div>
+<div class="sect2">
+<h3 id="_summary_10">10.1. SUMMARY</h3>
+<div class="paragraph"><p>Modify an existing DTB with an autogenerated BOLT config.
+The DT_ADDRESS envar is used as the base address of the dtb.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_10">10.2. NOTES</h3>
+<div class="paragraph"><p>The environment variable DT_SIZE will be changed to reflect the new size
+of the Device Tree specified by the address in DT_ADDRESS. All values
+are hexadecimal. Note that further modification cannot be done
+unless you issue a <em>dt on</em> command prior to the next <em>dt bolt</em>
+command.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_10">10.3. USAGE</h3>
+<div class="paragraph"><p>dt bolt</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_10">10.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt bolt
+DTB @ 0x7720000
+Note: dt modification is now off, use 'dt on' to re-enable
+*** command status = 0
+BOLT&gt; dt bolt
+DTB @ 0x7720000
+Command not done: dt modification is off, use 'dt on' to re-enable
+*** command status = -1
+BOLT&gt; dt on
+*** command status = 0
+BOLT&gt; dt bolt
+DTB @ 0x7720000
+Note: dt modification is now off, use 'dt on' to re-enable
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_memreserve">11.  dt memreserve</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt memreserve &#8230;.. Add an entry to the DTB memory reservation table.</p></div>
+<div class="sect2">
+<h3 id="_summary_11">11.1. SUMMARY</h3>
+<div class="paragraph"><p>Add an entry to the DTB memory reservation table. The address and length
+shall be specified in hex. The DT_ADDRESS envar is used as the base
+address of the dtb.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_11">11.2. NOTES</h3>
+<div class="paragraph"><p>Each call will add a /memreserve/ line in the Device Tree. Its up to you
+to check for overlaps.</p></div>
+<div class="paragraph"><p>The values are volatile and are lost across reboots. You can hard wire
+them into the Device Tree boilerplate files at build time or add them to
+a startup script.</p></div>
+<div class="paragraph"><p>The splash screen also uses /memreserve/ so be sure your other
+allocations are in a different DDR or out of the way of the splash
+screen reserved memory.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_11">11.3. USAGE</h3>
+<div class="paragraph"><p>dt memreserve &lt;address&gt; &lt;length&gt;</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_11">11.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt memreserve 0x100000000 0x40000000
+DTB @ 0x7722000
+*** command status = 0
+BOLT&gt; dt show memreserve
+DTB @ 0x7722000
+/dts-v1/;
+
+/memreserve/ 0x100000000 0x40000000;
+
+/*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_del_prop">12.  dt del prop</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt del prop &#8230;&#8230;. Delete a property from the DTB.</p></div>
+<div class="sect2">
+<h3 id="_summary_12">12.1. SUMMARY</h3>
+<div class="paragraph"><p>Delete a property from the DTB. The DT_ADDRESS envar is
+used as the base address of the dtb.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_12">12.2. USAGE</h3>
+<div class="paragraph"><p>dt del prop [path] [property name]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_12">12.3. NOTES</h3>
+<div class="paragraph"><p>Deletes a property name and value from the DTB. See the environment
+variable DT_SIZE for any changes. The node path to the property
+must exist.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_12">12.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt del prop /usb@f0480200/ehci@f0480300 interrupts
+DTB @ 0x1000
+*** command status = 0
+
+BOLT&gt; dt del prop / interrupt-parent
+DTB @ 0x1000
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_del_node">13.  dt del node</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt del node &#8230;&#8230;. Delete a node from the DTB.</p></div>
+<div class="sect2">
+<h3 id="_summary_13">13.1. SUMMARY</h3>
+<div class="paragraph"><p>Delete a node from the DTB. The DT_ADDRESS envar is
+used as the base address of the dtb.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_13">13.2. USAGE</h3>
+<div class="paragraph"><p>dt del node [path] [node name]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_13">13.3. NOTES</h3>
+<div class="paragraph"><p>Deletes any node from the Device Tree. See the environment
+variable DT_SIZE for any changes.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_13">13.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt del node / pcie@f0460000
+DTB @ 0x1000
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_add_prop">14.  dt add prop</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt add prop &#8230;&#8230;. Add a new property to the DTB.</p></div>
+<div class="sect2">
+<h3 id="_summary_14">14.1. SUMMARY</h3>
+<div class="paragraph"><p>Add a new property to the DTB. The DT_ADDRESS
+envar is used as the base address of the dtb.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_14">14.2. NOTES</h3>
+<div class="paragraph"><p>If the property already exists then it is updated, else it is set to the
+values specified with the command. See the environment variable DT_SIZE
+for any changes. The node path to the property must exist.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_14">14.3. USAGE</h3>
+<div class="paragraph"><p>dt add prop [path] [property name][s "string"|i &lt;0xN&#8230; 0xN&#8230; &gt;]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_14">14.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt add node / fred
+DTB @ 0x1000
+*** command status = 0
+BOLT&gt; dt add prop /fred items s "red,green,blue"
+DTB @ 0x1000
+*** command status = 0
+BOLT&gt; dt add prop /fred count i 0x00000001 0x00000002 0x00000003
+DTB @ 0x1000
+*** command status = 0
+BOLT&gt; dt add prop /fred count integer 0x00 0x11 0x00
+DTB @ 0x1000
+*** command status = 0
+BOLT&gt; dt add prop /fred buddy string "Albert"
+DTB @ 0x1000
+*** command status = 0
+BOLT&gt; dt add prop /fred happy bool
+
+BOLT&gt; dt show
+DTB @ 0x1000
+/dts-v1/;
+
+/ {
+        model = "Broadcom STB (7445a0)";
+        compatible = "brcm,brcmstb";
+        #address-cells = &lt;0x1&gt;;
+        #size-cells = &lt;0x1&gt;;
+        interrupt-parent = &lt;0x1&gt;;
+
+        fred {
+                buddy = "Albert";
+                count = &lt;0x0 0x11 0x0&gt;;
+                items = "red,green,blue";
+                happy;
+        };
+...
+...
+...
+};
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_add_node">15.  dt add node</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt add node &#8230;&#8230;. Add a new node to the DTB.</p></div>
+<div class="sect2">
+<h3 id="_summary_15">15.1. SUMMARY</h3>
+<div class="paragraph"><p>Add a new node to the DTB. The DT_ADDRESS envar is used as the base address of the dtb.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_15">15.2. USAGE</h3>
+<div class="paragraph"><p>dt add node [path] [name]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_15">15.3. NOTES</h3>
+<div class="paragraph"><p>This adds a level 1 (top) node to the Device Tree binary, which may change its size.
+See the environment variable DT_SIZE for any changes. If the node already exists then
+an error is returned.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_15">15.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt add node / fred
+DTB @ 0x1000
+*** command status = 0
+BOLT&gt; dt add node /fred ginger
+DTB @ 0x1000
+*** command status = 0
+
+BOLT&gt; dt show
+DTB @ 0x1000
+/dts-v1/;
+
+/ {
+        model = "Broadcom STB (7445a0)";
+        compatible = "brcm,brcmstb";
+        #address-cells = &lt;0x1&gt;;
+        #size-cells = &lt;0x1&gt;;
+        interrupt-parent = &lt;0x1&gt;;
+
+        fred {
+                ginger {
+                };
+        };
+...
+...
+...
+};
+*** command status = 0
+
+BOLT&gt;  dt add node / fred
+DTB @ 0x1000
+*** command status = -1</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_sane">16.  dt sane</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt sane &#8230;&#8230;&#8230;.. Check DTB header. The DT_ADDRESS envar is used as
+                    the base address of the dtb.</p></div>
+<div class="sect2">
+<h3 id="_summary_16">16.1. SUMMARY</h3>
+<div class="paragraph"><p>Check DTB header. The DT_ADDRESS envar is used as the base address of the dtb.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_16">16.2. USAGE</h3>
+<div class="paragraph"><p>dt sane</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_16">16.3. NOTES</h3>
+<div class="paragraph"><p>This is a basic check of the parameters of the Device Tree binary in memory.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_16">16.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt sane
+DTB @ 0x1000
+DTB reported size 0xabe @ 0x1000
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dt_show">17.  dt show</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>dt show &#8230;&#8230;&#8230;.. Decode contents of a memory resident DTB.</p></div>
+<div class="sect2">
+<h3 id="_summary_17">17.1. SUMMARY</h3>
+<div class="paragraph"><p>Decode contents of a memory resident DTB file as a DTS. The DT_ADDRESS environment
+variable is used as the base address of the dtb.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_17">17.2. USAGE</h3>
+<div class="paragraph"><p>dt show [-nodes|-paths] [partial or full node name]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_6">17.3. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-nodes &#8230;&#8230;&#8230;.. Show only the nodes
+</p>
+</li>
+<li>
+<p>
+-paths &#8230;&#8230;&#8230;.. Show full paths if node name is specified
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_17">17.4. NOTES</h3>
+<div class="paragraph"><p>The DTB must exist in directly readable memory such as flash or ram.
+It could even have been previously loaded via e.g. tftp but the
+environment variable DT_ADDRESS must be set to the load location prior to
+executing this command.</p></div>
+<div class="paragraph"><p>The resulting Device Tree source (DTS) output can be screen scraped into
+a file that is directly compilable by the standard Linux <em>dtc</em> utility.</p></div>
+<div class="paragraph"><p>A partial or full node name may also be used to filter only portions
+of the Device Tree you are interested in.</p></div>
+<div class="paragraph"><p>There is a limitation with regard to the <em>-paths</em> flag: For more than one
+subnode (partial or full name filter) matches from <em>different</em> parent
+nodes, only the first parent node encountered is printed.</p></div>
+<div class="paragraph"><p>The <em>-nodes</em> flag results in the printing of only the node names
+and not any properties, it may be used in conjunction with the
+above name filter.</p></div>
+<div class="paragraph"><p>The <em>-nodes</em> and <em>-paths</em> flags are mutually exclusive.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_17">17.5.  EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt show serial
+DTB @ 0x7822000
+/dts-v1/;
+
+/               serial@f040a900 {
+                        clock-frequency = &lt;0x4d3f640&gt;;
+                        compatible = "ns16550a";
+                        reg-io-width = &lt;0x4&gt;;
+                        reg-shift = &lt;0x2&gt;;
+                        reg = &lt;0xf040a900 0x20&gt;;
+                        interrupts = &lt;0x0 0x4b 0x4&gt;;
+                        interrupt-names = "upg_uart0";
+                        current-speed = &lt;0x1c200&gt;;
+                };
+
+                serial@f040a940 {
+                        clock-frequency = &lt;0x4d3f640&gt;;
+                        compatible = "ns16550a";
+                        reg-io-width = &lt;0x4&gt;;
+                        reg-shift = &lt;0x2&gt;;
+                        reg = &lt;0xf040a940 0x20&gt;;
+                        interrupts = &lt;0x0 0x4c 0x4&gt;;
+                        interrupt-names = "upg_uart1";
+                };
+
+                serial@f040a980 {
+                        clock-frequency = &lt;0x4d3f640&gt;;
+                        compatible = "ns16550a";
+                        reg-io-width = &lt;0x4&gt;;
+                        reg-shift = &lt;0x2&gt;;
+                        reg = &lt;0xf040a980 0x20&gt;;
+                        interrupts = &lt;0x0 0x4d 0x4&gt;;
+                        interrupt-names = "upg_uart2";
+                };
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt show serial -nodes
+DTB @ 0x7822000
+/dts-v1/;
+
+/               serial@f040a900
+                serial@f040a940
+                serial@f040a980
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt show serial -paths
+DTB @ 0x7822000
+/dts-v1/;
+
+/{
+        model = "Broadcom STB (7439b0)";
+        compatible = "brcm,bcm7439b0", "brcm,brcmstb";
+        #address-cells = &lt;0x2&gt;;
+        #size-cells = &lt;0x2&gt;;
+        interrupt-parent = &lt;0x1&gt;;
+        rdb {
+                #address-cells = &lt;0x1&gt;;
+                #size-cells = &lt;0x1&gt;;
+                compatible = "simple-bus";
+                ranges = &lt;0x0 0x0 0x0 0xffffffff&gt;;
+
+                serial@f040a900 {
+                        clock-frequency = &lt;0x4d3f640&gt;;
+                        compatible = "ns16550a";
+                        reg-io-width = &lt;0x4&gt;;
+                        reg-shift = &lt;0x2&gt;;
+                        reg = &lt;0xf040a900 0x20&gt;;
+                        interrupts = &lt;0x0 0x4b 0x4&gt;;
+                        interrupt-names = "upg_uart0";
+                        current-speed = &lt;0x1c200&gt;;
+                };
+
+                serial@f040a940 {
+                        clock-frequency = &lt;0x4d3f640&gt;;
+                        compatible = "ns16550a";
+                        reg-io-width = &lt;0x4&gt;;
+                        reg-shift = &lt;0x2&gt;;
+                        reg = &lt;0xf040a940 0x20&gt;;
+                        interrupts = &lt;0x0 0x4c 0x4&gt;;
+                        interrupt-names = "upg_uart1";
+                };
+
+                serial@f040a980 {
+                        clock-frequency = &lt;0x4d3f640&gt;;
+                        compatible = "ns16550a";
+                        reg-io-width = &lt;0x4&gt;;
+                        reg-shift = &lt;0x2&gt;;
+                        reg = &lt;0xf040a980 0x20&gt;;
+                        interrupts = &lt;0x0 0x4d 0x4&gt;;
+                        interrupt-names = "upg_uart2";
+                };
+        };
+};
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_e">18.  e</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>e &#8230;&#8230;&#8230;&#8230;&#8230;.. Modify contents of memory.</p></div>
+<div class="sect2">
+<h3 id="_summary_18">18.1. SUMMARY</h3>
+<div class="paragraph"><p>Modify contents of memory.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_18">18.2. USAGE</h3>
+<div class="paragraph"><p>e [-b|-h|-w|-q] [addr [data&#8230;]]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_18">18.3. NOTES</h3>
+<div class="paragraph"><p>This command modifies the contents of memory.  If you do not specify
+data on the command line, BOLT will prompt for it.  When prompting for
+data you may enter <em>-</em> to back up, <em>=</em> to dump memory at the current
+location, or <em>.</em> to exit edit mode.</p></div>
+<div class="paragraph"><p>For the ARM architecture, if caching is enabled then a data cache
+flush &amp; invalidate is performed if the -p' option is used.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_7">18.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-b &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as bytes
+</p>
+</li>
+<li>
+<p>
+-h &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as halfwords (16-bits)
+</p>
+</li>
+<li>
+<p>
+-w &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as words (32-bits)
+</p>
+</li>
+<li>
+<p>
+-q &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as quadwords (64-bits)
+</p>
+</li>
+<li>
+<p>
+-p &#8230;&#8230;&#8230;&#8230;&#8230; Address is an uncached physical address
+</p>
+</li>
+<li>
+<p>
+-v &#8230;&#8230;&#8230;&#8230;&#8230; Address is a kernel virtual address
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_18">18.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; d 0100 8
+00000100  22 22 22 22 11 11 11 11                          """"....
+*** command status = 0
+
+BOLT&gt; e -b 0100 00 99
+*** command status = 0
+
+BOLT&gt; d 0100 8
+00000100  00 99 22 22 11 11 11 11                          ..""....
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_erase">19.  erase</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>erase &#8230;&#8230;&#8230;&#8230;. Erase entire flash device or partition</p></div>
+<div class="sect2">
+<h3 id="_summary_19">19.1. SUMMARY</h3>
+<div class="paragraph"><p>Perform an erase operation on non-volatile memory</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_19">19.2. USAGE</h3>
+<div class="paragraph"><p>erase [device], erase [device.partition]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_19">19.3. NOTES</h3>
+<div class="paragraph"><p>NAND bad block skipping is in effect: Erasure will not
+revert bad blocks. If you see the message ".NAND: read failure:
+cannot find good blocks in partition" while loading a file e.g.
+after erasure, check you use did specify the "-max=" and "-zo"
+options for non-zImage files. Note also in the examples
+below the block checking is per device, not partition
+specific.</p></div>
+<div class="paragraph"><p>Erasure of SPI flash may be quite slow for large devices.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_8">19.4. OPTIONS</h3>
+<div class="paragraph"><p>none</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_19">19.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; erase flash1.macadr
+Erasing...NAND: block 90 is bad at address 0x5a00000
+NAND: block 91 is bad at address 0x5b00000
+done
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; erase flash1
+Erasing...Erase address 0x5a00000 failed, bad block?
+Erase address 0x5b00000 failed, bad block?
+done
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ephycfg">20.  ephycfg</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>ephycfg &#8230;&#8230;&#8230;.. Configure Ethernet PHY interface</p></div>
+<div class="sect2">
+<h3 id="_summary_20">20.1. SUMMARY</h3>
+<div class="paragraph"><p>Configure Ethernet PHY interface</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_9">20.2. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-i=* &#8230;&#8230;&#8230;&#8230;. Specify the GENET interface instance (0, 1&#8230;) to operate
+                   on. If omitted, all available interfaces are used.
+</p>
+</li>
+<li>
+<p>
+-e &#8230;&#8230;&#8230;&#8230;&#8230; Enables expert mode, showing possibly broken configuration
+                   options.
+</p>
+</li>
+<li>
+<p>
+-r &#8230;&#8230;&#8230;&#8230;&#8230; Reset the GENET interface(s) to the board defaults and unsets
+                   relevant environment variables
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_20">20.3. USAGE</h3>
+<div class="paragraph"><p>ephycfg [-i=*|-e|-r]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_20">20.4. NOTES</h3>
+<div class="paragraph"><p>This command setup following environment variable for an Ethernet PHY interface.
+For GENET-4 based chips e.g. BCM7445, use option #7 when selecting the phy if
+you wish to use it as an ordinary network port.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+ETH&lt;N&gt;_PHY            =       [INT|MII|RGMII|RGMII_NO_ID]
+</p>
+</li>
+<li>
+<p>
+ETH&lt;N&gt;_MDIO_MODE      =       [0|1|boot]
+</p>
+</li>
+<li>
+<p>
+ETH&lt;N&gt;_SPEED          =       [10|100|1000]
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Where &lt;N&gt; corresponds to the current Ethernet interface instance.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_20">20.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ephycfg
+
+1) Internal GPHY (built-in PHY) on GENET_0 (defaults)
+
+2) RGMII ID mode disabled for external Gigabit Switch on GENET_2 (defaults)
+
+Selection: 1
+*** command status = 0
+
+BOLT&gt; printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+            ETH0_PHY RGMII
+      ETH0_MDIO_MODE 0
+          ETH0_SPEED 1000
+        ETH0_PHYADDR 1</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_f">21.  f</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>f &#8230;&#8230;&#8230;&#8230;&#8230;.. Fill contents of memory.</p></div>
+<div class="sect2">
+<h3 id="_summary_21">21.1. SUMMARY</h3>
+<div class="paragraph"><p>Fill contents of memory.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_21">21.2. USAGE</h3>
+<div class="paragraph"><p>f [-b|-h|-w|-q] addr length pattern</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_21">21.3. NOTES</h3>
+<div class="paragraph"><p>This command modifies the contents of memory.  You can specify the
+starting address, length, and pattern of data to fill (in hex)</p></div>
+<div class="paragraph"><p>For the ARM architecture, if caching is enabled then a data cache
+flush &amp; invalidate is performed before, if the -p' option is used.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_10">21.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-b &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as bytes
+</p>
+</li>
+<li>
+<p>
+-h &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as halfwords (16-bits)
+</p>
+</li>
+<li>
+<p>
+-w &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as words (32-bits)
+</p>
+</li>
+<li>
+<p>
+-q &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as quadwords (64-bits)
+</p>
+</li>
+<li>
+<p>
+-p &#8230;&#8230;&#8230;&#8230;&#8230; Address is an uncached physical address
+</p>
+</li>
+<li>
+<p>
+-v &#8230;&#8230;&#8230;&#8230;&#8230; Address is a kernel virtual address
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_21">21.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; d 0100 8
+00000100  11 11 11 11 11 11 11 11                          ........
+*** command status = 0
+
+BOLT&gt; f -b 0100 4 22
+*** command status = 0
+
+BOLT&gt; d 0100 8
+00000100  22 22 22 22 11 11 11 11                          """"....
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_flash">22.  flash</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>flash &#8230;&#8230;&#8230;&#8230;. Update a flash memory device</p></div>
+<div class="sect2">
+<h3 id="_summary_22">22.1. SUMMARY</h3>
+<div class="paragraph"><p>Update a flash memory device</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_22">22.2. USAGE</h3>
+<div class="paragraph"><p>flash [options] filename [flashdevice]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_22">22.3. NOTES</h3>
+<div class="paragraph"><p>Copies data from a source file name or device to a flash memory device.
+The source device can be a disk file (FAT filesystem), a remote file
+(TFTP) or a flash device.  The destination device may be a flash or eeprom.
+If the destination device is your boot flash (usually flash0), the flash
+command will restart the firmware after the flash update is complete</p></div>
+<div class="paragraph"><p><span class="red">The -header and -noheader options are deprecated.</span></p></div>
+<div class="paragraph"><p>The flash operation works by first fully downloading an image into DDR
+and then passing that data to the flash driver. This means we have to
+have an area of free memory set aside for this. We don&#8217;t use the heap
+but specify the address and size of the memory in config/bsp_config.cfg
+as FLASH_STAGING_BUFFER and FLASH_STAGING_BUFFER_SIZE.</p></div>
+<div class="paragraph"><p>You can define a bigger flash buffer or change its base address
+but this is not recommended for flashing such things as Linux
+initrd images into NAND or other error prone media as BOLT only
+has basic bad block skipping with no other error recovery, coping
+with bit flips, blocks suddenly going bad or longevity features
+such as wear leveling and block data relocation.</p></div>
+<div class="paragraph"><p>It is <strong>STRONGLY RECOMMENDED</strong> that if you use NAND flash, you place
+filesystem data atop a NAND-aware layer like UBI (e.g. UBI/UBIFS,
+UBI/gluebi/SquashFS). As well as being more reliable you won&#8217;t
+have an initrd eating your main memory and thus introducing low
+memory problems when running apps.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_11">22.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-noerase &#8230;&#8230;&#8230; Don&#8217;t erase flash before writing
+</p>
+</li>
+<li>
+<p>
+-forceerase &#8230;&#8230; Force erase flash before writing
+</p>
+</li>
+<li>
+<p>
+-blockerase &#8230;&#8230; Erase a sector in the flash
+</p>
+</li>
+<li>
+<p>
+-forcewrite &#8230;&#8230; If file larger than flash device or default maximum, truncate and force write
+</p>
+</li>
+<li>
+<p>
+-offset=* &#8230;&#8230;.. Begin programming at this offset in the flash device
+</p>
+</li>
+<li>
+<p>
+-mem=* &#8230;&#8230;&#8230;.. If mem device then specify from where to read
+</p>
+</li>
+<li>
+<p>
+-memsize=* &#8230;&#8230;. If mem device then specify amount to read
+</p>
+</li>
+<li>
+<p>
+-size=* &#8230;&#8230;&#8230;. Size of source device when programming from flash to flash.
+                    Otherwise, for disk and network files, this is the maximum
+                   size of file, which when less than 1024 is interpreted in MB.
+</p>
+</li>
+<li>
+<p>
+-header &#8230;&#8230;&#8230;. Deprecated option; do not use
+</p>
+</li>
+<li>
+<p>
+-noheader &#8230;&#8230;.. Deprecated option; do not use
+</p>
+</li>
+<li>
+<p>
+-revend &#8230;&#8230;&#8230;. Binary file being downloaded is halfword swapped prior to being flashed
+</p>
+</li>
+<li>
+<p>
+-revend1 &#8230;&#8230;&#8230; Binary file being downloaded is full byte swapped prior to being flashed
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_22">22.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; flash 192.168.0.42:vmlinuz-initrd-7445a0 flash0.kernel
+Reading 192.168.0.42:vmlinuz-initrd-7445a0:
+Done. 3454624 bytes read
+Programming...done. 3454624 bytes written
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; flash 192.168.0.42:bolt.bin flash0.bolt
+Reading 192.168.0.42:bolt.bin: .
+Done. 368836 bytes read
+Programming...done. 368836 bytes written
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; flash -forceerase -mem=0x1000 -memsize=0x10000 mem0 flash0.devtree
+Reading mem0: Done. 65536 bytes read
+offset: 00000000   size: 00010000
+Force erasing...
+Erasing flash...Programming...done. 65536 bytes written
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>This is the old way where only bmp image was flashed and displayed.
+
+BOLT&gt; flash  -noheader 192.168.0.42:splash.bmp flash0.splash
+Warning: deprecated option '-noheader' will be removed soon
+Reading 192.168.0.42:splash.bmp: .
+Done. 440466 bytes read
+Programming...done. 440466 bytes written
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>This is the new way where, along with a bmp image, a pcm audio file can be
+played. This is achieved by flashing a combined(pcm audio + bmp) file named
+splashFile. Below is the command to do it. But, splashFile is created using
+the splash_create_flash_file utility in /scritps.
+
+BOLT&gt; flash -noheader 192.168.0.42:splashFile flash0.splash
+Reading 192.168.0.42:splashFile: .
+Done. 442576 bytes read
+Programming...done. 442576 bytes written
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; flash -header 192.168.0.42:vmlinuz-initrd-7445d0 flash0.kernel
+Invalid option; '-header' is deprecated
+*** command status = -8</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_gisb">23.  gisb</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>gisb &#8230;&#8230;&#8230;&#8230;.. Show or set GISB bus timeout</p></div>
+<div class="sect2">
+<h3 id="_summary_23">23.1. SUMMARY</h3>
+<div class="paragraph"><p>Show or set GISB bus timeout</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_23">23.2. USAGE</h3>
+<div class="paragraph"><p>gisb [-set=X] where X is a hex number</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_23">23.3. NOTES</h3>
+<div class="paragraph"><p>Sets the timeout for the top level multi-master register
+bus (GISB) connecting devices within the chip. See also the
+entry for the SUN_GISB_ARB_TIMER register in your chip
+(family) register database documentation.</p></div>
+<div class="paragraph"><p>To disable the timeout function, use zero for the new value,
+else you must use a value not lower than various peripherals
+can cope with in BOLT. Operating systems like Linux may have
+differing requirements.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_12">23.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-set=* &#8230;&#8230;&#8230;.. Program new gisb timeout
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_23">23.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; gisb
+GISB timeout: a4cb80
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; gisb -set=0xbbbbbb
+GISB timeout: bbbbbb
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; gisb -set=2
+gisb: timeout of 0x2 is too low! (!0 and &lt; 0x50
+GISB timeout: bbbbbb
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_go">24.  go</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>go &#8230;&#8230;&#8230;&#8230;&#8230;. Start a previously loaded program.</p></div>
+<div class="sect2">
+<h3 id="_summary_24">24.1. SUMMARY</h3>
+<div class="paragraph"><p>Start a previously loaded program.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_24">24.2. USAGE</h3>
+<div class="paragraph"><p>go [address]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_24">24.3. NOTES</h3>
+<div class="paragraph"><p>The <em>go</em> command will start a program previously loaded with
+the <em>load</em> command.  You can override the start address by
+specifying it as a parameter to the <em>go</em> command.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_13">24.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-noclose &#8230;&#8230;&#8230; Don&#8217;t close network link before executing program
+</p>
+</li>
+<li>
+<p>
+-bsu &#8230;&#8230;&#8230;&#8230;. Run as a sidecar app
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_additional_options_for_arm64_2">24.5.  Additional options for ARM64</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-32 &#8230;&#8230;&#8230;&#8230;.. Boot a 32 bit app
+</p>
+</li>
+<li>
+<p>
+-64 &#8230;&#8230;&#8230;&#8230;.. Boot a 64 bit app
+</p>
+</li>
+<li>
+<p>
+-nopsci &#8230;&#8230;&#8230;. Don&#8217;t use PSCI to boot app
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_additional_notes_for_arm64_2">24.6.  Additional notes for ARM64</h3>
+<div class="paragraph"><p>A zImage format file implies a 32 bit binary. An Image or gz compressed
+Image implies a 64 bit binary. The zImage/Image loader may override the
+<em>-32</em> and <em>-64</em> flags, and also automatically select the right 32 or 64
+bit load address, if not specified here. See also BOOT_START_ADDRESS_ZIMAGE
+in the file <em>config/A53.cfg</em>.</p></div>
+<div class="paragraph"><p>The <em>-nopsci</em> option will use the old way of jumping to the Linux entry point
+instead of doing it via PSCI. This is only valid for 32 bit apps.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_24">24.7. EXAMPLE</h3>
+<div class="listingblock">
+<div class="title">Load and then boot Linux</div>
+<div class="content">
+<pre><code>BOLT&gt; load flash0.kernel:vmlinuz-7445a0
+Loader:zimg Filesys:raw Dev:flash0.kernel File:vmlinuz-7445a0 Options:(null)
+Loading: Reading 3446648 bytes from zImage...........
+ 3446584 bytes read
+Entry address is 0x00008000
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; go
+Starting program at 0x00008000 (DTB @ 0x00001000)
+
+Booting Linux on physical CPU 0x0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">Load and then boot a BSU app</div>
+<div class="content">
+<pre><code>BOLT&gt; load -elf -nz 192.168.0.42:intmath.elf
+Device eth0:  hwaddr 00-10-18-B5-C3-78, ipaddr 192.168.0.23, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+Loader:elf Filesys:tftp Dev:(null) File:192.168.0.42:intmath.elf Options:(null)
+Loading: 0xa010000/6048 Entry address is 0xa010000
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; go -noclose -bsu
+Starting program at 0xa010000 (DTB @ 0x7822000)
+
+BSU UP @ 0x07052e14
+r0: 0x0a010000 r1: 0xffffffff r2: 0x07822000 r3: 0x07052e14
+Saved sp:91ff954 lr7014018
+HEADER is non-BSU
+Signature is OK
+Main version: 8
+Diag version: 117474465
+0       memc #0 0x00a00000 -&gt; 0x06ffc000 101Mb
+1       memc #0 0x10000000 -&gt; 0x80000000 1792Mb
+2       memc #1 0x40000000 -&gt; 0xc0000000 2048Mb
+3       memc #2 0x80000000 -&gt; 0x00000000 2048Mb
+Boxmode: 1
+Start app...
+Bye-Bye!
+*** command status = 0
+BOLT&gt;</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">Load ELF as a flat binary, then copy as ELF and run</div>
+<div class="content">
+<pre><code>BOLT&gt; load -raw -addr=0x10000000 192.168.0.42:intmath.elf
+Device eth0:  hwaddr 00-10-18-B5-C3-78, ipaddr 192.168.0.23, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+Loader:raw Filesys:tftp Dev:(null) File:192.168.0.42:intmath.elf Options:(null)
+Loading: .
+ 71976 bytes read
+Entry address is 0x10000000
+*** command status = 71976</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; load -elf  mem0:0x10000000
+Loader:elf Filesys:raw Dev:mem0 File:0x10000000 Options:(null)
+Loading: 0xa010000/6048 Entry address is 0xa010000
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; go -noclose -bsu
+Starting program at 0xa010000 (DTB @ 0x7822000)
+
+BSU UP @ 0x07052e34
+r0: 0x0a010000 r1: 0xffffffff r2: 0x07822000 r3: 0x07052e34
+Saved sp:91ff954 lr7014018
+HEADER is non-BSU
+Signature is OK
+Main version: 8
+Diag version: 117474465
+0       memc #0 0x00a00000 -&gt; 0x06ffc000 101Mb
+1       memc #0 0x10000000 -&gt; 0x80000000 1792Mb
+2       memc #1 0x40000000 -&gt; 0xc0000000 2048Mb
+3       memc #2 0x80000000 -&gt; 0x00000000 2048Mb
+Boxmode: 1
+Start app...
+Bye-Bye!
+*** command status = 0
+BOLT&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_help">25.  help</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>help &#8230;&#8230;&#8230;&#8230;.. Obtain help for BOLT commands</p></div>
+<div class="sect2">
+<h3 id="_summary_25">25.1. SUMMARY</h3>
+<div class="paragraph"><p>Obtain help for BOLT commands</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_25">25.2. USAGE</h3>
+<div class="paragraph"><p>help [command]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_25">25.3. NOTES</h3>
+<div class="paragraph"><p>Without any parameters, the <em>help</em> command will display a summary
+of available commands.  For more details on a command, type <em>help</em>
+and the command name.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_25">25.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; help
+Available commands:
+
+batch ............. Load a batch file into memory and execute it
+boards ............ Show supported boards
+...
+...
+...
+...
+waitusb ........... Wait for USB device to be installed.
+
+For more information about a command, enter 'help command-name'
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ifconfig">26.  ifconfig</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>ifconfig &#8230;&#8230;&#8230;. Configure the Ethernet interface</p></div>
+<div class="sect2">
+<h3 id="_summary_26">26.1. SUMMARY</h3>
+<div class="paragraph"><p>Configure the Ethernet interface</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_26">26.2. USAGE</h3>
+<div class="paragraph"><p>ifconfig device [options..]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_26">26.3. NOTES</h3>
+<div class="paragraph"><p>Activates and configures the specified Ethernet interface and sets its
+IP address, netmask, and other parameters.  The -auto switch can be used
+to set this information via DHCP.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_14">26.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-auto &#8230;&#8230;&#8230;&#8230; Configure interface automatically via DHCP
+</p>
+</li>
+<li>
+<p>
+-off &#8230;&#8230;&#8230;&#8230;. Deactivate the specified interface
+</p>
+</li>
+<li>
+<p>
+-addr=* &#8230;&#8230;&#8230;. Specifies the IP address of the interface
+</p>
+</li>
+<li>
+<p>
+-mask=* &#8230;&#8230;&#8230;. Specifies the subnet mask for the interface
+</p>
+</li>
+<li>
+<p>
+-gw=* &#8230;&#8230;&#8230;&#8230; Specifies the gateway address for the interface
+</p>
+</li>
+<li>
+<p>
+-dns=* &#8230;&#8230;&#8230;.. Specifies the name server address for the interface
+</p>
+</li>
+<li>
+<p>
+-domain=* &#8230;&#8230;.. Specifies the default domain for name service queries
+</p>
+</li>
+<li>
+<p>
+-speed=* &#8230;&#8230;&#8230; Sets the interface speed (auto,10fdx,10hdx, 100fdx, 100hdx,1000fdx,1000hdx)
+</p>
+</li>
+<li>
+<p>
+-loopback=* &#8230;&#8230; Sets the loopback mode (off, mac_internal, mac_external, phy_internal,phy_external).
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+<em>mac_internal</em> sets all data transmitted by the MAC be internally received by the MAC receiver.
+</p>
+</li>
+<li>
+<p>
+<em>mac_external</em> sets all data received by the MAC be loopback to the MAC transmitter.
+</p>
+</li>
+<li>
+<p>
+<em>phy_internal</em> sets all data transmitted by the PHY be internally received by the PHY receiver.
+</p>
+</li>
+<li>
+<p>
+<em>phy_external</em> sets all data received by thePHY be loopback to PHY transmitter.
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+-hwaddr=* &#8230;&#8230;.. Sets the hardware address (overrides environment)
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_26">26.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+Device eth0:  hwaddr 00-10-18-00-93-00, ipaddr 192.168.0.40, mask 255.255.255.0
+        gateway 192.168.0.42, nameserver not set
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+1000 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-10-C3-E1, ipaddr 99.88.77.66, mask 255.255.254.0
+        gateway 99.88.77.1, nameserver 99.99.99.99, domain acme.com
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_incenv">27.  incenv</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>incenv &#8230;&#8230;&#8230;&#8230; Increment an integer environment variable.</p></div>
+<div class="sect2">
+<h3 id="_summary_27">27.1. SUMMARY</h3>
+<div class="paragraph"><p>Increment an integer environment variable.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_27">27.2. USAGE</h3>
+<div class="paragraph"><p>incenv varname</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_27">27.3. NOTES</h3>
+<div class="paragraph"><p>This command increments the integer value of an environment variable.
+If it doesn&#8217;t exist, then it creates one (in NVRAM device) with a
+value of 1.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_27">27.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv COUNT 0
+*** command status = 0
+BOLT&gt; incenv COUNT
+    COUNT = 1
+*** command status = 0
+BOLT&gt; incenv COUNT
+    COUNT = 2
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_info">28.  info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>info &#8230;&#8230;&#8230;&#8230;.. Show BOLT configuration information</p></div>
+<div class="sect2">
+<h3 id="_summary_28">28.1. SUMMARY</h3>
+<div class="paragraph"><p>Show BOLT configuration information</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_28">28.2. USAGE</h3>
+<div class="paragraph"><p>info</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_28">28.3. NOTES</h3>
+<div class="paragraph"><p>This command displays information about the DDR, CPU speed, memory and
+build configuration. It also sets up environment variables of the
+format "DRAM&lt;N&gt;_SIZE", where N is the DDR number, e.g. "printenv" might
+show:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>DRAM0_SIZE 1024
+DRAM1_SIZE 1024
+DRAM2_SIZE 1024</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_example_28">28.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; info
+========================================================================
+     CPU speed: 1500MHz
+DDR0 Frequency: 1067MHz, 4x16 phy:32    40000000 @ 00000000
+DDR1 Frequency: 1067MHz, 4x16 phy:32    40000000 @ 80000000
+  Total memory: 2048MB
+   Boot Device: SPI
+
+Total memory used by BOLT: 0x07008000 - 0x070300A0 (164000)
+Initialized Data:          0x07025870 - 0x0702F990 (10312)
+BSS Area:                  0x0702F990 - 0x070300A0 (452)
+Local Heap:                0x07030400 - 0x09030400 (33554432)
+Stack Area:                0x09030400 - 0x09038400 (32768)
+Text (code) segment:       0x07008000 - 0x0700F61C (30236)
+FSBL info area:            0xFFE0FFC0 - 0xFFE0FFE0 (32)
+Page table base:           0x07000000
+
+BOLT driver build information:
+LDR:     ELF   0; RAW   0; SREC  0; ZIMG  0
+UI:      LEVEL 3; MIN   0
+FS:      FAT   0; FAT32 0
+NET:     STACK 0; ENET  0
+USB:     STACK 0; ETH   0; DISK  0; SERIAL   0; HID 0
+FLASH:   P30   0; P33   0; 128J3 0; Spansion 0
+========================================================================
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_load">29.  load</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>load &#8230;&#8230;&#8230;&#8230;.. Load an executable file into memory.</p></div>
+<div class="sect2">
+<h3 id="_summary_29">29.1. SUMMARY</h3>
+<div class="paragraph"><p>Load an executable file into memory without executing it</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_29">29.2. USAGE</h3>
+<div class="paragraph"><p>load [-options] host:filename|dev:filename</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_29">29.3. NOTES</h3>
+<div class="paragraph"><p>This command loads an executable file into memory, but does not
+execute it.  It can be used for loading data files, overlays or
+other programs needed before the <em>boot</em> command is used.  By
+default, <em>load</em> will load a zImage binary.</p></div>
+<div class="paragraph"><p>The filename for the <em>rawfs</em> filesystem may be expressed
+in the format &lt;device&gt;:&lt;offset&gt;,&lt;size&gt; e.g. <em>mem0:0x8000,0x10000</em>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_15">29.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-elf &#8230;&#8230;&#8230;&#8230;. Load the file as an ELF executable
+</p>
+</li>
+<li>
+<p>
+-srec &#8230;&#8230;&#8230;&#8230; Load the file as ASCII S-records
+</p>
+</li>
+<li>
+<p>
+-raw &#8230;&#8230;&#8230;&#8230;. Load the file as a raw binary
+</p>
+</li>
+<li>
+<p>
+-zimg &#8230;&#8230;&#8230;&#8230; Load the file as a zImage binary (default)
+</p>
+</li>
+<li>
+<p>
+-bsu &#8230;&#8230;&#8230;&#8230;. Load a sidecar app
+</p>
+</li>
+<li>
+<p>
+-z &#8230;&#8230;&#8230;&#8230;&#8230; Load gzip-compressed file (default)
+</p>
+</li>
+<li>
+<p>
+-nz &#8230;&#8230;&#8230;&#8230;.. Load uncompressed file
+</p>
+</li>
+<li>
+<p>
+-splash &#8230;&#8230;&#8230;. Load a BMP file and display it
+</p>
+</li>
+<li>
+<p>
+-loader=* &#8230;&#8230;.. Specify BOLT loader name
+</p>
+</li>
+<li>
+<p>
+-tftp &#8230;&#8230;&#8230;&#8230; Load the file using the TFTP protocol
+</p>
+</li>
+<li>
+<p>
+-fatfs &#8230;&#8230;&#8230;.. Load the file from a FAT file system
+</p>
+</li>
+<li>
+<p>
+-rawfs &#8230;&#8230;&#8230;.. Load the file from an unformatted file system
+</p>
+</li>
+<li>
+<p>
+-fs=* &#8230;&#8230;&#8230;&#8230; Specify BOLT file system name
+</p>
+</li>
+<li>
+<p>
+-max=* &#8230;&#8230;&#8230;.. Specify the maximum number of bytes to load (raw and zImage)
+</p>
+</li>
+<li>
+<p>
+-addr=* &#8230;&#8230;&#8230;. Specify the load address (hex) (raw and zImage)
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_additional_notes_for_arm64_3">29.5.  Additional notes for ARM64</h3>
+<div class="paragraph"><p>A zImage format file implies a 32 bit binary. An Image or gz compressed
+Image implies a 64 bit binary. The zImage/Image loader may automatically
+select the right 32 or 64 bit boot type, and also the load address - if it&#8217;s
+not been specified here. See also BOOT_START_ADDRESS_ZIMAGE in the file
+<em>config/A53.cfg</em>.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_29">29.6. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+1000 Mbps Full-Duplex
+Device eth0:  hwaddr 00-00-00-00-00-00, ipaddr 10.12.153.152, mask 255.255.254.0
+        gateway 10.12.152.1, nameserver 10.10.10.10, domain broadcom.com
+*** command status = 0
+BOLT&gt; load -raw 10.12.153.131:ntsc_matrix.yuv
+Loader:raw Filesys:tftp Dev:eth0 File:10.12.153.131:ntsc_matrix.yuv Options:(null)
+Loading: .
+ 691200 bytes read
+Entry address is 0x00008000
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; load flash0.rootfs:vmlinuz-initrd-7445a0
+Loader:zimg Filesys:raw Dev:flash0.rootfs File:vmlinuz-initrd-7445a0 Options:(null)
+Loading: Reading 5857736 bytes from zImage...........
+ 5857672 bytes read
+Entry address is 0x00008000
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; load -raw -splash 192.168.0.42:splash.bmp
+Loader:raw Filesys:tftp Dev:eth0 File:192.168.0.42:splash.bmp Options:(null)
+Loading: .
+ 440466 bytes read
+Entry address is 0x8000
+*** command status = 440466</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_loop">30.  loop</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>loop &#8230;&#8230;&#8230;&#8230;.. Loop a command</p></div>
+<div class="sect2">
+<h3 id="_summary_30">30.1. SUMMARY</h3>
+<div class="paragraph"><p>Loop a command</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_30">30.2. USAGE</h3>
+<div class="paragraph"><p>loop "command" [-count=*]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_30">30.3. NOTES</h3>
+<div class="paragraph"><p>The <em>loop</em> command causes the specified command or list of commands
+to be repeated <em>count</em> times or forever, or until a character is typed</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_16">30.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-count=* &#8230;&#8230;&#8230; Specifies number of iterations
+</p>
+</li>
+<li>
+<p>
+-forever &#8230;&#8230;&#8230; Loops forever
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_30">30.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; loop "d 100 4;sleep 1000" -count=2
+00000100  f3007800                             .x..
+00000100  f3007800                             .x..
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_macprog">31.  macprog</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>macprog &#8230;&#8230;&#8230;.. Program the MAC address.</p></div>
+<div class="sect2">
+<h3 id="_summary_31">31.1. SUMMARY</h3>
+<div class="paragraph"><p>Program the MAC address.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_31">31.2. USAGE</h3>
+<div class="paragraph"><p>macprog XX-XX-XX-XX-XX-XX</p></div>
+<div class="paragraph"><p>macprog &lt;board-type&gt; &lt;serial-num&gt; &lt;board-rev&gt;</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_31">31.3. NOTES</h3>
+<div class="paragraph"><p>This command has two modes: the first mode sets the specific value of
+the MAC to the address you specify.  The second mode sets the MAC based
+to a pseudo random setting based on the board-type, serial number, and
+board-rev.  Here are two example usages:</p></div>
+<div class="paragraph"><p>macprog 00-60-6E-70-0D-A2</p></div>
+<div class="paragraph"><p>macprog 97110 1549734 3</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_31">31.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; macprog BCM97445VMSVMB_SFFV00 1234 5
+Programming flash...done
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_memtest">32.  memtest</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>memtest &#8230;&#8230;&#8230;.. Test memory.</p></div>
+<div class="sect2">
+<h3 id="_summary_32">32.1. SUMMARY</h3>
+<div class="paragraph"><p>Test memory.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_32">32.2. USAGE</h3>
+<div class="paragraph"><p>memtest [options] addr length</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_32">32.3. NOTES</h3>
+<div class="paragraph"><p>This command tests memory.  It is a very crude test, so don&#8217;t
+rely on it for anything really important.  Addr and length are in hex</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_17">32.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-p &#8230;&#8230;&#8230;&#8230;&#8230; Address is an uncached physical address
+</p>
+</li>
+<li>
+<p>
+-v &#8230;&#8230;&#8230;&#8230;&#8230; Address is a kernel virtual address
+</p>
+</li>
+<li>
+<p>
+-loop &#8230;&#8230;&#8230;&#8230; Loop till keypress
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_32">32.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; memtest  0x800 0x10
+Pattern: 0000000200000017
+Pattern: 0000000800000808
+Pattern: FFFFFFFFFFFFFFFF
+Pattern: 5555555555555555
+Pattern: AAAAAAAAAAAAAAAA
+Pattern: FF00FF00FF00FF00
+Pattern: 00FF00FF00FF00FF
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_memwrap">33.  memwrap</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>memwrap &#8230;&#8230;&#8230;.. Test for end of (ddr) memory</p></div>
+<div class="sect2">
+<h3 id="_summary_33">33.1. SUMMARY</h3>
+<div class="paragraph"><p>Test for end of (ddr) memory. The -ddr option pre-fills -base &amp; -top values,
+which may be overridden by your own (optional) -base &amp; -top</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_33">33.2. USAGE</h3>
+<div class="paragraph"><p>memwrap [options]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_33">33.3. NOTES</h3>
+<div class="paragraph"><p>This command performs a write-readback test to the base reference address and each
+presumed ddr test location before the wrap test is performed. You can see this in
+the examples as "cannot modify". On failure, the next lowest word is tested (-4 bytes)
+to see if it can be writtten to. For ARM, If the address is above MMU_MEMTOP but lower
+than the flash and register spaces then BOLT may hang if the mmu is enabled,
+is is expected. The <em>uncache</em> command should be used prior to <em>memwrap</em> to
+avoid mmu complications - if this is desired, though it may not be and
+effects with the mmu on may be part of your tests.</p></div>
+<div class="paragraph"><p>Next, the wrap test prints "cmp[X Y]" where X is the test base and Y the
+incrementing (32 bit) test point values that have been read back after
+the test writes to them. For a non-wrap condition they should be different, though
+read only locations e.g. registers in the RDB may show a non-test value (not
+0xaa55aa55 or 0x55aa55aa) that we do the test with.</p></div>
+<div class="paragraph"><p>The wrap test increments by <em>step</em> Mb with the test point being checked that it is
+not equal to the base reference. The test must be performed so that the step value
+will fall on the exact address location of the base reference if there is the
+possibility of a memory wrap condition.</p></div>
+<div class="paragraph"><p>The wrap test may not actually find a wrap due to the vagaries of a specific chip
+architecture, but this command is written in such a way as find the end of a ddr;
+which is the overall point of this.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">the use of the <em>uncache</em> command to disable the mmu allowing the memwrap test
+to complete without a hang. An alternative is to build BOLT in uncached mode.</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The wrap test is ONLY valid within the confines of a specific ddr bus.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_options_18">33.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-ddr=* &#8230;&#8230;&#8230;.. Which ddr to test on (optional)
+</p>
+</li>
+<li>
+<p>
+-base=* &#8230;&#8230;&#8230;. Start address
+</p>
+</li>
+<li>
+<p>
+-top=* &#8230;&#8230;&#8230;.. End address
+</p>
+</li>
+<li>
+<p>
+-cont &#8230;&#8230;&#8230;&#8230; Continue testing after a test fail
+</p>
+</li>
+<li>
+<p>
+-step=* &#8230;&#8230;&#8230;. Step size, in Mb
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_33">33.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; memwrap -ddr=0
+ddr #0, scan 0x0 to 0x40000000 step 0x10000000 (256Mb)
+256Mb   0x0 - 0x10000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+512Mb   0x0 - 0x20000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+768Mb   0x0 - 0x30000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+1024Mb  0x0 - 0x40000000
+*** REBOOTING TARGET</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; uncache -override -nommu
+uncache: 0x00000000 =&gt; 0xc0000000...ok
+disable mmu...ok
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; memwrap -ddr=0
+ddr #0, scan 0x0 to 0x40000000 step 0x10000000 (256Mb)
+256Mb   0x0 - 0x10000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+512Mb   0x0 - 0x20000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+768Mb   0x0 - 0x30000000                cmp[aa55aa55 55aa55aa] ref ok, addr ok
+1024Mb  0x0 - 0x40000000        cannot modify 0x40000000, can modify 0x3ffffffc
+*** command status = -1</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_mhl_power">34.  mhl power</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>mhl power &#8230;&#8230;&#8230; Show the MHL bootup power</p></div>
+<div class="sect2">
+<h3 id="_summary_34">34.1. SUMMARY</h3>
+<div class="paragraph"><p>Display the MHL power negotiated from a connected 'sink' device, if any.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_34">34.2. USAGE</h3>
+<div class="paragraph"><p>mhl power</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_34">34.3. NOTES</h3>
+<div class="paragraph"><p>MHL must be enabled in the build ('config MHL on') to enable this feature,
+and not all chips support this feature either.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_34">34.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; mhl power
+MHL power: 900mA.
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_mii">35.  mii</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>mii &#8230;&#8230;&#8230;&#8230;&#8230; Reads or writes an Ethernet phy</p></div>
+<div class="sect2">
+<h3 id="_summary_35">35.1. SUMMARY</h3>
+<div class="paragraph"><p>Reads or writes register contents from/to specified
+PHY address on a given MDIO bus (use show devices to
+discover the bus.)</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_35">35.2. USAGE</h3>
+<div class="paragraph"><p>mii [read|write] [device] [phy address] [reg] [value]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_35">35.3. NOTES</h3>
+<div class="paragraph"><p>Requires BOLT to be built with Ethernet support.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_35">35.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt;  mii read mdio0 1 2
+MII read, phy=1, reg=2, value=0xae02
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt;  mii read mdio0 1 3
+MII read, phy=1, reg=3, value=0x5080
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ping">36.  ping</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>ping &#8230;&#8230;&#8230;&#8230;.. Ping a remote IP host.</p></div>
+<div class="sect2">
+<h3 id="_summary_36">36.1. SUMMARY</h3>
+<div class="paragraph"><p>Ping a remote IP host.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_36">36.2. USAGE</h3>
+<div class="paragraph"><p>ping [-t] remote-host</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_36">36.3. NOTES</h3>
+<div class="paragraph"><p>This command sends an ICMP ECHO message to a remote host and waits for
+a reply.  The network interface must be configured and operational for
+this command to work.  If the interface is configured for loopback mode
+the packet will be sent through the network interface, so this command
+can be used for a simple network test.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_19">36.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-t &#8230;&#8230;&#8230;&#8230;&#8230; Ping forever, or until the ENTER key is struck
+</p>
+</li>
+<li>
+<p>
+-x &#8230;&#8230;&#8230;&#8230;&#8230; Exit immediately on first error (use with -f or -t)
+</p>
+</li>
+<li>
+<p>
+-f &#8230;&#8230;&#8230;&#8230;&#8230; Flood ping (use carefully!) - ping as fast as possible
+</p>
+</li>
+<li>
+<p>
+-s=* &#8230;&#8230;&#8230;&#8230;. Specify the number of ICMP data bytes
+</p>
+</li>
+<li>
+<p>
+-c=* &#8230;&#8230;&#8230;&#8230;. Specify number of packets to echo
+</p>
+</li>
+<li>
+<p>
+-A &#8230;&#8230;&#8230;&#8230;&#8230; Don&#8217;t abort even if key is pressed
+</p>
+</li>
+<li>
+<p>
+-E &#8230;&#8230;&#8230;&#8230;&#8230; Require all packets sent to be returned, for successful return status
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_36">36.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ping -E -x -c=4 192.168.0.42
+192.168.0.42 (192.168.0.42) is alive (seq=0)
+192.168.0.42 (192.168.0.42) is alive (seq=1)
+192.168.0.42 (192.168.0.42) is alive (seq=2)
+192.168.0.42 (192.168.0.42) is alive (seq=3)
+192.168.0.42 (192.168.0.42): 4 packets sent, 4 received
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_pmap">37.  pmap</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>pmap &#8230;&#8230;&#8230;&#8230; list all, or select a pmap</p></div>
+<div class="sect2">
+<h3 id="_summary_37">37.1. SUMMARY</h3>
+<div class="paragraph"><p>Show PMap ID&#8217;s (power profiles) available, or select another.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_37">37.2. USAGE</h3>
+<div class="paragraph"><p>pmap [-set=&lt;N&gt; | -clear]</p></div>
+<div class="paragraph"><p>Without any command line argument, available PMap ID&#8217;s will be
+listed along with associated number of power domains.</p></div>
+<div class="paragraph"><p>For -set=&lt;N&gt; option, &lt;N&gt; is a PMap ID.</p></div>
+<div class="paragraph"><p>For -clear option, any PMap ID selection gets reverted back to
+the default one for the current board.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_37">37.3. NOTES</h3>
+<div class="paragraph"><p>A PMap specified at build time can be checked and replaced with
+a new one using the <em>pmap</em> command. For the newly selected PMap
+to be effective, the board has to reboot (or reset).</p></div>
+<div class="paragraph"><p>Without any command line argument, selectable PMap&#8217;s are listed
+with numbers at beginning of their lines while non-selectable are
+with asterisk. The number of power domains is marked at the end of
+a line, enclosed in parenthesis. 0 (zero) means "don&#8217;t care".
+The asterisk at the end of a line indicates the currently selected
+PMap.</p></div>
+<div class="paragraph"><p>Trying to select a PMap that is incompatible with the number of
+power domains on the current board or unavailable in the list will
+result in a failure message, and will not change the existing PMap
+selection.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_38">37.4. NOTES</h3>
+<div class="paragraph"><p>The <em>pmap</em> command is available only on ARM64 based platforms.
+It is also disabled once SECURE_BOOT is defined.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_37">37.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; pmap
+*)      PMap0 (1)
+*)      PMap1 (1)
+*)      PMap2 (1)
+*)      PMap3 (1)
+4)      PMap4 (2)
+5)      PMap5 (2)
+6)      PMap6 (2)
+7)      PMap7 (2) *
+8)      PMap8 (2)
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; pmap
+0)      PMap0 (0)
+1)      PMap1 (0)
+2)      PMap2 (0) *
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; pmap -set=1
+board selection update!
+board was f, now f (flags:0xffe00008)
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; pmap -set=5
+PMap must be [0..2]. 5 is invalid.
+*** command status = -1</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; pmap -clear
+board selection update!
+board was f, now f (flags:0xfffffff8)
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_printenv">38.  printenv</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>printenv &#8230;&#8230;&#8230;. Display the environment variables</p></div>
+<div class="sect2">
+<h3 id="_summary_38">38.1. SUMMARY</h3>
+<div class="paragraph"><p>Display the environment variables</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_38">38.2. USAGE</h3>
+<div class="paragraph"><p>printenv [varname]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_39">38.3. NOTES</h3>
+<div class="paragraph"><p>This command prints the value(s) of all or a specified environment
+variable(s)</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_38">38.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOOT_CONSOLE uart0
+              SPLASH DISABLE
+             STARTUP printenv; show devices
+                  F1 ifconfig eth1 -addr=192.168.0.41 -mask=255.255.255.0 -gw=192.168.0.42
+                  F2 ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+            ETH0_PHY INT
+      ETH0_MDIO_MODE 1
+          ETH0_SPEED 1000
+        ETH0_PHYADDR 10
+         ETH0_HWADDR 00:10:18:00:93:00
+             VERSION 0.50
+      CHIP_FAMILY_ID 74450000
+           BOARDNAME BCM97445VMSVMB_SFFV00
+          MEMORYSIZE 3072
+          DT_ADDRESS 1000
+             DT_SIZE abe
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_psci">39.  psci</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>psci &#8230;&#8230;&#8230;&#8230;.. Call PSCI feature using smc</p></div>
+<div class="sect2">
+<h3 id="_summary_39">39.1. SUMMARY</h3>
+<div class="paragraph"><p>Call PSCI feature using smc (ARM trap to EL3/monitor mode)</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_39">39.2. USAGE</h3>
+<div class="paragraph"><p>PSCI should be present in memory</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_20">39.3. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-r0 &#8230;&#8230;&#8230;&#8230; Function id
+</p>
+</li>
+<li>
+<p>
+-r1 &#8230;&#8230;&#8230;&#8230; Arg1
+</p>
+</li>
+<li>
+<p>
+-r2 &#8230;&#8230;&#8230;&#8230; Arg2
+</p>
+</li>
+<li>
+<p>
+-r3 &#8230;&#8230;&#8230;&#8230; Arg3
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_40">39.4. NOTES</h3>
+<div class="paragraph"><p>The <em>psci</em> command is currently only available on ARM64 based platforms.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_39">39.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; psci -r0=0x84000000
+PSCI result: 0x2
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_reboot">40.  reboot</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>reboot &#8230;&#8230;&#8230;&#8230; Reboot the system</p></div>
+<div class="sect2">
+<h3 id="_summary_40">40.1. SUMMARY</h3>
+<div class="paragraph"><p>Reboot the system</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_40">40.2. USAGE</h3>
+<div class="paragraph"><p>reboot</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_41">40.3. NOTES</h3>
+<div class="paragraph"><p>This performs a software initiated warm boot</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_40">40.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; reboot
+CPU 0
+BCM73640010
+PRID73640010
+v1.2
+RR:00000200
+BFW
+...
+...</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_rlogin">41.  rlogin</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>rlogin &#8230;&#8230;&#8230;&#8230; Mini rlogin client.</p></div>
+<div class="sect2">
+<h3 id="_summary_41">41.1. SUMMARY</h3>
+<div class="paragraph"><p>Connects to a remote system using the RLOGIN protocol.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_41">41.2. USAGE</h3>
+<div class="paragraph"><p>rlogin hostname [username]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_42">41.3. NOTES</h3>
+<div class="paragraph"><p>The remote system must have appropriate permissions in place (usually via the file
+<em>.rhosts</em>) for BOLT to connect. To terminate the session, type a tilde (~) character
+followed by a period (.)</p></div>
+<div class="paragraph"><p>Requires BOLT <em>TCP</em> support.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_rpmb_counter">42.  rpmb counter</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>rpmb counter &#8230;&#8230; Read the RPMB Write Counter.</p></div>
+<div class="sect2">
+<h3 id="_summary_42">42.1. SUMMARY</h3>
+<div class="paragraph"><p>Print the RPMB Write Counter.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_42">42.2. USAGE</h3>
+<div class="paragraph"><p>rpmb counter [RPMBdevice]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_43">42.3. NOTES</h3>
+<div class="paragraph"><p>Applies to eMMC devices.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_rpmb_program_key">43.  rpmb program-key</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>rpmb program-key .. Program the authentication key.</p></div>
+<div class="sect2">
+<h3 id="_summary_43">43.1. SUMMARY</h3>
+<div class="paragraph"><p>Program the authentication key using the key specified by the <em>rpmb use-key</em>
+command.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_43">43.2. USAGE</h3>
+<div class="paragraph"><p>rpmb program-key [RPMBdevice]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_44">43.3. NOTES</h3>
+<div class="paragraph"><p>Applies to eMMC devices.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content"><span class="red">This is a one time programable operation!!!</span></td>
+</tr></table>
+</div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_rpmb_use_key">44.  rpmb use-key</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>rpmb use-key &#8230;&#8230; Specify the key to be used for all RPMB operations.</p></div>
+<div class="sect2">
+<h3 id="_summary_44">44.1. SUMMARY</h3>
+<div class="paragraph"><p>Specify the RPMB authentication key to be used for subsquent RPMB operations.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_44">44.2. USAGE</h3>
+<div class="paragraph"><p>rpmb use-key [RPMBdevice] [byte1] [byte2]&#8230;[byte32]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_45">44.3. NOTES</h3>
+<div class="paragraph"><p>Applies to eMMC devices.</p></div>
+<div class="paragraph"><p>The key must be 32 bytes long.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_rts">45.  rts</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>rts &#8230;&#8230;&#8230;&#8230; list all, or select an rts</p></div>
+<div class="sect2">
+<h3 id="_summary_45">45.1. SUMMARY</h3>
+<div class="paragraph"><p>Show RTS sets (box modes) available, or select another.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_45">45.2. USAGE</h3>
+<div class="paragraph"><p>rts [-set=&lt;N&gt; | -clear | ]</p></div>
+<div class="paragraph"><p>For no option, this lists all the box modes available and its associated
+RTS version name.</p></div>
+<div class="paragraph"><p>For -set=&lt;N&gt; option, &lt;N&gt; is the box mode.</p></div>
+<div class="paragraph"><p>For -clear option, this reverts the box mode to the one defined for
+the current board.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_46">45.3. NOTES</h3>
+<div class="paragraph"><p>At build time, sets of RTS values can be specified for various
+operating modes, e.g. Video SD, PIP &amp; HD etc. You can choose which
+set you want at runtime by using this command. The RTS is then
+programmed immediately and the choice is also preserved
+by saving to flash, unless SECURE_BOOT is defined - in which case
+no permanent change is made.</p></div>
+<div class="paragraph"><p>With regard to showing the rts sets, if "*used" is show then
+that set is used and has priority over the board specific set
+that is marked as "*default" (board default.) To revert to
+using the board default rts set use the "rts -clear" form
+of the command.</p></div>
+<div class="paragraph"><p>If <em>rts -set=&lt;N&gt;</em> has been used then that rts set is saved to flash
+(excepting secure boot builds) and will override any board default rts
+sets, i.e. if you change the board via the <em>setboard</em> command then
+the rts set will stay the same.</p></div>
+<div class="paragraph"><p>Note, in the example "missing client list(s)" refers to a partial
+rts which, as shown, did not cover memory client #2, i.e. we
+didn&#8217;t consider the third ddr "RTS2:" as being present. This is an
+informational message.</p></div>
+<div class="paragraph"><p>If the "rtsdefault" id for a board matches no id for an rts set then
+you will see the message "RTS: not programed!" at startup.</p></div>
+<div class="paragraph"><p>The "*used" and "*default" markers will also not be seen. If you
+change the rts set via "rts -set=&lt;N&gt;" then only the "*used"
+marker will be seen.</p></div>
+<div class="sect3">
+<h4 id="_changes_for_box_mode_0">45.3.1.  Changes for box mode #0</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+These changes activate only if box mode #0 is included in the build
+configuration and it is the <em>only</em> box mode (RTS set) present.
+</p>
+</li>
+<li>
+<p>
+BOLT is no longer limited to matching RTS sets to ID (box mode)
+numbers. The rts command is now free to use any box mode &lt;N&gt; from 1 to 1022
+i.e. RTS sets and associated ID (box modes) are now decoupled from each other
+within BOLT.
+</p>
+</li>
+<li>
+<p>
+BOLT only programs box mode #0 for its own use. Selecting box mode #0
+with this command is not allowed.
+</p>
+</li>
+<li>
+<p>
+You must check that NEXUS supports the box mode you select in BOLT.
+</p>
+</li>
+<li>
+<p>
+The default box mode for a board is still set by the <em>rtsdefault</em>
+build configuration script command.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_example_41">45.4. EXAMPLE</h3>
+<div class="paragraph"><p>At first bootup after flashing bolt.bin:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>RTS0: 0x901004, 256 clients, ok
+rts 00 [20130824232717_7366_1u]         *default</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; rts
+rts 00 [20130824232717_7366_1u]         *default
+rts 01 [20131213060042_7366_1u]
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt;  rts -set=1
+RTS0: 0x901004, 256 clients, ok
+rts 00 [20130824232717_7366_1u]         *default
+rts 01 [20131213060042_7366_1u] *used
+board selection update!
+board was ?, now b (flags:0x10000000)
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; rts -clear
+RTS0: 0x901004, 256 clients, ok
+rts 00 [20130824232717_7366_1u]         *default
+rts 01 [20131213060042_7366_1u]
+board selection update!
+board was ?, now b (flags:0xf0000000)
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; rts -set=2
+RTS0: 0x1101004, 256 clients, ok
+RTS1: 0x1181004, 256 clients, ok
+RTS2: 0x1201004, missing client list(s) in rts file id:#2? (2 &gt;= 2)
+rts 01 [20140613215801_7445D0_box1]
+rts 02 [20141022172927_7252_4Kstb_box2] *used   *default
+rts 03 [20140613223802_7445D0_box3]
+rts 04 [20140711023505_7252_4Kstb1t_50Hz_box4]
+rts 05 [20140711023446_7252_4K1t_box5]
+rts 06 [20140711023526_7252_1u2t_box6]
+rts 07 [20141003234421_7445_6T_box7]
+rts 08 [20141030233328_7445_3T_box8]
+rts 1000 [20140729212047_7445_TEMP_box1000]
+board selection update!
+board was z, now z (flags:0x10000000)
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p>For box mode #0:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; rts
+rts 00 [20150504220439_7445_all_box0]
+BOX MODE: 1
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; rts -set=10
+RTS0: 0x1101004, 256 clients, ok
+RTS1: 0x1181004, 256 clients, ok
+RTS2: 0x1201004, 256 clients, ok
+rts 00 [20150504220439_7445_all_box0]
+BOX MODE: 10
+board selection update!
+board was ?, now k (flags:0x02a00000)
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p>After reboot:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>...
+RTS0: 0x1101004, 256 clients, ok
+RTS1: 0x1181004, 256 clients, ok
+RTS2: 0x1201004, 256 clients, ok
+BOX MODE: 10
+...</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; rts -clear
+RTS0: 0x1101004, 256 clients, ok
+RTS1: 0x1181004, 256 clients, ok
+RTS2: 0x1201004, 256 clients, ok
+rts 00 [20150504220439_7445_all_box0]
+BOX MODE: 1
+board selection update!
+board was k, now k (flags:0xffe00000)
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_save">46.  save</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>save &#8230;&#8230;&#8230;&#8230;.. Save a region of memory to a remote file via TFTP</p></div>
+<div class="sect2">
+<h3 id="_summary_46">46.1. SUMMARY</h3>
+<div class="paragraph"><p>Save a region of memory to a remote file via TFTP</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_46">46.2. USAGE</h3>
+<div class="paragraph"><p>save host:filename startaddr length</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_47">46.3. NOTES</h3>
+<div class="paragraph"><p>The destination must exist and be writeable.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_42">46.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span><span style="color: #009900">$touch</span> /tftpboot/chunk
+<span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span><span style="color: #009900">$sudo</span> chmod a<span style="color: #990000">+</span>wrx /tftpboot/chunk</tt></pre></div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; save 192.168.0.42:chunk E0000000 40000
+262144 bytes written to 192.168.0.42:chunk
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_set_console">47.  set console</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>set console &#8230;&#8230;. Change the active console device</p></div>
+<div class="sect2">
+<h3 id="_summary_47">47.1. SUMMARY</h3>
+<div class="paragraph"><p>Change the active console device</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_47">47.2. USAGE</h3>
+<div class="paragraph"><p>set console device-name</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_48">47.3. NOTES</h3>
+<div class="paragraph"><p>Changes the console device to the specified device name.  The console
+must be a serial-style device.  Be careful not to change the console
+to a device that is not connected!</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_43">47.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; set console uart0
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_setboard">48.  setboard</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>setboard &#8230;&#8230;&#8230;. Set board to use</p></div>
+<div class="sect2">
+<h3 id="_summary_48">48.1. SUMMARY</h3>
+<div class="paragraph"><p>set board number</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_48">48.2. USAGE</h3>
+<div class="paragraph"><p>setboard [boardnum] [options]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_49">48.3. NOTES</h3>
+<div class="paragraph"><p>After changing the board it is <strong>STRONGLY RECOMMENDED</strong> that
+you reset the board to pick up the new configuration.</p></div>
+<div class="paragraph"><p>The <em>-forget</em> option resets the automatic (<em>config BOARD_ID on</em>)
+board detection or manual selection to the original build time
+default value (<em>CFG_BOARDDEFAULT</em>). This option cannot be used
+at the same time as the <em>[boardnum]</em> parameter.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">If you set the build time CFG_BOARDDEFAULT parameter
+to any valid board (index) then the automatic board selection
+(config BOARD_ID on) will not of course function as you have <em>already</em>
+overridden the default, but at build time rather than at runtime.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>See also: <em>boards</em> command.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_21">48.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-park &#8230;&#8230;&#8230;&#8230; Enable overtemp checking
+</p>
+</li>
+<li>
+<p>
+-nopark &#8230;&#8230;&#8230;. Disable overtemp checking
+</p>
+</li>
+<li>
+<p>
+-avs &#8230;&#8230;&#8230;&#8230;. Enable AVS
+</p>
+</li>
+<li>
+<p>
+-noavs &#8230;&#8230;&#8230;.. Disable AVS
+</p>
+</li>
+<li>
+<p>
+-bavs &#8230;&#8230;&#8230;&#8230; Board defaults for AVS
+</p>
+</li>
+<li>
+<p>
+-force &#8230;&#8230;&#8230;.. Always update flash
+</p>
+</li>
+<li>
+<p>
+-forget &#8230;&#8230;&#8230;. forget saved board selection
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_44">48.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setboard b
+board selection update!
+board was a, now b (flags:0x00000000)
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setboard -forget
+Not using default board #k, but board #&amp;
+board selection update!
+board was a, now ? (flags:0xf0000000)
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_setenv">49.  setenv</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>setenv &#8230;&#8230;&#8230;&#8230; Set an environment variable.</p></div>
+<div class="sect2">
+<h3 id="_summary_49">49.1. SUMMARY</h3>
+<div class="paragraph"><p>Set an environment variable.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_49">49.2. USAGE</h3>
+<div class="paragraph"><p>setenv [-ro] [-p] varname value</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_50">49.3. NOTES</h3>
+<div class="paragraph"><p>This command sets an environment variable.  By default, an environment variable
+is stored only in memory and will not be retained across system restart.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_22">49.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-p &#8230;&#8230;&#8230;&#8230;&#8230; Store environment variable permanently in the NVRAM device, if present
+</p>
+</li>
+<li>
+<p>
+-ro &#8230;&#8230;&#8230;&#8230;.. Causes variable to be read-only (cannot be changed in the future, implies -p)
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_45">49.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv MESSAGE "Hello!"
+*** command status = 0
+BOLT&gt; printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+                 VAR 10
+             MESSAGE Hello!
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_sha">50.  sha</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_summary_50">50.1. SUMMARY</h3>
+<div class="paragraph"><p>Calculate SHA256 of a memory region</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_50">50.2. USAGE</h3>
+<div class="paragraph"><p>sha -addr=&lt;addr&gt; -size=&lt;size&gt; -channel=&lt;n&gt;</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_51">50.3. NOTES</h3>
+<div class="paragraph"><p>If the build configuration option <em>HARDWARE_SHA</em> is not
+set to <em>on</em> then the -channel flag will not be available.</p></div>
+<div class="paragraph"><p>If -channel is available but not specified then a software
+SHA method is used instead of the hardware XPT DMA.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_23">50.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-addr=* &#8230;&#8230;&#8230;. Start address of the memory to SHA
+</p>
+</li>
+<li>
+<p>
+-size=* &#8230;&#8230;&#8230;. The size of the memory to SHA
+</p>
+</li>
+<li>
+<p>
+-channel=* &#8230;&#8230;. XPT_SHA20:channel 0, XPT_SHA21:channel 1
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_46">50.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; sha -addr=0x6008000 -size=256 -channel=0
+Hardware SHA channel 0:
+        659672137d842296e2639749402f0a15724c0ef35b4bcec6854fe4de460a9af8
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; sha -addr=0x6008000 -size=256 -channel=1
+Hardware SHA channel 1:
+        659672137d842296e2639749402f0a15724c0ef35b4bcec6854fe4de460a9af8
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; sha -addr=0x6008000 -size=256
+Software SHA:
+        659672137d842296e2639749402f0a15724c0ef35b4bcec6854fe4de460a9af8
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_show_usb">51.  show usb</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>show usb &#8230;&#8230;&#8230;. Display devices connected to USB bus.</p></div>
+<div class="sect2">
+<h3 id="_summary_51">51.1. SUMMARY</h3>
+<div class="paragraph"><p>Display devices connected to USB bus.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_51">51.2. USAGE</h3>
+<div class="paragraph"><p>usb show [bus [device]]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_52">51.3. NOTES</h3>
+<div class="paragraph"><p>Displays the configuration descriptors for devices connected to the USB
+If you specify a bus, the entire bus is displayed.  If you specify the
+device number as well, only the specified device is displayed</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_24">51.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-v &#8230;&#8230;&#8230;&#8230;&#8230; Display descriptors from the devices
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_47">51.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; show usb
+Bus 0 Device 1   Class 9 Vendor 0000 Product 0000  [HUB]
+Bus 0 Device 2   Class 0 Vendor 13FE Product 4100  [DEVICE]
+Bus 1 Device 1   Class 9 Vendor 0000 Product 0000  [HUB]
+Bus 1 Device 2   Class 255 Vendor 0B95 Product 7720  [DEVICE]
+*** command status = 0
+BOLT&gt; show usb 1
+Bus 1 Device 1   Class 9 Vendor 0000 Product 0000  [HUB]
+Bus 1 Device 2   Class 255 Vendor 0B95 Product 7720  [DEVICE]
+*** command status = 0
+BOLT&gt; show usb 1 2
+Bus 1 Device 2   Class 255 Vendor 0B95 Product 7720  [DEVICE]
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_show_heap">52.  show heap</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>show heap &#8230;&#8230;&#8230; Display information about BOLT&#8217;s heap</p></div>
+<div class="sect2">
+<h3 id="_summary_52">52.1. SUMMARY</h3>
+<div class="paragraph"><p>Display information about BOLT&#8217;s heap</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_52">52.2. USAGE</h3>
+<div class="paragraph"><p>show heap</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_53">52.3. NOTES</h3>
+<div class="paragraph"><p>This is a debugging command that can be used to determine the health
+of BOLT&#8217;s internal memory manager.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_48">52.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; show heap
+
+Total bytes:       33554432
+Free bytes:        29494768
+Free nodes:        4
+Allocated bytes:   4054768
+Allocated nodes:   200
+Largest free node: 29494408
+Heap status:       CONSISTENT
+
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_show_devices">53.  show devices</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>show devices &#8230;&#8230; Display information about the installed devices.</p></div>
+<div class="sect2">
+<h3 id="_summary_53">53.1. SUMMARY</h3>
+<div class="paragraph"><p>Display information about the installed devices.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_53">53.2. USAGE</h3>
+<div class="paragraph"><p>show devices</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_54">53.3. NOTES</h3>
+<div class="paragraph"><p>This command displays the names and descriptions of the devices BOLT is
+configured to support.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_49">53.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; show devices
+Device Name          Description
+-------------------  ---------------------------------------------------------
+              uart0  16550 DUART at 0xF0406B00 channel 0
+        flash0.bolt  SPI flash at E0000000 offset 00000000 size 512KB
+      flash0.macadr  SPI flash at E0000000 offset 00080000 size 64KB
+       flash0.nvram  SPI flash at E0000000 offset 00090000 size 64KB
+      flash0.kernel  SPI flash at E0000000 offset 000A0000 size 4096KB
+     flash0.devtree  SPI flash at E0000000 offset 004A0000 size 64KB
+      flash0.avail0  SPI flash at E0000000 offset 004B0000 size 11584KB
+      flash1.avail0  NAND flash (CS1) offset 00000000 size 4175872KB spare 16384KB
+    flash1.drmregn0  NAND flash (CS1) offset FEE00000 size 2048KB spare 1024KB
+    flash1.drmregn1  NAND flash (CS1) offset FF000000 size 2048KB spare 1024KB
+      flash1.kernel  NAND flash (CS1) offset FF200000 size 7168KB spare 1024KB
+        flash1.temp  NAND flash (CS1) offset FF900000 size 2048KB spare 1024KB
+     flash1.virtual  NAND flash (CS1) offset FFB00000 size 2048KB spare 1024KB
+     flash1.kreserv  NAND flash (CS1) offset FFD00000 size 2048KB spare 1024KB
+     flash1.devtree  NAND flash (CS1) offset FFF00000 size 1024KB spare 1024KB
+               eth0  GENET Internal Ethernet at 0xF0B60800
+               eth1  USB-Ethernet Device
+           usbdisk0  USB Disk unit 0
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_sleep">54.  sleep</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>sleep &#8230;&#8230;&#8230;&#8230;. Sleep for specified milliseconds.</p></div>
+<div class="sect2">
+<h3 id="_summary_54">54.1. SUMMARY</h3>
+<div class="paragraph"><p>Sleep for specified milliseconds.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_54">54.2. USAGE</h3>
+<div class="paragraph"><p>sleep [timeout]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_55">54.3. NOTES</h3>
+<div class="paragraph"><p>This command sleeps for a specified time in mS (default is 1000 mS).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_50">54.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; sleep 500
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_switchcfg">55.  switchcfg</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>switchcfg &#8230;&#8230;&#8230; Configure integrated Ethernet switch settings.</p></div>
+<div class="sect2">
+<h3 id="_summary_55">55.1. SUMMARY</h3>
+<div class="paragraph"><p>Configure integrated Ethernet switch settings.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_55">55.2. USAGE</h3>
+<div class="paragraph"><p>switchcfg -port=&lt;port&gt; -isolate_mask=0x1ff</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_56">55.3. NOTES</h3>
+<div class="paragraph"><p>This command controls the integrate switch per-port isolation mask, useful to
+allow e.g: Port 0 and Port 1 to share the same LAN segment.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_51">55.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; switchcfg -port=0 -isolate_mask=0x1fff
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_t">56.  t</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>t &#8230;&#8230;&#8230;&#8230;&#8230;.. Test contents of memory.</p></div>
+<div class="sect2">
+<h3 id="_summary_56">56.1. SUMMARY</h3>
+<div class="paragraph"><p>Test contents of memory.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_56">56.2. USAGE</h3>
+<div class="paragraph"><p>t [-b|-h|-w] [-lt|-eq|-gt] addr pattern</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_57">56.3. NOTES</h3>
+<div class="paragraph"><p>This command tests the contents of memory against the specified pattern.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_25">56.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-b &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as bytes
+</p>
+</li>
+<li>
+<p>
+-h &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as halfwords (16-bits)
+</p>
+</li>
+<li>
+<p>
+-w &#8230;&#8230;&#8230;&#8230;&#8230; Edit memory as words (32-bits)
+</p>
+</li>
+<li>
+<p>
+-eq &#8230;&#8230;&#8230;&#8230;.. Test if variable is equal to specified value.
+</p>
+</li>
+<li>
+<p>
+-gt &#8230;&#8230;&#8230;&#8230;.. Test if variable is greater than specified value.
+</p>
+</li>
+<li>
+<p>
+-lt &#8230;&#8230;&#8230;&#8230;.. Test if variable is less than specified value.
+</p>
+</li>
+<li>
+<p>
+-and &#8230;&#8230;&#8230;&#8230;. Bit test variable against mask pattern.
+</p>
+</li>
+<li>
+<p>
+-p &#8230;&#8230;&#8230;&#8230;&#8230; Address is an uncached physical address
+</p>
+</li>
+<li>
+<p>
+-v &#8230;&#8230;&#8230;&#8230;&#8230; Address is a kernel virtual address
+</p>
+</li>
+<li>
+<p>
+-pr &#8230;&#8230;&#8230;&#8230;.. Print operation
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_52">56.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; d 0x100 1
+00000100  87                                               .
+
+BOLT&gt; t -b -eq  -pr 0x100 0xEC
+*** Testing 0x87 = 0xEC
+*** command status = 1
+
+BOLT&gt; t -b -eq  -pr 0x100 0x87
+*** Testing 0x87 = 0x87
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tcp_constest">57.  tcp constest</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>tcp constest &#8230;&#8230; TCP console test.</p></div>
+<div class="sect2">
+<h3 id="_summary_57">57.1. SUMMARY</h3>
+<div class="paragraph"><p>TCP console test.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_57">57.2. USAGE</h3>
+<div class="paragraph"><p>tcp constest device.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_58">57.3. NOTES</h3>
+<div class="paragraph"><p>Requires BOLT TCP support.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_53">57.4. EXAMPLE</h3>
+<div class="paragraph"><p>Two machines running BOLT and connected via an Ethernet switch:</p></div>
+<div class="listingblock">
+<div class="title">A</div>
+<div class="content">
+<pre><code>BOLT&gt; ifconfig
+Device eth0:  hwaddr 00-10-18-5B-03-8B, ipaddr 192.168.0.15, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">B</div>
+<div class="content">
+<pre><code>BOLT&gt; ifconfig
+Device eth0:  hwaddr 00-10-18-C6-63-EC, ipaddr 192.168.0.19, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">A</div>
+<div class="content">
+<pre><code>BOLT&gt; show devices
+Device Name          Description
+-------------------  ---------------------------------------------------------
+              uart0  16550 DUART at 0xf040ab00 channel 0
+              ...
+       tcpfastboot0  TCP Fastboot (port 1234)
+        tcpconsole0  TCP Console (port 23)
+       tcpfastboot1  TCP Fastboot (port 1234)
+        tcpconsole1  TCP Console (port 23)
+*** command status = 0
+
+BOLT&gt; tcp constest tcpconsole0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">B</div>
+<div class="content">
+<pre><code>BOLT&gt; tcp connect 192.168.0.15
+Connected to remote host.</code></pre>
+</div></div>
+<div class="paragraph"><p>Text typed on the UART console for <em>B</em> appears on the UART
+console for <em>A</em>.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tcp_listen">58.  tcp listen</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>tcp listen &#8230;&#8230;.. Port listener.</p></div>
+<div class="sect2">
+<h3 id="_summary_58">58.1. SUMMARY</h3>
+</div>
+<div class="sect2">
+<h3 id="_usage_58">58.2. USAGE</h3>
+<div class="paragraph"><p>tcp listen portnum</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_59">58.3. NOTES</h3>
+<div class="paragraph"><p>Requires BOLT <em>TCP</em> support.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_26">58.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-q &#8230;&#8230;&#8230;&#8230;&#8230; Sink output, don&#8217;t display on terminal
+</p>
+</li>
+<li>
+<p>
+-d &#8230;&#8230;&#8230;&#8230;&#8230; Send junk data to discard
+</p>
+</li>
+<li>
+<p>
+-nodelay &#8230;&#8230;&#8230; Set nodelay option on socket
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_54">58.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-E0-03-B5, ipaddr 192.168.0.3, mask 255.255.255.0
+        gateway not set, nameserver not set, domain dhcpd.local
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; tcp listen 80
+Listening...</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ ifconfig eth0 <span style="color: #990000">|</span> fgrep <span style="color: #FF0000">"inet addr"</span>
+          inet addr<span style="color: #990000">:</span><span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.42</span>  Bcast<span style="color: #990000">:</span><span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.255</span>  Mask<span style="color: #990000">:</span><span style="color: #993399">255.255</span><span style="color: #990000">.</span><span style="color: #993399">255.0</span>
+<span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ firefox <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.3</span></tt></pre></div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>Listening...Connection from port 36030 on 192.168.0.42
+GET / HTTP/1.1
+Host: 192.168.0.3
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:37.0) Gecko/20100101 Firefox/37.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+
+Remote host is no longer connected.
+Disconnecting...done.
+*** command status = 0
+BOLT&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tcp_connect">59.  tcp connect</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>tcp connect &#8230;&#8230;. TCP connection test.</p></div>
+<div class="sect2">
+<h3 id="_summary_59">59.1. SUMMARY</h3>
+<div class="paragraph"><p>TCP connection test.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_59">59.2. USAGE</h3>
+<div class="paragraph"><p>tcp connect hostname [portnum]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_60">59.3. NOTES</h3>
+<div class="paragraph"><p>Requires BOLT <em>TCP</em> support.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_27">59.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-q &#8230;&#8230;&#8230;&#8230;&#8230; Sink output, don&#8217;t display on terminal
+</p>
+</li>
+<li>
+<p>
+-d &#8230;&#8230;&#8230;&#8230;&#8230; Send junk data to discard
+</p>
+</li>
+<li>
+<p>
+-nodelay &#8230;&#8230;&#8230; Set nodelay option on socket
+</p>
+</li>
+<li>
+<p>
+-srcport=* &#8230;&#8230;. Specify the source port
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_55">59.5. EXAMPLE</h3>
+<div class="paragraph"><p>Two machines running BOLT and connected via an Ethernet switch:</p></div>
+<div class="listingblock">
+<div class="title">A</div>
+<div class="content">
+<pre><code>BOLT&gt; ifconfig
+Device eth0:  hwaddr 00-10-18-C6-63-EC, ipaddr 192.168.0.19, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">B</div>
+<div class="content">
+<pre><code>BOLT&gt; ifconfig
+Device eth0:  hwaddr 00-10-18-5B-03-8B, ipaddr 192.168.0.15, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">A</div>
+<div class="content">
+<pre><code>BOLT&gt; tcp listen 80
+Listening...</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">B</div>
+<div class="content">
+<pre><code>BOLT&gt; tcp connect 192.168.0.19 80
+Connected to remote host.</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="title">A</div>
+<div class="content">
+<pre><code>Listening...Connection from port 62732 on 192.168.0.15</code></pre>
+</div></div>
+<div class="paragraph"><p>Text typed on the UART console for <em>A</em> appears on the UART
+console for <em>B</em> and vice versa. A ctrl-C on any console
+will end the session for both.</p></div>
+<div class="paragraph"><p>If the listener is not running then <em>tcp connect</em> will
+immediately fail:</p></div>
+<div class="listingblock">
+<div class="title">B</div>
+<div class="content">
+<pre><code>BOLT&gt; tcp connect 192.168.0.19 80
+Could not connect to remote host
+*** command status = -1</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_testenv">60.  testenv</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>testenv &#8230;&#8230;&#8230;.. Tests environment variable.</p></div>
+<div class="sect2">
+<h3 id="_summary_60">60.1. SUMMARY</h3>
+<div class="paragraph"><p>Tests environment variable for various conditions. The default is to
+test the existence of the variable.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_60">60.2. USAGE</h3>
+<div class="paragraph"><p>testenv [-n] [-lt][-eq][-gt] varname [value]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_61">60.3. NOTES</h3>
+<div class="paragraph"><p>Tests environment variable for various conditions. The default is to
+test the existence of the variable.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_28">60.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-n &#8230;&#8230;&#8230;&#8230;&#8230; Check for non-existence of variable
+</p>
+</li>
+<li>
+<p>
+-eq &#8230;&#8230;&#8230;&#8230;.. Test if variable is equal to specified value.
+</p>
+</li>
+<li>
+<p>
+-gt &#8230;&#8230;&#8230;&#8230;.. Test if variable is greater than specified value.
+</p>
+</li>
+<li>
+<p>
+-lt &#8230;&#8230;&#8230;&#8230;.. Test if variable is less than specified value.
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_56">60.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; setenv VAR 10
+*** command status = 0
+
+BOLT&gt; testenv VAR
+*** command status = 0
+BOLT&gt; testenv -n VAR
+*** command status = 1
+BOLT&gt; testenv -n NOEXIST
+*** command status = 0
+BOLT&gt; testenv VAR -eq 10
+*** command status = 0
+BOLT&gt; testenv VAR -lt 10
+*** command status = 1
+BOLT&gt; testenv VAR -gt 10
+*** command status = 1</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_time">61.  time</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>time &#8230;&#8230;&#8230;&#8230;.. Timing utility.</p></div>
+<div class="sect2">
+<h3 id="_summary_61">61.1. SUMMARY</h3>
+<div class="paragraph"><p>Measures and prints time taken for executing a bolt command in ms and us.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_61">61.2. USAGE</h3>
+<div class="paragraph"><p>time COMMAND</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_29">61.3. OPTIONS</h3>
+<div class="paragraph"><p>none</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_57">61.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; time "load 192.168.0.42:vmlinuz-initrd-7439b0"
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-C6-63-EC, ipaddr 192.168.0.19, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+Loader:zimg Filesys:tftp Dev:(null) File:192.168.0.42:vmlinuz-initrd-7439b0 Options:(null)
+Loading: Reading 7952208 bytes from zImage...........
+ 7952144 bytes read
+Entry address is 0x8000
+
+Command executed in : 5741 ms (5741738 us)
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ttcp">62.  ttcp</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>TCP test command.</p></div>
+<div class="sect2">
+<h3 id="_summary_62">62.1. SUMMARY</h3>
+<div class="paragraph"><p>TCP test command.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_62">62.2. USAGE</h3>
+<div class="paragraph"><p>ttcp -t [-options] host</p></div>
+<div class="paragraph"><p>ttcp -r [-options]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_62">62.3. NOTES</h3>
+<div class="paragraph"><p>Requires BOLT <em>TCP</em> support.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_30">62.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-t &#8230;&#8230;&#8230;&#8230;&#8230; Source a pattern to the network
+</p>
+</li>
+<li>
+<p>
+-r &#8230;&#8230;&#8230;&#8230;&#8230; Sink (discard) data from the network
+</p>
+</li>
+<li>
+<p>
+-D &#8230;&#8230;&#8230;&#8230;&#8230; Don&#8217;t buffer TCP writes (TCP_NODELAY)
+</p>
+</li>
+<li>
+<p>
+-n=* &#8230;&#8230;&#8230;&#8230;. Number of buffers to send (-t only) (default 2048)
+</p>
+</li>
+<li>
+<p>
+-l=* &#8230;&#8230;&#8230;&#8230;. Size of buffer to send/receive (default 2048)
+</p>
+</li>
+<li>
+<p>
+-p=* &#8230;&#8230;&#8230;&#8230;. Port number to use (default 5001)
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_58">62.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+Device eth0:  hwaddr 00-10-18-BE-A3-1F, ipaddr 192.168.0.8, mask 255.255.255.0
+        gateway not set, nameserver not set, domain localdomain
+        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
+
+BOLT&gt; ttcp -r  192.168.0.42
+Waiting for connection on port 5001: done.
+118358016 bytes transferred via 57792 calls in 100 ticks
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span><span style="color: #009900">$iperf</span> -c <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.8</span>
+ ------------------------------------------------------------
+ Client connecting to <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.8</span><span style="color: #990000">,</span> TCP port <span style="color: #993399">5001</span>
+ TCP window size<span style="color: #990000">:</span> <span style="color: #993399">16.0</span> KByte <span style="color: #990000">(</span>default<span style="color: #990000">)</span>
+ ------------------------------------------------------------
+ <span style="color: #990000">[</span>  <span style="color: #993399">3</span><span style="color: #990000">]</span> <span style="font-weight: bold"><span style="color: #0000FF">local</span></span> <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.42</span> port <span style="color: #993399">59043</span> connected with <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.8</span> port <span style="color: #993399">5001</span>
+ <span style="color: #990000">[</span> ID<span style="color: #990000">]</span> Interval       Transfer     Bandwidth
+ <span style="color: #990000">[</span>  <span style="color: #993399">3</span><span style="color: #990000">]</span>  <span style="color: #993399">0.0</span>-<span style="color: #993399">10.0</span> sec   <span style="color: #993399">113</span> MBytes  <span style="color: #993399">94.6</span> Mbits/sec</tt></pre></div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_u">63.  u</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>u &#8230;&#8230;&#8230;&#8230;&#8230;.. Disassemble instructions.</p></div>
+<div class="sect2">
+<h3 id="_summary_63">63.1. SUMMARY</h3>
+<div class="paragraph"><p>Disassemble instructions.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_63">63.2. USAGE</h3>
+<div class="paragraph"><p>u [addr [length]]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_63">63.3. NOTES</h3>
+<div class="paragraph"><p>This command disassembles instructions at the specified address.
+BOLT will display standard register names and symbolic names for
+certain CP0 registers.  The <em>u</em> command remembers the last address
+that was disassembled so you can enter <em>u</em> again with no parameters
+to continue a previous request.
+ For the ARM architecture, if caching is enabled then a data cache
+flush &amp; invalidate is performed if the -p' option is used.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_31">63.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-p &#8230;&#8230;&#8230;&#8230;&#8230; Address is an uncached physical address
+</p>
+</li>
+<li>
+<p>
+-v &#8230;&#8230;&#8230;&#8230;&#8230; Address is a kernel virtual address
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_59">63.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; u 0x800 4
+00000800: 51ae3c00    MOVPL     r3, r0, LSL #24  ; [unexpected bits]
+00000804: 23dcd600    BICCSS    sp, ip, #&amp;00,12
+00000808: 000017e8    ANDEQ     r1, r0, r8, ROR #15
+0000080C: 05003dc2    STREQ     r3, [r0, #-&amp;DC2]
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_uncache">64.  uncache</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>uncache &#8230;&#8230;&#8230;.. Make all ddr memory access via the mmu as uncached</p></div>
+<div class="sect2">
+<h3 id="_summary_64">64.1. SUMMARY</h3>
+<div class="literalblock">
+<div class="content">
+<pre><code> Mark (all ddr) memory access via the mmu as uncached. Various effects depending
+upon the architecture.</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_64">64.2. USAGE</h3>
+<div class="paragraph"><p>uncache [options]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_64">64.3. NOTES</h3>
+<div class="paragraph"><p>This command is targeted at debugging memory issues. For ARM, going between
+the ddr range (MMU_MEMTOP) to the start of EBI &amp; RDB (flash &amp; register spaces)
+may result in BOLT hanging (a crash) if the mmu is on, as the pages for this
+memory range are deliberately not setup.</p></div>
+<div class="paragraph"><p>This command is intended to be used in conjunction with the
+<em>memwrap</em> command. It is strongly suggested that to debug ddr
+<em>uncache -override -nommu</em> is used before the memwrap tests to avoid
+any cache effects or complications with mmu page tables.</p></div>
+<div class="paragraph"><p>If the override option is not specified then only the ddr(s) for the current
+board configuration are marked as uncached in the mmu (if the mmu is on.)</p></div>
+<div class="paragraph"><p>This command has no effect if BOLT is built CFG_UNCACHED.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_32">64.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-override &#8230;&#8230;.. Ignore ddr settings and config all memory upto  MMU_MEMTOP as unacached
+</p>
+</li>
+<li>
+<p>
+-nommu &#8230;&#8230;&#8230;.. Turn off the mmu. On some architectures this also turns off all caches e.g. ARM
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_60">64.5. EXAMPLE</h3>
+<div class="literalblock">
+<div class="content">
+<pre><code> In these examples the board has two 1Gb ddrs starting at
+memory address 0x00000000 and 0x80000000. MMU_MEMTOP
+is 0xc0000000.</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; uncache
+uncache: 0x00000000 =&gt; 0x40000000...ok
+uncache: 0x80000000 =&gt; 0xc0000000...ok
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; uncache -override
+uncache: 0x00000000 =&gt; 0xc0000000...ok
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; uncache -override -nommu
+uncache: 0x00000000 =&gt; 0xc0000000...ok
+disable mmu...ok
+*** command status = 0</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; uncache  -nommu
+uncache: 0x00000000 =&gt; 0x40000000...ok
+uncache: 0x80000000 =&gt; 0xc0000000...ok
+disable mmu...ok
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_unsetenv">65.  unsetenv</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>unsetenv &#8230;&#8230;&#8230;. Delete an environment variable.</p></div>
+<div class="sect2">
+<h3 id="_summary_65">65.1. SUMMARY</h3>
+<div class="paragraph"><p>Delete an environment variable.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_65">65.2. USAGE</h3>
+<div class="paragraph"><p>unsetenv varname</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_65">65.3. NOTES</h3>
+<div class="paragraph"><p>This command deletes an environment variable from memory and also
+removes it from the NVRAM device (if present).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_61">65.4. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; unsetenv ETH_DBG
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_usb_init">66.  usb init</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>usb init &#8230;&#8230;&#8230;. Initialize the USB controller.</p></div>
+<div class="sect2">
+<h3 id="_summary_66">66.1. SUMMARY</h3>
+<div class="paragraph"><p>Initialize the USB controller.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_66">66.2. USAGE</h3>
+<div class="paragraph"><p>usb init</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_66">66.3. NOTES</h3>
+<div class="paragraph"><p>The environment variable USBMODE may be used to set the USB startup mode
+prior to the USB driver starting:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+0 - No USB. <em>usb init</em>, <em>usb exit</em> and <em>show usb</em> commands will be unavailable.
+</p>
+</li>
+<li>
+<p>
+1 or is unset - normal mode. USB is operational.
+</p>
+</li>
+<li>
+<p>
+2 - USB only available after <em>usb init</em> command.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>The environment variables EHCIOFF and OHCIOFF if set (to any value) will
+not start their respective USB drivers. This must be done prior to starting
+the USB driver.</p></div>
+<div class="paragraph"><p>The USB driver defaults to starting up. If its not required at boot
+time then <em>setenv -p USBMODE &lt;mode&gt;;reboot</em> will ensure that USBMODE
+is respected from inital bootup.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_33">66.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-o &#8230;&#8230;&#8230;&#8230;&#8230; OHCI debug messages
+</p>
+</li>
+<li>
+<p>
+-oo &#8230;&#8230;&#8230;&#8230;.. More OHCI debug messages
+</p>
+</li>
+<li>
+<p>
+-u &#8230;&#8230;&#8230;&#8230;&#8230; USBD debug messages
+</p>
+</li>
+<li>
+<p>
+-uu &#8230;&#8230;&#8230;&#8230;.. More USBD debug messages
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_62">66.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; usb init
+USB @ 0xf0470200: IPP is active low, IOC is negative polarity
+USB @ 0xf0480200: IPP is active low, IOC is negative polarity
+*** command status = 0
+usb: resetting device on bus 1 hub 1 port 1
+USB: New high speed device connected to bus 1 hub 1 port 1
+usb: resetting device on bus 1 hub 2 port 3
+USB: New high speed device connected to bus 1 hub 2 port 3
+usb: found Ethernet Device 0b95:7720
+usb: identified ASIX-Based USB-Ethernet Adapter (00:50:b6:4e:0a:df)
+
+BOLT&gt; usb init
+USB has already been initialized.
+*** command status = -1
+BOLT&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_usb_exit">67.  usb exit</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>usb exit &#8230;&#8230;&#8230;. Stop &amp; reset the USB controller.</p></div>
+<div class="sect2">
+<h3 id="_summary_67">67.1. SUMMARY</h3>
+<div class="paragraph"><p>Stop &amp; reset the USB controller.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_67">67.2. USAGE</h3>
+<div class="paragraph"><p>usb exit</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_67">67.3. NOTES</h3>
+<div class="paragraph"><p>This is paired with <em>usb init</em> so the USB driver can be started and
+stopped within BOLT.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_34">67.4. OPTIONS</h3>
+<div class="paragraph"><p>None.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_63">67.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; usb exit
+*** command status = 0
+
+BOLT&gt; usb exit
+USB has not been initialized.
+*** command status = -1
+BOLT&gt;</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_waitusb">68.  waitusb</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>waitusb &#8230;&#8230;&#8230;.. Wait for USB device to be installed.</p></div>
+<div class="sect2">
+<h3 id="_summary_68">68.1. SUMMARY</h3>
+<div class="paragraph"><p>Wait for USB device to be installed.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_68">68.2. USAGE</h3>
+<div class="paragraph"><p>waitusb [-t=timeout] [-d=device_name]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_68">68.3. NOTES</h3>
+<div class="paragraph"><p>This command waits for a USB device to be recognized and installed.
+The wait will time out after the specified time in seconds
+(the default is 10 seconds).</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_35">68.4. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+-t=* &#8230;&#8230;&#8230;&#8230;. Specify new timeout period (0 = 0.5 seconds)
+</p>
+</li>
+<li>
+<p>
+-d=* &#8230;&#8230;&#8230;&#8230;. Specify device name to look for&#8230;partial names ok but case-sensitive (default=USB)
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_example_64">68.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; waitusb -t=20 -d='USB Disk'
+usb: new device connected to bus 0 hub 1 port 1
+usb: resetting device on bus 0 hub 1 port 1
+usb: found Mass-Storage Device 13fe:4100
+USBMASS: Unit 0 connected
+*** command status = 0
+BOLT&gt;</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">69. Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

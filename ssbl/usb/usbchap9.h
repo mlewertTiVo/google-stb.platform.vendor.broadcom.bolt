@@ -268,6 +268,7 @@ typedef struct usb_hub_status_s {
 #define USB_PORT_STATUS_POWER   0x0100
 #define USB_PORT_STATUS_LOWSPD	0x0200
 #define USB_PORT_STATUS_HIGHSPD	0x0400
+#define USB_PORT_STATUS_SUPRSPD	0x8000	/* compatibility with our hubd */
 
 typedef struct usb_port_status_s {
 	uint8_t wPortStatusLow, wPortStatusHigh;
@@ -296,6 +297,8 @@ typedef struct usb_port_status_s {
 #define USB_PORT_FEATURE_C_PORT_SUSPEND		18
 #define USB_PORT_FEATURE_C_PORT_OVER_CURRENT	19
 #define USB_PORT_FEATURE_C_PORT_RESET		20
+#define USB_PORT_FEATURE_C_LINK_STATE		25
+#define USB_PORT_FEATURE_C_MASK			0x001f
 
 #define GETUSBFIELD(s,f) (((s)->f##Low) | ((s)->f##High << 8))
 #define PUTUSBFIELD(s,f,v) (s)->f##Low = (v & 0xFF); \

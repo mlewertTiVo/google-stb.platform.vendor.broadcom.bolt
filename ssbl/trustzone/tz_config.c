@@ -68,9 +68,9 @@ struct tz_mem_layout s_tz_mem_layout_32MB = {
 
 #ifdef STUB64_START
 	.os_offset      = 0x01000000,
-	.os_size        = 0x00b00000,
-	.spd_offset     = 0x01b00000,
-	.spd_size       = 0x00800000,
+	.os_size        = 0x00f00000,
+	.spd_offset     = 0x01f00000,
+	.spd_size       = 0x00100000,
 #else
 	.os_offset      = 0x01000000,
 	.os_size        = 0x01000000,
@@ -91,27 +91,27 @@ struct tz_mem_layout s_tz_mem_layout_32MB = {
 
 struct tz_mem_layout s_tz_mem_layout_16MB = {
 	.tzioc_offset   = 0x00000000,
-	.tzioc_size     = 0x00600000,
+	.tzioc_size     = 0x00400000,
 
 #ifdef STUB64_START
-	.os_offset      = 0x00600000,
-	.os_size        = 0x00500000,
-	.spd_offset     = 0x00b00000,
-	.spd_size       = 0x00500000,
+	.os_offset      = 0x00400000,
+	.os_size        = 0x00600000,
+	.spd_offset     = 0x00a00000,
+	.spd_size       = 0x00600000,
 #else
-	.os_offset      = 0x00600000,
-	.os_size        = 0x00a00000,
+	.os_offset      = 0x00400000,
+	.os_size        = 0x00c00000,
 	.spd_offset     = 0x00000000,		/* Unused on 32 bit builds */
 	.spd_size       = 0x00000000,
 #endif
 	.t2n_offset     = 0x00001000,
-	.t2n_size       = 0x000ff000,
-	.n2t_offset     = 0x00100000,
-	.n2t_size       = 0x000ff000,
+	.t2n_size       = 0x0007f000,
+	.n2t_offset     = 0x00080000,
+	.n2t_size       = 0x0007f000,
 
-	.tzheaps_offset = 0x00200000,
-	.tzheaps_size   = 0x00200000,
-	.nwheaps_offset = 0x00400000,
+	.tzheaps_offset = 0x00100000,
+	.tzheaps_size   = 0x00100000,
+	.nwheaps_offset = 0x00200000,
 	.nwheaps_size   = 0x00200000
 };
 

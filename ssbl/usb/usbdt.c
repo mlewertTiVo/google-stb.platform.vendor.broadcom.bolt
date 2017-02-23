@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -124,6 +122,7 @@ static void usb_find_dt_ports(void *fdt, int *offset, int *depth,
 		*offset = fdt_next_node(fdt, *offset, depth);
 		if ((*offset < 0) || (*depth < 3))
 			break;
+
 		name = fdt_get_name(fdt, *offset, NULL);
 		if (strncmp(name, ohci_name, strlen(ohci_name)) == 0)
 			type = USB_PORT_TYPE_OHCI;
@@ -135,11 +134,21 @@ static void usb_find_dt_ports(void *fdt, int *offset, int *depth,
 			type = USB_PORT_TYPE_BDC;
 		else
 			continue;
+
 		prop = fdt_get_property(fdt, *offset, "reg", &proplen);
 		if (proplen < (int)((sizeof(uint32_t) * 2))) {
 			xprintf("USB: error, %s node didn't have reg "
 				"attribute\n", name);
 			continue;
+		}
+
+		if (type == USB_PORT_TYPE_XHCI) {
+			ctl->has_xhci = 1;
+			/* XHCI EC does not exist on every chip */
+			if (proplen >= (int)((sizeof(uint32_t) * 4)))
+				ctl->xhci_ec_regs =
+					DT_PROP_DATA_TO_U32(prop->data,
+						2*sizeof(uint32_t));
 		}
 		port = &ctl->ports[ctl->port_cnt++];
 		port->type = type;
@@ -307,12 +316,12 @@ static int dis_port_node(uint32_t ctrl_addr, char *port_name,
 	char node_name[80];
 	int rc;
 
-	xsprintf(node_name, "%s/usb@%8x/%s@%8x", dt_rdb_root, ctrl_addr,
+	xsprintf(node_name, "%s/usb@%x/%s@%x", dt_rdb_root, ctrl_addr,
 		port_name, port_addr);
 	rc = add_status_disabled(node_name);
 	if (rc)
 		return rc;
-	xsprintf(node_name, "%s/%s_v2@%8x", dt_rdb_root, port_name, port_addr);
+	xsprintf(node_name, "%s/%s_v2@%x", dt_rdb_root, port_name, port_addr);
 	return add_status_disabled(node_name);
 }
 

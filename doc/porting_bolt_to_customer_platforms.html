@@ -1,0 +1,2246 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Porting BOLT to customer platforms</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(4);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1>Porting BOLT to customer platforms</h1>
+<span id="author">Broadcom Ltd</span><br />
+<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>This is a guide to moving BOLT from a working reference board
+implementation to your own hardware. The major prerequisite is the ability to
+unpack the BOLT source code deliverable, build bolt-*.bin and successfully run
+it on a reference board.</p></div>
+<div class="paragraph"><p>Signed images and some other security issues are not within the scope
+of this document. See your FAE for help on acquiring signing tools and
+security related code for BOLT.</p></div>
+<div class="paragraph"><p>In the following text we will be mainly using chip family 7445d0 and
+BCM97252C as our base board for an example of porting.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_the_basics">1. The basics</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Ok, the first step is to select the chip family and the reference board
+that most closely matches your platform. For the moment we will be
+running bolt (with the changes) on a reference board configured (via
+<em>strap</em> DIP switches) for NAND boot.</p></div>
+<div class="paragraph"><p>Type <em>make boardinfo</em> to see what is available:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make boardinfo
+<span style="color: #990000">...</span>
+<span style="color: #990000">...</span>
+<span style="color: #990000">===[</span> 7445d0 <span style="color: #990000">]===</span>
+        BCM97445SVMB         -     7445d0
+        BCM97445VMS          -     7445d0
+        BCM97445VMS_PCI      - BCM97445VMS
+        BCM97445C            -     7445d0
+        BCM97445C_V30        -  BCM97445C
+        BCM97445DBS          -     7445d0
+        BCM97445LCC          -     7445d0
+        BCM97252SVMB         -     7252d0
+        BCM97252C            -     7252d0
+        BCM97444SVMB         -     7444d0
+        BCM97448SV           -     7448d0
+        BCM97449SV           -     7449d0
+<span style="color: #990000">...</span>
+<span style="color: #990000">...</span></tt></pre></div></div>
+<div class="paragraph"><p>We want BCM97252C and that is a 7252d0 chip, of the 7445d0 family of chips. That
+means we work off config/family-7445d0.cfg and its associated files:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> ls -l config/family-7445d0<span style="color: #990000">*</span>
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">63949</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">1</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">64850</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">1000</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">43563</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">2</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">64053</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">3</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">42868</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">4</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">42805</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">5</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">42831</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">6</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">65603</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">7</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">52440</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">17</span><span style="color: #990000">:</span><span style="color: #993399">09</span> config/family-7445d0<span style="color: #990000">.</span>cfg
+-rw-rw-r-- <span style="color: #993399">1</span> user users   <span style="color: #993399">154</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0<span style="color: #990000">.</span>dts</tt></pre></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">On later BOLT versions you may only see box mode #0 <em>.rts</em> file shown.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>Now copy over the config file as we can then alter that while retaining the
+ability to make for the reference box:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cp config/family-7445d0<span style="color: #990000">.</span>cfg config/platform<span style="color: #990000">.</span>cfg</tt></pre></div></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make 7445d0 <span style="color: #009900">CFG</span><span style="color: #990000">=</span>config/platform<span style="color: #990000">.</span>cfg
+  <span style="color: #990000">================================</span>
+  CFG<span style="color: #990000">.</span>PL  config/platform<span style="color: #990000">.</span>cfg
+  FAMILY  7445d0
+  <span style="color: #990000">================================</span>
+  <span style="color: #990000">...</span>
+  <span style="color: #990000">...</span>
+  <span style="color: #990000">...</span>
+  LD      objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>elf
+  OBJCOPY objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>bin
+  INFO    objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>txt
+  OBJDUMP objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>asm
+  SPLIT   objs<span style="color: #990000">/</span>7445d0/fsbl<span style="color: #990000">.</span>bin
+  SPLIT   objs<span style="color: #990000">/</span>7445d0/ssbl<span style="color: #990000">.</span>bin
+  SPLIT   objs<span style="color: #990000">/</span>7445d0/memsys<span style="color: #990000">.</span>bin
+  EXEC    postpatch
+  PATCH   bolt-v<span style="color: #993399">0.93</span>-7445d0-ba-bfw-<span style="color: #993399">2.1</span><span style="color: #990000">.</span><span style="color: #993399">0</span><span style="color: #990000">.</span>bin<span style="color: #990000">...</span> OK</tt></pre></div></div>
+<div class="paragraph"><p>The bolt-v0.93-7445d0-ba-bfw-2.1.0.bin produced should be the same (sans the
+build date) as the reference build. From now on when you build you will always
+do "make 7445d0 CFG=config/platform.cfg" to pick up your platform specific
+changes.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_one_board">2. One board</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>In the config file (config/platform.cfg) you will see [chip xxxxnn] etc. and
+[board BCMxxxxxxxx : chip.xxxnn] etc. headings. Its time to delete all but the
+ones you want so we end up with one [chip] and one [board] heading.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">To not have to remove all the boards see the section <em>Single board builds</em> in
+<a href="security.html">BOLT security options</a></td>
+</tr></table>
+</div>
+<div class="paragraph"><p>For this example, the following chip headings and the commands under them are deleted:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>[chip 7445d0]
+[chip 7444d0]
+[chip 7448d0]
+[chip 7449d0]</code></pre>
+</div></div>
+<div class="paragraph"><p>For this example, the following board headings and the commands under them are deleted:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>[board BCM97445SVMB : chip.7445d0]
+[board BCM97445VMS : chip.7445d0]
+[board BCM97445VMS_PCI : board.BCM97445VMS]
+[board BCM97445C : chip.7445d0]
+[board BCM97445C_V30 : board.BCM97445C]
+[board BCM97445DBS :chip.7445d0]
+[board BCM97445LCC :chip.7445d0]
+[board BCM97252SVMB : chip.7252d0]
+[board BCM97444SVMB : chip.7444d0]
+[board BCM97448SV : chip.7448d0]
+[board BCM97449SV : chip.7449d0]</code></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>Check config/platform.cfg and it should have only one [chip] and [board] heading:</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>[chip 7252d0]
+[board BCM97252C : chip.7252d0]</code></pre>
+</div></div>
+<div class="paragraph"><p>If you forget to delete a board that has a deleted chip heading then you might see,
+as we did upon trying to make bolt-*.bin again, the following error:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make clean<span style="color: #990000">;</span>make 7445d0 <span style="color: #009900">CFG</span><span style="color: #990000">=</span>config/platform<span style="color: #990000">.</span>cfg
+/projects/stbtc/stbgcc-<span style="color: #993399">4.5</span><span style="color: #990000">.</span><span style="color: #993399">4</span>-<span style="color: #993399">2.6</span>/bin/arm-linux-gcc is <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> your path<span style="color: #990000">.</span>
+  <span style="color: #990000">================================</span>
+  CFG<span style="color: #990000">.</span>PL  config/platform<span style="color: #990000">.</span>cfg
+  FAMILY  7445d0
+  <span style="color: #990000">================================</span>
+Error<span style="color: #990000">:</span> inherited chip <span style="color: #FF0000">'7449d0'</span> has not been defined
+    <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> <span style="color: #FF0000">'config/platform.cfg'</span><span style="color: #990000">:</span><span style="color: #993399">175</span></tt></pre></div></div>
+<div class="paragraph"><p>Delete the errant board and continue on to remake bolt and
+reflash it on your reference board:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make clean<span style="color: #990000">;</span>make 7445d0 <span style="color: #009900">CFG</span><span style="color: #990000">=</span>config/platform<span style="color: #990000">.</span>cfg</tt></pre></div></div>
+<div class="paragraph"><p>As it boots you should see the line "single board" appear. BOLT
+knows that if you only have a single board that it should boot it,
+regardless of any other parameter such as product id and board id.</p></div>
+<div class="paragraph"><p>With regard to board id, that is an I2C peripheral that Broadcom
+uses to automatically select a board at startup. Its not expected to
+exist on customer platforms. In such cases you might see the message:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>"Board id of 0xXX not found! - upgrade your BOLT"</code></pre>
+</div></div>
+<div class="paragraph"><p>Where <em>0xXX</em> is the board id. We will deal with this in the next section.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">BOLT saves back into flash the board selection and misc
+configuration. This is for the multiplicity of reference boards
+BOLT has to sport, but is very bad if you have a read only and/or
+signed images of BOLT for your own platform. Having only one board
+prevents an immediate update, and any flash modification is disabled
+if you make BOLT with SECURE_BOOT=y on the make command line.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>The updatable parameters (defaults) live in shmoo/shmoo_board.c and
+the decision to save parameters back to flash is the function
+board_update_check() in the ssbl/arch/board_update.c file.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_build_configuration">3. Build configuration</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The BOLT build system uses config/stdbuild.cfg to get its build time
+defaults from. These can be overridden in your config/platform.cfg file,
+<em>after</em> including the stdbuild.cfg file.</p></div>
+<div class="paragraph"><p>A snippet from config/family-7445d0.cfg shows such an instance:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>&gt;include config/stdbuild.cfg
+&gt;
+&gt;# FLASH_DMA is fixed (HW7445-858/859)
+&gt;config FLASH_DMA on</code></pre>
+</div></div>
+<div class="paragraph"><p>To preserve building for reference boards e.g. for comparisons,
+we copy over stdbuild.cfg before we edit it:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cp config/stdbuild<span style="color: #990000">.</span>cfg config/platbuild<span style="color: #990000">.</span>cfg</tt></pre></div></div>
+<div class="paragraph"><p>Now edit config/platform.cfg to use config/platbuild.cfg
+instead of config/stdbuild.cfg; diff of config/platform.cfg
+before and after editing:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>- include config/stdbuild.cfg
++ include config/platbuild.cfg</code></pre>
+</div></div>
+<div class="sect2">
+<h3 id="_board_id">3.1.  Board ID</h3>
+<div class="paragraph"><p>Now you can go edit config/platbuild.cfg and turn build time
+options on and off. The first thing you might want to do is
+to remove the board id:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>- config BOARD_ID          on
++ config BOARD_ID          off</code></pre>
+</div></div>
+<div class="paragraph"><p>You should notice the message "Board id of 0xXX not found! - upgrade your BOLT"
+no longer appears as BOLT boots.</p></div>
+<div class="paragraph"><p>Other options are left to your specific platform requirements. Note
+that your config/platform.cfg might override settings in config/platbuild.cfg
+so check there as well, and possibly move them to config/platbuild.cfg.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usb">3.2.  USB</h3>
+<div class="paragraph"><p>Some build options have other dependencies. The USB code has one
+for Device Tree. Try turning USB off and rebuilding:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>- config USB               on
+- config USB_HID           on
+- config USB_SERIAL        on
+- config USB_DISK          on
+- config USB_ETH           on
+
++ config USB               off
++ config USB_HID           off
++ config USB_SERIAL        off
++ config USB_DISK          off
++ config USB_ETH           off</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make clean<span style="color: #990000">;</span>make 7445d0 <span style="color: #009900">CFG</span><span style="color: #990000">=</span>config/platform<span style="color: #990000">.</span>cfg
+/projects/stbtc/stbgcc-<span style="color: #993399">4.5</span><span style="color: #990000">.</span><span style="color: #993399">4</span>-<span style="color: #993399">2.6</span>/bin/arm-linux-gcc is <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> your path<span style="color: #990000">.</span>
+  <span style="color: #990000">================================</span>
+  CFG<span style="color: #990000">.</span>PL  config/platform<span style="color: #990000">.</span>cfg
+  FAMILY  7445d0
+  <span style="color: #990000">================================</span>
+Error<span style="color: #990000">:</span> Configure <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> USB is off<span style="color: #990000">,</span> but <span style="color: #FF0000">'dt autogen usb'</span> specified<span style="color: #990000">!</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> <span style="color: #FF0000">'config/stddevices.cfg'</span><span style="color: #990000">:</span><span style="color: #993399">17</span>
+        included from <span style="color: #FF0000">'config/platform.cfg'</span><span style="color: #990000">:</span><span style="color: #993399">85</span>
+make<span style="color: #990000">:</span> <span style="color: #990000">***</span> <span style="color: #990000">[</span>gen<span style="color: #990000">/</span>7445d0/aon_history<span style="color: #990000">.</span>h<span style="color: #990000">]</span> Error <span style="color: #993399">25</span></tt></pre></div></div>
+<div class="paragraph"><p>BOLT takes a template Device Tree at build time and then
+modifies it based on which chip it is actually running on at
+that time.</p></div>
+<div class="paragraph"><p>Commenting out <em>dt autogen -node usb</em> in config/stddevices.cfg (or
+again, making a copy of config/stddevices.cfg and referencing the
+copied file instead in platform.cfg) will now allow us to complete
+the build, i.e.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>-dt autogen usb
++#dt autogen usb</code></pre>
+</div></div>
+<div class="paragraph"><p>BOLT uses the Device Tree generated by <em>dt autogen usb</em> to
+configure its own USB stack. If you want USB enabled in BOLT
+then you have to have <em>dt autogen usb</em>.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">On BOLT version v0.95 onwards we have taken out the
+check for USB off and <em>dt autogen usb</em> specified, to allow
+more flexibility. Please take care from now on when dealing
+with USB configurations and Device Tree.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_flash">4.  Flash</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_layout">4.1.  Layout</h3>
+<div class="paragraph"><p>The default Broadcom dynamic flash partitioning copes with various
+sized flash devices (see other BOLT documentation about this), but your
+requirements may be for fixed partitions. If this is so, then you
+can create a fixed flashmap. An example is given in
+<a href="tips_n_tricks.html">tips_n_tricks.html</a>
+for the <em>superbox</em> flash mapping, and in config/flashmaps.cfg where
+the <em>example</em> config is commented out.</p></div>
+<div class="paragraph"><p>Remember to modify the <em>mapselect</em> line in your config/platform.cfg
+to use the same name as the flash map used.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cp config/flashmaps<span style="color: #990000">.</span>cfg  config/platmap<span style="color: #990000">.</span>cfg</tt></pre></div></div>
+<div class="paragraph"><p>Edit config/platmap.cfg:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>-# [map example]
+-# map example  bolt    1Mb     CS0
+-# map example  macadr  64Kb    CS0
+-# map example  nvram   64Kb    CS0
+-# map example  kernel  4Mb     CS0
+-# map example  devtree 64Kb    CS0
+-# map example  splash  512Kb   CS0
+-# map example  rootfs  1024Mb  CS1
++[map example]
++ map example   bolt    1Mb   CS0
++ map example   macadr  1Mb   CS0
++ map example   nvram   1Mb   CS0
++ map example   devtree 1Mb   CS0
++ map example   splash  1Mb   CS0
++ map example   kernel  10Mb  CS0
++ map example   other   100Mb CS0</code></pre>
+</div></div>
+<div class="paragraph"><p>Edit config/platform.cfg:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>-include config/flashmaps.cfg
++include config/platmap.cfg
+
+-mapselect STB
++mapselect example</code></pre>
+</div></div>
+<div class="paragraph"><p>After rebuilding, the BOLT <em>show devices</em> command gives us:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; show devices
+Device Name          Description
+-------------------  ---------------------------------------------------------
+              uart0  16550 DUART at 0xf0406b00 channel 0
+               mem0  Memory
+        flash0.bolt  NAND flash @ CS0: 0x00000000-0x00200000 (2048KB)
+      flash0.macadr  NAND flash @ CS0: 0x00200000-0x00400000 (2048KB)
+       flash0.nvram  NAND flash @ CS0: 0x00400000-0x00600000 (2048KB)
+     flash0.devtree  NAND flash @ CS0: 0x00600000-0x00800000 (2048KB)
+      flash0.splash  NAND flash @ CS0: 0x00800000-0x00A00000 (2048KB)
+      flash0.kernel  NAND flash @ CS0: 0x00A00000-0x01400000 (10MB)
+       flash0.other  NAND flash @ CS0: 0x01400000-0x07800000 (100MB)
+             flash0  NAND flash @ CS0: 0x00000000-0x100000000 (4096MB)
+               eth0  GENET Internal Ethernet at 0xf0b60000
+              mdio0  GENET MDIO at 0xf0b60800
+              sata0  SATA3 AHCI Device
+              sata1  SATA3 AHCI Device
+*** command status = 0
+BOLT&gt;</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">As you can see, the BOLT flash partition code still gets its way for
+small allocations in that it has to align to the <span class="red">NAND block size</span> (boundary.)</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>The above example is for a NAND with the following reported parameters
+during BOLT startup:</p></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>"CS0: ONFI NAND, 4096MB, 2048kB blocks, 8192B page, 45B OOB, BCH-40 (1KB sector)"</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_enabling_spi_quad_mode">4.2.  Enabling SPI Quad mode</h3>
+<div class="paragraph"><p>BOLT already takes care of four byte addressing in SSBL (note: not FSBL) and can
+also be configured to use all four SPI IO lines (if available on the SPI device)
+or "quad mode" as it is called - instead of just one (<em>IO0</em>) or two (<em>IO0</em>, <em>IO1</em>).</p></div>
+<div class="paragraph"><p>The SPI_QUAD_MODE build config option enables it in SSBL, but there are strict
+limitations that apply due to what happens at any reset or reboot.</p></div>
+<div class="sect3">
+<h4 id="_incorrect_application_of_quad_mode_support">4.2.1.  Incorrect application of quad mode support</h4>
+<div class="paragraph"><p>As an example, let us imagine a system that has an SPI device with quad mode support
+wired to a system that at startup does <em>not</em> support quad mode.</p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+At cold boot the SPI device defaults to single or dual mode.
+</p>
+</li>
+<li>
+<p>
+The system starts up and loads code and data from the SPI device.
+</p>
+</li>
+<li>
+<p>
+The system later on sets quad mode in a register on the SPI device.
+</p>
+</li>
+<li>
+<p>
+The system reboots.
+</p>
+</li>
+<li>
+<p>
+If the SPI device is not guaranteed to revert to single or dual mode
+at reset then will be stuck in quad mode and the system cannot advance
+as it expected single or dual mode.
+</p>
+</li>
+<li>
+<p>
+The system is stuck until all power from the SPI device
+dissipates and the configuration register reverts to non-quad mode,
+unless of course that configuration register is <strong>non-volatile</strong>, in which
+case the system really would be bricked.
+</p>
+</li>
+</ol></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">You could enable quad mode only when accessing the SPI device, but
+that still runs the risk of an unexpected reset during an SPI operation
+stalling the STB reboot.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_quad_mode_support_checklist">4.2.2.  Quad mode support checklist</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+The Broadcom STB chip must support it.
+</p>
+</li>
+<li>
+<p>
+The SPI chip is guaranteed to revert to single or dual mode at reset.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Implies the  Broadcom chip boot strap pins are wired for singe or dual mode.
+</p>
+</li>
+<li>
+<p>
+The SPI device reset line is connected to a valid reset source, usually
+a reset output from the Broadcom STB chip.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">Some SPI devices mux an <em>IO</em> and <em>reset</em> line together,
+these devices <em>CANNOT</em> use BOLT quad mode.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_enabling_quad_mode">4.2.3.  Enabling quad mode</h4>
+<div class="paragraph"><p>This is a build time option that will enable it only for the SSBL sub-component of BOLT.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>--- a/config/stdbuild.cfg
++++ b/config/stdbuild.cfg
+
+-config SPI_QUAD_MODE     off
++config SPI_QUAD_MODE     on</code></pre>
+</div></div>
+</div>
+<div class="sect3">
+<h4 id="_verify_quad_mode_is_working">4.2.4.  Verify quad mode is working</h4>
+<div class="paragraph"><p>A quad mode enabled SPI flash device should always successfully allow BOLT
+to boot for each of the reset tests listed below.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Two cold boot cycles.
+</p>
+</li>
+<li>
+<p>
+A hardware reset, e.g. via a button or strobing the reset line.
+</p>
+</li>
+<li>
+<p>
+A software reset via the BOLT "reboot" command.
+</p>
+</li>
+<li>
+<p>
+A hardware reset whilst the SPI flash is reading data.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_adding_spi_devices">4.3.  Adding SPI Devices</h3>
+<div class="paragraph"><p>BOLT can automatically identify SPI NOR flash using the JEDEC Serial Flash
+Discovery Protocol (SFDP)
+<span class="footnote"><br />[<a href="https://www.jedec.org/standards-documents/docs/jesd216b">https://www.jedec.org/standards-documents/docs/jesd216b</a>]<br /></span>
+or pseudo-CFI parameter tables. If your SPI flash device does not support these
+and is not recognized in BOLT you can add it to the device ID lookup table in
+<em>ssbl/dev/dev_spiflash.c</em>, below is an example for a Winbond W25Q16CV device:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">static</span></span> <span style="color: #008080">spi_flash_device_lookup_t</span> spi_id_table<span style="color: #990000">[]</span> <span style="color: #990000">=</span> <span style="color: #FF0000">{</span>
+        <span style="font-style: italic"><span style="color: #9A1900">/* ID, ID len, total_size, sector_size, page_size */</span></span>
+        <span style="color: #990000">...</span>
+        <span style="color: #FF0000">{</span> <span style="color: #FF0000">{</span><span style="color: #993399">0xef</span><span style="color: #990000">,</span> <span style="color: #993399">0x40</span><span style="color: #990000">,</span> <span style="color: #993399">0x15</span><span style="color: #FF0000">}</span><span style="color: #990000">,</span>             <span style="color: #993399">3</span><span style="color: #990000">,</span> <span style="font-weight: bold"><span style="color: #000000">_MB</span></span><span style="color: #990000">(</span><span style="color: #993399">2</span><span style="color: #990000">),</span>    <span style="font-weight: bold"><span style="color: #000000">_KB</span></span><span style="color: #990000">(</span><span style="color: #993399">64</span><span style="color: #990000">),</span> <span style="color: #993399">256</span> <span style="color: #FF0000">}</span><span style="color: #990000">,</span>
+        <span style="color: #990000">...</span>
+        <span style="color: #FF0000">{</span> <span style="color: #FF0000">{}</span><span style="color: #990000">,</span>                             <span style="color: #993399">0</span><span style="color: #990000">,</span> <span style="color: #993399">0</span><span style="color: #990000">,</span>         <span style="color: #993399">0</span><span style="color: #990000">,</span>       <span style="color: #993399">0</span> <span style="color: #FF0000">}</span><span style="color: #990000">,</span>
+<span style="color: #FF0000">}</span><span style="color: #990000">;</span></tt></pre></div></div>
+</div>
+<div class="sect2">
+<h3 id="_adding_nand_devices">4.4.  Adding NAND Devices</h3>
+<div class="paragraph"><p>BOLT supports ONFI NAND <span class="footnote"><br />[<a href="http://www.onfi.org">http://www.onfi.org</a>]<br /></span> without any
+modification, and also non-ONFI devices via the <em>nandchip</em> build configuration
+script command.</p></div>
+<div class="paragraph"><p>For non-ONFI devices you have to supply the <em>nandchip</em> command with a set of
+parameters for your NAND device. To do this, please reference your NAND
+chip datasheet, and consult the BOLT documentation entry on the <em>nandchip</em>
+command. <span class="footnote"><br />[Build configuration script:
+<a href="build_configuration_script.html#_nandchip">nandchip</a>]<br /></span></p></div>
+</div>
+<div class="sect2">
+<h3 id="_adding_emmc_devices">4.5.  Adding eMMC Devices</h3>
+<div class="paragraph"><p>In the BOLT documentation are notes <span class="footnote"><br />[<a href="eMMC_readme.html">eMMC_readme.html</a>]<br /></span> on configuring
+for eMMC. We would strongly suggest you read it now if your platform requires
+eMMC boot.</p></div>
+<div class="paragraph"><p>Historically, CFE/BOLT software is written to eMMC boot from
+SDIO_1 hardware rather than SDIO_0, with the selection being
+NAND or eMMC, but not both.</p></div>
+<div class="paragraph"><p>BOLT can now support NAND and eMMC together with the eMMC
+function (eMMC or SDIO) being set in the config script for
+each board. Look for the <em>sdio</em> command
+<span class="footnote"><br />[Build configuration script:
+<a href="build_configuration_script.html#_sdio">sdio</a>]<br /></span>
+in the config file for the chip, e.g.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> sdio -controller 0 -type sd -uhs 0
+ sdio -controller 1 -type nodevice
+ dt autogen -node sdio
+ # now setup sdio pinmuxing....
+ pmux -pin gpio_076:gpio_085 -sel sd_card0_ -pull up -n 10
+ ...
+ ...</code></pre>
+</div></div>
+<div class="paragraph"><p>If the Broadcom reference board is not configured for eMMC boot
+and your platform is, and the configuration file changes reflect that
+then you will have to consider the other changes that may also be
+required on your board for it to function. The typical one is
+ddr configuration. For now, you may see the FSBL up and running
+but SHMOO failing if the ddr is wrong.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_sd_card_devices">4.6.  SD Card Devices</h3>
+<div class="paragraph"><p>BOLT does not support SD Card devices.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_other_settings">5. Other settings</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_rts_and_dts_dtb">5.1.  RTS and DTS/DTB</h3>
+<div class="paragraph"><p>For rts files, the default dts file, pinmuxing and ethernet see
+<a href="build_configuration_script.html">build_configuration_script.html</a> for changing these.</p></div>
+<div class="paragraph"><p>They are non-critical for early porting of BOLT, unless your boot
+flash depends on some pinmuxing that differs from the Broadcom
+reference platform, such as (possibly) eMMC.</p></div>
+<div class="paragraph"><p>You may use one of the default rts files that comes with BOLT or
+contact your FAE for a <em>memory spreadsheet</em> or request for a
+specific <em>box mode</em> to get a custom rts file to use.</p></div>
+<div class="paragraph"><p>During product development you&#8217;ll be using the default Device Tree
+in BOLT, but for production a fixed one with all the settings required
+built in is heavily recommended. Later on here, we&#8217;ll go create one.</p></div>
+<div class="paragraph"><p>See also: "Changes for box mode #0" in the
+<a href="bolt_commands.html#_rts">BOLT commands</a> documentation.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_power_profiles">5.2.  Power Profiles</h3>
+<div class="paragraph"><p>Two different power profiles are available for 7250b0 and 72501b0,
+standard and boost. One of the notable differences between the two
+profiles is the CPU speed, 1503MHz of standard profile versus
+1719MHz of boost profile. Selecting a power profile is a build time
+option. By default, the standard power profile is selected. If the
+boost power profile is to be selected, please add the following to
+the 7250b0 build configuration file. For the reference BOLT, it is
+<em>config/family-7250b0.cfg</em>.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>cset POWER_PROFILE_BOOST 1</code></pre>
+</div></div>
+<div class="paragraph"><p>Please note that the boost power profile is defined only for 7250b0
+family. Adding the above option to a non-7250b0 family will result
+in build failure.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_ddr">6. DDR</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>This is the critical one when deciding to move the development
+over to your platform from a reference board. The ddr may be
+quite incompatible with respect to a Broadcom reference board.</p></div>
+<div class="paragraph"><p>In BOLT, the SHMOO program code (used by FSBL) resides in the MEMSYS
+section of BOLT. See the config/layout*.cfg file (referenced in our
+config/platform.cfg) for where it is and what size it is in the
+memory map.</p></div>
+<div class="paragraph"><p>Since we have to support multiple reference boards the default is
+to source the code for SHMOO from the MEMSYS section of BOLT and the
+actual DDR configuration (MCB data) from the SHMOO section. This
+requires the FSBL to load from flash twice.</p></div>
+<div class="paragraph"><p>Why a separate SHMOO section in BOLT? - The MCB data in the SHMOO
+section has some very simple compression to allow a lot of MCBs
+to exist in there, all for supporting multiple boards.</p></div>
+<div class="paragraph"><p>For a product you don&#8217;t need all those ddr settings, and also
+some security vendors mandate that the MEMSYS section holds both
+the SHMOO code and the MCB data. Note that the MEMSYS section
+is limited in the number of MCBs that it can hold since it does
+not compress it. Typically, it can hold three full MCBs.</p></div>
+<div class="paragraph"><p>To change the ddr over to using MEMSYS for both code and MCB, simply
+add a '-fixed - ' property to the ddr command in config/platform.cfg:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>- ddr -n 0 -size_mb 1024 -base_mb    0 -clk 933MHz -size_bits 4G -width 16 -phy 32
+- ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 933MHz -size_bits 4G -width 16 -phy 32
+- ddr -n 2 -size_mb    - -base_mb    - -clk      - -size_bits  - -width  - -phy  -
+
++ ddr -n 0 -size_mb 1024 -base_mb    0 -clk 933MHz -size_bits 4G -width 16 -phy 32 -fixed -
++ ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 933MHz -size_bits 4G -width 16 -phy 32 -fixed -
++ ddr -n 2 -size_mb    - -base_mb    - -clk      - -size_bits  - -width  - -phy  - -fixed -</code></pre>
+</div></div>
+<div class="paragraph"><p>You can check this by looking at the before and after BOLT startup messages:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>...
+...
+SHMOO v0.4 (ffffffff) 0p4
+MCB: FLEX
+...
+...</code></pre>
+</div></div>
+<div class="paragraph"><p>After:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>...
+...
+ SHMOO v0.4 (ffffffff) 0p4
+ MCB: FIX
+...
+...</code></pre>
+</div></div>
+<div class="paragraph"><p>The above change was run on a reference board, now to change to your
+required ddr MCB(s.) If none of the BOLT ddr settings match then go
+talk to your FAE about getting the correct MCB file(s) for your product.</p></div>
+<div class="paragraph"><p>Tell your FAE the exact ddr used and its always handy to provide them
+with the ddr datasheet so our engineers can figure it out.</p></div>
+<div class="paragraph"><p>See
+<a href="howto_update_ddr_mcb_files.html">howto_update_ddr_mcb_files.html</a>
+on how to integrate MCB files into BOLT.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_device_tree">7. Device Tree</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>In the config directory you will see two Device Tree source files:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>config/family-7445.dtsi
+config/family-7445d0.dts</code></pre>
+</div></div>
+<div class="paragraph"><p>These are simple boilerplate Device Tree source files. The *.dtsi is
+an include file, rather like a c header file. The *.dts is referenced
+by our config/platform.cfg file by the line:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> dts config/family-7445d0.dts</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">During BOLT build the <em>dt</em> commands in the [family] section of BOLT
+generate more Device Tree source for peripherals. The resulting Device Tree
+source file is in the 'gen/$FAMILY directory. Still working our example,
+it is:</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre><code>gen/7445d0/family-7445d0.dtx</code></pre>
+</div></div>
+<div class="paragraph"><p>In the above file you can see the peripheral configurations used
+for Linux (+USB for BOLT as well) Since we have to support multiple
+boards that is not the end of it - the Device Tree is compiled into
+a binary blob by the dtc tool (gen/dtc/dtc in the BOLT source tree)
+and built into BOLT. Then BOLT manipulates that binary version of
+gen/7445d0/family-7445d0.dtx with regard to the current board.
+ That manipulation occurs via the <em>dt bolt</em> command, also a
+silent <em>dt bolt</em> is done by BOLT when using the <em>boot</em> command, i.e.
+just before Linux is started.</p></div>
+<div class="paragraph"><p>Versions of BOLT and Linux, due to the Device Tree dependency, may
+be quite closely tied together. For a product this is not acceptable
+as updating a BOLT image (i.e. principal boot code) due to a Linux
+update is a no-go.</p></div>
+<div class="paragraph"><p>Applications or updates generally consist of an OS, the app
+itself and maybe a separate root filesystem, all packaged in
+a signed (encrypted) image bundle. We now have to add a
+Device Tree to that as well.</p></div>
+<div class="paragraph"><p>You therefore need to generate a fixed Device Tree that BOLT
+won&#8217;t go off and modify. The most direct way is to develop
+using BOLT and a matched Linux to get the system
+as you want it, then save the Device Tree outside the system
+and integrated later to run via a possibly older version of
+BOLT.</p></div>
+<div class="paragraph"><p>The first step is to do <em>dt bolt; dt show</em> on the BOLT/Linux
+setup that you want, then screen scrape the text and save as
+a *.dts file, or simply look up DT_ADDRESS and save that
+binary blob (tftp via the <em>save</em> command) for manipulation
+on a development PC later on.</p></div>
+<div class="paragraph"><p>Here is an example using the screen scrape method, which has
+the advantage of being both human and machine readable:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt bolt ;  dt show</code></pre>
+</div></div>
+<div class="paragraph"><p>The text from "/dts-v1/;" to the last "};" (leaving out BOLT
+error reporting and extra fluff) is put into a file named
+plat.dts, then it is converted into the binary format BOLT
+can read:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> gen/dtc/dtc -I dts -O dtb plat<span style="color: #990000">.</span>dts <span style="color: #990000">&gt;</span> plat<span style="color: #990000">.</span>dtb</tt></pre></div></div>
+<div class="paragraph"><p>From there its flashed back (e.g. for testing) to flash0.devtree.
+Note that the flash0.devtree flash partition is for development
+purposes. Its not used by Broadcom and should not be used in
+products.</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cp plat<span style="color: #990000">.</span>dtb /tftpboot<span style="color: #990000">/</span></tt></pre></div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+
+BOLT&gt; flash  192.168.0.42:plat.dtb flash0.devtree
+Reading 192.168.0.42:plat.dtb: .
+Done. 8934 bytes read
+Programming...done. 8934 bytes written
+*** command status = 0
+
+BOLT&gt; load -raw -addr=0x1000 -max=0x3000 flash0.devtree:
+
+BOLT&gt; setenv DT_ADDRESS 0x1000
+
+BOLT&gt; dt off
+
+BOLT&gt; boot 192.168.0.42:vmlinuz-initrd-7445d0
+Loader:zimg Filesys:tftp Dev:eth0 File:192.168.0.42:vmlinuz-initrd-7445d0 Options:(null)
+Reading 6882048 bytes from zImage...........
+Closing network 'eth0'
+Starting program at 0x8000 (DTB @ 0x1000)
+
+DT_OFF: bypass device tree modification
+Booting Linux on physical CPU 0x0
+Linux version 3.8.13-2.4pre....</code></pre>
+</div></div>
+<div class="paragraph"><p>The line <em>setenv DT_ADDRESS</em> is to tell BOLT where to find
+the Device Tree in ram. Its up to you to decide where; so it
+does not stomp other important information. By convention a 4Kb
+offset is often used, though if the Device Tree grows too big
+(~12KiB) it might interfere with Linux. To be safe BOLT allocates
+the DTB from its own heap, well above where Linux is
+generally loaded.</p></div>
+<div class="paragraph"><p>The line <em>dt off</em> is to prevent BOLT from
+doing any modification of the Device Tree at all. This is
+important for products. Since we have divorced the
+existing BOLT Device Tree from the one used to boot Linux
+the Device Tree used by the existing BOLT is only of
+consequence to itself.</p></div>
+<div class="paragraph"><p>In a product it is expected that an application bundle will
+extract a Device Tree, then Linux and pass the address of the
+Device Tree to Linux, either through the environment variable
+method or directly. See the BOLT source code for details
+on how it does this. TIP: check the bolt_go() function in
+ssbl/main/boot.c for the low level details.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">If your product has extra peripherals its recommended
+that you use Device Tree to put the configuration info
+in, instead of hard wiring it. Using the Device Tree
+sources its easy to add, remove or modify such things
+and test them without a Linux kernel rebuild.</td>
+</tr></table>
+</div>
+<div class="sect2">
+<h3 id="_building_linux_with_an_appended_dtb">7.1. Building Linux with an appended DTB</h3>
+<div class="paragraph"><p>Another possibility is to boot Linux with a DTB appended
+to it. In the Broadcom Linux deliverable use the makesystem
+to set it up:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make menuconfig-linux
+ boot options -<span style="color: #990000">&gt;</span> <span style="color: #009900">CONFIG_ARM_APPENDED_DTB</span><span style="color: #990000">=[*]</span></tt></pre></div></div>
+<div class="paragraph"><p>In the same boot options menu unset any <em>ATAGS</em> support
+option, then save and exit. Next set as a default if
+required, then rebuild Linux:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make save_defaults
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make vmlinuz-initrd-7445d0</tt></pre></div></div>
+<div class="paragraph"><p>The Linux (initrd) image will then be made and can
+be joined with a BOLT dtb file:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cat <span style="color: #990000">~</span>/uclinux-rootfs/images/vmlinuz-initrd-7445d0 <span style="color: #990000">~</span>/bolt/bolt<span style="color: #990000">.</span>dtb <span style="color: #990000">&gt;</span> /tftpboot/zimage_dtb</tt></pre></div></div>
+<div class="paragraph"><p>The file bolt/bolt.dtb was made by doing a <em>dt bolt;dt show</em>
+and screen scraping the results to bolt.dts so it can
+be processed by the dtc tool in the BOLT build directory:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> gen/dtc/dtc -I dts -O dtb bolt<span style="color: #990000">.</span>dts <span style="color: #990000">&gt;</span>  bolt<span style="color: #990000">.</span>dtb</tt></pre></div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">We specify the final image as a <em>raw</em> binary, <em>load -raw</em>
+as a zImage load would not consider the appended dtb:</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -auto
+BOLT&gt; load -raw 192.168.0.42:zimage_dtb
+BOLT&gt; setenv DT_ADDRESS 0x0
+BOLT&gt; go 0x8000</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_avs">8. AVS</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Adaptive Voltage Scaling (AVS) is a low power technique that enables
+lowering power while maintaining performance. AVS is required for
+ALL 28nm BCG chips in production.</p></div>
+<div class="paragraph"><p>AVS is not required for initial board bring up process but MUST be
+in the final Bolt binary in order to ensure that the long term integrity
+of the chip is maintained. It is highly suggested that the customer-
+board-bring-up process run WITHOUT AVS enabled and then be enabled later
+after BOLT is successfully booting. This ensures that random issues,
+that could be the effect of incorrectly configuring the AVS circuit,
+do not interfere with the bring-up process. Then, after all the other
+issues have been addressed, the AVS should be enabled and the boot process
+monitored for unexpected side-effects. This would most often be identified
+as random system resets. If the board unexpectedly resets, the "reset reason"
+in BOLT prints should be examined for AVS related reasons.</p></div>
+<div class="paragraph"><p>Any issues seen with initial software releases should be reported back to
+Broadcom for review of proper implementation. For hardware implementation
+to support AVS, please reference the AVS APP Note on DocSafe (title:
+7XXX_4XXX-AN100-R).</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_splash_screen_and_audio">9.  Splash screen and audio</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_important_changes_for_bolt_v1_11">9.1.  Important changes for BOLT v1.11</h3>
+<div class="paragraph"><p>As of BOLT v1.11 we will be no longer be shipping the chip specific files created
+with <em>splashgen</em> (see the splashgen section below) that we import from our reference
+software. This is to strongly encourage you to run the reference software
+<em>splashgen</em> app on <em>your</em> specific platform to create the proper <em>rul</em> and <em>rdc</em>
+data files for BOLT.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_splashgen">9.2.  Splashgen</h3>
+<div class="paragraph"><p>The splash code used in BOLT was derived and modified from the Broadcom reference software
+<em>splashrun</em> app. To generate or modify splash screen parameters you will have to boot Linux
+and run the reference software version of the <em>splashgen</em> app.
+<span class="footnote"><br />[<em>splashgen</em> is shipped with Broadcom reference software releases.
+ You must configure and then run the splashgen app. Afterward, feed the
+generated files back into BOLT and rebuild. The location for the generated files
+is bolt/splash/BSEAV/app/splash/splashrun/&lt;CHIP&gt;.]<br /></span></p></div>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+The <em>splashgen</em> app must be run again if:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Your splash screen bitmap is of a different size or colorspace.
+</p>
+</li>
+<li>
+<p>
+Your DDR configuration has changed.
+</p>
+</li>
+<li>
+<p>
+Your board has differently wired video DAC configurations
+or require a different mix of composite, component or HDMI. Check the
+<em>bsplash_board.h</em> and <em>platformconfig.c</em> files in the Broadcom reference
+software <em>BSEAV/app/splash/splashgen/&lt;CHIP&gt;</em> directory to make sure they
+match your setup.
+</p>
+</li>
+</ul></div>
+</li>
+</ol></div>
+</div>
+<div class="sect2">
+<h3 id="_configuring_the_build">9.3.  Configuring the build</h3>
+<div class="paragraph"><p>The splash is normally disabled by default in BOLT. To enable
+it, edit the following lines in config/stdbuild.cfg:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> config SPLASH       off
+ config SPLASH_PAL   default
+ config SPLASH_FILE  "\"flash0.splash\""</code></pre>
+</div></div>
+<div class="paragraph"><p>Enable splash:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>  config SPLASH            ON</code></pre>
+</div></div>
+<div class="paragraph"><p>By default, splash audio is played continuously in a loop. To play the splash
+audio only once, edit the following lines in config/bsp_config.cfg:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>gset SPLASH_AUDIO_REPEAT_COUNT 0</code></pre>
+</div></div>
+<div class="paragraph"><p>Disable splash audio looping (loop once):</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>gset SPLASH_AUDIO_REPEAT_COUNT 1</code></pre>
+</div></div>
+<div class="paragraph"><p>Full feature to enable splash audio to play N number of times will be
+implemented soon.</p></div>
+<div class="paragraph"><p>Build, or rebuild BOLT to pick up the new configuration.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">BOLT can now support audio as well as bitmap images, but only
+for <em>some</em> chips.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_creating_splash_media_files">9.4.  Creating splash media files</h3>
+<div class="paragraph"><p>Now create <em>splashFile</em>, with both image and audio files incorporated within it.
+To do this run <strong>splash_create_flash_file</strong> in the BOLT source directory with the
+options as shown below:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make env
+
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> <span style="color: #990000">.</span>/gen/scripts/splash_create_flash_file <span style="color: #990000">\</span>
+        -b splash/splash<span style="color: #990000">.</span>bmp  <span style="color: #990000">\</span>
+        -p splash/audio-testtones<span style="color: #990000">.</span>bin <span style="color: #990000">\</span>
+        -o splashFile
+
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> ls -l splashFile
+-rw-rw-r-- <span style="color: #993399">1</span> user user <span style="color: #993399">442576</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12</span><span style="color: #990000">:</span><span style="color: #993399">00</span> splashFile</tt></pre></div></div>
+<div class="paragraph"><p>Alternately, compression (via the <em>-z</em> flag) of the meda file is now supported:</p></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make env
+
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> <span style="color: #990000">.</span>/gen/scripts/splash_create_flash_file <span style="color: #990000">\</span>
+        -b splash/splash<span style="color: #990000">.</span>bmp <span style="color: #990000">\</span>
+        -p splash/audio-testtones<span style="color: #990000">.</span>bin <span style="color: #990000">\</span>
+        -t splash/fire<span style="color: #990000">.</span>bmp <span style="color: #990000">\</span>
+        -z -o splashFile<span style="color: #990000">.</span>zb
+
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> ls -l splashFile<span style="color: #990000">.</span>zb
+-rw-rw-r-- <span style="color: #993399">1</span> user user <span style="color: #993399">184877</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12</span><span style="color: #990000">:</span><span style="color: #993399">00</span> splashFile</tt></pre></div></div>
+<div class="paragraph"><p>As you can see in the above example the compressed media file is approximately 41% smaller
+than the uncompressed. This even with another bitmap added (<em>-t</em> flag for the image to be
+shown when the box goes over a preset temperature.)</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">Only little endian, 32 bit signed pcm audio data, sampled at 48Khz is supported.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_flashing_the_splash_media_file">9.5.  Flashing the splash media file</h3>
+<div class="paragraph"><p>Flash <em>splashFile</em> or <em>splashFile.zb</em> to <em>flash0.splash</em> in BOLT, both
+are supported without any other BOLT build or runtime configuration.</p></div>
+<div class="paragraph"><p>Example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+100 Mbps Full-Duplex
+Device eth0:  hwaddr 00-10-18-85-63-0B, ipaddr 192.168.0.40, mask 255.255.255.0
+        gateway 192.168.0.42, nameserver not set
+*** command status = 0
+
+BOLT&gt; flash 192.168.0.42:splashFile flash0.splash
+Reading 192.168.0.42:splashFile: .
+Done. 442576 bytes read
+Programming...done. 442576 bytes written
+*** command status = 0
+
+BOLT&gt; reboot</code></pre>
+</div></div>
+<div class="paragraph"><p>The video will be seen on your (reference software configured) screen
+devices (HDMI, component, composite etc.) outputs after you reboot with both
+the new BOLT and the splashFile file in flash.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_interactions_with_device_tree">9.6.  Interactions with Device Tree</h3>
+<div class="paragraph"><p>Splash has Device Tree integration to carve out the memory used
+so NEXUS won&#8217;t trash it. You can see from the example below where
+after a <em>dt bolt</em> command (to modify the Device Tree ready for Linux) the
+physical memory from 0xbfc00000 to 0xC0000000 is reserved for splash
+and Linux won&#8217;t touch it. The memory region it came from is lowered
+by 0x400000 so Linux won&#8217;t try to reserve it.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt show memory
+DTB @ 0x7722000
+/dts-v1/;
+
+/memreserve/ 0xbfc00000 0x400000;
+
+/       memory {
+                #address-cells = &lt;0x1&gt;;
+                #size-cells = &lt;0x1&gt;;
+                device_type = "memory";
+                reg = &lt;0x0 0x0        0x0 0x40000000
+                       0x0 0x40000000 0x0 0x40000000
+                       0x0 0x80000000 0x0 0x40000000
+                       0x1 0x0        0x0 0x40000000
+                       0x3 0x0        0x0 0x40000000
+                       0xc 0x0        0x0 0x40000000&gt;;
+        };
+        ...
+        ...</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">For Linux using LPAE, the splash may appear in the <strong>middle</strong>
+(and growing down) of a DDR. This is because the cpu sees a DDR split into
+1Gb or 2Gb lower
+<span class="footnote"><br />[Some parts may be able to see 2Gb in the 32 bit view, this is chip dependent.]<br /></span>
+(32 bit address), and an nGb upper (40 bit) portion which BOLT
+cannot access due to it using a SECTION sized (1MiB) 1 level page table for
+its 1:1 virtual to physical 32 bit address mapping: BOLT cannot program the
+splash into memory it cannot see
+<span class="footnote"><br />[See the <em>mmap</em> configuration script command for how your DDR/MEMC
+banks are configured for the chip. Note these values are read only/hard wired
+for your chip.]<br /></span>.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_notes">9.7.  Notes</h3>
+<div class="olist arabic"><ol class="arabic">
+<li>
+<p>
+To recover CMA/BMEM memory you can also not do the <em>/memreserve/</em> and hence
+avoid the lowering of available memory in the Device Tree. To accomplish this edit
+out <em>bolt_populate_splash()</em> from <em>bolt/ssbl/main/dtbolt.c</em>.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+Your splash screen may not survive long after Linux is up as
+the register update list (RUL) for SPLASH must not be tampered
+with until NEXUS resets and inits the graphics and display hardware. The
+memory for SPLASH should not be touched in case the RULs get corrupted
+and therefore may possibly read or write to any memory location. Check by
+enabling BMEM debug that NEXUS allocations are not done in the RUL area until
+the graphics and display hardware are configured by NEXUS. This is not in
+general a big problem, but it pays to check it out anyway.
+</p>
+</li>
+</ul></div>
+</li>
+<li>
+<p>
+How to create a BOLT PCM audio compatible file: Install <strong>ffmpeg</strong> and
+use that to convert audio files from other formats or sampling rates
+to the PCM audio format BOLT requires, example:
+</p>
+<div class="literalblock">
+<div class="content">
+<pre><code>ffmpeg -i original.wav -f s32le -ar 48000 -acodec pcm_s32le splash_audio.pcm</code></pre>
+</div></div>
+</li>
+<li>
+<p>
+If you increase the size of the <em>flash0.splash</em> partition for e.g. a HD bitmap
+image (rather than the Broadcom default SD image), then you will have to edit
+<em>MAX_SPLASH_SIZE</em> in <em>splash/splash-glue.h</em> to reflect the new maximum
+size to load the bitmap(s) and/or audio from.
+</p>
+</li>
+</ol></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_bolt_uart_disabling_and_alternate_selection">10. BOLT UART disabling and alternate selection</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Broadcom reference platforms standardize on UART #0 (UART A) for
+providing boot time information and the BOLT interactive console.</p></div>
+<div class="paragraph"><p>Such output can be disabled for either the first or the second
+stage bootloaders. In the patch below we disable both, e.g. for
+production builds:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>--- a/config/stdbuild.cfg
++++ b/config/stdbuild.cfg
+- config FSBL_CONSOLE      on
+- config SSBL_CONSOLE      on
++ config FSBL_CONSOLE      off
++ config SSBL_CONSOLE      off</code></pre>
+</div></div>
+<div class="paragraph"><p>It is really not recommended that you use another UART, it adds
+problems when running your binaries on our reference platforms
+for comparison purposes during debug, and interfering with other
+UARTs debug output (e.g. from a video decoder) that will now be
+completely unavailable.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">Changing the default Broadcom console uart is a bad idea.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>If you do need to change UART assignments you need to select
+another uart in FSBL (this propagates to SSBL) and setup the
+pinmuxing for it in the chip family configuration file.</p></div>
+<div class="paragraph"><p>Here is an example using UART #2 (<em>C</em>) instead of
+UART #0 (<em>A</em>) on a 7364a0 part:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>diff --git a/fsbl/fsbl-main.c b/fsbl/fsbl-main.c
+index bac807c..549509b 100644
+--- a/fsbl/fsbl-main.c
++++ b/fsbl/fsbl-main.c
+@@ -151,7 +151,7 @@ void fsbl_main(void)
+
+        late_cpu_init();
+        late_release_resets();
+-       uart_init(BCHP_UARTA_REG_START);
++       uart_init(BCHP_UARTC_REG_START);
+        hack_power_down_cpus();
+ #if !CFG_UNCACHED
+        i_cache_config(1);</code></pre>
+</div></div>
+<div class="paragraph"><p>Adding the new uart pinmuxing:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>diff --git a/config/family-7364a0.cfg b/config/family-7364a0.cfg
+index 067721a..6a7501a 100644
+--- a/config/family-7364a0.cfg
++++ b/config/family-7364a0.cfg
+@@ -40,6 +40,8 @@ include config/layout-zeus42.cfg
+  rtsdefault -id 1
+  rtsbase 0 MEMC_ARB_0_CLIENT_INFO_0
+
++ pmux -pin onoff_gpio_112 -sel uart_txd_2
++ pmux -pin onoff_gpio_114 -sel uart_rxd_2
+  pmux -pin onoff_gpio_117,onoff_gpio_118 -sel uart_ -n 2 # UART_RXD_0 and TXD_0
+  pmux -pin aon_sgpio_02,aon_sgpio_03 -sel aon_bsc_m1_ -n 2 # Board ID</code></pre>
+</div></div>
+<div class="paragraph"><p>You can also need to select a different default UART for Linux to use
+as its boot console. This can be easily built into the device tree by
+changing the <em>-stdout</em> selection on your <em>dt autogen serial &#8230;</em> line.
+For example, the following will select UART C for your Linux boot
+console, instead of UART A:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>diff --git a/config/stddevices.cfg b/config/stddevices.cfg
+index 9cf8dcf3d27e..7493a0869c14 100644
+--- a/config/stddevices.cfg
++++ b/config/stddevices.cfg
+@@ -28 +28 @@ dt autogen -node rf4ce
+-dt autogen -node serial -compatible ns16550a -stdout A
++dt autogen -node serial -compatible ns16550a -stdout C</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_networking">11. Networking</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The default Ethernet configurations in BOLT are with respect to
+Broadcom reference boards. For your board they might very well
+differ, especially if you are connecting up the MII/RGMII ports
+or using an external PHY chip.</p></div>
+<div class="sect2">
+<h3 id="_checklist">11.1.  Checklist</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+Pinmuxing is right, if applicable.
+</p>
+</li>
+<li>
+<p>
+The <em>enet</em> script command for your board is correct.
+</p>
+</li>
+<li>
+<p>
+For an external PHY you will have to write the BOLT driver for it.
+</p>
+</li>
+<li>
+<p>
+For RGMII back-to-back, e.g. STB to an external cable modem (eCM) you
+may have to specify a phy id of 257 (PHY_ID_NONE, 0x101).
+Example:
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> enet -genet 2 -phy_type RGMII -mdio_mode 0 -phy_speed 1000 -phy_id 257</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> enet -switch_port 1 -phy_type RGMII -mdio_mode 0 -phy_speed 1000 -phy_id 257</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Check that the RTS for your GENET client has enough bandwidth/is active.
+</p>
+</li>
+<li>
+<p>
+Select GENET MAC to RGMII output, if your chip has such a facility
+and it is required by your design to use non-defaults.
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+E.g. For 7366c0 you can route a specific GMAC to RGMII via the
+<em>mii_genet_mac_select</em> bit in <em>SUN_TOP_CTRL_GENERAL_CTRL_0</em>.
+</p>
+</li>
+</ul></div>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> Selects the GENET MAC.
+  0 = GMAC0 is routed to RGMII_1.
+  1 = GMAC1 is routed to RGMII_1.
+  Reset value is 0 decimal.</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Check RGMII voltages, levels etc. are correct. Check your register
+database (RDB) documentation for <em>rgmii</em> values to be configured if
+BOLT has not already done so in <em>ssbl/arch/bcm_init_enet.c</em>.
+Example register and fields:
+</p>
+</li>
+</ul></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>SUN_TOP_CTRL_GENERAL_CTRL_NO_SCAN_0
+ rgmii_1_pad_sel_gmii
+ rgmii_1_pad_amp_en
+ rgmii_1_pad_modehv
+ rgmii_1_pad_sel</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_tcp_ip">11.2.  TCP/IP</h3>
+<div class="paragraph"><p>The BOLT TCP stack is a very simple implementation meant for local links
+e.g. Android fastboot, and is <strong>not for use</strong> in more complex environments,
+or for more complex tasks.</p></div>
+<div class="sect3">
+<h4 id="_limitations_of_the_tcp_stack">11.2.1.  Limitations of the TCP stack</h4>
+<div class="ulist"><ul>
+<li>
+<p>
+Do not cross subnets.
+</p>
+</li>
+<li>
+<p>
+Does not support out of order packets.
+</p>
+</li>
+<li>
+<p>
+No firewall.
+</p>
+</li>
+<li>
+<p>
+No security or integrity hardening.
+</p>
+</li>
+<li>
+<p>
+Not DDoS, intrusion or other attack tested.
+</p>
+</li>
+<li>
+<p>
+Not for use in a public network environment e.g. The Internet.
+</p>
+</li>
+</ul></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">If you use a large number of <em>TCB</em> buffers e.g. the "ttcp -n=3000000 &#8230;"
+command fails, then increase the value of TCP_MAX_TCBS (a define in
+ssbl/net/net_tcp_internal.h) to add more buffers.</td>
+</tr></table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_what_tcp_stack">11.2.2.  What TCP stack?</h4>
+<div class="paragraph"><p>If a TCP/IP network is required for downloading content or software
+updates etc. then a hardened Linux and download application would
+be far better. There are companies that specialize in securing and
+hardening Linux, and a lot more information about Linux than there
+is about the minimal BOLT TCP stack.</p></div>
+<div class="paragraph"><p>If TCP is required in the bootloader for more demanding tasks then
+you should source it from a 3rd party to replace the one in BOLT.</p></div>
+<div class="paragraph"><p>Whatever stack you use, it should be fully hardened and tested. Attacks
+may come from local as well as public network attempts at subverting it.</p></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_food_for_thought">12. Food for thought</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Since BOLT can cope with multiple boards and often once a bootloader
+is done and certified it should never get changed, it brings up the
+possibility that you could support other configurations without
+re-certification or upgrading the bootloader. Perhaps supporting
+differing (e.g. cheaper) ddr for lower cost boxes: Not using the
+Broadcom I2C board ID method which would add an extra chip, but
+using an OTP bit (done on the production line) or a GPIO pinstrap.</p></div>
+<div class="paragraph"><p>Maybe selecting full functionality or partial as well, all with
+the same or similar (not placed) components on the same board.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">13. Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

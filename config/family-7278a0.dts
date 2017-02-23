@@ -1,0 +1,31 @@
+/dts-v1/;
+
+/include/ "A53.dtsi"
+/include/ "family-7278.dtsi"
+
+
+/ {
+	model = "Broadcom STB (7278a0)";
+	compatible = "brcm,bcm7278a0", "brcm,brcmstb";
+
+	rdb {
+		#address-cells = <0x1>;
+		#size-cells = <0x1>;
+
+		brcmstb-clks {
+			#address-cells = <0x1>;
+			#size-cells = <0x1>;
+
+			sw_scb: sw_scb {
+			};
+
+			cpu_ndiv_int: cpu_ndiv_int {
+			};
+
+			cpu_mdiv_ch0: cpu_mdiv_ch0@8161010 {
+				clocks = <&cpu_ndiv_int>; 
+				clock-names = "cpu_ndiv_int";
+			};
+		};
+	};
+};
