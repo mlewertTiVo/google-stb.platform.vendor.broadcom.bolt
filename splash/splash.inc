@@ -49,6 +49,10 @@ ifeq ($(CFG_SPLASH),1)
     ifeq (,$(wildcard $(SPLASH_H_RUL)))
       SPLASH_SHOULD_RUN_SPLASHGEN := y
     endif
+    # $(SPLASH_C_RUL) does not exist. $(SPLASH_H_REG) is required.
+    ifeq (,$(wildcard $(SPLASH_H_REG)))
+      SPLASH_SHOULD_RUN_SPLASHGEN := y
+    endif
   else
     # $(SPLASH_C_RUL) exists, but should not co-exist with $(SPLASH_H_RUL).
     ifneq (,$(wildcard $(SPLASH_H_RUL)))
@@ -58,16 +62,11 @@ ifeq ($(CFG_SPLASH),1)
     SPLASH_S += $(SPLASH_C_RUL)
   endif
 
-  # Regardless $(SPLASH_C_RUL) or $(SPLASH_H_RUL), $(SPLASH_H_REG) is required.
-  ifeq (,$(wildcard $(SPLASH_H_REG)))
-    SPLASH_SHOULD_RUN_SPLASHGEN := y
-  endif
-
   define SPLASH_INFO_AMBIGUITY
 
   ------------------------------------------------------------------------
   Conflicting file names from 'splashgen' have been found under:
-  '$(dir $(SPLASH_H_REG))'.
+  '$(dir $(SPLASH_H_RUL))'.
   Please remove unintended file(s) so that there is no ambiguity.
 
   For more information, please refer to:
@@ -82,7 +81,7 @@ ifeq ($(CFG_SPLASH),1)
   ------------------------------------------------------------------------
   Please run 'splashgen' in reference software environment after adjusting
   options based on your target platform, and then copy the generated header
-  files to: '$(dir $(SPLASH_H_REG))'.
+  files to: '$(dir $(SPLASH_H_RUL))'.
 
   For more information, please refer to:
     'doc/porting_bolt_to_customer_platforms.txt' in BOLT, or

@@ -8,11 +8,11 @@ Release notes
 Broadcom Ltd <support@broadcom.com>
 
 
- Bolt SQA Release v1.23, 28th November 2016
+ Bolt SQA Release v1.26, 14th February 2017
 ------------------------------------------
 
 ....
-	o Supported chip families: 7250b0 7260a0 7268a0 7271a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+	o Supported chip families: 7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
 	o Toolchain: stbgcc-4.8-1.1
 
 	o AVS version: v0.3.2.x
@@ -26,34 +26,47 @@ Broadcom Ltd <support@broadcom.com>
 
 	o SHMOO versions:
 		o DDR3
-			o 7364a0:  2.1.1.0
-			o 7364b0:  2.1.1.0
-			o 7364c0:  2.1.1.0
+			o 7250b0:  2.1.2.0
+			o 7260a0:  3.1.1.0
+			o 7364a0:  2.1.2.0
+			o 7364b0:  2.1.2.0
+			o 7364c0:  2.1.2.0
+			o 7366c0:  2.1.1.0
+			o 7439b0:  2.1.1.0
 			o 7445d0:  2.1.1.0
-			o 7250b0:  2.1.1.0
+			o 7445e0:  2.1.1.0
 			o 74371a0: 1.0.0.6
-			o 7439b0:  2.1.1.0
-			o 7366c0:  2.1.1.0
-			o 7445e0:  2.1.1.0
-			o 7260a0:  3.1.0.2
 		o DDR4
-			o 7445d0:  2.1.1.0
-			o 7445e0:  2.1.1.0
-			o 7366c0:  2.1.1.0
 			o 7250b0:  2.1.1.0
+			o 7260a0:  3.1.1.0
 			o 7364a0:  2.1.1.0
 			o 7364b0:  2.1.1.0
 			o 7364c0:  2.1.1.0
+			o 7366c0:  2.1.1.0
 			o 7439b0:  2.1.1.0
-			o 7260a0:  3.1.0.8
+			o 7445d0:  2.1.1.0
+			o 7445e0:  2.1.1.0
 		o LPDDR4
-			o 7271a0:  2.2.0.28
 			o 7268a0:  2.2.0.28
+			o 7268b0:  2.2.2.7
+			o 7271a0:  2.2.0.28
+			o 7271b0:  2.2.2.7
+			o 7278a0:  5.1.0.3
 ....
+
+ Known Issues
+~~~~~~~~~~~~~~
+
+* link:http://jira.broadcom.com/browse/SWBOLT-2182[SWBOLT-2182] S2 power management [red]#does not work# for 7268b0 and 7271b0.
+
+* Long-term repeated software reboots [red]#may fail# on 7268 and 7271.
+
 
 
  Compatibility
 ~~~~~~~~~~~~~~
+
+* For 7271b0, 7268b0, 7260a and 7278a0, BOLT v1.25 requires Linux 4.1-1.7 or later.  If using an earlier version of Linux, please disable DTU in BOLT in fsbl/fsbl-secparams.c
 
 * URSR 15.4 or newer should be used, or the Magnum XPT PI should be updated with link:http://jira.broadcom.com/browse/SW7439-510[SW7439-510]. Otherwise, XPT PI will not work correctly against S3 Standby/Resume operation.
 
@@ -187,16 +200,22 @@ arm-linux-ld: error: no memory region specified for loadable section `.bss'
 
 ''''
 
- Upgrade to v1.23 criteria
+ Upgrade to v1.26 criteria
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-link:http://jira.broadcom.com/browse/SWBOLT-2095[SWBOLT-2095] Fixed regression that broke 7439 USB/BDC for Android in BOLT previous v1.22. ^[red silver-background]#blocker#^
+link:http://jira.broadcom.com/browse/SWBOLT-2199[SWBOLT-2199] Correct PMap values for 7260A0. ^[yellow silver-background]#major#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-2062[SWBOLT-2062] Limitation on the 2GB of installed DRAM has been lifted from BCM7260, BCM7268 and BCM7271. ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2193[SWBOLT-2193] Fix missing Ethernet PHY clock reference in BOLT provided Device Tree for Linux' Ethernet PHY driver to correctly enable it.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2185[SWBOLT-2185] Fixed crash on BCM97437SV.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2160[SWBOLT-2160] Fixed splash code so that it can compile properly for 7268B0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2205[SWBOLT-2205] Fixed splash code so that it can compile properly for 7271B0. ^[red silver-background]#blocker#^
 
  Broadcom FAE access
 ~~~~~~~~~~~~~~~~~~~~
-http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.23%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.26%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
 
 
  Documentation

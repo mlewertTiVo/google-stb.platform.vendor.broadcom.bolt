@@ -91,7 +91,7 @@ void avs_ssbl_init(unsigned int pmap_id)
 		BDEV_RD_F(AVS_HW_MNTR_TEMPERATURE_RESET_ENABLE, reset_enable);
 #endif
 
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 	dvfs_init_board_pmap(pmap_id);
 #endif
 }

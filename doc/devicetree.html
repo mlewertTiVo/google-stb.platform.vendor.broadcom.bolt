@@ -1,0 +1,1096 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title>Device Tree in BOLT</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(2);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1>Device Tree in BOLT</h1>
+<span id="author">Broadcom Ltd</span><br />
+<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_introduction">1.  Introduction</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>BOLT makes use of Device Tree as a way to communicate platform information to an
+operating system such as Linux, which is expected to be Device Tree aware to
+consume and manipulate this information.</p></div>
+<div class="paragraph"><p>This documentation is not a about Device Tree compilers, syntax, nor Device Tree
+bindings documents, but references to all of these can be found at the end of
+this document. The intent of this document is to describe how BOLT constructs,
+utilizes and passes the Device Tree Blob to the Operating System, and what are
+the different options if utilizing BOLT&#8217;s built-in Device Tree blob is not an
+option.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_terminology">2.  Terminology</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Device Tree designates the general technology (compiler, language, set of tools)
+associated with it. The following terms will be used throughout this document:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<strong>Device Tree Source</strong> (.dts files): a textual file containing valid Device Tree
+  syntax under the form of nodes, properties, aliases and compiler directives
+</p>
+</li>
+<li>
+<p>
+<strong>Device Tree Source Include</strong> (.dtsi files): similar to the DTS file, but usually
+  included within a .dts file to provide some kind of inheritance/overloading
+  scheme (analoguous to what a header file is in the C language)
+</p>
+</li>
+<li>
+<p>
+<strong>Device Tree Blob</strong> (.dtb): binary file, produced by the Device Tree Compiler
+  (dtc) from a .dts file. Represents Device Tree information in a machine
+  independent way, and is usable under its binary format. A DTB is also know
+  as a Flattened Device Tree (FDT)
+</p>
+</li>
+<li>
+<p>
+<strong>Device Tree Compiler</strong> (dtc): tool which takes either a Device Tree Source or
+  Device Tree Blob as an input, and can output either a Blob (from source) or
+  a source (from blob)
+</p>
+</li>
+<li>
+<p>
+<strong>libfdt</strong>: BSD-licensed library which is used by the dtc compiler itself as well
+  as by operating systems or software projects which need to manipulate a Device
+  Tree blob/Flattened Device Tree, either under a read-only mode or a read-write
+  mode.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_build_process">3.  Build process</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>BOLT starts building its own copy of the Device Tree Compiler (dtc) which can be
+found under <code>thirdparty/GPL-BSD-dtc-g448faa43.tgz</code>. The Device Tree compiler also
+contains the sources for libfdt which is linked into BOLT later in the build
+process.</p></div>
+<div class="paragraph"><p>The Device Tree building process is divided into 2 distinct parts:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+a build-time part, where the Device Tree is constructed out of static files,
+  and scripted out of the BCHP header files targeting a specific family
+</p>
+</li>
+<li>
+<p>
+a run-time part, where the Device Tree is live in main memory, and is
+  manipulated by BOLT, as a result of user interactions, and hardware
+  (chip, board) specifities
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_build_time_process">4.  Build time process</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The initial Device Tree is constructed out of the following files, located under
+the <code>config/</code> directory from BOLT&#8217;s top-level directory:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<code>A15.dtsi</code>, <code>A53.dtsi</code>: processor-specific invariants such as hardware
+  addresses, built-in timers, enabling method for multi-core boot etc.
+</p>
+</li>
+<li>
+<p>
+<code>common.dtsi</code>: chip/family agnostic invariants, e.g: reserved addresses
+</p>
+</li>
+<li>
+<p>
+<code>family-$(FAMILY).dtsi</code>: chip-specific (for all revisions) model, compatible
+  and chosen nodes
+</p>
+</li>
+<li>
+<p>
+<code>family-$(FAMILY).dts</code>: chip-specific (for a revision) model, compatible and
+  chosen nodes, this files does an included of <code>family-$(FAMILY).dtsi</code>,
+  <code>common.dtsi</code> and <code>A15.dtsi</code> or <code>A53.dtsi</code>
+</p>
+</li>
+<li>
+<p>
+<code>clk-$(FAMILY).plx</code>: Device Tree fragment containing chip-specific clocking
+  information (register, clock references/phandles)
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>A graphical include graph would look like the following:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>  A15.dtsi              ----|
+  common.dtsi           ----|
+  family-$(FAMILY).dtsi ----|
+                            \-&gt; family-$(FAMILY).dts</code></pre>
+</div></div>
+<div class="paragraph"><p><code>family-$(FAMILY).dts</code> acts as the basic building block for Device Tree, and is
+then complemented by BOLT&#8217;s scripting engine.</p></div>
+<div class="paragraph"><p>The scripting engine proceeds with reading <code>config/family-$(FAMILY).cfg</code> to know a
+few essential things:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+which dts file to use and assemble: typically <code>config/family-$(FAMILY).dts</code>
+  (can be changed by using a different parameter to the <code>dts</code> configuration
+  command, see <a href="build_configuration_script.html">build_configuration_script.html</a>)
+</p>
+</li>
+<li>
+<p>
+looking for the "dt autogen" configuration directive to know which
+  peripherals to generate Device Tree nodes for
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Note: the exact configuration syntax and directives are described under
+<a href="build_configuration_script.html">build_configuration_script.html</a>.</p></div>
+<div class="paragraph"><p>A large number of Device Tree nodes peripherals are generated from the BCHP
+headers, which provide an accurate description of the hardware and its register
+interface. The syntax of the Device Tree node does, to the best possible extent,
+respect the existing Device Tree bindings documents (ePAPR or newer) and strives
+to be standard.</p></div>
+<div class="paragraph"><p>The low-level logic and code doing that is located under <code>scripts/config.pl</code>,
+<code>scripts/BcmUtils.pm</code> and <code>scripts/BcmDt/Devices.pm</code>.</p></div>
+<div class="paragraph"><p>Once the scripting engine has invoked these different auto-generation routines,
+it has produced a file under <code>gen/$(FAMILY)/family-$(FAMILY).dtx</code> which contains
+valid Device Tree syntax, and includes <code>config/family-$(FAMILY).dts</code>. The clock
+description file under <code>config/clks-$(FAMILY).plx</code> is then concatened to the *.dtx
+file, and the resulting output is fed to the Device Tree compiler to produce
+<code>obj/$(FAMILY)/config.dtb</code> which is a Device Tree blob linked into BOLT&#8217;s binary.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_runtime_modification_process">5.   Runtime modification process</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>All the board-specific sections are also parsed by <code>scripts/config.pl</code> and produce
+different C files with structures (Flash partition maps, pinmux settings,
+Ethernet configurations etc.) under <code>gen/$(FAMILY)/board_params.[ch]</code>, these
+structures are also linked into the BOLT image (FSBL and SSBL).</p></div>
+<div class="paragraph"><p>On Broadcom reference boards, there is a special EEPROM-like chip (resistors
+essentially) which returns an unique identifier per board model, called the
+Board ID (BID), which allows us to runtime detect which boards we are on.
+Customer boards are expected to either build support for a single board, or
+offer an alternative or identical runtime detection mechanism to offer per-board
+selection.</p></div>
+<div class="paragraph"><p>Once this runtime detection occurs, during FSBL, we read this board ID, map it
+against the local array of board structures we have, and from there we can infer
+anything we need:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+amount and placement of DDR
+</p>
+</li>
+<li>
+<p>
+pinmuxing
+</p>
+</li>
+<li>
+<p>
+peripheral-specific configuration (Ethernet, USB, SDIO, PCIe etc.)
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Later on, in the SSBL, we have a full libfdt environment, so based on the board
+ID, plus other runtime-configuration tunables, like the command-line commands,
+we can further patch the Device Tree Blob to taylor it to our needs, that
+includes:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+reading the One Time Programmable bits (OTP) to trim/disable
+  peripherals which are not enabled on that particular variant of the
+  System-on-Chip, remove additional CPUs not enabled etc.
+</p>
+</li>
+<li>
+<p>
+reading the environment variables and patch the Ethernet Device Tree
+  nodes to include the right PHYs, modes etc.
+</p>
+</li>
+<li>
+<p>
+insert Flash partition tables nodes etc.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>All of this happens in <code>ssbl/main/dtbolt.c</code>. When <code>bolt_devtree_boltset()</code>
+finishes, the live Device Tree blob is no longer touched, and its physical
+address is given to the OS.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_dealing_with_device_tree_updates">6.   Dealing with Device Tree updates</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>As new peripherals or features are brought up, updates to Device Tree blobs can
+result in new nodes and properties to appear, to the extent that they are not
+breaking existing bindings. It is not uncommon for vendors to lock down their
+bootloader version, so a few options exist to deal with Device Tree updates made
+in newer releases of BOLT:</p></div>
+<div class="sect2">
+<h3 id="_frozen_fsbl_with_newer_ssbl">6.1. Frozen FSBL with newer SSBL</h3>
+<div class="paragraph"><p>There is a supported mechanism allowing vendors to freeze their FSBL version,
+yet update the SSBL version and have a mix of an older FSBL and newer SSBL,
+thus allowing the latest and greatest SSBL to be utilized, and therefore still
+benefiting from the build-time and run-time DTB construction. This is the
+recommended way by Broadcom to benefit from frequent updates and be on the
+actively supported path.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_frozen_fsbl_and_ssbl">6.2. Frozen FSBL and SSBL</h3>
+<div class="paragraph"><p>In this case, the options are fairly limited, especially if the need for a newer
+Device Tree Blob arises. The recommended way by Broadcom to deal with that
+situation is to do a side-by-side comparison of the DTB provided by the frozen
+SSBL version, and the DTB provided by the newest BOLT version. The process would
+go like this:</p></div>
+<div class="paragraph"><p>Boot the frozen BOLT version on a Broadcom reference board, save it on a TFTP
+server by doing the following:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; dt bolt
+BOLT&gt; save &lt;host&gt;:bolt-$VERSION.dtb $DT_ADDRESS $DT_SIZE</code></pre>
+</div></div>
+<div class="paragraph"><p>Flash the new version of BOLT on a Broadcom reference board, and also save the
+file as shown above. To allow a side-by-side comparison, we want to convert
+these files back to a Device Tree sources:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/path/to/bolt/sources/dtc/dtc -I dtb -O dts /path/to/bolt-$VERSION&lt;X&gt;.dtb
+bolt-$VERSION&lt;X&gt;.dts</code></pre>
+</div></div>
+<div class="paragraph"><p>Repeat the operation for the later version of BOLT, and compare the differences:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>diff -wurN bolt-$VERSION&lt;X&gt;.dts bolt-$VERSION&lt;Y&gt;.dts</code></pre>
+</div></div>
+<div class="paragraph"><p>Note:</p></div>
+<div class="paragraph"><p>As new Device Tree nodes are inserted, it is not infrequent to notice a change
+in the phandle properties which are global index numbers allocated for the
+entire Device Tree blob. These changes need to be carefuly audited, and
+adjustments done so as to avoid creating conflicts. The phandle mechanism is a
+two-sided property, one allocated at the node level, which is to be referenced
+(this node contains a phandle = &lt;integer value&gt; property) and another
+reference to that node by the consumer node (this node contains a custom named
+property referencing the other node, e.g: phy-handle = &lt;integer value&gt;)</p></div>
+<div class="paragraph"><p>Once adjustments to the Device Tree sources are made, a recompilation to the DTB
+format is expected to occur:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/path/to/bolt/sources/dtc/dtc -I dts -O dtb /path/to/bolt-$VERSION&lt;Y&gt;.dts
+bolt-$VERSION&lt;Y&gt;.dtb</code></pre>
+</div></div>
+<div class="paragraph"><p>This DTB can then be loaded by BOLT prior to the OS booting, see
+<a href="porting_bolt_to_customer_platforms.html">porting_bolt_to_customer_platforms.html</a>
+for details on how to load a DTB and/or appended DTB alongside Linux.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_resources">7.  Resources</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a href="http://elinux.org/images/c/cf/Power_ePAPR_APPROVED_v1.1.pdf">ePAPR specification</a></p></div>
+<div class="paragraph"><p><a href="http://www.devicetree.org/Main_Page">DeviceTree.org website</a></p></div>
+<div class="paragraph"><p><a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/devicetree/bindings/">Linux kernel Device Tree bindings document directory</a></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">8. Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

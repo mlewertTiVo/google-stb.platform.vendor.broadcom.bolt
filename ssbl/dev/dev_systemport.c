@@ -61,6 +61,8 @@ typedef struct sysport_softc {
 	int instance;
 	mdio_info_t *mdio;
 	phy_speed_t speed;
+
+	bool is_lite;
 } sysport_softc;
 
 #define SYSPORT_IO_MACRO(name, offset)					\
@@ -81,10 +83,30 @@ static inline void name##_writel(sysport_softc *softc, uint32_t val,	\
 }									\
 
 SYSPORT_IO_MACRO(umac, SYS_PORT_UMAC_OFFSET);
+SYSPORT_IO_MACRO(gib, SYS_PORT_GIB_OFFSET);
 SYSPORT_IO_MACRO(tdma, SYS_PORT_TDMA_OFFSET);
-SYSPORT_IO_MACRO(rdma, SYS_PORT_RDMA_OFFSET);
 SYSPORT_IO_MACRO(topctrl, SYS_PORT_TOPCTRL_OFFSET);
 SYSPORT_IO_MACRO(rbuf, SYS_PORT_RBUF_OFFSET);
+
+/* On SYSTEMPORT Lite, registers after RDMA_STATUS (included) are moved up by 4
+ * bytes adjust for that
+ */
+static inline uint32_t rdma_readl(sysport_softc *softc, uint32_t off)
+{
+	uint32_t val;
+
+	if (softc->is_lite && off >= RDMA_STATUS)
+		off += 4;
+	val = DEV_RD(softc->base + SYS_PORT_RDMA_OFFSET + off);
+	return val;
+}
+
+static inline void rdma_writel(sysport_softc *softc, uint32_t val, uint32_t off)
+{
+	if (softc->is_lite && off >= RDMA_STATUS)
+		off += 4;
+	DEV_WR(softc->base + SYS_PORT_RDMA_OFFSET + off, val);
+}
 
 static int Enet_debug;
 #define DBG_RX			0x0010
@@ -121,30 +143,52 @@ static void unimac_set_speed(sysport_softc *softc)
 
 static inline unsigned int unimac_enabled(sysport_softc *softc)
 {
-	return umac_readl(softc, UMAC_CMD) & (CMD_TX_EN | CMD_RX_EN);
+	if (!softc->is_lite)
+		return umac_readl(softc, UMAC_CMD) & (CMD_TX_EN | CMD_RX_EN);
+	else
+		return gib_readl(softc, GIB_CONTROL) & (CMD_TX_EN | CMD_RX_EN);
 }
 
-static inline void unimac_on(sysport_softc *softc)
+static inline void unimac_mask_set(sysport_softc *softc, uint32_t mask,
+				   bool enable)
 {
 	uint32_t reg;
 
-	reg = umac_readl(softc, UMAC_CMD);
-	reg |= CMD_TX_EN | CMD_RX_EN;
-	umac_writel(softc, reg, UMAC_CMD);
+	if (!softc->is_lite) {
+		reg = umac_readl(softc, UMAC_CMD);
+		if (enable)
+			reg |= mask;
+		else
+			reg &= ~mask;
+		umac_writel(softc, reg, UMAC_CMD);
+	} else {
+		reg = gib_readl(softc, GIB_CONTROL);
+		if (enable)
+			reg |= mask;
+		else
+			reg &= ~mask;
+		gib_writel(softc, reg, GIB_CONTROL);
+	}
+}
+
+
+static inline void unimac_on(sysport_softc *softc)
+{
+	unimac_mask_set(softc, CMD_TX_EN | CMD_RX_EN, true);
 }
 
 static inline void unimac_off(sysport_softc *softc)
 {
-	uint32_t reg;
-
-	reg = umac_readl(softc, UMAC_CMD);
-	reg &= ~(CMD_TX_EN | CMD_RX_EN);
-	umac_writel(softc, reg, UMAC_CMD);
+	unimac_mask_set(softc, CMD_TX_EN | CMD_RX_EN, false);
 }
 
 static void unimac_init(sysport_softc *softc)
 {
 	uint32_t reg;
+
+	/* None of these registers exist on SYSTEMPORT Lite */
+	if (softc->is_lite)
+		return;
 
 	unimac_reset(softc);
 	unimac_set_speed(softc);
@@ -171,15 +215,22 @@ static void unimac_init(sysport_softc *softc)
 static void unimac_write_hwaddr(sysport_softc *softc, uint8_t *addr)
 {
 	unsigned int enabled = unimac_enabled(softc);
+	uint32_t mac0 = (addr[0] << 24 | addr[1] << 16 |
+			 addr[2] << 8 | addr[3]);
+	uint32_t mac1 = addr[4] << 8 | addr[5];
 
 	memcpy(softc->macaddr, addr, 6);
 
 	if (enabled)
 		unimac_off(softc);
 
-	umac_writel(softc, (addr[0] << 24 | addr[1] << 16 |
-				addr[2] << 8 | addr[3]), UMAC_MAC0);
-	umac_writel(softc, addr[4] << 8 | addr[5], UMAC_MAC1);
+	if (!softc->is_lite) {
+		umac_writel(softc, mac0, UMAC_MAC0);
+		umac_writel(softc, mac1, UMAC_MAC1);
+	} else {
+		gib_writel(softc, mac0, GIB_MAC0);
+		gib_writel(softc, mac1, GIB_MAC1);
+	}
 
 	if (enabled)
 		unimac_on(softc);
@@ -210,6 +261,11 @@ static int init_buffers(sysport_softc *softc)
 {
 	unsigned int i;
 	uint32_t addr;
+
+	if (NUM_RX_BUFFERS > 256 && softc->is_lite) {
+		xprintf(PFX "Exceeded SYSTEMPORT Lite buffer capacity\n");
+		return -1;
+	}
 
 	softc->rx_bds = softc->base + SYS_PORT_RDMA_OFFSET;
 	softc->rx_read_ptr = 0;
@@ -396,10 +452,22 @@ static int sysport_ether_read(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 	uint32_t dma_flags_len, addr;
 	uint16_t dma_flags, len;
 	uint16_t p_index, c_index;
+	uint32_t reg;
 	int rc = 0;
 
-	p_index = rdma_readl(softc, RDMA_PROD_INDEX) & RDMA_PROD_INDEX_MASK;
-	c_index = rdma_readl(softc, RDMA_CONS_INDEX) & RDMA_CONS_INDEX_MASK;
+	/* SYSTEMPORT Lite has grouped consumer/producer indexes in the same
+	 * register, but since rdma_readl() adds the necessary offset by 4 for
+	 * the Lite variant we read from the RDMA_CONS_INDEX register here and
+	 * do the split
+	 */
+	if (!softc->is_lite) {
+		p_index = rdma_readl(softc, RDMA_PROD_INDEX) & RDMA_PROD_INDEX_MASK;
+		c_index = rdma_readl(softc, RDMA_CONS_INDEX) & RDMA_CONS_INDEX_MASK;
+	} else {
+		reg = rdma_readl(softc, RDMA_CONS_INDEX);
+		c_index = (reg >> 16) & RDMA_CONS_INDEX_MASK;
+		p_index = reg & RDMA_PROD_INDEX_MASK;
+	}
 
 	addr = BDEV_RD(softc->rx_bds +
 			(softc->rx_read_ptr * DESC_SIZE) + DESC_ADDR_LO);
@@ -443,7 +511,16 @@ static int sysport_ether_read(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 out:
 	softc->rx_c_index++;
 	softc->rx_c_index &= RDMA_CONS_INDEX_MASK;
-	rdma_writel(softc, softc->rx_c_index, RDMA_CONS_INDEX);
+
+	/* SYSTEMPORT Lite groups the consumer and producer index in the same
+	 * register, with the producer being HW maintained, but the HW ignores
+	 * writes to the producer index while TDMA is active
+	 */
+	if (!softc->is_lite)
+		rdma_writel(softc, softc->rx_c_index, RDMA_CONS_INDEX);
+	else
+		rdma_writel(softc, (uint32_t)softc->rx_c_index << 16,
+			    RDMA_CONS_INDEX);
 
 	/* Advance read pointer */
 	softc->rx_read_ptr++;
@@ -460,8 +537,14 @@ static int sysport_ether_inpstat(bolt_devctx_t *ctx, iocb_inpstat_t *inpstat)
 	if (!softc || !inpstat)
 		return -1;
 
-	p_index = rdma_readl(softc, RDMA_PROD_INDEX) & RDMA_PROD_INDEX_MASK;
-	c_index = rdma_readl(softc, RDMA_CONS_INDEX) & RDMA_CONS_INDEX_MASK;
+	if (!softc->is_lite) {
+		p_index = rdma_readl(softc, RDMA_PROD_INDEX) & RDMA_PROD_INDEX_MASK;
+		c_index = rdma_readl(softc, RDMA_CONS_INDEX) & RDMA_CONS_INDEX_MASK;
+	} else {
+		p_index = rdma_readl(softc, RDMA_CONS_INDEX);
+		c_index = (p_index >> 16) & RDMA_CONS_INDEX_MASK;
+		p_index &= RDMA_PROD_INDEX_MASK;
+	}
 
 	inpstat->inp_status = (p_index != c_index);
 
@@ -586,13 +669,10 @@ static int sysport_ether_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 static int sysport_ether_close(bolt_devctx_t *ctx)
 {
 	sysport_softc *softc = ctx->dev_softc;
-	uint32_t reg;
 	int ret;
 
 	/* Disable UniMAC RX */
-	reg = umac_readl(softc, UMAC_CMD);
-	reg &= ~CMD_RX_EN;
-	umac_writel(softc, reg, UMAC_CMD);
+	unimac_mask_set(softc, CMD_RX_EN, false);
 
 	/* Poll for RDMA disabling */
 	ret = rdma_enable_set(softc, 0);
@@ -604,9 +684,7 @@ static int sysport_ether_close(bolt_devctx_t *ctx)
 		return ret;
 
 	/* Disable UniMAC TX */
-	reg = umac_readl(softc, UMAC_CMD);
-	reg &= ~CMD_TX_EN;
-	umac_writel(softc, reg, UMAC_CMD);
+	unimac_mask_set(softc, CMD_TX_EN, false);
 
 	/* Wait for a full-sized packet to be drained */
 	bolt_msleep(2);
@@ -630,12 +708,23 @@ static int sysport_ether_close(bolt_devctx_t *ctx)
 	return 0;
 }
 
+static unsigned long get_reg_prop(void *current_dtb, int offset)
+{
+	const struct fdt_property *prop;
+	int proplen;
+
+	prop = fdt_get_property(current_dtb, offset, "reg", &proplen);
+	if (proplen < (int)((sizeof(uint32_t) * 2)))
+		return 0;
+
+	return DT_PROP_DATA_TO_U32(prop->data, 0);
+}
+
 static unsigned long sysport_dt_init(sysport_softc *softc)
 {
 	bolt_devtree_params_t params;
 	const struct fdt_property *prop;
 	int offset = 0;
-	int proplen;
 	char *node_name = "ethernet@";
 	const char *name;
 	int depth;
@@ -656,13 +745,12 @@ static unsigned long sysport_dt_init(sysport_softc *softc)
 			prop = fdt_get_property(current_dtb, offset,
 						"compatible", NULL);
 
-			if (strcmp(prop->data, "brcm,systemport-v1.00") == 0) {
-				prop = fdt_get_property(current_dtb, offset,
-							"reg", &proplen);
-				if (proplen < (int)((sizeof(uint32_t) * 2)))
-					return 0;
+			if (strcmp(prop->data, "brcm,systemport-v1.00") == 0)
+				return get_reg_prop(current_dtb, offset);
 
-				return DT_PROP_DATA_TO_U32(prop->data, 0);
+			if (strcmp(prop->data, "brcm,systemportlite-v1.00") == 0) {
+				softc->is_lite = true;
+				return get_reg_prop(current_dtb, offset);
 			}
 		}
 		offset = fdt_next_node(current_dtb, offset, &depth);

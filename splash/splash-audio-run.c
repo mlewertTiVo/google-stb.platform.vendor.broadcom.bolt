@@ -24,10 +24,10 @@
 #include "bsp_config.h"
 
 
+#include "splash-api.h"
 #include "splash_file.h"
 #include "splash_script_load.h"
 
-#include "bchp_aud_fmm_iop_out_i2s_stereo_0.h"
 #include "bchp_aud_fmm_iop_out_dac_ctrl_0.h"
 #include "bchp_aud_misc.h"
 #include "bchp_aud_fmm_dp_ctrl0.h"
@@ -42,6 +42,10 @@
 #include "bchp_hdmi_tx_phy.h"
 #include "bchp_hifidac_ctrl_0.h"
 #include "bchp_hifidac_rm_0.h"
+#include "bchp_memc_gen_0.h"
+#ifdef BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_0_REG_START
+#include "bchp_aud_fmm_iop_out_i2s_stereo_0.h"
+#endif
 #ifdef BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_1_REG_START
 #include "bchp_aud_fmm_iop_out_i2s_stereo_1.h"
 #endif
@@ -53,6 +57,10 @@ int splash_audio_script_run(unsigned int size, unsigned int address,
 				uint32_t repeatcount, SplashData *splashData)
 {
 	uint32_t reg = 0, i = 0, addr = 0x0, data = 0, data0 = 0, data1 = 0;
+	uint32_t memtop, memlow, shift = 0;
+	int rc = 0;
+	struct board_type *b;
+	struct ddr_info *ddr;
 
 #ifdef BCHP_CLKGEN_ONOFF_ANA_PLL4_1P8V_TS28HPM_6MX_2MR_FC_X_E_PLLAUDIO0_INST_SEL
 	BDEV_WR(
@@ -64,6 +72,11 @@ int splash_audio_script_run(unsigned int size, unsigned int address,
 	BDEV_WR(
 	BCHP_CLKGEN_ONOFF_ANA_PLL4_RFMOD_1P8V_TS28HPM_6MX_2MR_NP_X_E_PLLAUDIO1_INST_SEL,
 	reg);
+#endif
+#ifdef BCHP_MEMC_GEN_0_MSA_MODE_CLOCK_GATE_MASK
+	reg = BDEV_RD(BCHP_MEMC_GEN_0_MSA_MODE);
+	reg &= (~BCHP_MEMC_GEN_0_MSA_MODE_CLOCK_GATE_MASK);
+	BDEV_WR(BCHP_MEMC_GEN_0_MSA_MODE, reg);
 #endif
 
 	reg = 0;
@@ -262,6 +275,42 @@ int splash_audio_script_run(unsigned int size, unsigned int address,
 		BDEV_WR(addr+(4*i), 0);
 
 	/* Initializing BF */
+	b = board_thisboard();
+	if (!b)
+		return 1;
+
+	reg = BDEV_RD(BCHP_AUD_FMM_BF_CTRL_MISC_CONFIG);
+
+	/* Set the end byte address in the base region for SCB1 and SCB2 to 0x0 */
+	reg |= BCHP_AUD_FMM_BF_CTRL_MISC_CONFIG_SCB1_BASE_START_MASK;
+	reg |= BCHP_AUD_FMM_BF_CTRL_MISC_CONFIG_SCB2_BASE_START_MASK;
+	/* Set the start byte address in the base region for SCB1 and SCB2 to 0xF */
+	reg &= ~BCHP_AUD_FMM_BF_CTRL_MISC_CONFIG_SCB1_BASE_END_MASK;
+	reg &= ~BCHP_AUD_FMM_BF_CTRL_MISC_CONFIG_SCB2_BASE_END_MASK;
+
+	/* Update the start and end byte addresses for the SCBs  */
+	for (i = 0; i < b->nddr; i++) {
+		rc = splash_glue_getmem(i, &memtop, &memlow);
+		if (rc)
+			continue;
+		ddr = board_find_ddr(b, i);
+		if (!ddr)
+			continue;
+		/* Use the base address from the ddr config command to update the
+		  * start address for the SCBs
+		  */
+		shift = BCHP_AUD_FMM_BF_CTRL_MISC_CONFIG_SCB0_BASE_START_SHIFT \
+			+ (8 * i);
+		reg &= ~(0xf << shift);
+		reg |= ((ddr->base_mb >> 8) << shift);
+
+		shift = BCHP_AUD_FMM_BF_CTRL_MISC_CONFIG_SCB0_BASE_END_SHIFT \
+			+ (8 * i);
+		reg &= ~(0xf << shift);
+		reg |= ((memtop >> 28) << shift);
+	}
+	BDEV_WR(BCHP_AUD_FMM_BF_CTRL_MISC_CONFIG, reg);
+
 	for (addr = BCHP_AUD_FMM_BF_CTRL_SOURCECH_RINGBUF_0_RDADDR;
 	addr <= BCHP_AUD_FMM_BF_CTRL_DESTCH_RINGBUF_11_MI_VALID; addr += 4)
 		BDEV_WR(addr, 0);
@@ -329,6 +378,7 @@ int splash_audio_script_run(unsigned int size, unsigned int address,
 	reg |= BCHP_AUD_FMM_IOP_OUT_SPDIF_0_SPDIF_CTRL_DITHER_ENA_MASK;
 	BDEV_WR(BCHP_AUD_FMM_IOP_OUT_SPDIF_0_SPDIF_CTRL, reg);
 
+#ifdef BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_0_REG_START
 	reg = BDEV_RD(BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_0_STREAM_CFG_0);
 	reg &= (~BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_0_STREAM_CFG_0_FCI_ID_MASK);
 	reg |= 0x104;
@@ -336,7 +386,7 @@ int splash_audio_script_run(unsigned int size, unsigned int address,
 	reg |= (0x2 << BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_0_STREAM_CFG_0_GROUP_ID_SHIFT);
 	reg |= BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_0_STREAM_CFG_0_ENA_MASK;
 	BDEV_WR(BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_0_STREAM_CFG_0, reg);
-
+#endif
 #ifdef BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_1_REG_START
 	reg = BDEV_RD(BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_1_STREAM_CFG_0);
 	reg &= (~BCHP_AUD_FMM_IOP_OUT_I2S_STEREO_0_STREAM_CFG_0_FCI_ID_MASK);

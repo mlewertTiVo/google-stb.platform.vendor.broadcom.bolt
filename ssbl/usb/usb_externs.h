@@ -14,14 +14,15 @@
 
 extern usb_hcdrv_t ohci_driver; /* OHCI Driver dispatch */
 extern usb_hcdrv_t ehci_driver; /* EHCI Driver dispatch */
+extern usb_hcdrv_t xhci_driver; /* XHCI Driver dispatch */
 
 extern int ohcidebug;		/* OHCI debug control */
 
 extern struct usb_controller_list usb_clist;
 #if CFG_USB_BDC
-extern int usb_init_bdc(physaddr_t base);
+extern int usb_init_bdc(physaddr_t base, physaddr_t ctrl);
 #else
-static inline int usb_init_bdc(physaddr_t base) { return 0; };
+static inline int usb_init_bdc(physaddr_t base, physaddr_t ctrl) { return 0; };
 #endif
 
 

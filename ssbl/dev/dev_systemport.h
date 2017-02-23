@@ -148,6 +148,13 @@ struct rsb {
 #define UMAC_MDF_CTRL			0x650
 #define UMAC_MDF_ADDR			0x654
 
+/* Present on SYSTEMPORT Lite only */
+#define SYS_PORT_GIB_OFFSET		0x1000
+
+#define GIB_CONTROL			0x00
+#define GIB_MAC1			0x08
+#define GIB_MAC0			0x0c
+
 /* Receive DMA offset and defines */
 #define SYS_PORT_RDMA_OFFSET		0x2000
 

@@ -181,6 +181,7 @@ sub enet_phy_mode($)
 	my %phy_types = (
 		"INT" => "internal",
 		"MII" => "mii",
+		"GMII" => "gmii",
 		"RGMII_NO_ID" => "rgmii",
 		"RGMII_IBS" => "rgmii-ibs",
 		"RGMII" => "rgmii-txid",
@@ -244,7 +245,7 @@ sub gen_enet_dts($) {
 			$text .= "&eth" . $e->{genet};
 			$mdio_text .= "&mdio" . $e->{genet} . " {\n";
 		} else {
-			$text .= "&switch_port" . $e->{switch_port};
+			$text .= "&sw_port" . $e->{switch_port};
 			if ($is_switch eq 0) {
 				$mdio_text .= "&mdio {\n";
 			}
@@ -449,16 +450,22 @@ sub replace_full_path_by_label($)
 	# Second kind could look like this:
 	# 	<&/rdb/vreg-wifi-pwr &/rdb/vreg-wifi-pwr>
 	if ($pval =~ m/^<&\/(.*)\/(.*)\@([a-z0-9]+)(.*)?>/) {
-		my $full_path = $2 . "\@" . $3;
+		my $index = $4;
+		my $offset = $3;
+		my $full_path = $2 . "\@";
+		$offset =~ s/^0+//g;
+		$full_path .= $offset;
 		$label = BcmDt::Devices::get_label_by_path($full_path);
-		my $nval = "<&$label$4>";
+		my $nval = "<&$label$index>";
 		return $nval;
 	} elsif ($pval =~ m/^<&\/(.*)\/(.*)>\s?/) {
 		my @elems = split(" ", $pval);
 		my $nval = "<";
 		foreach (@elems) {
 			if ($_ =~ m/(<)?&\/([a-z-_]+)\/([a-z-_]+)(>)?/) {
-				$label = BcmDt::Devices::get_label_by_path($3);
+				my $offset = $3;
+				$offset =~ s/^0+//g;
+				$label = BcmDt::Devices::get_label_by_path($offset);
 				$nval .= "&$label";
 				$nval .= ($_ eq $elems[-1]) ? "" : " ";
 			}

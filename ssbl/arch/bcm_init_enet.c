@@ -158,6 +158,20 @@ static void board_exit_systemport(void)
 	REG(BCHP_SUN_TOP_CTRL_SW_INIT_0_CLEAR) =
 		BCHP_SUN_TOP_CTRL_SW_INIT_0_CLEAR_systemport_sw_init_MASK;
 #endif
+#if defined(BCHP_SUN_TOP_CTRL_SW_INIT_0_SET_systemport0_sw_init_MASK)
+	REG(BCHP_SUN_TOP_CTRL_SW_INIT_0_SET) =
+		BCHP_SUN_TOP_CTRL_SW_INIT_0_SET_systemport0_sw_init_MASK;
+	bolt_msleep(10);
+	REG(BCHP_SUN_TOP_CTRL_SW_INIT_0_CLEAR) =
+		BCHP_SUN_TOP_CTRL_SW_INIT_0_CLEAR_systemport0_sw_init_MASK;
+#endif
+#if defined(BCHP_SUN_TOP_CTRL_SW_INIT_1_SET_systemport1_sw_init_MASK)
+	REG(BCHP_SUN_TOP_CTRL_SW_INIT_1_SET) =
+		BCHP_SUN_TOP_CTRL_SW_INIT_1_SET_systemport1_sw_init_MASK;
+	bolt_msleep(10);
+	REG(BCHP_SUN_TOP_CTRL_SW_INIT_1_CLEAR) =
+		BCHP_SUN_TOP_CTRL_SW_INIT_1_CLEAR_systemport1_sw_init_MASK;
+#endif
 }
 
 #define board_ll_init_enet board_init_systemport

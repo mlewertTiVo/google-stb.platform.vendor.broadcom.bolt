@@ -12,5 +12,7 @@
 #ifdef CFG_SPLASH_PAL
  #include "splash_vdc_reg_pal.h"
 #else
+#ifndef SPLASH_VERSION_2
  #include "splash_vdc_reg_def.h"
+#endif
 #endif

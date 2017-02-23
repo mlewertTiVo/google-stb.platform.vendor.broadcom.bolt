@@ -1,0 +1,1274 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
+<meta name="generator" content="AsciiDoc 8.6.9" />
+<title> Getting started with BOLT</title>
+<style type="text/css">
+/* Shared CSS for AsciiDoc xhtml11 and html5 backends */
+
+/* Default font. */
+body {
+  font-family: Georgia,serif;
+}
+
+/* Title font. */
+h1, h2, h3, h4, h5, h6,
+div.title, caption.title,
+thead, p.table.header,
+#toctitle,
+#author, #revnumber, #revdate, #revremark,
+#footer {
+  font-family: Arial,Helvetica,sans-serif;
+}
+
+body {
+  margin: 1em 5% 1em 5%;
+}
+
+a {
+  color: blue;
+  text-decoration: underline;
+}
+a:visited {
+  color: fuchsia;
+}
+
+em {
+  font-style: italic;
+  color: navy;
+}
+
+strong {
+  font-weight: bold;
+  color: #083194;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #527bbd;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+h1, h2, h3 {
+  border-bottom: 2px solid silver;
+}
+h2 {
+  padding-top: 0.5em;
+}
+h3 {
+  float: left;
+}
+h3 + * {
+  clear: left;
+}
+h5 {
+  font-size: 1.0em;
+}
+
+div.sectionbody {
+  margin-left: 0;
+}
+
+hr {
+  border: 1px solid silver;
+}
+
+p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+ul, ol, li > p {
+  margin-top: 0;
+}
+ul > li     { color: #aaa; }
+ul > li > * { color: black; }
+
+.monospaced, code, pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: inherit;
+  color: navy;
+  padding: 0;
+  margin: 0;
+}
+pre {
+  white-space: pre-wrap;
+}
+
+#author {
+  color: #527bbd;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+#email {
+}
+#revnumber, #revdate, #revremark {
+}
+
+#footer {
+  font-size: small;
+  border-top: 2px solid silver;
+  padding-top: 0.5em;
+  margin-top: 4.0em;
+}
+#footer-text {
+  float: left;
+  padding-bottom: 0.5em;
+}
+#footer-badges {
+  float: right;
+  padding-bottom: 0.5em;
+}
+
+#preamble {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+div.imageblock, div.exampleblock, div.verseblock,
+div.quoteblock, div.literalblock, div.listingblock, div.sidebarblock,
+div.admonitionblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.admonitionblock {
+  margin-top: 2.0em;
+  margin-bottom: 2.0em;
+  margin-right: 10%;
+  color: #606060;
+}
+
+div.content { /* Block element content. */
+  padding: 0;
+}
+
+/* Block element titles. */
+div.title, caption.title {
+  color: #527bbd;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 1.0em;
+  margin-bottom: 0.5em;
+}
+div.title + * {
+  margin-top: 0;
+}
+
+td div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content div.title:first-child {
+  margin-top: 0.0em;
+}
+div.content + div.title {
+  margin-top: 0.0em;
+}
+
+div.sidebarblock > div.content {
+  background: #ffffee;
+  border: 1px solid #dddddd;
+  border-left: 4px solid #f0f0f0;
+  padding: 0.5em;
+}
+
+div.listingblock > div.content {
+  border: 1px solid #dddddd;
+  border-left: 5px solid #f0f0f0;
+  background: #f8f8f8;
+  padding: 0.5em;
+}
+
+div.quoteblock, div.verseblock {
+  padding-left: 1.0em;
+  margin-left: 1.0em;
+  margin-right: 10%;
+  border-left: 5px solid #f0f0f0;
+  color: #888;
+}
+
+div.quoteblock > div.attribution {
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+div.verseblock > pre.content {
+  font-family: inherit;
+  font-size: inherit;
+}
+div.verseblock > div.attribution {
+  padding-top: 0.75em;
+  text-align: left;
+}
+/* DEPRECATED: Pre version 8.2.7 verse style literal block. */
+div.verseblock + div.attribution {
+  text-align: left;
+}
+
+div.admonitionblock .icon {
+  vertical-align: top;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-decoration: underline;
+  color: #527bbd;
+  padding-right: 0.5em;
+}
+div.admonitionblock td.content {
+  padding-left: 0.5em;
+  border-left: 3px solid #dddddd;
+}
+
+div.exampleblock > div.content {
+  border-left: 3px solid #dddddd;
+  padding-left: 0.5em;
+}
+
+div.imageblock div.content { padding-left: 0; }
+span.image img { border-style: none; vertical-align: text-bottom; }
+a.image:visited { color: white; }
+
+dl {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+dt {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+  font-style: normal;
+  color: navy;
+}
+dd > *:first-child {
+  margin-top: 0.1em;
+}
+
+ul, ol {
+    list-style-position: outside;
+}
+ol.arabic {
+  list-style-type: decimal;
+}
+ol.loweralpha {
+  list-style-type: lower-alpha;
+}
+ol.upperalpha {
+  list-style-type: upper-alpha;
+}
+ol.lowerroman {
+  list-style-type: lower-roman;
+}
+ol.upperroman {
+  list-style-type: upper-roman;
+}
+
+div.compact ul, div.compact ol,
+div.compact p, div.compact p,
+div.compact div, div.compact div {
+  margin-top: 0.1em;
+  margin-bottom: 0.1em;
+}
+
+tfoot {
+  font-weight: bold;
+}
+td > div.verse {
+  white-space: pre;
+}
+
+div.hdlist {
+  margin-top: 0.8em;
+  margin-bottom: 0.8em;
+}
+div.hdlist tr {
+  padding-bottom: 15px;
+}
+dt.hdlist1.strong, td.hdlist1.strong {
+  font-weight: bold;
+}
+td.hdlist1 {
+  vertical-align: top;
+  font-style: normal;
+  padding-right: 0.8em;
+  color: navy;
+}
+td.hdlist2 {
+  vertical-align: top;
+}
+div.hdlist.compact tr {
+  margin: 0;
+  padding-bottom: 0;
+}
+
+.comment {
+  background: yellow;
+}
+
+.footnote, .footnoteref {
+  font-size: 0.8em;
+}
+
+span.footnote, span.footnoteref {
+  vertical-align: super;
+}
+
+#footnotes {
+  margin: 20px 0 20px 0;
+  padding: 7px 0 0 0;
+}
+
+#footnotes div.footnote {
+  margin: 0 0 5px 0;
+}
+
+#footnotes hr {
+  border: none;
+  border-top: 1px solid silver;
+  height: 1px;
+  text-align: left;
+  margin-left: 0;
+  width: 20%;
+  min-width: 100px;
+}
+
+div.colist td {
+  padding-right: 0.5em;
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+div.colist td img {
+  margin-top: 0.3em;
+}
+
+@media print {
+  #footer-badges { display: none; }
+}
+
+#toc {
+  margin-bottom: 2.5em;
+}
+
+#toctitle {
+  color: #527bbd;
+  font-size: 1.1em;
+  font-weight: bold;
+  margin-top: 1.0em;
+  margin-bottom: 0.1em;
+}
+
+div.toclevel0, div.toclevel1, div.toclevel2, div.toclevel3, div.toclevel4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+div.toclevel2 {
+  margin-left: 2em;
+  font-size: 0.9em;
+}
+div.toclevel3 {
+  margin-left: 4em;
+  font-size: 0.9em;
+}
+div.toclevel4 {
+  margin-left: 6em;
+  font-size: 0.9em;
+}
+
+span.aqua { color: aqua; }
+span.black { color: black; }
+span.blue { color: blue; }
+span.fuchsia { color: fuchsia; }
+span.gray { color: gray; }
+span.green { color: green; }
+span.lime { color: lime; }
+span.maroon { color: maroon; }
+span.navy { color: navy; }
+span.olive { color: olive; }
+span.purple { color: purple; }
+span.red { color: red; }
+span.silver { color: silver; }
+span.teal { color: teal; }
+span.white { color: white; }
+span.yellow { color: yellow; }
+
+span.aqua-background { background: aqua; }
+span.black-background { background: black; }
+span.blue-background { background: blue; }
+span.fuchsia-background { background: fuchsia; }
+span.gray-background { background: gray; }
+span.green-background { background: green; }
+span.lime-background { background: lime; }
+span.maroon-background { background: maroon; }
+span.navy-background { background: navy; }
+span.olive-background { background: olive; }
+span.purple-background { background: purple; }
+span.red-background { background: red; }
+span.silver-background { background: silver; }
+span.teal-background { background: teal; }
+span.white-background { background: white; }
+span.yellow-background { background: yellow; }
+
+span.big { font-size: 2em; }
+span.small { font-size: 0.6em; }
+
+span.underline { text-decoration: underline; }
+span.overline { text-decoration: overline; }
+span.line-through { text-decoration: line-through; }
+
+div.unbreakable { page-break-inside: avoid; }
+
+
+/*
+ * xhtml11 specific
+ *
+ * */
+
+div.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+div.tableblock > table {
+  border: 3px solid #527bbd;
+}
+thead, p.table.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.table {
+  margin-top: 0;
+}
+/* Because the table frame attribute is overriden by CSS in most browsers. */
+div.tableblock > table[frame="void"] {
+  border-style: none;
+}
+div.tableblock > table[frame="hsides"] {
+  border-left-style: none;
+  border-right-style: none;
+}
+div.tableblock > table[frame="vsides"] {
+  border-top-style: none;
+  border-bottom-style: none;
+}
+
+
+/*
+ * html5 specific
+ *
+ * */
+
+table.tableblock {
+  margin-top: 1.0em;
+  margin-bottom: 1.5em;
+}
+thead, p.tableblock.header {
+  font-weight: bold;
+  color: #527bbd;
+}
+p.tableblock {
+  margin-top: 0;
+}
+table.tableblock {
+  border-width: 3px;
+  border-spacing: 0px;
+  border-style: solid;
+  border-color: #527bbd;
+  border-collapse: collapse;
+}
+th.tableblock, td.tableblock {
+  border-width: 1px;
+  padding: 4px;
+  border-style: solid;
+  border-color: #527bbd;
+}
+
+table.tableblock.frame-topbot {
+  border-left-style: hidden;
+  border-right-style: hidden;
+}
+table.tableblock.frame-sides {
+  border-top-style: hidden;
+  border-bottom-style: hidden;
+}
+table.tableblock.frame-none {
+  border-style: hidden;
+}
+
+th.tableblock.halign-left, td.tableblock.halign-left {
+  text-align: left;
+}
+th.tableblock.halign-center, td.tableblock.halign-center {
+  text-align: center;
+}
+th.tableblock.halign-right, td.tableblock.halign-right {
+  text-align: right;
+}
+
+th.tableblock.valign-top, td.tableblock.valign-top {
+  vertical-align: top;
+}
+th.tableblock.valign-middle, td.tableblock.valign-middle {
+  vertical-align: middle;
+}
+th.tableblock.valign-bottom, td.tableblock.valign-bottom {
+  vertical-align: bottom;
+}
+
+
+/*
+ * manpage specific
+ *
+ * */
+
+body.manpage h1 {
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+  border-top: 2px solid silver;
+  border-bottom: 2px solid silver;
+}
+body.manpage h2 {
+  border-style: none;
+}
+body.manpage div.sectionbody {
+  margin-left: 3em;
+}
+
+@media print {
+  body.manpage div#toc { display: none; }
+}
+
+
+@media screen {
+  body {
+    max-width: 50em; /* approximately 80 characters wide */
+    margin-left: 16em;
+  }
+
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 13em;
+    padding: 0.5em;
+    padding-bottom: 1.5em;
+    margin: 0;
+    overflow: auto;
+    border-right: 3px solid #f8f8f8;
+    background-color: white;
+  }
+
+  #toc .toclevel1 {
+    margin-top: 0.5em;
+  }
+
+  #toc .toclevel2 {
+    margin-top: 0.25em;
+    display: list-item;
+    color: #aaaaaa;
+  }
+
+  #toctitle {
+    margin-top: 0.5em;
+  }
+}
+</style>
+<script type="text/javascript">
+/*<![CDATA[*/
+var asciidoc = {  // Namespace.
+
+/////////////////////////////////////////////////////////////////////
+// Table Of Contents generator
+/////////////////////////////////////////////////////////////////////
+
+/* Author: Mihai Bazon, September 2002
+ * http://students.infoiasi.ro/~mishoo
+ *
+ * Table Of Content generator
+ * Version: 0.4
+ *
+ * Feel free to use this script under the terms of the GNU General Public
+ * License, as long as you do not remove or alter this notice.
+ */
+
+ /* modified by Troy D. Hanson, September 2006. License: GPL */
+ /* modified by Stuart Rackham, 2006, 2009. License: GPL */
+
+// toclevels = 1..4.
+toc: function (toclevels) {
+
+  function getText(el) {
+    var text = "";
+    for (var i = el.firstChild; i != null; i = i.nextSibling) {
+      if (i.nodeType == 3 /* Node.TEXT_NODE */) // IE doesn't speak constants.
+        text += i.data;
+      else if (i.firstChild != null)
+        text += getText(i);
+    }
+    return text;
+  }
+
+  function TocEntry(el, text, toclevel) {
+    this.element = el;
+    this.text = text;
+    this.toclevel = toclevel;
+  }
+
+  function tocEntries(el, toclevels) {
+    var result = new Array;
+    var re = new RegExp('[hH]([1-'+(toclevels+1)+'])');
+    // Function that scans the DOM tree for header elements (the DOM2
+    // nodeIterator API would be a better technique but not supported by all
+    // browsers).
+    var iterate = function (el) {
+      for (var i = el.firstChild; i != null; i = i.nextSibling) {
+        if (i.nodeType == 1 /* Node.ELEMENT_NODE */) {
+          var mo = re.exec(i.tagName);
+          if (mo && (i.getAttribute("class") || i.getAttribute("className")) != "float") {
+            result[result.length] = new TocEntry(i, getText(i), mo[1]-1);
+          }
+          iterate(i);
+        }
+      }
+    }
+    iterate(el);
+    return result;
+  }
+
+  var toc = document.getElementById("toc");
+  if (!toc) {
+    return;
+  }
+
+  // Delete existing TOC entries in case we're reloading the TOC.
+  var tocEntriesToRemove = [];
+  var i;
+  for (i = 0; i < toc.childNodes.length; i++) {
+    var entry = toc.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div'
+     && entry.getAttribute("class")
+     && entry.getAttribute("class").match(/^toclevel/))
+      tocEntriesToRemove.push(entry);
+  }
+  for (i = 0; i < tocEntriesToRemove.length; i++) {
+    toc.removeChild(tocEntriesToRemove[i]);
+  }
+
+  // Rebuild TOC entries.
+  var entries = tocEntries(document.getElementById("content"), toclevels);
+  for (var i = 0; i < entries.length; ++i) {
+    var entry = entries[i];
+    if (entry.element.id == "")
+      entry.element.id = "_toc_" + i;
+    var a = document.createElement("a");
+    a.href = "#" + entry.element.id;
+    a.appendChild(document.createTextNode(entry.text));
+    var div = document.createElement("div");
+    div.appendChild(a);
+    div.className = "toclevel" + entry.toclevel;
+    toc.appendChild(div);
+  }
+  if (entries.length == 0)
+    toc.parentNode.removeChild(toc);
+},
+
+
+/////////////////////////////////////////////////////////////////////
+// Footnotes generator
+/////////////////////////////////////////////////////////////////////
+
+/* Based on footnote generation code from:
+ * http://www.brandspankingnew.net/archive/2005/07/format_footnote.html
+ */
+
+footnotes: function () {
+  // Delete existing footnote entries in case we're reloading the footnodes.
+  var i;
+  var noteholder = document.getElementById("footnotes");
+  if (!noteholder) {
+    return;
+  }
+  var entriesToRemove = [];
+  for (i = 0; i < noteholder.childNodes.length; i++) {
+    var entry = noteholder.childNodes[i];
+    if (entry.nodeName.toLowerCase() == 'div' && entry.getAttribute("class") == "footnote")
+      entriesToRemove.push(entry);
+  }
+  for (i = 0; i < entriesToRemove.length; i++) {
+    noteholder.removeChild(entriesToRemove[i]);
+  }
+
+  // Rebuild footnote entries.
+  var cont = document.getElementById("content");
+  var spans = cont.getElementsByTagName("span");
+  var refs = {};
+  var n = 0;
+  for (i=0; i<spans.length; i++) {
+    if (spans[i].className == "footnote") {
+      n++;
+      var note = spans[i].getAttribute("data-note");
+      if (!note) {
+        // Use [\s\S] in place of . so multi-line matches work.
+        // Because JavaScript has no s (dotall) regex flag.
+        note = spans[i].innerHTML.match(/\s*\[([\s\S]*)]\s*/)[1];
+        spans[i].innerHTML =
+          "[<a id='_footnoteref_" + n + "' href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+        spans[i].setAttribute("data-note", note);
+      }
+      noteholder.innerHTML +=
+        "<div class='footnote' id='_footnote_" + n + "'>" +
+        "<a href='#_footnoteref_" + n + "' title='Return to text'>" +
+        n + "</a>. " + note + "</div>";
+      var id =spans[i].getAttribute("id");
+      if (id != null) refs["#"+id] = n;
+    }
+  }
+  if (n == 0)
+    noteholder.parentNode.removeChild(noteholder);
+  else {
+    // Process footnoterefs.
+    for (i=0; i<spans.length; i++) {
+      if (spans[i].className == "footnoteref") {
+        var href = spans[i].getElementsByTagName("a")[0].getAttribute("href");
+        href = href.match(/#.*/)[0];  // Because IE return full URL.
+        n = refs[href];
+        spans[i].innerHTML =
+          "[<a href='#_footnote_" + n +
+          "' title='View footnote' class='footnote'>" + n + "</a>]";
+      }
+    }
+  }
+},
+
+install: function(toclevels) {
+  var timerId;
+
+  function reinstall() {
+    asciidoc.footnotes();
+    if (toclevels) {
+      asciidoc.toc(toclevels);
+    }
+  }
+
+  function reinstallAndRemoveTimer() {
+    clearInterval(timerId);
+    reinstall();
+  }
+
+  timerId = setInterval(reinstall, 500);
+  if (document.addEventListener)
+    document.addEventListener("DOMContentLoaded", reinstallAndRemoveTimer, false);
+  else
+    window.onload = reinstallAndRemoveTimer;
+}
+
+}
+asciidoc.install(4);
+/*]]>*/
+</script>
+</head>
+<body class="book" style="max-width:100%">
+<div id="header">
+<h1> Getting started with BOLT</h1>
+<span id="author">Broadcom Ltd</span><br />
+<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<div id="toc">
+  <div id="toctitle">Table of Contents</div>
+  <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_introduction">1.  Introduction</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>BOLT is a bootloader for Broadcom ARM based products. If you are
+familiar with the CFE bootloader from our previous generation of
+chips then you will be familiar with BOLT as its based on CFE.</p></div>
+<div class="paragraph"><p>BOLT has a first stage bootloader and a second stage one,
+referred to as FSBL &amp; SSBL respectively. This is identical
+to the way CFE did things.</p></div>
+<div class="paragraph"><p>The user interface (UI) is in most cases identical to CFE,
+except where new functionality has been added.</p></div>
+<div class="paragraph"><p>See
+<a href="bolt_commands.html">BOLT commands</a>
+for a rundown on the currently supported UI commands.</p></div>
+<div class="paragraph"><p>Mostly, these changes are new flags to commands and added
+commands for new areas such as Device Tree <a href="#1">[1]</a>.
+See
+<a href="cfe_differences.html">CFE differences</a>
+for the major changes in user interface between CFE and BOLT.</p></div>
+<div class="paragraph"><p>Looking into the code, the functional split
+is very similar but we have taken the opportunity to
+refactor and update for new technology where needed.</p></div>
+<div class="paragraph"><p>For those familiar with CFE, here is a rundown of the changes:</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Device Tree support has been added. This is for the
+standard way Linux ARM gets its configuration info.
+</p>
+</li>
+<li>
+<p>
+The build system has been unified. FSBL &amp; SSBL are
+built as one image (which can be split apart
+afterwards.)
+</p>
+</li>
+<li>
+<p>
+Multiple board support from one binary.
+Instead of multiple builds per board you can
+now support them from one image. Its handy if you
+have a lot of slightly different boards for
+the same chip - but you can still choose to
+specify only one board type for e.g. secure
+production (FSBL) images.
+</p>
+</li>
+<li>
+<p>
+The directory structure has been flattened so
+you don&#8217;t have to go hunting around for files.
+</p>
+</li>
+<li>
+<p>
+Some large files have been split into smaller,
+more manageable ones. The goal is to split
+into functional areas and not have you wade
+through giant files. It also means its easier
+to add or remove functional areas, depending
+upon the target product.
+</p>
+</li>
+<li>
+<p>
+32 bit Linux ARM generates a <em>zImage</em> format file that
+consists of a zipped up Linux with a small bit of
+decompression code prepended.
+They are not ELF format files as we had in CFE.
+Loading and running Linux is very similar to CFE,
+though <em>zimg</em> rather than <em>elf</em> is the default for
+the <em>load</em> and <em>boot</em> commands in BOLT. For 64
+bit Linux the format is <em>Image</em> or a gz compressed
+<em>Image</em> file. BOLT autodetects zImage and Image
+and boots either in the correct ARM mode.
+</p>
+</li>
+<li>
+<p>
+Linux ARM64 generates an <em>Image</em> format file.
+BOLT can auto-detect zImage, Image or a gz
+compressed Image.
+</p>
+</li>
+<li>
+<p>
+There is a lot less assembly (source) code.
+We&#8217;ve tried to do more <em>c</em> code for legibility
+and maintainability.
+</p>
+</li>
+<li>
+<p>
+Due to the change in architecture, FSBL code
+is the most changed, but still small and
+manageable to comprehend. SSBL will be very
+familiar to CFE developers.
+</p>
+</li>
+<li>
+<p>
+We use a human readable build
+configuration file to concentrate all the
+differences in a simple way. No more
+waving lots of build flags or hacking
+flash partition maps - its done for you,
+in one place. All the configuration is
+(naturally) stored in the config/
+subdirectory of BOLT as <em>.cfg</em> files.
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_quickstart">2. Quickstart</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_what_you_need">2.1. What you need:</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+An x86 based PC running a modern Linux, or CentOS (2.6.18)
+</p>
+</li>
+<li>
+<p>
+Broadcom supplied BOLT release package
+</p>
+</li>
+<li>
+<p>
+Broadcom supplied GCC ARM cross-compile toolchain
+</p>
+</li>
+<li>
+<p>
+Common Linux tools such as sed, awk etc.
+</p>
+</li>
+<li>
+<p>
+Perl 5.8.5
+</p>
+</li>
+<li>
+<p>
+Patch 2.5.4
+</p>
+</li>
+<li>
+<p>
+GNU Make 3.80
+</p>
+</li>
+<li>
+<p>
+GNU GCC 3.4.6 or 4.4.4
+</p>
+</li>
+<li>
+<p>
+zlib v1.2.1 or later (<a href="http://www.zlib.net">http://www.zlib.net</a>)
+</p>
+</li>
+<li>
+<p>
+BroadBandStudio to flash the BOLT image
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_setting_up_the_toolchain">2.2. Setting up the toolchain</h3>
+<div class="paragraph"><p>BOLT requires that the toolchain be in the
+environments PATH variable. There is no special
+TOOLCHAIN variable or anything else to set up.</p></div>
+<div class="paragraph"><p>In this example the Broadcom supplied GCC toolchain
+package is called <em>stbgcc-4.8-1.1.tar.bz2</em>
+and the BOLT source code package is called
+<em>bolt-v1.26.tgz</em> The exact names depend upon
+the release you get from us.</p></div>
+<div class="paragraph"><p>First unpack and install the toolchain in
+a convenient place. We use <em>/media/cdrom/</em>
+as an example location only.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$mkdir -p /projects/stbtc/</code></pre>
+</div></div>
+<div class="paragraph"><p>Now copy over the toolchain from the install media:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$cp /media/cdrom/broadcom/stbgcc-4.8-1.1.tar.bz2 /projects/stbtc/</code></pre>
+</div></div>
+<div class="paragraph"><p>Unpack it:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$cd /projects/stbtc/
+ [user@machine]$bunzip2  stbgcc-4.8-1.1.tar.bz2
+ [user@machine]$tar -xf stbgcc-4.8-1.1.tar</code></pre>
+</div></div>
+<div class="paragraph"><p>Set PATH:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$export PATH=/projects/stbtc/stbgcc-4.8-1.1/bin:$PATH</code></pre>
+</div></div>
+<div class="paragraph"><p>That&#8217;s all there is to it!</p></div>
+<div class="paragraph"><p>You can test if everything went well by trying to run the
+toolchain&#8217;s gcc compiler:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>[user@machine]$ arm-linux-gcc --version
+arm-linux-gcc (Broadcom stbgcc-4.8-1.1) 4.8.4 20141110 (prerelease)
+Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_setting_up_bolt">2.3. Setting up BOLT</h3>
+<div class="paragraph"><p>As before you copy over and unpack the Broadcom product to
+your development location. In this case we use the
+<em>bolt</em> subdirectory on your PC&#8217;s home directory.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$mkdir ~/bolt
+ [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.26.tgz
+ [user@machine]$tar -xzf bolt-v1.26.tgz</code></pre>
+</div></div>
+<div class="paragraph"><p>You should now have a subdirectory named after the bolt release package name:</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">Check that your unzip or unpacking tool does not substitute Windows&#174;
+style line endings for the UNIX&#174; style BOLT requires. BOLT will fail to
+build if this happens.</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$cd ~/bolt/bolt-v1.26</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_making_bolt">2.4. Making BOLT</h3>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">Please use the <em>bash</em> shell as your environment
+to build BOLT and take care any environment paths or
+variables do not interfere e.g. defining $SYSCC as clang etc.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>The BOLT make process is quite simple. The very first time you
+build BOLT you have to configure the build by specifying the
+family (chip) types available, as shown here by this command:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$make show
+7250b0 7260a0 7268a0 7271a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0</code></pre>
+</div></div>
+<div class="paragraph"><p>Now select a family (in this example - 7445d0) and build BOLT:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$make 7445d0</code></pre>
+</div></div>
+<div class="paragraph"><p>To remake do:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$make clean ; make 7445d0</code></pre>
+</div></div>
+<div class="paragraph"><p>At the end of the build process you should have new binary
+file(s) to flash in the objs/$(FAMILY) directory with the
+following format:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>bolt-$(VERSION)-$(FAMILY)-[ba|bb|xx]-bfw-$(BFW_VER).bin</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content"><!-- Generator: GNU source-highlight 3.1.6
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>ls -l objs<span style="color: #990000">/</span>7445d0/bolt-<span style="color: #990000">*.</span>bin
+lrwxrwxrwx <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-ba<span style="color: #990000">.</span>bin -<span style="color: #990000">&gt;</span> bolt-v<span style="color: #993399">1.26</span>-7445d0-ba-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+lrwxrwxrwx <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-bb<span style="color: #990000">.</span>bin -<span style="color: #990000">&gt;</span> bolt-v<span style="color: #993399">1.26</span>-7445d0-bb-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+-rw-rw-r-- <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">1.26</span>-7445d0-ba-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+-rw-rw-r-- <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">1.26</span>-7445d0-bb-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin</tt></pre></div></div>
+<div class="paragraph"><p>For brevity we also symlink the longer BOLT binary names
+as you can see above. This may change if we have to support
+more than one BFW per <em>ba</em> or <em>bb</em> type in the future.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">Please note the BBL types (ba, bb or xx) as your
+chip will only run if you have the right one. All available
+ones for generic chips are supplied with BOLT and you have
+to choose which one to use. If you don&#8217;t know which one you
+have, record the exect part number on the chip package and
+contact your Broadcom FAE for help.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>You are now ready to flash this binary image via Broadcom
+BroadBandStudio (BBS) and run BOLT. The process is the same
+as for CFE - please refer to the BBS documentation.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">To make the build faster:</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$make 7445d0 -j8</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">To check your toolchain is ok:</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$make toolfind</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">To build without pausing at the board selection menu:</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre><code> [user@machine]$make 7445d0 CFG_BOARDDEFAULT=N</code></pre>
+</div></div>
+<div class="paragraph"><p>Where N is the board number [1-52] required that maps to [a-zA-Z]
+in the FSBL board selection menu.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">Some of our reference boards have an ID stored in an I2C
+device, so you will not encounter the board selection menu
+if the ID matches ones (per board type) that are built into
+BOLT.</td>
+</tr></table>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_flashing_linux">3. Flashing Linux</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>To flash Linux you can use either TFTP via eth0, a USB ethernet
+dongle (at e.g. eth1) or a USB memory stick. Below is an example
+using a static IP address and TFTP. You can use DHCP instead of
+a static IP by using <em>ifconfig eth0 -auto</em></p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; ifconfig eth0 -addr=192.168.0.40 -mask=255.255.255.0 -gw=192.168.0.42
+
+BOLT&gt; flash 192.168.0.42:vmlinuz-initrd-7445d0 flash0.kernel</code></pre>
+</div></div>
+<div class="paragraph"><p>To run Linux:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; boot flash0.kernel:</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">If BOLT is too big to fit in flash0.kernel, you can
+use another partition if its big enough, e.g.</td>
+</tr></table>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; flash 192.168.0.42:vmlinuz-initrd-7445d0 flash1.rootfs0
+
+BOLT&gt; boot flash1.rootfs0:</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">zImage detection is on by default. Use <em>-loader=raw</em> if
+     you want to force loading of a raw binary or text file to memory, the
+     same goes for elf format files: <em>-loader=elf</em> Note that the
+         <em>batch</em> command defaults to <em>raw</em>, not <em>zImage</em>.</td>
+</tr></table>
+</div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">To boot 64 bit Linux you <strong>must</strong> use PSCI, which BOLT
+does by default when using the <em>zImage</em> loader. When using any
+other loader type this selection between 32 and 64 bit boot is
+not done automatically for you.</td>
+</tr></table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_other_items">4. Other items</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_some_reference_board_configurations_for_spi_amp_nand_boot_selection">4.1. Some reference board configurations for SPI &amp; NAND boot selection</h3>
+<div class="literalblock">
+<div class="content">
+<pre><code>BCM97745C board (V00, rev #03)
+Set J2101 jumpering: 1 &amp; 2, 3 &amp; 4
+To boot from SPI flash set SW2702 as follows:</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>    off | on
+    --------
+    o   |               ENDIAN
+        |       o       STRAP_BOOT_SHAPE_4
+        |       o       STRAP_BOOT_SHAPE_3
+    o   |               STRAP_BOOT_SHAPE_2
+    o   |               STRAP_BOOT_SHAPE_1
+    o   |               STRAP_BOOT_SHAPE_0</code></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>BCM97745VMSMB_SFF board
+Set J2101 jumpering: 1 &amp; 2, 3 &amp; 4
+To boot from SPI flash set SW2701 &amp; SW2711 as follows:</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> on  oo  o   o  o
+     ||  |   |  |
+    123456  123456
+    |  ||   | || |
+off o  oo   o oo o</code></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>To boot from NAND flash (4Kb page, 1 bit ECC) set SW2701 &amp; SW2711 as follows:
+Set J2101 jumpering: 1 &amp; 3, 2 &amp; 4</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> on   oo o   o  o
+      || |   |  |
+    123456  123456
+    ||  |   | || |
+off oo  o   o oo o</code></pre>
+</div></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_references">5. References</h2>
+<div class="sectionbody">
+<div class="paragraph"><p><a id="1"></a> <a href="http://elinux.org/Device_Trees">http://elinux.org/Device_Trees</a></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">6. Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+All Rights Reserved.
+Confidential Property of Broadcom Ltd.</p></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr /></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2017-02-23 01:54:41 PST
+</div>
+</div>
+</body>
+</html>

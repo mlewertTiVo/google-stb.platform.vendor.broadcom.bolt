@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -57,7 +57,13 @@ static bool do_ranges_overlap(uint32_t off_x, uint32_t size_x,
 
 uint64_t arch_get_cpu_freq_hz(void)
 {
-	int shift = BDEV_RD_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, CLK_RATIO);
+	int shift;
+
+#if defined(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K)
+	shift = 0;
+#else
+	shift = BDEV_RD_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, CLK_RATIO);
+#endif
 
 	return arch_get_cpu_pll_hz() >> shift;
 }
@@ -138,7 +144,7 @@ static unsigned int arch_get_cpu_mdiv(void)
 
 /* arch_get_cpu_pll_hz -- returns CPU PLL speed in HZ
  *
- * It is the CPU PLL clock, the baseline clock to A15. It can be further
+ * It is the CPU PLL clock. For A15 based chips, it can be further
  * controlled (divided) by HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG.CLK_RATIO.
  * Hence, the user experience-able CPU speed is after the division.
  *
@@ -215,7 +221,7 @@ uint64_t arch_get_scb_freq_hz(void)
 	mdiv = BDEV_RD_F(CLKGEN_PLL_SCB_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0);
 #else
 	/* SCB shares SYS0 PLL with others */
-#if defined(CONFIG_BCM7439B0)
+#if defined(CONFIG_BCM7439B0) || defined(CONFIG_BCM7278A0)
 	/* channel#1 */
 	regval = BDEV_RD(BCHP_CLKGEN_PLL_SYS0_PLL_DIV);
 	pdiv = (regval & BCHP_CLKGEN_PLL_SYS0_PLL_DIV_PDIV_MASK) >>
@@ -225,11 +231,11 @@ uint64_t arch_get_scb_freq_hz(void)
 	mdiv = BDEV_RD_F(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1, MDIV_CH1);
 #elif defined(CONFIG_BCM7250B0) || \
 	defined(CONFIG_BCM7260A0) || \
+	defined(CONFIG_BCM7268) || \
+	defined(CONFIG_BCM7271) || \
 	defined(CONFIG_BCM7364) || \
 	defined(CONFIG_BCM7366) || \
-	defined(CONFIG_BCM74371A0)|| \
-	defined(CONFIG_BCM7271A0)|| \
-	defined(CONFIG_BCM7268A0)
+	defined(CONFIG_BCM74371A0)
 	/* channel#2 */
 	regval = BDEV_RD(BCHP_CLKGEN_PLL_SYS0_PLL_DIV);
 	pdiv = (regval & BCHP_CLKGEN_PLL_SYS0_PLL_DIV_PDIV_MASK) >>
@@ -257,8 +263,9 @@ uint64_t arch_get_sysif_freq_hz(void)
 #if !defined(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K)
 	return 0;
 #else
-	return arch_get_cpu_vco_hz() /
-		BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K, MDIV_CH1);
+	return (arch_get_cpu_vco_hz() /
+		BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_1_4K, MDIV_CH1)) >>
+		BDEV_RD_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, CLK_RATIO);
 #endif
 }
 
@@ -293,16 +300,24 @@ uint64_t arch_get_cpu_min_safe_hz(void)
 
 /* arch_is_safemode_required -- whether SAFE_CLK_MODE should be on
  *
- * Depending on the ratio between CPU and SCB frequencies, a special
- * hardware feature (SAFE_CLK_MODE) needs be enabled. Otherwise, system
- * might lock up. The ratio varies based on the number of active memory
- * controllers.
+ * Depending on the ratio between certain clocks, a special hardware
+ * feature (SAFE_CLK_MODE) needs be enabled. Otherwise, system might
+ * lock up.
  *
  * returns true if SAFE_CLK_MODE needs be enabled, false otherwise
  */
 static bool arch_is_safemode_required(void)
 {
+#if !defined(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0_4K)
 	return arch_get_cpu_freq_hz() < arch_get_cpu_min_safe_hz();
+#else
+	uint64_t scb_multiple;
+
+	scb_multiple = arch_get_scb_freq_hz();
+	scb_multiple += scb_multiple / 2; /* 1.5 x SCB frequency */
+
+	return arch_get_sysif_freq_hz() < scb_multiple;
+#endif
 }
 
 /* walk_page_table -- walks through page table for the given area, and
@@ -583,11 +598,7 @@ void arch_dump_registers(struct arm_regs *regs)
 
 /* HW7439-655. Verify against e.g. HW7366-587
 before adding newer chips listed there. */
-#if	defined(CONFIG_BCM7260A0) || \
-	defined(CONFIG_BCM7268A0) || \
-	defined(CONFIG_BCM7271A0) || \
-	defined(CONFIG_BCM7366C0) || \
-	defined(CONFIG_BCM7439B0)
+#if defined(CONFIG_BCM7366C0) || defined(CONFIG_BCM7439B0)
 #define HW7445_1480 0
 #else
 #define HW7445_1480 1
@@ -832,17 +843,40 @@ static void set_cpu_ratio(int new_ratio)
   **********************************************************************/
 void arch_set_cpu_clk_ratio(int ratio)
 {
+#if defined(BCHP_HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG)
+	unsigned int sel_clk_pattern;
+
+	switch (ratio) {
+	case CPU_CLK_RATIO_ONE:
+		sel_clk_pattern = 0; /* CPU_L2_DIV_TABLE[0] == 1 */
+		break;
+	case CPU_CLK_RATIO_HALF:
+		sel_clk_pattern = 1; /* CPU_L2_DIV_TABLE[1] == 2 */
+		break;
+	case CPU_CLK_RATIO_QUARTER:
+		sel_clk_pattern = 3; /* CPU_L2_DIV_TABLE[3] == 4 */
+		break;
+	case CPU_CLK_RATIO_EIGHTH:
+		sel_clk_pattern = 4; /* CPU_L2_DIV_TABLE[4] == 8 */
+		break;
+	case CPU_CLK_RATIO_SIXTEENTH:
+		sel_clk_pattern = 5; /* CPU_L2_DIV_TABLE[5] == 16 */
+		break;
+	default:
+		/* unknown ratio, do nothing */
+		return;
+	}
+	BDEV_WR_F(HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG,
+		SEL_CLK_PATTERN, sel_clk_pattern);
+	BARRIER();
+	return;
+#endif /* defined(BCHP_HIF_CPUBIUCTRL_CPU_CLUSTER0_CLOCK_CONTROL_REG) */
+
 	if (HW7445_1480) {
 		set_cpu_ratio(ratio);
 		return;
 	}
 
-#if defined(BCHP_HIF_CPUBIUCTRL_SYSIF_BPCM_ID)
-	BDEV_WR_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, CLK_RATIO, ratio);
-	/* With sysIF, turning on/off SAFE_MODE is not required when
-	 * changing CPU clock ratio.
-	 */
-#else
 	/* else with HW7445-1480 fixed. */
 	BDEV_WR_F(HIF_CPUBIUCTRL_CPU_CLOCK_CONFIG_REG, SAFE_CLK_MODE, 1);
 	BARRIER();
@@ -855,7 +889,6 @@ void arch_set_cpu_clk_ratio(int ratio)
 				SAFE_CLK_MODE, 0);
 		BARRIER();
 	}
-#endif
 }
 
 
@@ -891,4 +924,14 @@ const char *arch_get_cpu_bootname(void)
 	return (arch_booted64()) ? "B53 (64-bit)" : "B53 (32-bit)";
 #endif
 	return "B15";
+}
+
+void arch_abort_enable(void)
+{
+	__asm__("cpsie a    @__sta" : : : "memory", "cc");
+}
+
+void arch_abort_disable(void)
+{
+	__asm__("cpsie a   @__cla" : : : "memory", "cc");
 }

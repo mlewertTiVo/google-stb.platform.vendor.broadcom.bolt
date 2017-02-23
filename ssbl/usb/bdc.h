@@ -268,6 +268,12 @@ enum {EP0 = 1, EP1OUT, EP1IN, EP2OUT, EP2IN};
 #define V_INTCLS_ICI(x)		_BDC_MAKEVALUE(x, S_INTCLS_ICI)
 #define G_INTCLS_ICI(x)		_BDC_GETVALUE(x, S_INTCLS_ICI, M_INTCLS_ICI)
 
+/* DRD_STATUS defns */
+#define S_DRD_STATE		0
+#define M_DRD_STATE		_BDC_MAKEMASK(2, S_DRD_STATE)
+#define G_DRD_STATE(x)		_BDC_GETVALUE(x, S_DRD_STATE, M_DRD_STATE)
+#define DEV_MODE		2
+
 /*  *********************************************************************
     *  Status Report
     ********************************************************************* */
@@ -436,6 +442,8 @@ typedef struct bdc_softc {
 
 	int			debug;
 	bdc_lpbk_t		lpbk;
+
+	physaddr_t		drd_status;
 } bdc_softc;
 
 

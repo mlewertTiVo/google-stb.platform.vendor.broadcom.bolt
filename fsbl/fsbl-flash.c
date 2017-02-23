@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -47,9 +45,6 @@ static inline struct fsbl_flash *fsbl_get_flash(int cs)
 	return &flash_list[cs];
 }
 
-#define NAND_CONTROLLER_REVISION (BCHP_NAND_REVISION_MAJOR_DEFAULT * 0x100 + \
-				  BCHP_NAND_REVISION_MINOR_DEFAULT)
-
 #define NAND_FC_SIZE		512
 #define NAND_CMD_PAGE_READ	0x1
 #define NAND_CMD_READ_ID	0x7
@@ -93,8 +88,12 @@ static inline void *flash_offs_to_va(uint32_t offs)
 
 static void do_nand_cmd(uint32_t cmd, uint32_t addr)
 {
+#if NAND_CONTROLLER_REVISION >= 0x703
+	BDEV_WR64(BCHP_NAND_CMD_ADDRESS, 0);
+#else
 	BDEV_WR(BCHP_NAND_CMD_EXT_ADDRESS, 0);
 	BDEV_WR(BCHP_NAND_CMD_ADDRESS, addr);
+#endif
 	BDEV_WR_F(NAND_CMD_START, OPCODE, cmd);
 
 	while (!BDEV_RD_F(NAND_INTFC_STATUS, CTLR_READY))

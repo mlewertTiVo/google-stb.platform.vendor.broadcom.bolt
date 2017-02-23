@@ -837,7 +837,7 @@ static void _ehci_periodic_ept_delete(usbbus_t *bus, usb_ept_t *uept)
 	ehci_softc_t *softc = (ehci_softc_t *) bus->ub_hwsoftc;
 	ehci_endpoint_t *ept = (ehci_endpoint_t *) uept;
 	uint32_t reg;
-	int idx;
+	int idx, found = 0;
 
 	/* Stop the async list */
 	reg = EHCI_READCSR(softc, R_EHCI_USBCMD) & ~M_EHCI_USBCMD_PSE;
@@ -864,10 +864,10 @@ static void _ehci_periodic_ept_delete(usbbus_t *bus, usb_ept_t *uept)
 		if (G_EHCI_QH_PTR(softc->ehci_intr_table[idx]) ==
 			ept->ep_phys) {
 			softc->ehci_intr_table[idx] = NULL_INTR_QH;
-			break;
+			found = 1;
 		}
 	}
-	if (idx == EHCI_INTR_TABLE_SIZE)
+	if (!found)
 		printf
 		    ("EHCI Could not find periodic endpoint (%08x %08x %08x)\n",
 		     ept->ep_phys, softc->ehci_intr_table[0],
@@ -944,11 +944,12 @@ static void ehci_ept_xferdone(ehci_softc_t *softc, ehci_endpoint_t *ept)
 				/* set during device disconnect processing */
 				if (ept->ep_num == -1)
 					val = K_EHCI_TD_CANCELLED;
-				else if ((control != M_EHCI_STATUS_HALTED) ||
-						(ept->ep_num == 0)) {
+				else if (((val != M_EHCI_STATUS_HALTED) ||
+					  (ept->ep_num == 0)) &&
+					 (ehcidebug & SHOW_XFER_ERR)) {
 						/* show stalls only on EP0 */
-					printf("EHCI Transfer error: 0x%02x %p\n",
-						val, ur);
+					printf("EHCI Transfer error: 0x%02x %p %d\n",
+						val, ur, ept->ep_num);
 					val = BOLT_ERR_IOERR;
 				}
 			}
@@ -1172,6 +1173,7 @@ static usbbus_t *ehci_create(physaddr_t addr)
 
 	bus->ub_hwsoftc = (usb_hc_t *) softc;
 	bus->ub_hwdisp = &ehci_driver;
+	bus->ub_flags = UB_FLG_USB20;
 
 	q_init(&(softc->ehci_rh_intrq));
 
@@ -1222,15 +1224,25 @@ error:
 static usb_ept_t *ehci_ept_create(usbbus_t *bus,
 				  int usbaddr, int eptnum, int mps, int flags)
 {
-	uint32_t eptflags;
+	uint32_t eptflags, hport = 0, haddr = 0, spd;
 	ehci_endpoint_t *ept;
 	ehci_qh_t *qh;
 	ehci_transfer_t *dummyxfer;
 	ehci_qtd_t *dummyqtd;
 	ehci_softc_t *softc = (ehci_softc_t *) bus->ub_hwsoftc;
 #ifdef INTR_PIPE
-	int idx;
+	int idx, pte;
 #endif
+
+	/* Extract split transaction and speed info */
+	hport = (flags >> UP_RPORT_SHIFT) & UP_RPORT_MASK;
+	haddr = (flags >> UP_ROUTE_SHIFT) & UP_ROUTE_MASK;
+	if (flags & UP_TYPE_HIGHSPEED)
+		spd = HS;
+	else if (flags & UP_TYPE_LOWSPEED)
+		spd = LS;
+	else
+		spd = FS;
 
 	/*
 	 * Set up functional address, endpoint number, and packet size
@@ -1238,7 +1250,9 @@ static usb_ept_t *ehci_ept_create(usbbus_t *bus,
 	if (mps < 64)
 		mps = 64;
 	eptflags = V_EHCI_QH_DA(usbaddr) | V_EHCI_QH_EP(eptnum) |
-	    V_EHCI_QH_EPS(2) | V_EHCI_QH_MPS(mps);
+	    V_EHCI_QH_EPS(spd) | V_EHCI_QH_MPS(mps);
+	if ((spd != HS) && (flags & UP_TYPE_CONTROL))
+		eptflags |= M_EHCI_QH_C;
 
 	if (ehcidebug & SHOW_INIT_STATS) {
 		printf
@@ -1265,7 +1279,9 @@ static usb_ept_t *ehci_ept_create(usbbus_t *bus,
 	ept->ep_flags = flags;
 	ept->ep_mps = mps;
 	ept->ep_num = eptnum;
-	qh->qh_dw2 = BSWAP32(V_EHCI_QH_MULT(1));
+	qh->qh_dw2 = BSWAP32(V_EHCI_QH_MULT(1) |
+			     V_EHCI_QH_STPN(hport) |
+			     V_EHCI_QH_STHA(haddr));
 	qh->qh_next_qtd = BSWAP32(EHCI_VTOP(dummyqtd));
 	ept->qtd_list = dummyqtd;
 
@@ -1280,18 +1296,22 @@ static usb_ept_t *ehci_ept_create(usbbus_t *bus,
 	else if ((flags & UP_TYPE_INTR) && (usbaddr != 1)) {
 		/* no need to queue root hub intr requests */
 
-		/* queue into first empty entry */
-		for (idx = 0; idx < EHCI_INTR_TABLE_SIZE; idx++) {
-			if (softc->ehci_intr_table[idx] == NULL_INTR_QH)
+		/* queue into first empty entry and also into subsequent 64
+		   entry offets to get INTR period of 64mS needed for HID */
+		for (pte = 0; pte < EHCI_INTR_TABLE_SIZE; pte++) {
+			if (softc->ehci_intr_table[pte] == NULL_INTR_QH)
 				break;
 		}
-		if (idx < EHCI_INTR_TABLE_SIZE) {
-			/* should be last one in list */
+		if (pte < EHCI_INTR_TABLE_SIZE) {
 			qh->qh_next = NULL_INTR_QH;
 
-			qh->qh_dw2 |= 0xff; /* S-mask */
-			softc->ehci_intr_table[idx] =
-			    BSWAP32(ept->ep_phys + V_EHCI_QH_TYP(QH));
+			qh->qh_dw2 |= BSWAP32(V_EHCI_QH_STSM(0x01));
+			if (spd != HS)
+				qh->qh_dw2 |= BSWAP32(V_EHCI_QH_STCM(0x06));
+			for (idx = 0; idx < 4; idx++) {
+				softc->ehci_intr_table[pte+(idx*64)] =
+				    BSWAP32(ept->ep_phys + V_EHCI_QH_TYP(QH));
+			}
 			_ehci_queueept(softc, softc->ehci_periodic_list, ept);
 		} else
 			printf("EHCI No INTR entries available!\n");
@@ -1642,6 +1662,26 @@ static int ehci_xfer(usbbus_t *bus, usb_ept_t *uept, usbreq_t *ur)
 }
 
 /*  *********************************************************************
+    *  ehci_reset(bus)
+    *
+    *  Reset EHCI
+    *
+    *  Input parameters:
+    *	bus - our USB bus structure
+    *
+    *  Return value:
+    *	nothing
+    ********************************************************************* */
+
+static void ehci_reset(usbbus_t *bus)
+{
+	ehci_softc_t *softc = (ehci_softc_t *) bus->ub_hwsoftc;
+
+	EHCI_WRITECSR(softc, R_EHCI_USBCMD, 0);
+	EHCI_WRITECSR(softc, R_EHCI_USBCMD, M_EHCI_USBCMD_HCR);
+}
+
+/*  *********************************************************************
     *  Driver structure
     ********************************************************************* */
 
@@ -1656,7 +1696,8 @@ usb_hcdrv_t ehci_driver = {
 	ehci_ept_setmps,
 	ehci_ept_setaddr,
 	ehci_ept_cleartoggle,
-	ehci_xfer
+	ehci_xfer,
+	ehci_reset
 };
 
 /*  *********************************************************************

@@ -1,0 +1,11 @@
+/dts-v1/;
+
+/include/ "family-7271.dtsi"
+/include/ "common.dtsi"
+/include/ "A53.dtsi"
+
+
+/ {
+	model = "Broadcom STB (7271b0)";
+	compatible = "brcm,bcm7271b0", "brcm,brcmstb";
+};

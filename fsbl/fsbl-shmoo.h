@@ -7,106 +7,30 @@
  *
  ***************************************************************************/
 #ifndef __FSBL_SHMOO_H__
- #define __FSBL_SHMOO_H__
+#define __FSBL_SHMOO_H__
 
-#include <bchp_common.h>
 #include <fsbl-common.h>
+#include <memsys.h>
+#include "memsys-if.h"
 
-#if defined(BCHP_DDR34_PHY_CONTROL_REGS_0_REG_START)
+#define SHMOO_OPTION_DISABLE_CONSOLE	(1 << 0)
+#define SHMOO_OPTION_WARMBOOT		(1 << 1)
+#define SHMOO_OPTION_PHY_ISLPE0		(1 << 3)
+#define SHMOO_OPTION_SKIP_SHMOO		(1 << 4)
+#define SHMOO_OPTION_SKIP_RTS		(1 << 5)
+#define SHMOO_OPTION_SKIP_MEMCINIT	(1 << 6)
+#define SHMOO_OPTION_SKIP_PHYINIT	(1 << 7)
+#define SHMOO_OPTION_SKIP_PHYDRAMINIT	(1 << 8)
+#define SHMOO_OPTION_SKIP_PHYPLLINIT	(1 << 9)
+#define SHMOO_OPTION_SAVE_PHYSTATE	(1 << 10)
+#define SHMOO_OPTION_PREP_PHYSTANDBY	(1 << 11)
+#define SHMOO_OPTION_PHY_LOWPOWER	(1 << 12)
+#define SHMOO_OPTION_NUMRANKS_MASK	0xF
+#define SHMOO_OPTION_NUMRANKS(n) \
+	((((n)-1) & SHMOO_OPTION_NUMRANKS_MASK) << 13)
 
-#include <bchp_ddr34_phy_control_regs_0.h>
-#include <bchp_memc_gen_0.h>
-#include <bchp_shimphy_addr_cntl_0.h>
-
-#ifdef BCHP_DDR34_PHY_CONTROL_REGS_1_REG_START
- #include <bchp_ddr34_phy_control_regs_1.h>
- #include <bchp_memc_gen_1.h>
- #include <bchp_shimphy_addr_cntl_1.h>
-#endif
-
-#ifdef BCHP_DDR34_PHY_CONTROL_REGS_2_REG_START
- #include <bchp_ddr34_phy_control_regs_2.h>
- #include <bchp_memc_gen_2.h>
- #include <bchp_shimphy_addr_cntl_2.h>
-#endif
-
-/* EDIS HW block information
-       bits[3:0]  - Number of EDIS HW blocks for each PHY
-       bits[31:4] - Register offset between EDIS HW blocks (0 for one EDIS)
-*/
-#define EDIS_NPHY	0x2 /* FIXME: should snoop from RDB on config */
-
-#define EDIS_OFFS	BCHP_MEMC_EDIS_0_1_REG_START - \
-			BCHP_MEMC_EDIS_0_0_REG_START
-
-#define MEMC(n) 	BCHP_MEMC_GEN_##n##_CORE_REV_ID
-#define SHIM_PHY(n)	BCHP_SHIMPHY_ADDR_CNTL_##n##_CONFIG
-#define MEMC_EDIS(n)	BCHP_MEMC_EDIS_##n##_0_REG_START
-
-#ifdef BCHP_DDR34_PHY_CONTROL_REGS_0_PRIMARY_REVISION
- #define DDR_PHY(n)	BCHP_DDR34_PHY_CONTROL_REGS_##n##_PRIMARY_REVISION
-#else
- #define DDR_PHY(n)	BCHP_DDR34_PHY_CONTROL_REGS_##n##_REVISION
-#endif
-
-#define SHMOO_PARAMS(n) { \
-	.memc_reg_base	= BCHP_PHYSICAL_OFFSET + MEMC(n), \
-	.phy_reg_base	= BCHP_PHYSICAL_OFFSET + DDR_PHY(n), \
-	.shim_reg_base	= BCHP_PHYSICAL_OFFSET + SHIM_PHY(n), \
-	.edis_reg_base	= BCHP_PHYSICAL_OFFSET + MEMC_EDIS(n), \
-}
-
-static const struct memsys_params __maybe_unused shmoo_params[] = {
-	SHMOO_PARAMS(0),
-#ifdef BCHP_DDR34_PHY_CONTROL_REGS_1_REG_START
-	SHMOO_PARAMS(1),
-#endif
-#ifdef BCHP_DDR34_PHY_CONTROL_REGS_2_REG_START
-	SHMOO_PARAMS(2),
-#endif
-};
-
-
-#elif defined(BCHP_DDR34_PHY_CONTROL_REGS_A_0_REG_START) /* LPDDR4 */
-
-#include <bchp_ddr34_phy_common_regs_0.h>
-#include <bchp_ddr34_phy_control_regs_a_0.h>
-#include <bchp_ddr34_phy_control_regs_b_0.h>
-#include <bchp_memc_edis_0_0.h>
-#include <bchp_memc_gen_0.h>
-#include <bchp_shimphy_addr_cntl_0.h>
-
-#define MEMC(n) 	BCHP_MEMC_GEN_##n##_CORE_REV_ID
-#define DDR_PHY(n)	BCHP_DDR34_PHY_COMMON_REGS_##n##_PRIMARY_REVISION
-#define SHIM_PHY(n)	BCHP_SHIMPHY_ADDR_CNTL_##n##_CONFIG
-#define MEMC_EDIS(n)	BCHP_MEMC_EDIS_##n##_0_REV_ID
-
-#define SHMOO_PARAMS(n) { \
-	.memc_reg_base	= BCHP_PHYSICAL_OFFSET + MEMC(n), \
-	.phy_reg_base	= BCHP_PHYSICAL_OFFSET + DDR_PHY(n), \
-	.shim_reg_base	= BCHP_PHYSICAL_OFFSET + SHIM_PHY(n), \
-	.edis_reg_base	= BCHP_PHYSICAL_OFFSET + MEMC_EDIS(n), \
-}
-
-#define EDIS_NPHY	0x2 /* FIXME: should snoop from RDB on config */
-#define EDIS_OFFS	BCHP_MEMC_EDIS_0_1_REG_START - \
-			BCHP_MEMC_EDIS_0_0_REG_START
-
-static const struct memsys_params __maybe_unused shmoo_params[] = {
-	SHMOO_PARAMS(0),
-};
-
-
-#else /* TBD: Other DDR controller types. */
-
-#define EDIS_NPHY	0
-#define EDIS_OFFS	0
-static const struct memsys_params __maybe_unused shmoo_params[] = {
-	{0, 0, 0, 0},
-};
-
-#endif
-
+void do_shmoo(const struct memsys_interface *gmemsys,
+	const struct ddr_info *ddr, uint32_t *mcb, unsigned int options);
+void print_shmoo_error(memsys_error_t *e);
 
 #endif /* __FSBL_SHMOO_H__ */
-

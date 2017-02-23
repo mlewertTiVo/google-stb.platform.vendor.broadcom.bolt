@@ -38,7 +38,7 @@
 #include "bsp_config.h"
 #include "gisb.h"
 
-#if defined(DVFS_SUPPPORT)
+#if defined(DVFS_SUPPORT)
 #include "pmap.h"
 #endif
 
@@ -50,7 +50,7 @@ static int ui_cmd_flash(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[]);
 #if !defined(SECURE_BOOT)
 static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[]);
-#if defined(DVFS_SUPPPORT)
+#if defined(DVFS_SUPPORT)
 static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[]);
 #endif
 #endif
@@ -111,7 +111,7 @@ int ui_init_flashcmds(void)
 			"-force;always update flash|"
 			"-forget;forget saved board selection"
 );
-#if defined(DVFS_SUPPPORT)
+#if defined(DVFS_SUPPORT)
 	cmd_addcmd("pmap", ui_cmd_pmap, NULL, "list all, or select a PMap",
 			"pmap [-set=N] where N is the number shown when listing PMap",
 			"-set=*;program and save to flash PMap|"
@@ -710,7 +710,7 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[])
 	}
 	xprintf(" AVS %s, load/run status: %x\n", s, inf->avs_err);
 
-#if defined(DVFS_SUPPPORT)
+#if defined(DVFS_SUPPORT)
 	{
 		const struct dvfs_params *dvfs = board_dvfs();
 		char *ds;
@@ -821,7 +821,7 @@ static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[])
 	return rc;
 }
 
-#if defined(DVFS_SUPPPORT)
+#if defined(DVFS_SUPPORT)
 static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 {
 	bool set_pmap = false, clear_pmap = false;
@@ -850,7 +850,7 @@ static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 	}
 
 	pmap_id_old = board_pmap();
-	if (pmap_id_old >= PMapMax)
+	if (pmap_id_old >= PMAP_MAX)
 		xprintf("Stored PMap ID %d is invalid.\n", pmap_id_old);
 
 	if (!set_pmap && !clear_pmap) {
@@ -872,9 +872,9 @@ static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 		return BOLT_OK;
 	} else if (set_pmap) {
 		pmap_id_new = atoi(s);
-		if (pmap_id_new < 0 || pmap_id_new >= PMapMax) {
+		if (pmap_id_new < 0 || pmap_id_new >= PMAP_MAX) {
 			err_msg("PMap must be [0..%d]. %d is invalid.",
-				PMapMax-1, pmap_id_new);
+				PMAP_MAX-1, pmap_id_new);
 			return BOLT_ERR;
 		}
 		num_domains_pmap = pmapTable[pmap_id_new].num_domains;

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -28,7 +26,11 @@ extern "C" {
  * device: use 0 for STB and 1 for DCS(CM) island
  *     en: enable (1) or disable (0) reste on overtemp
  */
+#ifdef ENABLE_AVS_INIT
 void avs_set_temp_threshold(unsigned int device, int en);
+#else
+static inline void avs_set_temp_threshold(unsigned int device, int en) { }
+#endif
 
 
 /* Use to check whether current reset was due to over temperature condition

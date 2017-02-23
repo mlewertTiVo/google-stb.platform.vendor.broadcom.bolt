@@ -161,7 +161,7 @@ void dvfs_init_board_pmap(int pmap_id)
 		return;
 	}
 
-	if (pmap_id >= PMapMax) {
+	if (pmap_id >= PMAP_MAX) {
 		xprintf("DVFS: PMap%d is not supported\n",pmap_id);
 		return;
 	}

@@ -95,7 +95,173 @@ typedef enum BPXL_Format
 	BPXL_INVALID           = 0
 } BPXL_Format;
 
-typedef int BFMT_VideoFmt ;
+typedef enum
+{
+    BFMT_VideoFmt_eNTSC = 0,                   /* 480i, NTSC-M for North America */
+    BFMT_VideoFmt_eNTSC_J,                     /* 480i (Japan) */
+    BFMT_VideoFmt_eNTSC_443,                   /* NTSC-443 */
+    BFMT_VideoFmt_ePAL_B,                      /* Australia */
+    BFMT_VideoFmt_ePAL_B1,                     /* Hungary */
+    BFMT_VideoFmt_ePAL_D,                      /* China */
+    BFMT_VideoFmt_ePAL_D1,                     /* Poland */
+    BFMT_VideoFmt_ePAL_G,                      /* Europe */
+    BFMT_VideoFmt_ePAL_H,                      /* Europe */
+    BFMT_VideoFmt_ePAL_K,                      /* Europe */
+    BFMT_VideoFmt_ePAL_I,                      /* U.K. */
+    BFMT_VideoFmt_ePAL_M,                      /* 525-lines (Brazil) */
+    BFMT_VideoFmt_ePAL_N,                      /* Jamaica, Uruguay */
+    BFMT_VideoFmt_ePAL_NC,                     /* N combination (Argentina) */
+    BFMT_VideoFmt_ePAL_60,                     /* 60Hz PAL */
+    BFMT_VideoFmt_eSECAM_L,                    /* France */
+    BFMT_VideoFmt_eSECAM_B,                    /* Middle East */
+    BFMT_VideoFmt_eSECAM_G,                    /* Middle East */
+    BFMT_VideoFmt_eSECAM_D,                    /* Eastern Europe */
+    BFMT_VideoFmt_eSECAM_K,                    /* Eastern Europe */
+    BFMT_VideoFmt_eSECAM_H,                    /* Line SECAM */
+    BFMT_VideoFmt_e1080i,                      /* HD 1080i */
+    BFMT_VideoFmt_e1080p,                      /* HD 1080p 60/59.94Hz, SMPTE 274M-1998 */
+    BFMT_VideoFmt_e720p,                       /* HD 720p */
+    BFMT_VideoFmt_e720p_60Hz_3DOU_AS,          /* HD 3D 720p */
+    BFMT_VideoFmt_e720p_50Hz_3DOU_AS,          /* HD 3D 720p50 */
+    BFMT_VideoFmt_e720p_30Hz_3DOU_AS,          /* HD 3D 720p30 */
+    BFMT_VideoFmt_e720p_24Hz_3DOU_AS,          /* HD 3D 720p24 */
+    BFMT_VideoFmt_e480p,                       /* HD 480p */
+    BFMT_VideoFmt_e1080i_50Hz,                 /* HD 1080i 50Hz, 1125 sample per line, SMPTE 274M */
+    BFMT_VideoFmt_e1080p_24Hz_3DOU_AS,         /* HD 1080p 24Hz, 2750 sample per line, SMPTE 274M-1998 */
+    BFMT_VideoFmt_e1080p_30Hz_3DOU_AS,         /* HD 1080p 30Hz, 2200 sample per line, SMPTE 274M-1998 */
+    BFMT_VideoFmt_e1080p_60Hz_3DOU_AS,         /* HD 1080p 60Hz, 2200 sample per line  */
+    BFMT_VideoFmt_e1080p_60Hz_3DLR,            /* HD 1080p 60Hz, 4400 sample per line  */
+    BFMT_VideoFmt_e1080p_24Hz,                 /* HD 1080p 24Hz, 2750 sample per line, SMPTE 274M-1998 */
+    BFMT_VideoFmt_e1080p_25Hz,                 /* HD 1080p 25Hz, 2640 sample per line, SMPTE 274M-1998 */
+    BFMT_VideoFmt_e1080p_30Hz,                 /* HD 1080p 30Hz, 2200 sample per line, SMPTE 274M-1998 */
+    BFMT_VideoFmt_e1080p_50Hz,                 /* HD 1080p 50Hz. */
+    BFMT_VideoFmt_e1080p_100Hz,                /* HD 1080p 100Hz. */
+    BFMT_VideoFmt_e1080p_120Hz,                /* HD 1080p 120Hz. */
+    BFMT_VideoFmt_e1250i_50Hz,                 /* HD 1250i 50Hz, another 1080i_50hz standard SMPTE 295M */
+    BFMT_VideoFmt_e720p_24Hz,                  /* HD 720p 23.976/24Hz, 750 line, SMPTE 296M */
+    BFMT_VideoFmt_e720p_25Hz,                  /* HD 720p 25Hz, 750 line, SMPTE 296M */
+    BFMT_VideoFmt_e720p_30Hz,                  /* HD 720p 30Hz, 750 line, SMPTE 296M */
+    BFMT_VideoFmt_e720p_50Hz,                  /* HD 720p 50Hz (Australia) */
+    BFMT_VideoFmt_e576p_50Hz,                  /* HD 576p 50Hz (Australia) */
+    BFMT_VideoFmt_e240p_60Hz,                  /* NTSC 240p */
+    BFMT_VideoFmt_e288p_50Hz,                  /* PAL 288p */
+    BFMT_VideoFmt_e1440x480p_60Hz,             /* CEA861B */
+    BFMT_VideoFmt_e1440x576p_50Hz,             /* CEA861B */
+    BFMT_VideoFmt_e3840x2160p_24Hz,            /* 3840x2160 24Hz */
+    BFMT_VideoFmt_e3840x2160p_25Hz,            /* 3840x2160 25Hz */
+    BFMT_VideoFmt_e3840x2160p_30Hz,            /* 3840x2160 30Hz */
+    BFMT_VideoFmt_e3840x2160p_50Hz,            /* 3840x2160 50Hz */
+    BFMT_VideoFmt_e3840x2160p_60Hz,            /* 3840x2160 60Hz */
+    BFMT_VideoFmt_e4096x2160p_24Hz,            /* 4096x2160 24Hz */
+    BFMT_VideoFmt_e4096x2160p_25Hz,            /* 4096x2160 25Hz */
+    BFMT_VideoFmt_e4096x2160p_30Hz,            /* 4096x2160 30Hz */
+    BFMT_VideoFmt_e4096x2160p_50Hz,            /* 4096x2160 50Hz */
+    BFMT_VideoFmt_e4096x2160p_60Hz,            /* 4096x2160 60Hz */
+#ifdef BFMT_LEGACY_3DTV_SUPPORT
+    BFMT_VideoFmt_eCUSTOM1920x2160i_48Hz,    /* 3548 LVDS output for legacy 3DTV support */
+    BFMT_VideoFmt_eCUSTOM1920x2160i_60Hz,    /* 3548 LVDS output for legacy 3DTV support */
+#endif
+    BFMT_VideoFmt_eCUSTOM_1440x240p_60Hz,      /* 240p 60Hz 7411 custom format. */
+    BFMT_VideoFmt_eCUSTOM_1440x288p_50Hz,      /* 288p 50Hz 7411 custom format. */
+    BFMT_VideoFmt_eCUSTOM_1366x768p,           /* Custom 1366x768 mode */
+    BFMT_VideoFmt_eCUSTOM_1366x768p_50Hz,      /* Custom 1366x768 50Hz mode */
+    BFMT_VideoFmt_eDVI_640x480p,               /* DVI Safe mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x480p_CVT,           /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_800x600p,               /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1024x768p,              /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x768p,              /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x768p_Red,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x720p_50Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x720p,              /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x720p_Red,          /* DVI VESA mode for computer monitors */
+
+    /* Added for HDMI/HDDVI input support!  VEC does not support these timing format!
+     * Convention: BFMT_VideoFmt_eDVI_{av_width}x{av_height}{i/p}_{RefreshRateInHz}.
+     * Eventually VEC can output all these timing formats when we get the microcodes
+     * for it.  Currently there are no microcode for these yet. */
+    BFMT_VideoFmt_eDVI_640x350p_60Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x350p_70Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x350p_72Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x350p_75Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x350p_85Hz,          /* DVI VESA mode for computer monitors */
+
+    BFMT_VideoFmt_eDVI_640x400p_60Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x400p_70Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x400p_72Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x400p_75Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x400p_85Hz,          /* DVI VESA mode for computer monitors */
+
+    BFMT_VideoFmt_eDVI_640x480p_66Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x480p_70Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x480p_72Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x480p_75Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_640x480p_85Hz,          /* DVI VESA mode for computer monitors */
+
+    BFMT_VideoFmt_eDVI_720x400p_60Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_720x400p_70Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_720x400p_72Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_720x400p_75Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_720x400p_85Hz,          /* DVI VESA mode for computer monitors */
+
+    BFMT_VideoFmt_eDVI_800x600p_56Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_800x600p_59Hz_Red,      /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_800x600p_70Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_800x600p_72Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_800x600p_75Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_800x600p_85Hz,          /* DVI VESA mode for computer monitors */
+
+    BFMT_VideoFmt_eDVI_1024x768p_66Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1024x768p_70Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1024x768p_72Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1024x768p_75Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1024x768p_85Hz,         /* DVI VESA mode for computer monitors */
+
+    BFMT_VideoFmt_eDVI_1280x720p_70Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x720p_72Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x720p_75Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x720p_85Hz,         /* DVI VESA mode for computer monitors */
+
+    /* New DVI or PC vdec input support */
+    BFMT_VideoFmt_eDVI_1024x768i_87Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1152x864p_75Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x768p_75Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x768p_85Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x800p_60Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x960p_60Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x960p_85Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x1024p_60Hz,        /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x1024p_69Hz,        /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x1024p_75Hz,        /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1280x1024p_85Hz,        /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_832x624p_75Hz,          /*   MAC-16 */
+    BFMT_VideoFmt_eDVI_1360x768p_60Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1366x768p_60Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1400x1050p_60Hz,        /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1400x1050p_60Hz_Red,    /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1400x1050p_75Hz,        /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1600x1200p_60Hz,        /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1920x1080p_60Hz_Red,    /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_848x480p_60Hz,          /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1064x600p_60Hz,         /* DVI VESA mode for computer monitors */
+    BFMT_VideoFmt_eDVI_1440x900p_60Hz,         /* DVI VESA mode for computer monitors */
+
+    /* SW7435-276: New format enums for 482/483 */
+    BFMT_VideoFmt_e720x482_NTSC,               /* 720x482i NSTC-M for North America */
+    BFMT_VideoFmt_e720x482_NTSC_J,             /* 720x482i Japan */
+    BFMT_VideoFmt_e720x483p,                   /* 720x483p */
+
+    /* statics: custom formats */
+    BFMT_VideoFmt_eCustom0,         /* 59.94/60 Hz */
+    BFMT_VideoFmt_eCustom1,         /* 50 Hz */
+
+    /* dynamics: custom format */
+    BFMT_VideoFmt_eCustom2,         /* defined at run time by app */
+
+    /* Must be last */
+    BFMT_VideoFmt_eMaxCount         /* Counter. Do not use! */
+
+} BFMT_VideoFmt;
+
 
 #define true 1
 #define false 0

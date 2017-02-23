@@ -255,14 +255,14 @@ const struct dvfs_params *board_dvfs(void)
 	return &(board_params[inf->board_idx].dvfs);
 }
 
-#ifdef DVFS_SUPPPORT
+#ifdef DVFS_SUPPORT
 unsigned int board_pmap(void)
 {
 	struct fsbl_info *inf = board_info();
 	unsigned int pmap_id;
 
 	if (!inf || (inf->board_idx >= inf->n_boards))
-		return PMapMax;
+		return PMAP_MAX;
 
 	pmap_id = FSBL_HARDFLAG_PMAP_ID(inf->saved_board.hardflags);
 	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD) {

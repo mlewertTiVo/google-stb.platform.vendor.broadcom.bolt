@@ -56,7 +56,7 @@ enum {
 
 /* Consecutive readable/writeable spare area registers, in bytes */
 #if (BCHP_NAND_REVISION_MAJOR_DEFAULT >= 7 && \
-	BCHP_NAND_REVISION_MINOR_DEFAULT >= 2)
+	BCHP_NAND_REVISION_MINOR_DEFAULT == 2)
 #define NAND_MAX_SPARE_AREA 128
 #else
 #define NAND_MAX_SPARE_AREA 64
@@ -177,6 +177,21 @@ struct flash_dma_desc {
 #define FLASH_DMA_ECC_ERROR	(1 << 8)
 #define FLASH_DMA_CORR_ERROR	(1 << 9)
 
+#if NAND_CONTROLLER_REVISION >= 0x703
+enum flash_dma_reg {
+	FLASH_DMA_REVISION		= 0x00,
+	FLASH_DMA_FIRST_DESC		= 0x08,
+	FLASH_DMA_FIRST_DESC_EXT	= 0x0,
+	FLASH_DMA_CTRL			= 0x10,
+	FLASH_DMA_MODE			= 0x14,
+	FLASH_DMA_STATUS		= 0x18,
+	FLASH_DMA_INTERRUPT_DESC	= 0x20,
+	FLASH_DMA_INTERRUPT_DESC_EXT	= 0x0,
+	FLASH_DMA_ERROR_STATUS		= 0x28,
+	FLASH_DMA_CURRENT_DESC		= 0x30,
+	FLASH_DMA_CURRENT_DESC_EXT	= 0x0,
+};
+#else
 enum flash_dma_reg {
 	FLASH_DMA_REVISION		= 0x00,
 	FLASH_DMA_FIRST_DESC		= 0x04,
@@ -190,6 +205,7 @@ enum flash_dma_reg {
 	FLASH_DMA_CURRENT_DESC		= 0x24,
 	FLASH_DMA_CURRENT_DESC_EXT	= 0x28,
 };
+#endif
 
 static inline bool has_flash_dma(struct nand_dev *nand)
 {
@@ -210,6 +226,17 @@ static inline void flash_dma_writel(struct nand_dev *nand, uint32_t offs,
 static inline uint32_t flash_dma_readl(struct nand_dev *nand, uint32_t offs)
 {
 	return DEV_RD((unsigned long)nand->flash_dma_base + offs);
+}
+
+static inline void flash_dma_write64(struct nand_dev *nand, uint32_t offs,
+				    uint64_t val)
+{
+	DEV_WR64((unsigned long)nand->flash_dma_base + offs, val);
+}
+
+static inline uint64_t flash_dma_read64(struct nand_dev *nand, uint32_t offs)
+{
+	return DEV_RD64((unsigned long)nand->flash_dma_base + offs);
 }
 
 static inline bool flash_dma_irq_done(void)
@@ -784,9 +811,16 @@ static uint32_t do_nand_cmd(struct nand_probe_info *info, uint32_t cmd,
 
 	DBG("NAND cmd: %#04x @ %llx\n", cmd, addr);
 
+#if NAND_CONTROLLER_REVISION >= 0x703
+	/* 64 bit register */
+	addr &= BCHP_NAND_CMD_ADDRESS_ADDRESS_MASK;
+	addr |= ((uint64_t)info->cs) << BCHP_NAND_CMD_ADDRESS_CS_SEL_SHIFT;
+	BDEV_WR64(BCHP_NAND_CMD_ADDRESS, addr);
+#else
 	BDEV_WR(BCHP_NAND_CMD_EXT_ADDRESS,
 			(info->cs << 16) | ((addr >> 32) & 0xffff));
 	BDEV_WR(BCHP_NAND_CMD_ADDRESS, addr & 0xffffffff);
+#endif
 	BDEV_WR_F(NAND_CMD_START, OPCODE, cmd);
 
 	while (!BDEV_RD_F(NAND_INTFC_STATUS, CTLR_READY)) {
@@ -1030,11 +1064,21 @@ static int nand_write_page(struct nand_dev *nand,
 
 	/* Fill spare area with 0xff */
 	for (i = 0; i < NAND_MAX_SPARE_AREA; i += 4)
-		BDEV_WR(BCHP_NAND_SPARE_AREA_READ_OFS_0 + i, 0xffffffff);
+		BDEV_WR(BCHP_NAND_SPARE_AREA_WRITE_OFS_0 + i, 0xffffffff);
 
 	for (i = 0; i < flash->writesize; i += NAND_FC_SIZE) {
+		/*
+		 * need to update subpage address in NAND_CMD_ADDRESS
+		 * register before filling flash cache, even though
+		 * we call do_nand_cmd() where we do the same for each
+		 * subpage
+		 */
+#if NAND_CONTROLLER_REVISION >= 0x703
+		/* 64 bit register */
+		BDEV_WR64(BCHP_NAND_CMD_ADDRESS, addr + i);
+#else
 		BDEV_WR(BCHP_NAND_CMD_ADDRESS, addr + i);
-
+#endif
 		for (j = 0; j < NAND_FC_SIZE / 4; j++, buf++)
 			BDEV_WR(NAND_FC(j), *buf);
 
@@ -1131,6 +1175,13 @@ static int nand_verify_erased_page(struct nand_dev *nand, uint64_t addr,
 	int max_bitflips = 0, bitflips = 0;
 	unsigned int sector_size = flash->ecc_step;
 
+#if NAND_CONTROLLER_REVISION >= 0x702
+	/*
+	 * read erased page is protected from ecc error generated
+	 * skip software check.
+	 */
+	return NAND_ERR_UNCORR;
+#endif
 	nand_enable_read_ecc(nand, false);
 	for (i = 0; i < flash->writesize; i += NAND_FC_SIZE) {
 		nand_read_sector(info, addr + i, buf + i);
@@ -1351,8 +1402,13 @@ static int nand_dma_run(struct nand_dev *nand, dma_addr_t desc)
 
 	flash_dma_irq_clear();
 
+#if NAND_CONTROLLER_REVISION >= 0x703
+	flash_dma_write64(nand, FLASH_DMA_FIRST_DESC, desc);
+	(void) flash_dma_read64(nand, FLASH_DMA_FIRST_DESC);
+#else
 	flash_dma_writel(nand, FLASH_DMA_FIRST_DESC, lower_32_bits(desc));
 	flash_dma_writel(nand, FLASH_DMA_FIRST_DESC_EXT, upper_32_bits(desc));
+#endif
 
 	/* Start FLASH_DMA engine */
 	BARRIER();

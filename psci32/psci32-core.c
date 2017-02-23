@@ -384,7 +384,7 @@ static uint32_t do_cpu_on(int me, uint32_t target_id,
 		return PSCI_ERR_INTERNAL_FAILURE;
 	}
 
-	set_cpu_boot_addr(other, (uint32_t)cpu_init);
+	set_cpu_boot_addr(other, (uint64_t)((uint32_t)cpu_init));
 
 	config->cpu[other].state = CPU_PEND_ON;
 

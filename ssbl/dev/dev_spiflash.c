@@ -817,7 +817,7 @@ static int spi_probe_device(struct spidev *softc)
 	softc->fd_probe.flash_phys = BDEV_RD(BCHP_EBI_CS_BASE_0) &
 				     BCHP_EBI_CS_BASE_0_base_addr_MASK;
 #if CFG_ARCH_ARM
-	softc->fd_probe.flash_phys = 0xe0000000;
+	softc->fd_probe.flash_phys = BOLT_TEXT_ADDR;
 #else
 	softc->fd_probe.flash_phys = 0x20000000 - softc->flash.size;
 #endif
@@ -1301,7 +1301,7 @@ static void bspi_read(struct spidev *softc, void *buf, uint32_t addr,
 	bspi_flush_prefetch_buffers();
 
 #if CFG_ARCH_ARM /* for ARM, this is not needed */
-	reg_base = 0xe0000000;
+	reg_base = BOLT_TEXT_ADDR;
 #else
 #error MIPS support not implemented
 #endif

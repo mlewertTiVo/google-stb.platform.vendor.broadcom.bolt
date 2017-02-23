@@ -1028,6 +1028,7 @@ static usbbus_t *ohci_create(physaddr_t addr)
 	int res, o;
 	ohci_softc_t *softc;
 	usbbus_t *bus;
+	uint32_t reg;
 
 	o = env_getval("OHCIDBG");
 	if (o >= 0) {
@@ -1054,6 +1055,12 @@ static usbbus_t *ohci_create(physaddr_t addr)
 	softc->ohci_regs = addr;
 	softc->ohci_rh_newaddr = -1;
 	softc->ohci_bus = bus;
+
+	/* Root Hub setup - Choose individual power and OCD modes */
+	reg = OHCI_READCSR(softc, R_OHCI_RHDSCRA);
+	reg |= 0x900;
+	OHCI_WRITECSR(softc, R_OHCI_RHDSCRA, reg);
+	OHCI_WRITECSR(softc, R_OHCI_RHDSCRB, 0xfe0000);
 
 	res = _ohci_initpools(softc);
 	if (res != 0)
@@ -1523,6 +1530,27 @@ static int ohci_xfer(usbbus_t *bus, usb_ept_t *uept, usbreq_t *ur)
 }
 
 /*  *********************************************************************
+    *  ohci_reset(bus)
+    *
+    *  Reset OHCI
+    *
+    *  Input parameters:
+    *	bus - our USB bus structure
+    *
+    *  Return value:
+    *	nothing
+    ********************************************************************* */
+
+static void ohci_reset(usbbus_t *bus)
+{
+	ohci_softc_t *softc = (ohci_softc_t *) bus->ub_hwsoftc;
+
+	OHCI_WRITECSR(softc, R_OHCI_CMDSTATUS, M_OHCI_CMDSTATUS_HCR);
+	OHCI_WRITECSR(softc, R_OHCI_CONTROL, 0);
+
+}
+
+/*  *********************************************************************
     *  Driver structure
     ********************************************************************* */
 
@@ -1537,7 +1565,8 @@ usb_hcdrv_t ohci_driver = {
 	ohci_ept_setmps,
 	ohci_ept_setaddr,
 	ohci_ept_cleartoggle,
-	ohci_xfer
+	ohci_xfer,
+	ohci_reset
 };
 
 /*  *********************************************************************

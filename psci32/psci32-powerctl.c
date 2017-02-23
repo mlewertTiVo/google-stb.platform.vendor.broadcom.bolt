@@ -12,12 +12,12 @@
 
 #include <bchp_common.h>
 #include <bchp_cntcontrolbase.h>
+#include <bchp_hif_continuation.h>
 #include <bchp_hif_cpubiuctrl.h>
 #include <bchp_sun_top_ctrl.h>
 
 #include <psci.h>
 #include <error.h>
-
 
 /* Macro works as long as the h/w ip blocks have the same offsets. Either
  next to each other, or as part of a larger block. Have to revisit and use
@@ -84,13 +84,16 @@ static int wait_bit_clr(uint32_t reg, uint32_t mask)
  * -------------
  */
 
-void set_cpu_boot_addr(unsigned int cpu, uint32_t boot_addr)
+void set_cpu_boot_addr(unsigned int cpu, uint64_t boot_addr)
 {
-	uint32_t base, lo = boot_addr, hi = 0;
+	uint32_t base;
 
-	/* 2 x 32 bit registers per entry:
+	/* 2 x 32 bit registers per entry, or:
 	 * HIF_CONTINUATION_STB_BOOT_HI_ADDR0	07:00
 	 * HIF_CONTINUATION_STB_BOOT_ADDR0	31:00
+	 *
+	 * 1 x 64 bit register per entry:
+	 * HIF_CONTINUATION_STB_BOOT_ADDR0	39:00
 	 */
 	base = BCHP_HIF_CONTINUATION_REG_START + (cpu << 3);
 
@@ -103,8 +106,14 @@ void set_cpu_boot_addr(unsigned int cpu, uint32_t boot_addr)
 		puts("");
 	}
 
-	rdb_write(base, hi);
-	rdb_write(base + sizeof(uint32_t), lo);
+#ifndef BCHP_HIF_CONTINUATION_STB_BOOT_HI_ADDR0
+	rdb_write64(base, boot_addr);
+#else
+	/* high 8 bits address */
+	rdb_write(base, (uint32_t)((boot_addr >> 32) & 0x00000000000000ffULL));
+	base += sizeof(uint32_t); /* and, low 32 bits address */
+	rdb_write(base, (uint32_t) (boot_addr        & 0x00000000ffffffffULL));
+#endif
 	BARRIER();
 }
 
