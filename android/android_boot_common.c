@@ -209,6 +209,14 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add node /firmware android");
 	bolt_docommands(dt_add_cmd);
+	os_sprintf(dt_add_cmd, "dt add prop /firmware/android compatible s 'android,firmware'");
+	bolt_docommands(dt_add_cmd);
+	os_sprintf(dt_add_cmd, "dt add node /android fstab");
+	bolt_docommands(dt_add_cmd);
+   /* enable for early mount, need to populate the actual table content, then enable this node.
+	 *   os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab compatible s 'android,fstab'");
+	 *   bolt_docommands(dt_add_cmd);
+    */
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android serialno s '%s'", get_serial_no());
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android hardware s '%s'", get_hardware_name());
