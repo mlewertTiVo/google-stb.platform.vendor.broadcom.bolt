@@ -3943,6 +3943,11 @@ sub process_dev_tree($)
 		BcmDt::Devices::merge_clocks_file($rh->{rh_defines},
 			$dt, $clks_file)
 	} else {
+		# we must insert clock-frequency into the UARTS.
+		my $ni = BcmDt::Devices::insert_clk_frequency_into_uarts($rdb);
+		print "$P: WARN: no clocks or clock-freqs inserted for uart!\n"
+			if (!$ni && BcmUtils::get_num_serial($rh->{rh_defines}));
+
 		print "  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
 		print "  WARNING: no clock tree present\n";
 		print "  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";

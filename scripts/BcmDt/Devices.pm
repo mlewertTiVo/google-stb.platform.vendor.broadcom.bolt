@@ -654,6 +654,12 @@ sub output_interrupt_prop($$)
 	return $t;
 }
 
+# This variable will be set/modified by start_uart_body()
+# and then later on it maybe used to insert the
+# "clock-frequency" property into the nodes by func
+# insert_clk_frequency_into_uarts().
+my @serial_names;
+
 sub start_uart_body($$$$$$)
 {
 	my ($rh, $info, $label, $addr, $regs_ref, $intr_ref) = @_;
@@ -661,7 +667,6 @@ sub start_uart_body($$$$$$)
 	my @regs = @$regs_ref;
 	my @intrs = @$intr_ref;
 	my %default = ("compatible" => "ns16550a",
-		       "clock-frequency" => [ "dec", 81000000 ],
 		       "reg-shift" => [ "hex", 2 ],
 		       "reg-io-width" => [ "hex", 4 ],
 		      );
@@ -677,6 +682,7 @@ sub start_uart_body($$$$$$)
 	}
 	my $t = sprintf("%s: serial@%x {\n", $label, $addr);
 	insert_label($label, sprintf("serial@%x", $addr));
+	push @serial_names, sprintf("serial@%x", $addr);
 	$t .= output_default(\%default);
 	my $reg_addrs;
 	my $reg_names;
@@ -3680,11 +3686,35 @@ sub gen_clocks_prop
 	# change sata30 => sata3
 	$str1 =~ s/\b(sw_sata3)\d+\b/$1/g;
 
+	# change sw_uart0 => sw_baud
+	$str1 =~ s/\bsw_uart\d\b/sw_baud/g;
+	
 	my $clks = DevTree::prop->new($str0);
 	my $clock_names = DevTree::prop->new($str1);
 	return { clks => $clks, clock_names => $clock_names };
 }
 
+###############################################################
+# FUNCTION:
+#
+###############################################################
+sub insert_clk_frequency_into_uarts($)
+{
+    my ($dt) = @_;
+    my $count = 0;
+
+    my $text = "clock-frequency = <81000000>;";
+
+    foreach my $uart (@serial_names) {
+	my $re = qr/$uart/;
+	my ($x) = $dt->find_node($re);
+	next if !$x;
+	$x->add_prop(DevTree::prop->new($text));
+	$count++;
+    }
+    return $count;
+}
+    
 
 ###############################################################
 # FUNCTION:
@@ -4017,6 +4047,19 @@ STOP
 		qr/^SWITCH/, qr/^ethernet_switch\@/);
 	print "$P: WARN: no clocks inserted for switch!\n"
 		if (!$ni && BcmUtils::get_num_sf2_switch($bd));
+
+	# UART
+	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'none',
+		qr/^UART/, qr/^serial/);
+	if ($ni) {
+	    print "$P: WARN: no clocks inserted for uart!\n"
+		if (!$ni && BcmUtils::get_num_serial($bd));
+	} else {
+	    $ni = insert_clk_frequency_into_uarts($rdb);
+	    print "$P: WARN: no clocks or clock-freqs inserted for uart!\n"
+		if (!$ni && BcmUtils::get_num_serial($bd));
+	}
+
 
 	####################
 	# USB, old way
