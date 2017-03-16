@@ -178,11 +178,12 @@ static const uint32_t mcb_1600mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbda
 /* 7268B_1867MHz_32b_dev8Gx16_LPDDR4-3733_le.mcb
 */
 static const uint32_t mcb_1867mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0x7710d662,	/* 3 */
-	0x00000006,  0x00103dae,	/* 6 */
+	0x00000003,  0x7718bc60,	/* 3 */
+	0x00000005,  0x00002002,	/* 5 */
+	0x00000006,  0x00203fb9,	/* 6 */
 	0x0000000f,  0x0000074b,	/* 15 */
 	0x00000010,  0x001c513f,	/* 16 */
-	0x00000013,  0x00000001,	/* 19 */
+	0x00000016,  0x00404000,	/* 22 */
 	0x00000018,  0x00001e20,	/* 24 */
 	0x00000019,  0x00001e20,	/* 25 */
 	0x0000001d,  0x0021766c,	/* 29 */
@@ -200,13 +201,12 @@ static const uint32_t mcb_1867mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbda
 	0x00000046,  0x3c3c1b4b,	/* 70 */
 	0x00000047,  0x201d211e,	/* 71 */
 	0x00000048,  0x3c1b2010,	/* 72 */
-	0x00000051,  0x0001a955,	/* 81 */
 	0x00000053,  0x1322224f,	/* 83 */
 	0x00000054,  0x00204b0e,	/* 84 */
 	0x00000055,  0x133c3c1b,	/* 85 */
 	0x00000056,  0x0030281b,	/* 86 */
 	0x00000057,  0x0015074b,	/* 87 */
-	0x00000058,  0x0481100e,	/* 88 */
+	0x00000058,  0x04811160,	/* 88 */
 	0x0000005a,  0x08206b30,	/* 90 */
 	0x0000005b,  0x3c1b2010,	/* 91 */
 	0x00000062,  0x200fe038,	/* 98 */
@@ -218,7 +218,7 @@ static const uint32_t mcb_1867mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbda
 	0x00000086,  0x179d2dce,	/* 134 */
 	0x00000087,  0x03590438,	/* 135 */
 	0x00000088,  0x00001c78,	/* 136 */
-	0xffffffff,  0xef5453b3,	/* -1 */
+	0xffffffff,  0xef641faf,	/* -1 */
 }; /* 40 differences */
 
 const struct memsys_info __maybe_unused shmoo_data[] __attribute__ ((section(".mcbtable"))) = {
