@@ -63,9 +63,9 @@
  * fastboot layer, but for now use the max unless there is a memory constraint */
 #define USB_BULKOUT_BUFFER_SIZE	(64*1024)
 
-/* Use 2048 bytes for TCP receive buffer as we want it to be a size larger than
+/* Use 32*1024 bytes for TCP receive buffer as we want it to be a size larger than
  * MTU size (1500 bytes) and also a power of 2 for efficient cache data fetch*/
-#define TCP_RECV_BUFFER_SIZE	(2048)
+#define TCP_RECV_BUFFER_SIZE	(32*1024)
 
 /* Assume Android platform does not need more than 64 partitions */
 #define MAX_PTN 64
