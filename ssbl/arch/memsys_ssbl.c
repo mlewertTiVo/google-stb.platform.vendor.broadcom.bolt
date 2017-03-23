@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -15,45 +15,25 @@
 #include "arch.h"
 #include "lib_physio.h"
 
-
 #if defined(BCHP_DDR34_PHY_BYTE_LANE_0_0_REG_START)
- /*
-  * 7250b0, 7364a0, 7364b0, 7364c0, 74371a0, 7260a0,
-  * [7366c0 7439b0, 7445d0, 7445e0].
-  */
 #include "bchp_ddr34_phy_byte_lane_0_0.h"
 #define	PHY_BYTE_LANE_0		BCHP_DDR34_PHY_BYTE_LANE_0_0_BL_SPARE_REG
 #elif defined(BCHP_DDR34_PHY_BYTE_LANE_0_A_0_REG_START)
- /*
-  * 7268a0, 7271a0.
-  */
 #include "bchp_ddr34_phy_byte_lane_0_a_0.h"
 #define	PHY_BYTE_LANE_0		BCHP_DDR34_PHY_BYTE_LANE_0_A_0_BL_SPARE_REG
 #else
-/*
- * Other chip def, or we are missing the RDB header.
- */
 #error ddr_ssc: PHY_BYTE_LANE undefined!
 #endif
 
-
 #if defined(BCHP_DDR34_PHY_BYTE_LANE_0_1_REG_START)
- /*
-  * 7366c0, 7439b0, [7445d0, 7445e0].
-  */
 #include "bchp_ddr34_phy_byte_lane_0_1.h"
 #define	PHY_BYTE_LANE_1		BCHP_DDR34_PHY_BYTE_LANE_0_1_BL_SPARE_REG
 #endif
 
-
 #if defined(BCHP_DDR34_PHY_BYTE_LANE_0_2_REG_START)
- /*
-  * 7445d0, 7445e0.
-  */
 #include "bchp_ddr34_phy_byte_lane_0_2.h"
 #define	PHY_BYTE_LANE_2		BCHP_DDR34_PHY_BYTE_LANE_0_2_BL_SPARE_REG
 #endif
-
 
 /*
  * BL_SPARE_REG is set by FSBL memsys (shmoo'ing) code to

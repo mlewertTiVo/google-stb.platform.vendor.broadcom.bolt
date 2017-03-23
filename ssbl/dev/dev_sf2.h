@@ -58,6 +58,8 @@
 	BCHP_SWITCH_CORE_CTL_IMP_RX_UCST_EN_MASK
 #define BCHP_SWITCH_CORE_IMP_CTL_RX_BCST_EN_MASK \
 	BCHP_SWITCH_CORE_CTL_IMP_RX_BCST_EN_MASK
+#define BCHP_SWITCH_CORE_IMP_CTL_RX_MCST_EN_MASK \
+	BCHP_SWITCH_CORE_CTL_IMP_RX_MCST_EN_MASK
 #endif
 
 #ifndef BCHP_SWITCH_REG_LED_0_CNTRL_sel_no_link_encode_SHIFT
@@ -77,5 +79,5 @@
 void bcm_sf2_init(void);
 mdio_info_t *bcm_sf2_mdio_init(void);
 void bcm_sf2_exit(void);
-
+void bcm_sf2_multicast_enable(void);
 #endif /* _BCMSF2_H */

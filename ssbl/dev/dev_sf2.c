@@ -399,7 +399,7 @@ static void sf2_mdio_probe(bolt_driver_t * drv, unsigned long probe_a,
 	phy_speed_t phy_speed;
 	const enet_params *e;
 	char buf[255];
-	int phy_addr[NUM_SWITCH_PHY];
+	int phy_addr[NUM_SWITCH_PHY] = {0};
 	int i, cnt = 0;
 
 	softc->base = BVIRTADDR(BCHP_SWITCH_MDIO_REG_START);
@@ -569,7 +569,7 @@ static int sf2_mdio_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 {
 	sf2_softc *softc = ctx->dev_softc;
 	int retval = BOLT_OK;
-	int phy_addr[NUM_SWITCH_PHY];
+	int phy_addr[NUM_SWITCH_PHY] = {0};
 	int i, cnt = 0;
 	unsigned int port, phyid;
 	struct ether_phy_info *phy_info;
@@ -760,4 +760,14 @@ void bcm_sf2_exit(void)
 
 	if (timeout == 0)
 		err_msg("failed to software reset switch!\n");
+}
+void bcm_sf2_multicast_enable(void)
+{
+	uint32_t reg;
+	/* Accept only broadcast, multicast  and unicast for IMP port */
+	reg = BDEV_RD(BCHP_SWITCH_CORE_IMP_CTL);
+	reg |= BCHP_SWITCH_CORE_IMP_CTL_RX_UCST_EN_MASK |
+		BCHP_SWITCH_CORE_IMP_CTL_RX_MCST_EN_MASK |
+		BCHP_SWITCH_CORE_IMP_CTL_RX_BCST_EN_MASK;
+	BDEV_WR(BCHP_SWITCH_CORE_IMP_CTL, reg);
 }

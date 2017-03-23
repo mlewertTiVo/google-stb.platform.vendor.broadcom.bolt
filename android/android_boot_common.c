@@ -209,6 +209,14 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add node /firmware android");
 	bolt_docommands(dt_add_cmd);
+	os_sprintf(dt_add_cmd, "dt add prop /firmware/android compatible s 'android,firmware'");
+	bolt_docommands(dt_add_cmd);
+	os_sprintf(dt_add_cmd, "dt add node /android fstab");
+	bolt_docommands(dt_add_cmd);
+   /* enable for early mount, need to populate the actual table content, then enable this node.
+	 *   os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab compatible s 'android,fstab'");
+	 *   bolt_docommands(dt_add_cmd);
+    */
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android serialno s '%s'", get_serial_no());
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android hardware s '%s'", get_hardware_name());
@@ -1103,3 +1111,45 @@ void android_wktmr_adjust(void)
 	}
 }
 #endif
+
+
+#define BCHP_TIMER_WDTIMEOUT_OFFSET	0x28
+#define BCHP_TIMER_WDTCMD_OFFSET	0x2c
+#define WDT_RATE			27000000
+#define WDT_START1			0xff00
+#define WDT_START2			0x00ff
+#define WDT_TIMEOUT_ENVAR		"WDT_TIMEOUT"
+
+/* Start watchdog timer with the user-specified timeout */
+void android_start_wdt(void)
+{
+	volatile uint32_t *wdt_timeout = (volatile uint32_t *)
+		REG_ADDR(BCHP_TIMER_REG_START + BCHP_TIMER_WDTIMEOUT_OFFSET);
+	volatile uint32_t *wdt_cmd = (volatile uint32_t *)
+		REG_ADDR(BCHP_TIMER_REG_START + BCHP_TIMER_WDTCMD_OFFSET);
+	char *timeout_str;
+	int timeout;
+
+	timeout_str = env_getenv(WDT_TIMEOUT_ENVAR);
+	if (!timeout_str) {
+		os_printf("'%s' env var not set. WDT not started\n",
+			  WDT_TIMEOUT_ENVAR);
+		return;
+	}
+
+	timeout = os_atoi(timeout_str);
+	if (timeout <= 0) {
+		os_printf("'%s' (%d) must be > 0. WDT not started\n",
+			  WDT_TIMEOUT_ENVAR, timeout);
+		return;
+	}
+
+	os_printf("Starting WDT with timeout of %d seconds\n", timeout);
+
+	/* Program watchdog timeout */
+	*wdt_timeout = timeout * WDT_RATE;
+
+	/* Start watchdog timer */
+	*wdt_cmd = WDT_START1;
+	*wdt_cmd = WDT_START2;
+}

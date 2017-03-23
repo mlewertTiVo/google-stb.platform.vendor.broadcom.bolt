@@ -116,7 +116,7 @@ struct ether_phy_info {
 #define IOCTL_ETHER_GET_MDIO_PHYID	13 /* Get the PHY ID for the mdio */
 #define IOCTL_ETHER_SET_PHY_DEFCONFIG	14 /* Apply default phy workarounds */
 #define IOCTL_ETHER_GET_PHY_INFO	15
-
+#define IOCTL_ETHER_SETMULTICAST_HWADDR	16
 #define ETHER_LOOPBACK_OFF	0	/* no loopback */
 #define ETHER_LOOPBACK_MAC_INT	1	/* MAC Internal loopback */
 #define ETHER_LOOPBACK_MAC_EXT	2	/* MAC External loopback */

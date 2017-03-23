@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,11 +10,30 @@
 #ifndef __XPT_DMA_H__
 #define __XPT_DMA_H__
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <bchp_common.h>
+#if CFG_MEMDMA_MCPB
+#include <bchp_xpt_memdma_mcpb_ch0.h>
+#include <bchp_xpt_memdma_mcpb.h>
+#else
+#include <bchp_xpt_mcpb_ch0.h>
+#include <bchp_xpt_mcpb.h>
+#endif
+
 #include <compiler.h>
 #include <config.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
+#if CFG_MEMDMA_MCPB
+#ifndef BCHP_XPT_MEMDMA_MCPB_CH0_DMA_DATA_CONTROL
+#define XPT_DMA_DESC_IS_64BIT /* DMA descriptor is 64-bit register */
+#endif
+#else
+#ifndef BCHP_XPT_MCPB_CH0_DMA_DATA_CONTROL
+#define XPT_DMA_DESC_IS_64BIT /* DMA descriptor is 64-bit register */
+#endif
+#endif
 
 #if CFG_MEMDMA_MCPB
 #define PID_CHANNEL_A	1022
@@ -33,14 +52,25 @@ struct dma_region {
 };
 
 struct mcpb_dma_desc {
+#ifdef XPT_DMA_DESC_IS_64BIT
 	uint32_t buf_hi;
 	uint32_t buf_lo;
-	uint32_t next_offs; /* or 00001b for "last descriptor" */
+	uint32_t size;
+	uint32_t opts1;
+	uint32_t opts2;
+	uint32_t pid_channel;
+	uint32_t next_hi;
+	uint32_t next_offs; /* [0] == 1 for "last descriptor" */
+#else
+	uint32_t buf_hi;
+	uint32_t buf_lo;
+	uint32_t next_offs; /* [0] == 1 for "last descriptor" */
 	uint32_t size;
 	uint32_t opts1;
 	uint32_t opts2;
 	uint32_t pid_channel;
 	uint32_t reserved;
+#endif
 };
 
 struct wdma_desc {

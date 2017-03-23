@@ -91,7 +91,7 @@ extern "C" {
 #define MEMSYS_FW_VERSION_MAJOR             5
 #define MEMSYS_FW_VERSION_MINOR             1
 #define MEMSYS_FW_VERSION_PATCH             0
-#define MEMSYS_FW_VERSION_ENG               3
+#define MEMSYS_FW_VERSION_ENG               4
     
 #define MEMSYS_FW_VERSION                                         \
     ((MEMSYS_FW_VERSION_MAJOR << MEMSYS_FW_VERSION_MAJOR_SHIFT) | \
@@ -370,6 +370,7 @@ typedef enum memsys_error_shmoo
     MEMSYS_ERROR_SHMOO_WR_SHMOO_EXCEEDED_RANGE_LIMIT,       // word 4: 0x00000008
     MEMSYS_ERROR_SHMOO_WR_SHMOO_WIDE_NO_WINDOW,             // word 4: 0x00000010
     MEMSYS_ERROR_OVERALL_INVALID_RANK_COUNT,                // word 4: 0x00000020
+    MEMSYS_ERROR_SHMOO_LP4_WR_DMI_SHMOO_BAD_WINDOW,         // word 4: 0x00000040
     MEMSYS_ERROR_SHMOO_MAX
 } memsys_error_shmoo_e;
 

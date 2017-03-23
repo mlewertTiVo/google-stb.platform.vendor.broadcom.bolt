@@ -12,6 +12,7 @@
 
 #include "lib_types.h"
 #include <stddef.h>
+#include <stdarg.h>
 
 char *lib_strcpy(char *dest, const char *src);
 char *lib_strncpy(char *dest, const char *src, size_t cnt);
@@ -20,6 +21,7 @@ size_t lib_strlen(const char *str);
 
 int lib_strcmp(const char *dest, const char *src);
 int lib_strcmpi(const char *dest, const char *src);
+int lib_strncasecmp(const char *s1, const char *s2, size_t n);
 char *lib_strchr(const char *dest, int c);
 char *lib_strrchr(const char *dest, int c);
 int lib_memcmp(const void *dest, const void *src, size_t cnt);
@@ -30,6 +32,7 @@ void *lib_memset(void *dest, int c, size_t cnt);
 char *lib_strdup(const char *str);
 void lib_strupr(char *s);
 char lib_toupper(char c);
+char lib_tolower(char c);
 char *lib_strcat(char *dest, const char *src);
 char *lib_gettoken(char **str);
 char *lib_strnchr(const char *dest, int c, size_t cnt);
@@ -42,6 +45,7 @@ int lib_xtoi(const char *dest);
 uint64_t lib_xtoq(const char *dest);
 char *lib_strstr(const char *dest, const char *find);
 int lib_strncmp(const char *dest, const char *src, size_t cnt);
+int lib_snprintf(char *outbuf, int n, const char *format, ...);
 
 static inline void *lib_xtop(const char *s)
 {
@@ -68,9 +72,12 @@ static inline void *lib_xtop(const char *s)
 #define memcpy(d,s,c) lib_memcpy(d,s,c)
 #define memmove(d,s,c) lib_memmove(d,s,c)
 #define memchr(s,c,n) lib_memchr(s,c,n)
+#define bcopy(s, d, c) lib_memcpy(d, s, c)
+#define bzero(d, c) lib_memset(d, 0, c)
 #define strupr(s) lib_strupr(s)
 #define toupper(c) lib_toupper(c)
-#define strcat(d,s) lib_strcat(d,s)
+#define tolower(c) lib_tolower(c)
+#define strcat(d, s) lib_strcat(d, s)
 #define gettoken(s) lib_gettoken(s)
 #define strnchr(d,ch,cnt) lib_strnchr(d,ch,cnt)
 #define atoi(d) lib_atoi(d)
@@ -83,6 +90,7 @@ static inline void *lib_xtop(const char *s)
 #define setoptions(x,y,z) lib_setoptions(x,y,z)
 #define strstr(d,s) lib_strstr(d,s)
 #define strncmp(d,s,c) lib_strncmp(d,s,c)
+#define strncasecmp(d, s, n) lib_strncasecmp(d, s, n)
 
 #endif
 

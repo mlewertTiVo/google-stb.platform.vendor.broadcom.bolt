@@ -187,13 +187,7 @@ void fsbl_main(void)
 	BDEV_WR(BCHP_SUN_GISB_ARB_TIMER, 0x278d0); /* 1.5 ms */
 	BDEV_WR(BCHP_SUN_GISB_ARB_REQ_MASK, 0);
 
-#ifndef SECURE_BOOT
-	bypass_avs = ('8' == getc());
-	if (bypass_avs)
-		puts("AVS: BYPASS");
-	else
-#endif
-		avs_init(); /* initialize the AVS hardware, if applicable. */
+	avs_init(); /* initialize the AVS hardware */
 
 	/* Must be called before loading anything else from flash */
 	get_flash_info(&info);
@@ -205,6 +199,7 @@ void fsbl_main(void)
 #endif
 
 #ifndef SECURE_BOOT
+	bypass_avs = ('8' == getc());
 	if (!bypass_avs)
 #endif
 		avs_err = avs_load();

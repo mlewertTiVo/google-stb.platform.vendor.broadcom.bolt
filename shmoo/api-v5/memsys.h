@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  * THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  * AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,6 +10,8 @@
 
 #include <bchp_common.h>
 #include <bchp_ddr34_phy_common_regs_0.h>
+#include <bchp_ddr34_phy_control_regs_a_0.h>
+#include <bchp_ddr34_phy_control_regs_b_0.h>
 #include <bchp_memc_gen_0.h>
 #include <bchp_shimphy_addr_cntl_0.h>
 #include <memsys-if.h>

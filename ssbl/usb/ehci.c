@@ -1058,12 +1058,12 @@ static int ehci_intr(usbbus_t *bus)
 	 * Read the interrupt status register.
 	 */
 
-	reg = EHCI_READCSR(softc, R_EHCI_USBSTS);
+	reg = EHCI_READCSR(softc, R_EHCI_USBSTS) & M_EHCI_INT_ALL;
 
 	/*
 	 * Don't bother doing anything if nothing happened.
 	 */
-	if (reg == 0)
+	if (!softc->pending_psc && (reg == 0))
 		return 0;
 
 	/*
@@ -1079,7 +1079,8 @@ static int ehci_intr(usbbus_t *bus)
 	}
 
 	/* Root Hub Status Change */
-	if ((reg & ~softc->ehci_intdisable) & M_EHCI_USBSTS_PSC) {
+	if (!(softc->ehci_intdisable & M_EHCI_USBSTS_PSC) &&
+		(softc->pending_psc || (reg & M_EHCI_USBSTS_PSC))) {
 		uint32_t lreg;
 
 		if (ehcidebug & SHOW_RH_INFO1) {
@@ -2179,18 +2180,20 @@ static void ehci_roothub_statchg(ehci_softc_t *softc)
 	}
 
 	if (portstat != 0) {
-		softc->ehci_intdisable |= M_EHCI_USBSTS_PSC;
-
 		ur = (usbreq_t *)q_deqnext(&(softc->ehci_rh_intrq));
-		if (!ur)
-			return;	/* no requests pending, ignore it */
+		if (!ur) {	/* no requests pending, postpone action */
+			softc->pending_psc = 1;
+			return;
+		}
 
 		memset(ur->ur_buffer, 0, ur->ur_length);
 		ur->ur_buffer[0] = portstat;
 		ur->ur_xferred = ur->ur_length;
 
 		usb_complete_request(ur, 0);
+		softc->ehci_intdisable |= M_EHCI_USBSTS_PSC;
 	}
+	softc->pending_psc = 0;
 }
 
 /*  *********************************************************************

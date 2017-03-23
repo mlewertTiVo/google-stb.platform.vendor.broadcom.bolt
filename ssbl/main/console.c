@@ -23,7 +23,9 @@
 #include "env_subr.h"
 #include "console.h"
 #include "bolt.h"
-
+#if CFG_COAP
+#include "brcm/coap_api.h"
+#endif
 /*
 Escape sequences:
 
@@ -892,6 +894,9 @@ int console_readline(char *prompt, char *str, int maxlen)
 		 */
 
 		if (console_status() == 0) {
+#if CFG_COAP
+			coap_server_thread(NULL);
+#endif
 			POLL();
 			continue;
 		}

@@ -1,5 +1,5 @@
 /********************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  * This program is the proprietary software of Broadcom and/or its
  * licensors, and may only be used, duplicated, modified or distributed pursuant
@@ -47,19 +47,19 @@
  * The launch point for all information concerning RDB is found at:
  *   http://bcgbu.broadcom.com/RDB/SitePages/Home.aspx
  *
- * Date:           Generated on               Thu Oct 20 06:11:10 2016
- *                 Full Compile MD5 Checksum  a4cf01343914cbe977ff5dbbfecedfc2
+ * Date:           Generated on               Sat Feb  4 03:49:17 2017
+ *                 Full Compile MD5 Checksum  9d6215899d3e76f8389b268683fe448f
  *                     (minus title and desc)
- *                 MD5 Checksum               79b3267dbc97ab78b1475c8950650765
+ *                 MD5 Checksum               4201b1b2476c5b5ee227db9566df87e2
  *
  * lock_release:   n/a
  * Compiled with:  RDB Utility                combo_header.pl
- *                 RDB.pm                     1139
+ *                 RDB.pm                     1255
  *                 unknown                    unknown
  *                 Perl Interpreter           5.008008
  *                 Operating System           linux
- *                 Script Source              /projects/stbgit/bin/gen_rdb.pl
- *                 DVTSWVER                   n/a
+ *                 Script Source              projects/stbgit/bin/gen_rdb.pl
+ *                 DVTSWVER                   LOCAL
  *
  *
 ********************************************************************************/
@@ -129,15 +129,15 @@
 #define BCHP_USB_CTRL_SETUP_OC_DISABLE_SHIFT                       28
 #define BCHP_USB_CTRL_SETUP_OC_DISABLE_DEFAULT                     0x00000000
 
-/* USB_CTRL :: SETUP :: strap_cc_enable_sel [27:27] */
-#define BCHP_USB_CTRL_SETUP_strap_cc_enable_sel_MASK               0x08000000
-#define BCHP_USB_CTRL_SETUP_strap_cc_enable_sel_SHIFT              27
-#define BCHP_USB_CTRL_SETUP_strap_cc_enable_sel_DEFAULT            0x00000001
+/* USB_CTRL :: SETUP :: strap_cc_drd_mode_enable_sel [27:27] */
+#define BCHP_USB_CTRL_SETUP_strap_cc_drd_mode_enable_sel_MASK      0x08000000
+#define BCHP_USB_CTRL_SETUP_strap_cc_drd_mode_enable_sel_SHIFT     27
+#define BCHP_USB_CTRL_SETUP_strap_cc_drd_mode_enable_sel_DEFAULT   0x00000001
 
-/* USB_CTRL :: SETUP :: cc_enable [26:26] */
-#define BCHP_USB_CTRL_SETUP_cc_enable_MASK                         0x04000000
-#define BCHP_USB_CTRL_SETUP_cc_enable_SHIFT                        26
-#define BCHP_USB_CTRL_SETUP_cc_enable_DEFAULT                      0x00000000
+/* USB_CTRL :: SETUP :: cc_drd_mode_enable [26:26] */
+#define BCHP_USB_CTRL_SETUP_cc_drd_mode_enable_MASK                0x04000000
+#define BCHP_USB_CTRL_SETUP_cc_drd_mode_enable_SHIFT               26
+#define BCHP_USB_CTRL_SETUP_cc_drd_mode_enable_DEFAULT             0x00000000
 
 /* USB_CTRL :: SETUP :: strap_ipp_sel [25:25] */
 #define BCHP_USB_CTRL_SETUP_strap_ipp_sel_MASK                     0x02000000
@@ -1191,10 +1191,44 @@
 #define BCHP_USB_CTRL_USBD_DRD_STATUS_DRD_STATUS_SPARE_SHIFT       9
 #define BCHP_USB_CTRL_USBD_DRD_STATUS_DRD_STATUS_SPARE_DEFAULT     0x00000000
 
-/* USB_CTRL :: USBD_DRD_STATUS :: drd_status [08:00] */
-#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_status_MASK              0x000001ff
-#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_status_SHIFT             0
-#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_status_DEFAULT           0x00000000
+/* USB_CTRL :: USBD_DRD_STATUS :: cc_drd_mode [08:08] */
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_cc_drd_mode_MASK             0x00000100
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_cc_drd_mode_SHIFT            8
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_cc_drd_mode_DEFAULT          0x00000000
+
+/* USB_CTRL :: USBD_DRD_STATUS :: cc_data_role [07:06] */
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_cc_data_role_MASK            0x000000c0
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_cc_data_role_SHIFT           6
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_cc_data_role_DEFAULT         0x00000000
+
+/* USB_CTRL :: USBD_DRD_STATUS :: vbusout [05:05] */
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_vbusout_MASK                 0x00000020
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_vbusout_SHIFT                5
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_vbusout_DEFAULT              0x00000000
+
+/* USB_CTRL :: USBD_DRD_STATUS :: idout [04:04] */
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_idout_MASK                   0x00000010
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_idout_SHIFT                  4
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_idout_DEFAULT                0x00000000
+
+/* USB_CTRL :: USBD_DRD_STATUS :: pwron_dis [03:03] */
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_pwron_dis_MASK               0x00000008
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_pwron_dis_SHIFT              3
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_pwron_dis_DEFAULT            0x00000000
+
+/* USB_CTRL :: USBD_DRD_STATUS :: device_sel [02:02] */
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_device_sel_MASK              0x00000004
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_device_sel_SHIFT             2
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_device_sel_DEFAULT           0x00000000
+
+/* USB_CTRL :: USBD_DRD_STATUS :: drd_state [01:00] */
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_state_MASK               0x00000003
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_state_SHIFT              0
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_state_DEFAULT            0x00000000
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_state_IDLE               0
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_state_HOSTMODE           1
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_state_DEVICEMODE         2
+#define BCHP_USB_CTRL_USBD_DRD_STATUS_drd_state_DISCON             3
 
 /***************************************************************************
  *USB30_CTL1 - USB30 CONTROL Register 1

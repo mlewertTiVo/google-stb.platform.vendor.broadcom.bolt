@@ -20,8 +20,8 @@
 #ifndef BCHP_PMAP_PRIV_H__
 #define BCHP_PMAP_PRIV_H__
 
-#define AVS_RDB_DATE 20161124 /* %y%m%d */
-#define AVS_RDB_TIME 1157 /* %h%m */
+#define AVS_RDB_DATE 20170303 /* %y%m%d */
+#define AVS_RDB_TIME 1001 /* %h%m */
 
 struct pmapParameters {
 	uint16_t ndiv_int;
@@ -41,11 +41,11 @@ static const struct pmapParameters pmapTable[] = {
 	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
 	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap0"},
 	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 3, .mdiv_p1 = 4, .mdiv_p2 = 6,
-	  .mdiv_p3 = 8, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap1"},
+	  .mdiv_p3 = 10, .mdiv_p4 = 12, .num_domains = 1, .desc = "PMap1"},
 	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 3, .mdiv_p1 = 4, .mdiv_p2 = 6,
-	  .mdiv_p3 = 8, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap2"},
+	  .mdiv_p3 = 10, .mdiv_p4 = 12, .num_domains = 1, .desc = "PMap2"},
 	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 3, .mdiv_p1 = 4, .mdiv_p2 = 6,
-	  .mdiv_p3 = 8, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap3"},
+	  .mdiv_p3 = 10, .mdiv_p4 = 12, .num_domains = 1, .desc = "PMap3"},
 	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
 	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 2, .desc = "PMap4"},
 	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,

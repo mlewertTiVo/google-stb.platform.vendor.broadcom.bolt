@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016 Broadcom
+ * Copyright (C) 2014-2017 Broadcom
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -207,7 +207,6 @@ static void usb3_pll_54Mhz(uintptr_t ctrl_base)
 
 	/* Only needed for newer B53 based SoC's */
 #if defined(CONFIG_BCM7260A0) ||	\
-	defined(CONFIG_BCM7364A0) ||	\
 	defined(CONFIG_BCM7366C0) ||	\
 	defined(CONFIG_BCM7445D0) ||	\
 	defined(CONFIG_BCM7364B0) ||	\
@@ -456,12 +455,6 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	/* Setup the endian bits */
 	reg &= ~USB_CTRL_SETUP_ENDIAN_BITS;
 	reg |= ENDIAN_SETTINGS;
-#endif
-
-#if defined(CONFIG_BCM7364)
-	if ((BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID) == 0x73640000))
-		/* Suppress overcurrent indication from USB30 ports for A0 */
-		reg |= USB_CTRL_MASK(SETUP, OC3_DISABLE);
 #endif
 
 #if defined(BCHP_USB_CTRL_SETUP_strap_ipp_sel_MASK)

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -7,43 +7,39 @@
  *
  ***************************************************************************/
 
-#include "bolt.h"
-
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
-
-#include "env_subr.h"
-#include "zimage.h"
-#include "devtree.h"
-
-#include "ioctl.h"
-#include "devfuncs.h"
-#include "device.h"
-#include "dev_emmcflash.h"
+#include <arch_ops.h>
+#include <bchp_aon_ctrl.h>
+#include <bchp_avs_cpu_ctrl.h>
+#include <bchp_avs_top_ctrl.h>
+#include <bchp_ebi.h>
+#include <bchp_nand.h>
+#include <board.h>
+#include <board_init.h>
+#include <boardcfg.h>
+#include <bolt.h>
+#include <bsp_config.h>
+#include <dev_emmcflash.h>
 #include "../dev/dev_genet.h"
-#include "ssbl-common.h"
-#include "board.h"
-#include "boardcfg.h"
-#include "macutils.h"
-#include "bchp_ebi.h"
-#include "bchp_nand.h"
-#include "bchp_avs_top_ctrl.h"
-#include "bchp_avs_cpu_ctrl.h"
-#include "flash.h"
-#include "board_init.h"
-
-#include "mmap-dram.h"
-#include "net_ebuf.h"
-#include "net_ether.h"
-#include "net_api.h"
-#include "splash-api.h"
-#include "otp_status.h"
-#include "arch_ops.h"
-#include "bsp_config.h"
-#include "ssbl-sec.h"
-
+#include <devfuncs.h>
+#include <device.h>
+#include <devtree.h>
+#include <env_subr.h>
+#include <flash.h>
+#include <ioctl.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <macutils.h>
+#include <mmap-dram.h>
+#include <net_api.h>
+#include <net_ebuf.h>
+#include <net_ether.h>
+#include <otp_status.h>
+#include <splash-api.h>
+#include <ssbl-common.h>
+#include <ssbl-sec.h>
+#include <zimage.h>
 
 /* ------------------------------------------------------------------------- */
 /* Remove me after a grace period */
@@ -428,23 +424,33 @@ static unsigned int map_ddr_to_cpu(uint64_t *regs, const unsigned int memc,
 	unsigned int i;
 	unsigned int nsegs;
 	uint64_t *p;
+	const struct addr_mapping_entry *am_entry = dram_mapping_table;
+	unsigned int num_entries = NUM_DRAM_MAPPING_ENTRIES;
 
 	if (regs == NULL || size_mb == 0)
 		return 0;
 
+#ifdef BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT_map_variant_MASK
+	if (is_mmap_v7_64()) {
+		num_entries = sizeof(dram_mapping_table_v7_64) /
+			sizeof*(dram_mapping_table_v7_64);
+		am_entry = dram_mapping_table_v7_64;
+	}
+#endif
+
 	p = regs;
 	nsegs = 0;
-	for (i = 0; i < NUM_DRAM_MAPPING_ENTRIES; i++) {
+	for (i = 0; i < num_entries; i++) {
 		uint64_t offset_mb;
 		uint64_t length_mb;
 
-		if (memc != dram_mapping_table[i].which)
+		if (memc != am_entry[i].which)
 			continue;
 
-		offset_mb = dram_mapping_table[i].to_mb;
-		if (size_mb >= dram_mapping_table[i].size_mb) {
-			length_mb = dram_mapping_table[i].size_mb;
-			size_mb -= dram_mapping_table[i].size_mb;
+		offset_mb = am_entry[i].to_mb;
+		if (size_mb >= am_entry[i].size_mb) {
+			length_mb = am_entry[i].size_mb;
+			size_mb -= am_entry[i].size_mb;
 		} else {
 			length_mb = size_mb;
 			size_mb = 0;
@@ -519,20 +525,27 @@ static int bolt_populate_memory(void *fdt)
 	unsigned int i, count, bytes;
 	int node;
 	int rc;
+	unsigned int num_entries = NUM_DRAM_MAPPING_ENTRIES;
 
 	b = board_thisboard();
 	if (!b)
 		return BOLT_ERR_DEVNOTFOUND;
 
-	if (NUM_DRAM_MAPPING_ENTRIES >= b->nddr) {
-		num_mapping_entries = NUM_DRAM_MAPPING_ENTRIES;
-	} else if (NUM_DRAM_MAPPING_ENTRIES == 0) {
+#ifdef BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT_map_variant_MASK
+	if (is_mmap_v7_64())
+		num_entries = sizeof(dram_mapping_table_v7_64) /
+			sizeof*(dram_mapping_table_v7_64);
+#endif
+
+	if (num_entries >= b->nddr) {
+		num_mapping_entries = num_entries;
+	} else if (num_entries == 0) {
 		/* no mapping table */
 		num_mapping_entries = b->nddr;
 	} else {
-		/* mapping, but (NUM_DRAM_MAPPING_ENTRIES < b->nddr) */
+		/* mapping, but (num_entries < b->nddr) */
 		xprintf("%s: #mapping table entries %d, #MEMC %d\n",
-			__func__, NUM_DRAM_MAPPING_ENTRIES, b->nddr);
+			__func__, num_entries, b->nddr);
 		return BOLT_ERR_INV_PARAM;
 	}
 
@@ -549,7 +562,7 @@ static int bolt_populate_memory(void *fdt)
 		if (!ddr)
 			continue;
 
-		if (NUM_DRAM_MAPPING_ENTRIES > 0) {
+		if (num_entries > 0) {
 			nsegs = map_ddr_to_cpu(&regs[count*2], i, ddr->size_mb);
 			count += nsegs;
 		} else {

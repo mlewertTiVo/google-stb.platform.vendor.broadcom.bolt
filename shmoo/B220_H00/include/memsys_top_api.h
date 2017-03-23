@@ -95,7 +95,7 @@ extern "C" {
 #define MEMSYS_FW_VERSION_MAJOR             2
 #define MEMSYS_FW_VERSION_MINOR             2
 #define MEMSYS_FW_VERSION_PATCH             2
-#define MEMSYS_FW_VERSION_ENG               7
+#define MEMSYS_FW_VERSION_ENG               9
     
 #define MEMSYS_FW_VERSION                                         \
     ((MEMSYS_FW_VERSION_MAJOR << MEMSYS_FW_VERSION_MAJOR_SHIFT) | \
@@ -390,6 +390,7 @@ typedef enum memsys_error_shmoo
     MEMSYS_ERROR_SHMOO_LP4_FAILED_RD_DLY_PATTERN,               // word 3: 0x20000000
     MEMSYS_ERROR_SHMOO_LP4_RD_DLY_NO_MIN_PASS_WINDOW,           // word 3: 0x40000000
     MEMSYS_ERROR_SHMOO_LP4_RD_DLY_FAILED_REPORT,                // word 3: 0x80000000
+    MEMSYS_ERROR_SHMOO_LP4_WR_DMI_SHMOO_BAD_WINDOW,         // word 4: 0x00000001
     MEMSYS_ERROR_SHMOO_MAX
 } memsys_error_shmoo_e;
 

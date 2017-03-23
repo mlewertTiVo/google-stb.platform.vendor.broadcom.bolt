@@ -242,7 +242,33 @@ SSBL_S += \
 	ssbl/ui/ui_tcpcmds \
 	ssbl/net/dev_tcpconsole.c
 endif
-
+ifeq ($(CFG_SSDP),1)
+SSBL_S += \
+	ssbl/net/net_ssdp.c \
+	ssbl/net/net_socket.c \
+	ssbl/ui/ui_ssdpcmds
+endif
+ifeq ($(CFG_COAP),1)
+SSBL_S += \
+	ssbl/ui/ui_coapcmds.c \
+	$(GEN)/libcoap-$(COAP_VER)/pdu.c \
+	$(GEN)/libcoap-$(COAP_VER)/net.c \
+	$(GEN)/libcoap-$(COAP_VER)/debug.c \
+	$(GEN)/libcoap-$(COAP_VER)/encode.c \
+	$(GEN)/libcoap-$(COAP_VER)/uri.c \
+	$(GEN)/libcoap-$(COAP_VER)/resource.c \
+	$(GEN)/libcoap-$(COAP_VER)/hashkey.c \
+	$(GEN)/libcoap-$(COAP_VER)/option.c \
+	$(GEN)/libcoap-$(COAP_VER)/async.c \
+	$(GEN)/libcoap-$(COAP_VER)/subscribe.c \
+	$(GEN)/libcoap-$(COAP_VER)/block.c \
+	$(GEN)/libcoap-$(COAP_VER)/brcm/coap_api.c \
+	$(GEN)/libcoap-$(COAP_VER)/brcm/osal.c \
+	$(GEN)/libcoap-$(COAP_VER)/brcm/handler_common.c \
+	$(GEN)/libcoap-$(COAP_VER)/brcm/handler_env.c \
+	$(GEN)/libcoap-$(COAP_VER)/brcm/handler_memory.c \
+	$(GEN)/libcoap-$(COAP_VER)/brcm/handler_misc.c
+endif
 ifeq ($(CFG_BSU),1)
 SSBL_S += \
 	ssbl/main/bsu.c

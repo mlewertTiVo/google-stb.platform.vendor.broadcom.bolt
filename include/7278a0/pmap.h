@@ -50,12 +50,6 @@ static const struct pmapParameters pmapTable[] = {
 	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 1, .desc = "PMap4"},
 	{ .ndiv_int = 222, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
 	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap5"},
-	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 2, .desc = "PMap6"},
-	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 2, .desc = "PMap7"},
-	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 2, .desc = "PMap8"},
 };
 
 static const int PMAP_MAX = sizeof(pmapTable)/sizeof(pmapTable[0]);

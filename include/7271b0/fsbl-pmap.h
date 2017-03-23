@@ -25,7 +25,6 @@
 
 const struct pmap_entry pmapTable[]
 	__attribute__ ((section(".pmaptable") unused)) = {
-#if defined(CONFIG_BCM7271)
 	{
 		.cpu = { .ndiv = 184, .pdiv = 3, .mdiv = 2 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
@@ -35,36 +34,6 @@ const struct pmap_entry pmapTable[]
 		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 2 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 9 },
 		.sysif_mdiv = 4,
-	},
-	{
-		.cpu = { .ndiv = 184, .pdiv = 3, .mdiv = 2 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
-		.sysif_mdiv = 3,
-	},
-	{
-		.cpu = { .ndiv = 206, .pdiv = 3, .mdiv = 2 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
-		.sysif_mdiv = 3,
-	},
-	{
-		.cpu = { .ndiv = 222, .pdiv = 3, .mdiv = 2 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
-		.sysif_mdiv = 3,
-	},
-	{
-		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 3 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 11 },
-		.sysif_mdiv = 4,
-	},
-	{
-		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 2 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 9 },
-		.sysif_mdiv = 4,
-	},
-	{
-		.cpu = { .ndiv = 184, .pdiv = 3, .mdiv = 2 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
-		.sysif_mdiv = 3,
 	},
 	{
 		.cpu = { .ndiv = 184, .pdiv = 3, .mdiv = 2 },
@@ -72,5 +41,4 @@ const struct pmap_entry pmapTable[]
 		.sysif_mdiv = 3,
 	},
 };
-#endif
 #endif

@@ -639,7 +639,9 @@ static int sysport_ether_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 	case IOCTL_ETHER_SETHWADDR:
 		unimac_write_hwaddr(softc, buffer->buf_ptr);
 		break;
-
+	case IOCTL_ETHER_SETMULTICAST_HWADDR:
+		bcm_sf2_multicast_enable();
+		break;
 	case IOCTL_ETHER_GETSPEED:
 		rc = SPEED_1000;
 		break;

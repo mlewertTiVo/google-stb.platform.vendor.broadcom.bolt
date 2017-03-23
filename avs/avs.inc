@@ -1,5 +1,5 @@
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -11,8 +11,8 @@
 AVS_DUAL:=
 
 # Whitelists
-AVS_SETUPS   :=7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
-AVS_FIRMWARES:=7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+AVS_SETUPS   :=7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+AVS_FIRMWARES:=7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
 
 # for bsu and temp_reset:
 # These parts use an older set of conversion functions for PVTMON

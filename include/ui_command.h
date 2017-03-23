@@ -77,5 +77,8 @@ int ui_docommand(const char *buffer);
 int ui_init_cmddisp(void);
 ui_command_t *cmd_readcommand(const char **pptr);
 
+#if CFG_SSDP
+int ui_init_ssdpcmds(void);
+#endif
 #endif /* __UI_COMMAND_H__ */
 
