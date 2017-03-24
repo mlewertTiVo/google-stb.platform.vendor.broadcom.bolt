@@ -145,6 +145,18 @@ err_exit:
 	return NULL;
 }
 
+static int is_quiescent_mode(void)
+{
+	char *q_mode = env_getenv("A_QUIESCENT");
+	if (q_mode == NULL) {
+		return 0;
+	}
+	if (os_atoi(q_mode)) {
+		return 1;
+	}
+	return 0;
+}
+
 /* Default value for androidboot.hardware property */
 #define ANDROID_HW_NAME_DEFAULT		"bcm_platform"
 
@@ -204,6 +216,8 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	char *env_verity_pub_key;
 
 	bootargs_buflen = os_sprintf(bootargs_buf, "%s", cmdline);
+	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
+		" androidboot.quiescent=%d", is_quiescent_mode());
 
 	os_sprintf(dt_add_cmd, "dt add node / firmware");
 	bolt_docommands(dt_add_cmd);
@@ -418,6 +432,14 @@ static void boot_path_set_env(enum bootpath boot_path)
 	char buffer[40];
 
 	os_sprintf(buffer, "setenv A_BOOT_PATH %s", bootpath_str[boot_path]);
+	bolt_docommands(buffer);
+}
+
+static void boot_quiescent_set_env(int quiescent)
+{
+	char buffer[40];
+
+	os_sprintf(buffer, "setenv A_QUIESCENT %d", (quiescent > 0) ? 1 : 0);
 	bolt_docommands(buffer);
 }
 
@@ -888,6 +910,8 @@ static int recovery_mode_boot_override(void)
 		return ret;
 }
 
+#define BOOT_REASON_MASK    0x000000FF
+#define BOOT_QUIESCENT_MASK 0x00000100
 int android_get_boot_partition(ui_cmdline_t *cmd,
 		char *boot_partition, int *is_legacy_boot)
 {
@@ -915,13 +939,15 @@ int android_get_boot_partition(ui_cmdline_t *cmd,
 
 	DLOG("boot_path = %s; boot_reason = %u\n", bootpath_str[boot_path], boot_reason);
 
+	boot_quiescent_set_env(boot_reason & BOOT_QUIESCENT_MASK);
+
 	/* Determine the boot mode based on boot reason register.
 	 * Note that first letter of the reboot command is saved in
 	 * the register. */
-	if (boot_reason == 'r') {
+	if ((boot_reason & BOOT_REASON_MASK) == 'r') {
 		os_printf("boot reason = recovery\n");
 		boot_mode = BOOTMODE_RECOVERY;
-	} else if ((boot_reason == 'b') ||
+	} else if (((boot_reason & BOOT_REASON_MASK) == 'b') ||
 		   (boot_path == BOOTPATH_AB_BOOTLOADER_RECOVERY)) {
 		os_printf("boot reason = bootloader\n");
 
