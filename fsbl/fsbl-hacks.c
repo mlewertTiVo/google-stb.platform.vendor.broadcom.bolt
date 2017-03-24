@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,6 +9,7 @@
 
 #include "fsbl-hacks.h"
 
+#include <addr-mapping.h>
 #include <bchp_common.h>
 #include <bchp_hif_cpubiuctrl.h>
 #include <bchp_sun_gisb_arb.h>
@@ -250,8 +251,7 @@ void orion_hack_early_bus_cfg(void)
 
 #if defined(CONFIG_BCM7278A0)
 	/* fixup range limits depending on v7-32 or v7-64 */
-	if (BDEV_RD(BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT) &
-		BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT_map_variant_MASK)
+	if (is_mmap_v7_64())
 		fixup_v7_64();
 	else
 		fixup_v7_32();

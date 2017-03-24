@@ -25,7 +25,6 @@
 
 const struct pmap_entry pmapTable[]
 	__attribute__ ((section(".pmaptable") unused)) = {
-#if defined(CONFIG_BCM7278)
 	{
 		.cpu = { .ndiv = 200, .pdiv = 3, .mdiv = 2 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
@@ -56,21 +55,5 @@ const struct pmap_entry pmapTable[]
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
 		.sysif_mdiv = 4,
 	},
-	{
-		.cpu = { .ndiv = 200, .pdiv = 3, .mdiv = 2 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
-		.sysif_mdiv = 3,
-	},
-	{
-		.cpu = { .ndiv = 200, .pdiv = 3, .mdiv = 2 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
-		.sysif_mdiv = 3,
-	},
-	{
-		.cpu = { .ndiv = 200, .pdiv = 3, .mdiv = 2 },
-		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 8 },
-		.sysif_mdiv = 3,
-	},
 };
-#endif
 #endif

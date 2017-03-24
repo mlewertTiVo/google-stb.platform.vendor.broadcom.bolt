@@ -25,7 +25,8 @@ Dual GPL/BSD
 ------------
 GPL-BSD-dtc-g448faa43.tgz
  git clone git://github.com/virtualopensystems/dtc.git dtc **
-
+v4.1.1.tar.gz
+ https://libcoap.net/ **
 
 GPL
 ---

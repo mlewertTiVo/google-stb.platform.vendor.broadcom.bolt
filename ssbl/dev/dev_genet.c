@@ -299,6 +299,41 @@ static void umac_set_mdf(volatile uniMacRegs *umac, const uint8_t *addr,
 	(*mc)++;
 }
 
+static bool genet_ether_set_multicast_mdf_filter(volatile uniMacRegs * umac,
+				const uint8_t *addr)
+{
+	unsigned long mdf_ctrl = umac->mdf_ctrl;
+	unsigned int j = 0;
+	unsigned int i = 0;
+	unsigned long mdf_add1;
+	unsigned long mdf_add2;
+
+	/* Check if same filter already set.*/
+	for (j = 0; j <= (unsigned int)MDF_ADDR_CNT; j++) {
+		if ((mdf_ctrl & (1 << (MDF_ADDR_CNT - j)))) {
+			i = j*2;
+			mdf_add1 = (unsigned long) (addr[0] << 8 | addr[1]);
+			mdf_add2 = (unsigned long)(addr[2] << 24 |
+				addr[3] << 16 | addr[4] << 8 | addr[5]);
+			if ((mdf_add1 == umac->mdf_addr[i]) &&
+				(mdf_add2 == umac->mdf_addr[i + 1]))
+				return true;
+		}
+	}
+	/* set the filter on free slot else return false */
+	for (j = 0; j <= (unsigned int)MDF_ADDR_CNT; j++) {
+		if (!(mdf_ctrl & (1 << (MDF_ADDR_CNT - j)))) {
+			i = j*2;
+			umac_set_mdf(umac, addr, &i, &j);
+			return true;
+		}
+	}
+	/* disable MDF filtering and enable promiscuous mode */
+	umac->mdf_ctrl = 0;
+	umac->cmd |= CMD_PROMISC;
+	return false;
+}
+
 static void genet_ether_write_mac_address(struct genet_softc *softc)
 {
 	unsigned int i = 0;
@@ -1146,6 +1181,11 @@ static int genet_ether_ioctl(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 			genet_write_mac_address(softc, buffer->buf_ptr, 1);
 			/* (re)Configure our MDF filters */
 			genet_ether_write_mac_address(softc);
+			break;
+		case IOCTL_ETHER_SETMULTICAST_HWADDR:
+			/* (re)Configure our MDF filters */
+			genet_ether_set_multicast_mdf_filter(softc->umac,
+							buffer->buf_ptr);
 			break;
 		case IOCTL_ETHER_GETSPEED:
 			xprintf("GENET: GETSPEED not implemented.\n");

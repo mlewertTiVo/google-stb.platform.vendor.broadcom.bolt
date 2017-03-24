@@ -6,6 +6,44 @@
 Release changelog
 =================
 
+ v1.27
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2220[SWBOLT-2220] Added PMU compatible string to enable the PMU driver for ARM64.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2059[SWBOLT-2059] Added support for CoAP and SSDP.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2179[SWBOLT-2179] Fiexd problem where only one device was detected when two devices are plugged into BCM7278's root ports from power-up or reset. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2196[SWBOLT-2196] Fixed USB host port on the BCM97268B0-USFF board's Type-C port when used with a splitter cable and strap_usb_typec_enable=1. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2076[SWBOLT-2076] Fixed problem when using the '8' key to by-pass AVS on DVFS supported reference boards.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2180[SWBOLT-2180] Fixed problem where a high speed USB device can render a port unusable if the device was disconnected and connected fast enough.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2057[SWBOLT-2057] Getting a DHCP address got more reliable on 7439b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2188[SWBOLT-2188] Print AVS data from the SSBL.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2182[SWBOLT-2182] S2 power management for 7268b0 and 7271b0 has been fixed. Also, the Shmoo v2.2.2.9 is more stable than its predecessor v2.2.2.7. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2192[SWBOLT-2192] Support for 7364a0 has been dropped.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2217[SWBOLT-2217] Support for BCM972604_4L has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2218[SWBOLT-2218] Support for BCM97271IPCQ has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2215[SWBOLT-2215] Support for BCM97278VMS has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2228[SWBOLT-2228] The Shmoo v5.1.0.4 is more stable than its predecessor, v5.1.0.3. Updating to v5.1.0.4 requires an SRAM layout change, which is packaged in BOLT v1.27. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2237[SWBOLT-2237] The default PMap for 7271b0 is now #2. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.27%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.26
 ------
 

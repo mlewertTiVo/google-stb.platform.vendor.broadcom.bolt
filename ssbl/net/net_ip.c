@@ -171,7 +171,26 @@ int _ip_send(ip_info_t *ipi, ebuf_t *buf, uint8_t *destaddr, uint8_t proto)
 		eth_free(buf);
 		return res;
 	}
+	/* If sending to a multicast address,
+	* calculate physical address and send.
+	*/
+	if (ip_addrismcast(destaddr)) {
+		uint8_t eth_multicast[6];
 
+		/* first 24 bits are fixed for all
+		multicast physical addresses */
+		eth_multicast[0] = 0x01;
+		eth_multicast[1] = 0x00;
+		eth_multicast[2] = 0x5E;
+		/* map the last 23 bits of the multicast address */
+		eth_multicast[3] = destaddr[2] & 0x7f;
+		eth_multicast[4] = destaddr[2];
+		eth_multicast[5] = destaddr[3];
+
+		res = eth_send(buf, (uint8_t *) eth_multicast);
+		eth_free(buf);
+		return res;
+	}
 	/* If the mask has not been set, don't try to
 	 * determine if we should use the gateway or not.
 	 */
@@ -204,6 +223,44 @@ int _ip_send(ip_info_t *ipi, ebuf_t *buf, uint8_t *destaddr, uint8_t proto)
 	}
 
 }
+/**********************************************************************
+  *  ip_addr_in_mcgroup(ip_info_t *ipi, uint8_t *ipaddr)
+  *
+  *  Check  recevied multicast IP packet is belongs to multicast group
+  *
+  *  Input parameters:
+  *	 ipi - IP stack information
+  *	 ipaddr - received IP address
+  *
+  *  Return value:
+  *	 1 if ok
+  *	 else null
+  **********************************************************************/
+#ifdef CFG_SSDP
+int ip_addr_in_mcgroup(ip_info_t *ipi, uint8_t *ipaddr)
+{
+	if (ip_addrismcast(ipaddr)) {
+		int cur_group;
+
+		for (cur_group = 0; cur_group < MAX_MC_GROUPS; cur_group++) {
+			if ((ipi->mc_list[cur_group].flags & MC_FLAG_VALID) &&
+				(0 == ip_compareaddr
+				(ipi->mc_list[cur_group].mc_group_addr,
+				ipaddr)))
+				/* we are part of this multicast group */
+				return 1;
+		}
+	}
+	return 0;
+	/* this isn't a multicast address or we aren't part of this group */
+}
+#else
+static inline int ip_addr_in_mcgroup(ip_info_t *ipi, uint8_t *ipaddr)
+{
+	return 0;
+}
+
+#endif
 
 /**********************************************************************
   *  ip_rx_callback(buf,ref)
@@ -302,7 +359,9 @@ static int ip_rx_callback(ebuf_t *buf, void *ref)
 
 	if (!ip_addriszero(ipi->net_info.ip_addr)) {
 		if ((ip_compareaddr(dstip, ipi->net_info.ip_addr) != 0) &&
-		    !(ip_addrisbcast(dstip))) {
+			!(ip_addrisbcast(dstip)) &&
+			!ip_addr_in_mcgroup(ipi, dstip)
+			) {
 			goto drop;	/* not for us */
 		}
 	}
@@ -565,7 +624,69 @@ void _ip_free(ip_info_t *ipi, ebuf_t *buf)
 {
 	eth_free(buf);
 }
+#if CFG_SSDP
+/**********************************************************************
+  *  _ip_setmcastgroup(ipi, buf, flags)
+  *
+  *  Configure loopback mode options for the Ethernet
+  *
+  *  Input parameters:
+  *      ipi - IP stack information
+  *      buf - pointer to 4-byte buffer to receive group address
+  *      flags - flags for setting group
+  *
+  *  Return value:
+  *      0 if ok
+  *      else error code
+  **********************************************************************/
+int _ip_setmcastgroup(ip_info_t *ipi, uint8_t *buf, uint32_t flags)
+{
+	int cur_group;
+	int drop = flags & NET_DROP_GROUP;
 
+
+	for (cur_group = 0; cur_group < MAX_MC_GROUPS; cur_group++) {
+		if (ipi->mc_list[cur_group].flags &
+					MC_FLAG_VALID && drop) {
+			if (0 == ip_compareaddr(
+				ipi->mc_list[cur_group].mc_group_addr, buf)) {
+				ipi->mc_list[cur_group].flags &= ~MC_FLAG_VALID;
+				/* clear the valid flag */
+				return 0;
+			}
+		} else {
+			uint8_t eth_multicast[6];
+
+			memcpy(ipi->mc_list[cur_group].mc_group_addr,
+						buf, IP_ADDR_LEN);
+			/* copy the group address */
+			ipi->mc_list[cur_group].flags |= MC_FLAG_VALID;
+			/* set the valid flag */
+			/* first 24 bits are fixed for all
+			multicast physical addresses */
+			eth_multicast[0] = 0x01;
+			eth_multicast[1] = 0x00;
+			eth_multicast[2] = 0x5E;
+			/* map the last 23 bits of the multicast address */
+			eth_multicast[3] = buf[2] & 0x7f;
+			eth_multicast[4] = buf[2];
+			eth_multicast[5] = buf[3];
+			eth_setmulticast_hwaddr(ipi->eth_info,
+					&eth_multicast[0]);
+			return 0;
+		}
+	}
+
+	return BOLT_ERR;
+	/* we didn't have room to add or it didn't exist to remove */
+}
+#else
+static inline int
+_ip_setmcastgroup(ip_info_t *ipi, uint8_t *buf, uint32_t flags)
+{
+	return BOLT_ERR;
+}
+#endif
 /**********************************************************************
   *  _ip_getaddr(ipi,buf)
   *
@@ -698,6 +819,10 @@ int _ip_setparam(ip_info_t *ipinfo, int param, uint8_t *ptr)
 		break;
 	case NET_LOOPBACK:
 		res = eth_setloopback(ipinfo->eth_info, (int)ptr);
+		break;
+	case NET_ADD_GROUP:
+	case NET_DROP_GROUP:
+		res = _ip_setmcastgroup(ipinfo, ptr, param);
 		break;
 	}
 

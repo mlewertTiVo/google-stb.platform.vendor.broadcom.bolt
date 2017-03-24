@@ -777,7 +777,7 @@ asciidoc.install(4);
 </div>
 <div id="content">
 <div class="sect1">
-<h2 id="_bolt_sqa_release_v1_26_14th_february_2017">1.  Bolt SQA Release v1.26, 14th February 2017</h2>
+<h2 id="_bolt_sqa_release_v1_27_17th_march_2017">1.  Bolt SQA Release v1.27, 17th March 2017</h2>
 <div class="sectionbody">
 <div class="literalblock">
 <div class="content">
@@ -817,22 +817,17 @@ asciidoc.install(4);
                         o 7445e0:  2.1.1.0
                 o LPDDR4
                         o 7268a0:  2.2.0.28
-                        o 7268b0:  2.2.2.7
+                        o 7268b0:  2.2.2.9
                         o 7271a0:  2.2.0.28
-                        o 7271b0:  2.2.2.7
-                        o 7278a0:  5.1.0.3</code></pre>
+                        o 7271b0:  2.2.2.9
+                        o 7278a0:  5.1.0.4</code></pre>
 </div></div>
 <div class="sect2">
 <h3 id="_known_issues">1.1.  Known Issues</h3>
 <div class="ulist"><ul>
 <li>
 <p>
-<a href="http://jira.broadcom.com/browse/SWBOLT-2182">SWBOLT-2182</a> S2 power management <span class="red">does not work</span> for 7268b0 and 7271b0.
-</p>
-</li>
-<li>
-<p>
-Long-term repeated software reboots <span class="red">may fail</span> on 7268 and 7271.
+None at this time.
 </p>
 </li>
 </ul></div>
@@ -840,11 +835,6 @@ Long-term repeated software reboots <span class="red">may fail</span> on 7268 an
 <div class="sect2">
 <h3 id="_compatibility">1.2.  Compatibility</h3>
 <div class="ulist"><ul>
-<li>
-<p>
-For 7271b0, 7268b0, 7260a and 7278a0, BOLT v1.25 requires Linux 4.1-1.7 or later.  If using an earlier version of Linux, please disable DTU in BOLT in fsbl/fsbl-secparams.c
-</p>
-</li>
 <li>
 <p>
 URSR 15.4 or newer should be used, or the Magnum XPT PI should be updated with <a href="http://jira.broadcom.com/browse/SW7439-510">SW7439-510</a>. Otherwise, XPT PI will not work correctly against S3 Standby/Resume operation.
@@ -1075,16 +1065,26 @@ http://www.gnu.org/software/src-highlite -->
 <hr />
 </div>
 <div class="sect2">
-<h3 id="_upgrade_to_v1_26_criteria">1.4.  Upgrade to v1.26 criteria</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2199">SWBOLT-2199</a> Correct PMap values for 7260A0. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2193">SWBOLT-2193</a> Fix missing Ethernet PHY clock reference in BOLT provided Device Tree for Linux' Ethernet PHY driver to correctly enable it.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2185">SWBOLT-2185</a> Fixed crash on BCM97437SV.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2160">SWBOLT-2160</a> Fixed splash code so that it can compile properly for 7268B0.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2205">SWBOLT-2205</a> Fixed splash code so that it can compile properly for 7271B0. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<h3 id="_upgrade_to_v1_27_criteria">1.4.  Upgrade to v1.27 criteria</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2220">SWBOLT-2220</a> Added PMU compatible string to enable the PMU driver for ARM64.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2059">SWBOLT-2059</a> Added support for CoAP and SSDP.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2179">SWBOLT-2179</a> Fiexd problem where only one device was detected when two devices are plugged into BCM7278&#8217;s root ports from power-up or reset. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2196">SWBOLT-2196</a> Fixed USB host port on the BCM97268B0-USFF board&#8217;s Type-C port when used with a splitter cable and strap_usb_typec_enable=1. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2076">SWBOLT-2076</a> Fixed problem when using the <em>8</em> key to by-pass AVS on DVFS supported reference boards.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2180">SWBOLT-2180</a> Fixed problem where a high speed USB device can render a port unusable if the device was disconnected and connected fast enough.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2057">SWBOLT-2057</a> Getting a DHCP address got more reliable on 7439b0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2188">SWBOLT-2188</a> Print AVS data from the SSBL.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2182">SWBOLT-2182</a> S2 power management for 7268b0 and 7271b0 has been fixed. Also, the Shmoo v2.2.2.9 is more stable than its predecessor v2.2.2.7. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2192">SWBOLT-2192</a> Support for 7364a0 has been dropped.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2217">SWBOLT-2217</a> Support for BCM972604_4L has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2218">SWBOLT-2218</a> Support for BCM97271IPCQ has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2215">SWBOLT-2215</a> Support for BCM97278VMS has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2228">SWBOLT-2228</a> The Shmoo v5.1.0.4 is more stable than its predecessor, v5.1.0.3. Updating to v5.1.0.4 requires an SRAM layout change, which is packaged in BOLT v1.27. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2237">SWBOLT-2237</a> The default PMap for 7271b0 is now 2. <sup>[yellow silver-background]#major</sup></p></div>
 </div>
 <div class="sect2">
 <h3 id="_broadcom_fae_access">1.5.  Broadcom FAE access</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.26%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.27%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
 </div>
 </div>
 </div>
@@ -1119,7 +1119,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-02-23 01:54:41 PST
+Last updated 2017-03-23 09:56:12 PDT
 </div>
 </div>
 </body>

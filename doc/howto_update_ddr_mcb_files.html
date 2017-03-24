@@ -797,7 +797,7 @@ stored in the MEMSYS subsection of BOLT please see the
 Find out which shmoo you are currently using. Look
 in your config file for the line <em>gset MEMC_REV</em>
 The associated text is a subdirectory of shmoo,
-e.g. For 7364a0, it is <em>B150_F002</em>. So, <em>shmoo/B150_F002/mcb/</em>
+e.g. For 7364c0, it is <em>B150_F002</em>. So, <em>shmoo/B150_F002/mcb/</em>
 will show you associated mcb files. The memc IP block may
 be used in many different chips, so its shared this way.
 </p>
@@ -816,8 +816,8 @@ the file name format is of the form:
 <div class="paragraph"><p>e.g.</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>  7364A0_1067MHz_16b_dev4Gx16_DDR3-2133N_le.mcb
-  7364A0_800MHz_16b_dev4Gx8_DDR3-1600K_le.mcb</code></pre>
+<pre><code>  7364C0_1067MHz_16b_dev4Gx16_DDR3-2133N_le.mcb
+  7364C0_800MHz_16b_dev4Gx8_DDR3-1600K_le.mcb</code></pre>
 </div></div>
 <div class="paragraph"><p>The build system needs MCB files to be named like the above to be
 able to pick them up and parse the numbers in them. Rename your mcb
@@ -828,8 +828,8 @@ is a special name for MCB&#8217;s that can be shared by multiple families.</p></
 <p>
 The shmoo build process takes the contents of these files and
 creates mcb-{family}.c which condenses all the available ones down
-into a single C file for BOLT to build in, e.g. for 7364a0 that is
-the file <em>shmoo/B150_F002/mcb-7364a0.c</em>. Please note that the
+into a single C file for BOLT to build in, e.g. for 7364c0 that is
+the file <em>shmoo/B150_F002/mcb-7364c0.c</em>. Please note that the
 existence of a family specific mcb-{family}.c prevents mcb-common.c
 from being included in the family BOLT build.
 </p>
@@ -852,8 +852,8 @@ by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
 <pre><tt>     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make distclean
-     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make ddr_update <span style="color: #009900">FAMILY</span><span style="color: #990000">=</span>7364a0 <span style="color: #009900">MEMC_REV</span><span style="color: #990000">=</span>B150_F002
-     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make 7364a0</tt></pre></div></div>
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make ddr_update <span style="color: #009900">FAMILY</span><span style="color: #990000">=</span>7364c0 <span style="color: #009900">MEMC_REV</span><span style="color: #990000">=</span>B150_F002
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make 7364c0</tt></pre></div></div>
 </div>
 </div>
 <div class="sect1">
@@ -1041,7 +1041,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-02-23 01:54:41 PST
+Last updated 2017-03-23 09:56:12 PDT
 </div>
 </div>
 </body>

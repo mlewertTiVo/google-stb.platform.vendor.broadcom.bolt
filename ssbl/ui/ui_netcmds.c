@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -57,6 +57,10 @@ static int ui_cmd_ping(ui_cmdline_t *cmd, int argc, char *argv[]);
 
 #if CFG_TCP
 extern int ui_init_tcpcmds(void);
+#endif
+
+#if CFG_COAP
+extern int ui_init_coapcmds(void);
 #endif
 
 #if CFG_ENET
@@ -171,6 +175,12 @@ int ui_init_netcmds(void)
 	ui_init_tcpcmds();
 #endif
 
+#if CFG_SSDP
+	ui_init_ssdpcmds();
+#endif
+#if CFG_COAP
+	ui_init_coapcmds();
+#endif
 #if CFG_ENET
 	cmd_addcmd("ephycfg",
 		   ui_cmd_ephy_config,
@@ -371,11 +381,13 @@ static void ui_showifconfig(dhcpreply_t *dhcp)
 int do_dhcp_request(char *devname)
 {
 	dhcpreply_t *reply = NULL;
+	int res;
 
-	if (dhcp_bootrequest(&reply) < 0) {
+	res = dhcp_bootrequest(&reply);
+	if (res != 0) {
 		xprintf("DHCP registration failed on device %s\n", devname);
 		net_uninit();
-		return BOLT_ERR_NETDOWN;
+		return res;
 	}
 
 	net_setparam(NET_IPADDR, reply->dr_ipaddr);
@@ -398,27 +410,39 @@ static int ui_ifconfig_auto(ui_cmdline_t *cmd, char *devname)
 	int err;
 	const char *x;
 	uint8_t hwaddr[6];
-
-	net_uninit();
-
-	err = net_init(devname);
-	if (err < 0) {
-		xprintf("Could not activate device %s: %s\n",
-			devname, bolt_errortext(err));
-		return err;
-	}
+	bool is_hwaddr_valid = false;
+	int i;
+	static const int MAX_TRIES = 3;
 
 	if (cmd_sw_value(cmd, "-hwaddr", &x)) {
 		if (parsehwaddr(x, hwaddr) != 0) {
 			xprintf("Invalid hardware address: %s\n", x);
-			net_uninit();
 			return BOLT_ERR_INV_PARAM;
-		} else {
-			net_setparam(NET_HWADDR, hwaddr);
 		}
+		is_hwaddr_valid = true;
 	}
 
-	return do_dhcp_request(devname);
+	for (i = 0; i < MAX_TRIES; ++i) {
+		net_uninit();
+		err = net_init(devname);
+		if (err < 0) {
+			xprintf("Could not activate device %s: %s\n",
+				devname, bolt_errortext(err));
+			return err;
+		}
+		if (is_hwaddr_valid)
+			net_setparam(NET_HWADDR, hwaddr);
+
+		err = do_dhcp_request(devname);
+		/* Try again only if BOLT_ERR_IOERR, which is returned
+		 * when GENET is stuck with passing a frame.
+		 */
+		if (err != BOLT_ERR_IOERR)
+			break;
+
+		xprintf("Re-trying getting DHCP %d...\n", i+1);
+	}
+	return err;
 }
 
 static int ui_ifconfig_getsw(ui_cmdline_t *cmd, char *swname, char *descr,

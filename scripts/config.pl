@@ -6,6 +6,7 @@ use File::Spec;
 use File::Basename;
 use Math::BigInt;
 use Text::ParseWords;
+use Carp;
 use Getopt::Std;
 use lib dirname(File::Spec->rel2abs(__FILE__));
 
@@ -105,7 +106,9 @@ my @configs = (
 	       "STACK_SIZE",
 	       "SYSINIT",
 	       "SYSTEMPORT",
-               "TCP",
+	       "TCP",
+	       "SSDP",
+	       "COAP",
 	       "TRUSTZONE_CMD",
 		   "TRUSTZONE_MON",
 	       "UI",
@@ -649,6 +652,7 @@ sub new($$) {
 	$s->{cset} = [];
 	$s->{ddr} = [];
 	$s->{drammap} = [];
+	$s->{drammap64} = [];
 	$s->{dt_ops} = [];
 	$s->{dts} = undef;
 	$s->{enet} = [];
@@ -1894,6 +1898,16 @@ sub cmd_mmap($) {
 	  @{$Current->{drammap}};
 }
 
+sub cmd_mmap64($) {
+	my ($f) = @_;
+	check_in_family();
+	@{$Current->{drammap64}} = sort {
+		$a->{memc} <=> $b->{memc} ||
+		Math::BigInt->new($a->{to_bytes}) <=> Math::BigInt->new($b->{to_bytes})
+	} Drammap->new($f->[1],$f->[2],$f->[3],$f->[4]),
+	  @{$Current->{drammap64}};
+}
+
 sub cmd_section($) {
 	my ($f) = @_;
 	check_in_family();
@@ -1965,6 +1979,7 @@ my %commands = (
 		'mapselect' =>	\&cmd_map_select,
 		'memsys' =>	\&cmd_memsys,
 		'mmap' =>	\&cmd_mmap,
+		'mmap64' =>	\&cmd_mmap64,
 		'moca' =>	\&cmd_moca,
 		'mset' =>	\&cmd_mset,
 		'nandchip' =>	\&cmd_nandchip,
@@ -4175,25 +4190,32 @@ sub check_drammap32($) {
 	}
 }
 
-sub processed_mmap() {
+sub processed_mmap(;$) {
+	my $is_v7_64 = shift;
 	my $b = $Family;
-	my $nentries = scalar @{$b->{drammap}};
+	my $mmap = $is_v7_64 ? $b->{drammap64} : $b->{drammap};
+	return ""
+		if ($is_v7_64 && !@$mmap);
+	my $nentries = scalar @{$mmap};
 	my $text = qq(#include "addr-mapping.h"\n\n);
-	$text .= "static const unsigned int NUM_DRAM_MAPPING_ENTRIES = "
-		. $nentries . ";\n";
-	$text .= "static const struct addr_mapping_entry __maybe_unused "
-		. "dram_mapping_table[" . $nentries . "] = {\n";
-	if (!@{$b->{drammap}}) {
+	$text .= sprintf "static const unsigned int NUM_DRAM%s_MAPPING_ENTRIES = %d;\n",
+		$is_v7_64 ? "64" : "", $nentries;
+	$text .= "static const struct addr_mapping_entry __maybe_unused ";
+	$text .= sprintf "dram_mapping_table%s[%d] = {\n",
+		$is_v7_64 ? "_v7_64" : "", $nentries;
+	if (!@{$mmap}) {
 		die "$P: Missing DRAM map.  Please see mmap in doc/build_configuration_script.txt\n"
 	}
-	foreach (@{$Family->{mset}}) {
-		if ($_->{name} eq 'CFG_ARCH_ARM' and $_->{value} eq '1') {
-			check_drammap32($b->{drammap});
-			last;
+	if (!$is_v7_64) {
+		foreach (@{$Family->{mset}}) {
+			if ($_->{name} eq 'CFG_ARCH_ARM' and $_->{value} eq '1') {
+				check_drammap32($b->{drammap});
+				last;
+			}
 		}
 	}
 	# The map will be sorted in cmd_mmap().
-	for my $n (@{$b->{drammap}}) {
+	for my $n (@{$mmap}) {
 		my $from_mb =
 			(Math::BigInt->new($n->{from_bytes}))->bdiv(1024*1024);
 		my $to_mb = (Math::BigInt->new($n->{to_bytes}))->bdiv(1024*1024);
@@ -4471,7 +4493,8 @@ sub main()
 	write_textfile("$D/nand_chips.h", processed_nandshape());
 	append_textfile("$D/nand_chips.h", processed_nandchip());
 
-	write_textfile("$D/mmap-dram.h", processed_mmap());
+	write_textfile("$D/mmap-dram.h",
+		processed_mmap() . processed_mmap('64'));
 
 	write_textfile("$D/family", $Family->{familyname});
 

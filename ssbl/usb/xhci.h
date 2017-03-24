@@ -490,6 +490,7 @@ typedef struct xhci_softc_s {
 
 	physaddr_t	regs;
 	int		block_pcd;
+	int		pending_pcd;
 	int		error;
 
 	int		rh_newaddr;	/* to be set on next status update */

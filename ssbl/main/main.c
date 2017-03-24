@@ -7,6 +7,7 @@
  *
  ***************************************************************************/
 
+#include <avs_bsu.h> /* for avs_info_print() */
 #include <bolt.h>
 #include <board.h>
 #include <bsp_config.h>
@@ -43,9 +44,6 @@
 #define WANT_OTP_DECODE 1 /* SWBOLT-263 */
 #include <otp_status.h> /* from gen/ */
 
-#ifdef SECURE_BOOT
-#include <avs_bsu.h> /* for avs_info_print() */
-#endif
 
 /*  *********************************************************************
     *  Constants
@@ -54,6 +52,7 @@
 /* "Stringification" of a macro! */
 #define M_STR1(x)	(#x)
 #define M_STR(x)	M_STR1(x)
+#define NODENAME_STR "NODENAME"
 
 static const char * const logo[] = {
 	"    ,/   ",
@@ -152,6 +151,14 @@ static void bolt_setup_default_env(void)
 
 	env_setenv("BOARDNAME", board_name(),
 		ENV_FLG_BUILTIN | ENV_FLG_READONLY);
+
+	/* If NODENAME does not exist, set a default name. */
+	if (!env_getenv(NODENAME_STR)) {
+		char *envmac = env_getenv("ETH0_HWADDR");
+		xsprintf(buffer, "%s-%s", board_name(), envmac);
+		env_setenv(NODENAME_STR, buffer,
+			ENV_FLG_BUILTIN | ENV_FLG_NORMAL);
+	}
 
 	/* if we have a config put it there, but respect if the
 	 user has one already setup.
@@ -470,7 +477,33 @@ static void bolt_auto_sysinit(int force_init)
 static void bolt_autostart(void)
 {
 	char *env;
+#if CFG_COAP
+	bolt_device_t *netdev;
+	char bolt_cmd[80];
 
+	if (!bolt_docommands("testenv -eq COAP_SSDP_ENABLE 1")) {
+		netdev = bolt_finddev(DEF_NETDEV);
+		if (netdev != NULL) {
+			xsprintf(bolt_cmd, "ifconfig %s -auto",
+				netdev->dev_fullname);
+			if (!bolt_docommands(bolt_cmd)) {
+				bolt_docommands("ssdp");
+				bolt_docommands("coap listen");
+				/* check the env variable
+				 * "COAP_HALT_CMD"
+				 * before proceeding to execute STARTUP
+				 * "COAP_HALT_CMD" is set to 1
+				 * on receiving the halt command
+				 * from coap client
+				 */
+				xsprintf(bolt_cmd,
+					"testenv -eq COAP_HALT_CMD 1");
+				if (!bolt_docommands(bolt_cmd))
+					return;
+			}
+		}
+	}
+#endif
 	env = env_getenv("STARTUP");
 	if (env) {
 		xprintf("Executing STARTUP...\r");
@@ -668,9 +701,10 @@ void bolt_main(int a, int b)
 	condition while we wait for the chip to cool down. */
 	bolt_overtemp_init();
 #endif
-#ifdef SECURE_BOOT
-	avs_info_print(); /* not needed in non-secure as FSBL prints it out */
-#endif
+
+	/* Print out the latest status with DVFS enabled */
+	avs_info_print();
+
 	ui_init();
 
 	board_final_init();

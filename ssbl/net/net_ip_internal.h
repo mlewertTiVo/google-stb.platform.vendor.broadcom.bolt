@@ -62,7 +62,16 @@ typedef struct ip_protodisp_s {
 } ip_protodisp_t;
 
 #define IP_MAX_PROTOCOLS	4
+#define MAX_MC_GROUPS		4
 
+/* Multicast flags */
+#define MC_FLAG_VALID		1
+
+/* Multicast data types */
+typedef struct mcast_list_s {
+	uint8_t mc_group_addr[IP_ADDR_LEN];
+	uint32_t flags;
+} mcast_list_t;
 struct ip_info_s {
 	net_info_t net_info;
 
@@ -87,4 +96,6 @@ struct ip_info_s {
 	uint16_t assembly_identification;
 	uint16_t assembly_proto;
 	uint32_t assembly_ip;
+	/* multicast groups */
+	mcast_list_t mc_list[MAX_MC_GROUPS];
 };

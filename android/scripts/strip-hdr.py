@@ -9,7 +9,7 @@ verbose=0
 
 # Tips: Update the dictionary as we need to include additional RDB header files
 rdb_hdr_file_dict = {}
-rdb_hdr_file_dict["bchp_common.h"] = {"BCHP_PHYSICAL_OFFSET","BCHP_WKTMR_REG_START"}
+rdb_hdr_file_dict["bchp_common.h"] = {"BCHP_PHYSICAL_OFFSET","BCHP_WKTMR_REG_START","BCHP_TIMER_REG_START"}
 rdb_hdr_file_dict["bchp_aon_ctrl.h"] = {"BCHP_AON_CTRL_SYSTEM_DATA_RAMi_ARRAY_BASE"}
 
 h_file_iterator_pattern = r"""

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -8,13 +8,10 @@
  ***************************************************************************/
 
 #include <addr-mapping.h>
+#include <bchp_aon_ctrl.h>
 #include <fsbl-common.h>
 #include <mmap-dram.h>
 #include <stdint.h>
-
-#ifdef CONFIG_BCM7278A0
-#include <bchp_aon_ctrl.h>
-#endif
 
 /* Limit to a 32-bit space---BOLT does not (currently) support ARM LPAE. */
 uint32_t ddr_get_restricted_size_mb(const struct ddr_info *ddr)
@@ -24,9 +21,8 @@ uint32_t ddr_get_restricted_size_mb(const struct ddr_info *ddr)
 	unsigned int i;
 	unsigned int num_entries = NUM_DRAM_MAPPING_ENTRIES;
 
-#ifdef CONFIG_BCM7278A0
-	if (BDEV_RD(BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT) &
-		BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT_map_variant_MASK) {
+#ifdef BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT_map_variant_MASK
+	if (is_mmap_v7_64()) {
 		num_entries = sizeof(dram_mapping_table_v7_64) /
 			sizeof*(dram_mapping_table_v7_64);
 		am_entry = dram_mapping_table_v7_64;
@@ -44,3 +40,14 @@ uint32_t ddr_get_restricted_size_mb(const struct ddr_info *ddr)
 
 	return size_mb;
 }
+
+#ifdef BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT_map_variant_MASK
+bool is_mmap_v7_64(void)
+{
+	if (BDEV_RD(BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT) &
+		BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT_map_variant_MASK)
+		return true;
+
+	return false;
+}
+#endif

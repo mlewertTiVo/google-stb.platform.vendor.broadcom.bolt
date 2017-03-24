@@ -411,7 +411,7 @@ static int load_code(void)
 		/* read the code, data and security params to the buffer */
 		if (emmc_read_fsbl(AVS_SRAM_ADDR,
 			bytes+round_up(data_length)+AVS_PARAM_SIZE,
-			flash_offs, false) != 0)
+			(flash_offs+info.flash.part_offs), false) != 0)
 			sys_die(DIE_AVS_CODE_LOAD_FROM_EMMC_FAILED,
 				"AVS code load from eMMC failed");
 		/* copy the code to AVS PROG_ARRAY */

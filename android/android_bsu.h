@@ -98,4 +98,5 @@ extern int android_boot_addloader(void);
 #if defined(BCHP_WKTMR_REG_START)
 extern void android_wktmr_adjust(void);
 #endif
+extern void android_start_wdt(void);
 #endif /* _ANDROID_BSU_H */

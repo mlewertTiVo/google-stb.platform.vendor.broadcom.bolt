@@ -11,6 +11,7 @@
 #define _LIB_NO_MACROS_
 #include "lib_string.h"
 #include "lib_malloc.h"
+#include "lib_printf.h"
 
 char *lib_strcpy(char *dest, const char *src)
 {
@@ -107,6 +108,20 @@ int lib_strncmp(const char *dest, const char *src, size_t cnt)
 		return -1;
 }
 
+int lib_strncasecmp(const char *s1, const char *s2, size_t n)
+{
+	if (n == 0)
+		return 0;
+
+	while (n-- != 0 && lib_tolower(*s1) == lib_tolower(*s2)) {
+		if (n == 0 || *s1 == '\0' || *s2 == '\0')
+			break;
+		s1++;
+		s2++;
+	}
+	return (lib_tolower(*(unsigned char *) s1) -
+		lib_tolower(*(unsigned char *) s2));
+}
 int lib_strcmpi(const char *dest, const char *src)
 {
 	char dc, sc;
@@ -127,6 +142,17 @@ int lib_strcmpi(const char *dest, const char *src)
 	if (!*dest && *src)
 		return -1;
 	return 0;
+}
+int lib_snprintf(char *outbuf, int n, const char *format, ...)
+{
+	va_list marker;
+	int count;
+
+	va_start(marker, format);
+	count = xvsnprintf(outbuf, n, format, marker);
+	va_end(marker);
+
+	return count;
 }
 
 char *lib_strchr(const char *dest, int c)
@@ -272,6 +298,14 @@ char lib_toupper(char c)
 {
 	if ((c >= 'a') && (c <= 'z'))
 		c -= 32;
+	return c;
+}
+
+char lib_tolower(char c)
+{
+
+	if ((c >= 'A') && (c <= 'Z'))
+		c += 32;
 	return c;
 }
 

@@ -2778,7 +2778,7 @@ sub add_pmu($$)
 	my ($dt, $rh) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my %default = (
-		"compatible" => [ 'string', [ 'arm,cortex-a15-pmu', 'arm,cortex-a9-pmu' ] ],
+		"compatible" => [ 'string', [ 'arm,armv8-pmuv3', 'arm,cortex-a15-pmu', 'arm,cortex-a9-pmu' ] ],
 	);
 	my @intr_prop;
 	my $j;

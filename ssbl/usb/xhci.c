@@ -1158,7 +1158,7 @@ static int xhci_intr(usbbus_t *bus)
 	/* Read the interrupt status register and don't bother
 	   doing anything if nothing happened  */
 	reg = XHCI_READCSR(softc, R_USBSTS);
-	if (reg == 0)
+	if (!softc->pending_pcd && (reg == 0))
 		return 0;
 
 	/* Write interrupt status value back to clear bits that were set */
@@ -1169,7 +1169,8 @@ static int xhci_intr(usbbus_t *bus)
 		xhci_event(softc);
 
 	/* Root Hub Status Change */
-	if ((softc->block_pcd == 0) && (reg & M_USBSTS_PCD)) {
+	if ((softc->block_pcd == 0) &&
+	    (softc->pending_pcd || (reg & M_USBSTS_PCD))) {
 		uint32_t lreg;
 
 		if (xhcidebug & SHOW_RH_INFO1) {
@@ -2183,22 +2184,25 @@ static void xhci_roothub_statchg(xhci_softc_t *softc)
 	for (idx = 1; idx <= softc->hc->ndp; idx++) {
 		status = XHCI_READCSR(softc, R_PORTSC(idx));
 		/* Process main change bits and clear others */
-		XHCI_WRITECSR(softc, R_PORTSC(idx), M_PORTSC_OTHER);
+		XHCI_WRITECSR(softc, R_PORTSC(idx), (status & M_PORTSC_OTHER));
 		if (status & M_PORTSC_CHECK)
 			portstat = (1 << idx);
 	}
 
 	if (portstat != 0) {
-		++softc->block_pcd;
 		ur = (usbreq_t *)q_deqnext(&(softc->rh_intrq));
-		if (!ur)
-			return;	/* no requests pending, ignore it */
+		if (!ur) {	/* no requests pending, postpone action */
+			softc->pending_pcd = 1;
+			return;
+		}
 
 		ur->ur_buffer[0] = portstat;
 		ur->ur_xferred = 1;
 
 		usb_complete_request(ur, 0);
+		++softc->block_pcd;
 	}
+	softc->pending_pcd = 0;
 }
 
 /*  *********************************************************************

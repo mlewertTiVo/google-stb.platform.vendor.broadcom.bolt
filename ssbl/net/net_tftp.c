@@ -141,8 +141,9 @@ static int _tftp_send_blksize_error(tftp_info_t *info, const char *reason)
   *	 0 if ok
   *	 else error code
   **********************************************************************/
-static int _tftp_open(tftp_info_t *info, char *hostname, char *filename,
-		      int mode)
+static int _tftp_open(tftp_info_t *info, char *hostname,
+					int port, char *filename,
+					int mode)
 {
 	ebuf_t *buf = NULL;
 	const char *datamode = "octet";
@@ -163,8 +164,7 @@ static int _tftp_open(tftp_info_t *info, char *hostname, char *filename,
 
 	/* Open a UDP socket to the TFTP server
 	 */
-
-	info->tftp_socket = udp_socket(UDP_PROTO_TFTP);
+	info->tftp_socket = udp_socket(port);
 	if (info->tftp_socket < 0)
 		return info->tftp_socket;
 
@@ -622,7 +622,8 @@ static int tftp_fileop_init(void **fsctx, void *dev)
 static int tftp_fileop_open(void **ref, void *fsctx, const char *name, int mode)
 {
 	tftp_info_t *info;
-	char *host, *filename;
+	char *host, *filename, *portNumChar, *swapTemp;
+	int portNum;
 	int res;
 	int auto_blksize;
 
@@ -649,6 +650,17 @@ static int tftp_fileop_open(void **ref, void *fsctx, const char *name, int mode)
 	}
 	*filename++ = '\0';
 
+	portNumChar = strchr(filename, ':');
+	if (!portNumChar)
+		portNum = UDP_PROTO_TFTP;
+	else {
+		*portNumChar++ = '\0';
+		swapTemp = portNumChar;
+		portNumChar = filename;
+		filename = swapTemp;
+		portNum = lib_atoi(portNumChar);
+	}
+
 	/* Allocate the tftp info structure */
 
 	info = KMALLOC(sizeof(tftp_info_t), 0);
@@ -669,7 +681,7 @@ static int tftp_fileop_open(void **ref, void *fsctx, const char *name, int mode)
 
 	/* Open the file */
 
-	res = _tftp_open(info, host, filename, mode);
+	res = _tftp_open(info, host, portNum, filename, mode);
 
 	KFREE(host);
 

@@ -39,6 +39,8 @@ SYSCC			:=gcc
 SYSCFLAGS		:= -Wall -Wextra -Werror
 SYSZLIB			:=-lz
 
+COAP_VER        := 4.1.1
+
 # Security
 BFW_LOAD		:= y
 BFW_HASH_LOCK		:= n
@@ -77,7 +79,7 @@ CFG := config/family-$(FAMILY).cfg
 endif
 endif
 
-export FAMILY FAMILIES ZLIB_VER ROOT ODIR TMPDIR Q BFW_LOAD \
+export FAMILY FAMILIES ZLIB_VER COAP_VER ROOT ODIR TMPDIR Q BFW_LOAD \
 	BFW_HASH_LOCK SECURE_BOOT S_UNITTEST S_UNITTEST_AUTOFLASH \
 	FLASH_TEMPLATE SOFTLOAD BCM_JTAG DUMMY_SECURITY \
 	CFG SAVED_CFG SINGLE_BOARD SAVE_TEMPS GEN
@@ -173,6 +175,7 @@ bolts: env
 
 #  --- setting up the environment ---
 env: family_dirs $(GEN)/dtc/.marker $(GEN)/zlib-$(ZLIB_VER)/.marker \
+		$(GEN)/libcoap-$(COAP_VER)/.marker \
 		$(GEN)/scripts/mcb2c $(GEN)/scripts/splash_create_flash_file \
 		$(GEN)/scripts/patcher.pl
 
@@ -192,6 +195,13 @@ $(GEN)/dtc/.marker: thirdparty/GPL-BSD-dtc-$(DTC_COMMIT).tgz \
 	$(Q)patch --directory $(GEN) -p0 < $(ROOT)/thirdparty/libfdt_env.patch
 	$(Q)patch --directory $(GEN) -p0 < $(ROOT)/thirdparty/libfdt_coverity.patch
 	$(Q)pushd $(GEN) && $(MAKE) -C dtc libfdt_clean && popd
+	$(Q)touch $@
+
+$(GEN)/libcoap-$(COAP_VER)/.marker: thirdparty/v$(COAP_VER).tar.gz \
+		thirdparty/v$(COAP_VER).patch
+	$(Q)echo "         SETUP COAP"
+	$(Q)tar -xzf thirdparty/v$(COAP_VER).tar.gz --directory $(GEN)
+	$(Q)patch --directory $(GEN) -p0 < $(ROOT)/thirdparty/v$(COAP_VER).patch
 	$(Q)touch $@
 
 $(GEN)/scripts/mcb2c: scripts/mcb2c.c

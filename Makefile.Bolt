@@ -190,6 +190,10 @@ AFLAGS64 := $(COMMON_FLAGS64) -D__ASSEMBLER__ -D_ASMLANGUAGE
 LDFLAGS64 := $(ARCH_LDFLAGS64)
 ########################################
 
+ifeq ($(CFG_COAP),1)
+CFLAGS += -I$(GEN)/libcoap-$(COAP_VER)
+endif
+
 ifeq ($(V),1)
 LDFLAGS += --print-gc-sections
 LDFLAGS64 += --print-gc-sections

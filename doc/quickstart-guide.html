@@ -957,7 +957,7 @@ TOOLCHAIN variable or anything else to set up.</p></div>
 <div class="paragraph"><p>In this example the Broadcom supplied GCC toolchain
 package is called <em>stbgcc-4.8-1.1.tar.bz2</em>
 and the BOLT source code package is called
-<em>bolt-v1.26.tgz</em> The exact names depend upon
+<em>bolt-v1.27.tgz</em> The exact names depend upon
 the release you get from us.</p></div>
 <div class="paragraph"><p>First unpack and install the toolchain in
 a convenient place. We use <em>/media/cdrom/</em>
@@ -1003,8 +1003,8 @@ your development location. In this case we use the
 <div class="listingblock">
 <div class="content">
 <pre><code> [user@machine]$mkdir ~/bolt
- [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.26.tgz
- [user@machine]$tar -xzf bolt-v1.26.tgz</code></pre>
+ [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.27.tgz
+ [user@machine]$tar -xzf bolt-v1.27.tgz</code></pre>
 </div></div>
 <div class="paragraph"><p>You should now have a subdirectory named after the bolt release package name:</p></div>
 <div class="admonitionblock">
@@ -1019,7 +1019,7 @@ build if this happens.</td>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre><code> [user@machine]$cd ~/bolt/bolt-v1.26</code></pre>
+<pre><code> [user@machine]$cd ~/bolt/bolt-v1.27</code></pre>
 </div></div>
 </div>
 <div class="sect2">
@@ -1040,7 +1040,7 @@ family (chip) types available, as shown here by this command:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code> [user@machine]$make show
-7250b0 7260a0 7268a0 7271a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0</code></pre>
+7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0</code></pre>
 </div></div>
 <div class="paragraph"><p>Now select a family (in this example - 7445d0) and build BOLT:</p></div>
 <div class="listingblock">
@@ -1065,10 +1065,10 @@ by Lorenzo Bettini
 http://www.lorenzobettini.it
 http://www.gnu.org/software/src-highlite -->
 <pre><tt>ls -l objs<span style="color: #990000">/</span>7445d0/bolt-<span style="color: #990000">*.</span>bin
-lrwxrwxrwx <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-ba<span style="color: #990000">.</span>bin -<span style="color: #990000">&gt;</span> bolt-v<span style="color: #993399">1.26</span>-7445d0-ba-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
-lrwxrwxrwx <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-bb<span style="color: #990000">.</span>bin -<span style="color: #990000">&gt;</span> bolt-v<span style="color: #993399">1.26</span>-7445d0-bb-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
--rw-rw-r-- <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">1.26</span>-7445d0-ba-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
--rw-rw-r-- <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">1.26</span>-7445d0-bb-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin</tt></pre></div></div>
+lrwxrwxrwx <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-ba<span style="color: #990000">.</span>bin -<span style="color: #990000">&gt;</span> bolt-v<span style="color: #993399">1.27</span>-7445d0-ba-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+lrwxrwxrwx <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-bb<span style="color: #990000">.</span>bin -<span style="color: #990000">&gt;</span> bolt-v<span style="color: #993399">1.27</span>-7445d0-bb-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+-rw-rw-r-- <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">1.27</span>-7445d0-ba-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+-rw-rw-r-- <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">1.27</span>-7445d0-bb-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin</tt></pre></div></div>
 <div class="paragraph"><p>For brevity we also symlink the longer BOLT binary names
 as you can see above. This may change if we have to support
 more than one BFW per <em>ba</em> or <em>bb</em> type in the future.</p></div>
@@ -1267,7 +1267,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-02-23 01:54:41 PST
+Last updated 2017-03-23 09:56:12 PDT
 </div>
 </div>
 </body>

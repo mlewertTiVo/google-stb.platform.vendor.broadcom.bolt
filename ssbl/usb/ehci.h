@@ -293,7 +293,8 @@ typedef volatile struct ehci_qtd_s {
 #define M_EHCI_USBSTS_PSS	_EHCI_MAKEMASK1(14)
 #define M_EHCI_USBSTS_ASS	_EHCI_MAKEMASK1(15)
 #define M_EHCI_INT_ALL		(M_EHCI_USBSTS_INT | M_EHCI_USBSTS_ERR | \
-							 M_EHCI_USBSTS_PSC | M_EHCI_USBSTS_HSE )
+				 M_EHCI_USBSTS_IAA | M_EHCI_USBSTS_PSC | \
+				 M_EHCI_USBSTS_HSE)
 
 /*
  * R_EHCI_FRINDEX
@@ -370,6 +371,7 @@ typedef struct ehci_softc_s {
 	int ehci_ndp;
 	long ehci_addr;
 	uint32_t ehci_intdisable;
+	int pending_psc;
 
 	int ehci_rh_newaddr;	/* Address to be set on next status update */
 	int ehci_rh_addr;	/* address of root hub */

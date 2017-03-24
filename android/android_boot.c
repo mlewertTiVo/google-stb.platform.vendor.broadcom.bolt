@@ -108,6 +108,7 @@ int android_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 	/* Adjust the wake-up timer */
 	android_wktmr_adjust();
 #endif
+	android_start_wdt();
 
 	DLOG("boot_cmd=%s\n", boot_cmd);
 

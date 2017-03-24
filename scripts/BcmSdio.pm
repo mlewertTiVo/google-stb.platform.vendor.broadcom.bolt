@@ -1,5 +1,5 @@
 ################################################################################
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -67,7 +67,6 @@ sub get_pinsel_type($)
 	       "7268b0" => "2",
 	       "7271a0" => "2",
 	       "7271b0" => "2",
-	       "7364a0" => "1",
 	       "7364b0" => "1",
 	       "7364c0" => "1",
         );

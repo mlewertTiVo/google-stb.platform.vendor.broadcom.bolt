@@ -2008,14 +2008,14 @@ completely unavailable.</p></div>
 another uart in FSBL (this propagates to SSBL) and setup the
 pinmuxing for it in the chip family configuration file.</p></div>
 <div class="paragraph"><p>Here is an example using UART #2 (<em>C</em>) instead of
-UART #0 (<em>A</em>) on a 7364a0 part:</p></div>
+UART #0 (<em>A</em>) on a 7364c0 part:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>diff --git a/fsbl/fsbl-main.c b/fsbl/fsbl-main.c
-index bac807c..549509b 100644
+index 1315a26..03fb9a3 100644
 --- a/fsbl/fsbl-main.c
 +++ b/fsbl/fsbl-main.c
-@@ -151,7 +151,7 @@ void fsbl_main(void)
+@@ -159,7 +159,7 @@ void fsbl_main(void)
 
         late_cpu_init();
         late_release_resets();
@@ -2028,18 +2028,17 @@ index bac807c..549509b 100644
 <div class="paragraph"><p>Adding the new uart pinmuxing:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>diff --git a/config/family-7364a0.cfg b/config/family-7364a0.cfg
-index 067721a..6a7501a 100644
---- a/config/family-7364a0.cfg
-+++ b/config/family-7364a0.cfg
-@@ -40,6 +40,8 @@ include config/layout-zeus42.cfg
-  rtsdefault -id 1
-  rtsbase 0 MEMC_ARB_0_CLIENT_INFO_0
+<pre><code>diff --git a/config/family-7364c0.cfg b/config/family-7364c0.cfg
+index a553d70..052324b 100644
+--- a/config/family-7364c0.cfg
++++ b/config/family-7364c0.cfg
+@@ -44,4 +44,6 @@ rtsdefault -id 1
+ rtsbase 0 MEMC_ARB_0_CLIENT_INFO_0
 
-+ pmux -pin onoff_gpio_112 -sel uart_txd_2
-+ pmux -pin onoff_gpio_114 -sel uart_rxd_2
-  pmux -pin onoff_gpio_117,onoff_gpio_118 -sel uart_ -n 2 # UART_RXD_0 and TXD_0
-  pmux -pin aon_sgpio_02,aon_sgpio_03 -sel aon_bsc_m1_ -n 2 # Board ID</code></pre>
++pmux -pin onoff_gpio_112 -sel uart_txd_2
++pmux -pin onoff_gpio_114 -sel uart_rxd_2
+ pmux -pin onoff_gpio_117,onoff_gpio_118 -sel uart_ -n 2 # UART_RXD_0 and TXD_0
+ pmux -pin aon_sgpio_02,aon_sgpio_03 -sel aon_bsc_m1_ -n 2 # Board ID</code></pre>
 </div></div>
 <div class="paragraph"><p>You can also need to select a different default UART for Linux to use
 as its boot console. This can be easily built into the device tree by
@@ -2049,10 +2048,10 @@ console, instead of UART A:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>diff --git a/config/stddevices.cfg b/config/stddevices.cfg
-index 9cf8dcf3d27e..7493a0869c14 100644
+index e1b5953..5d2c5b1 100644
 --- a/config/stddevices.cfg
 +++ b/config/stddevices.cfg
-@@ -28 +28 @@ dt autogen -node rf4ce
+@@ -32 +32 @@ dt autogen -node rf4ce
 -dt autogen -node serial -compatible ns16550a -stdout A
 +dt autogen -node serial -compatible ns16550a -stdout C</code></pre>
 </div></div>
@@ -2239,7 +2238,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-02-23 01:54:41 PST
+Last updated 2017-03-23 09:56:12 PDT
 </div>
 </div>
 </body>

@@ -12,7 +12,8 @@
 /**********************************************************************
   * Global info
   **********************************************************************/
-
+#ifndef __NET_IP_H__
+#define __NET_IP_H__
 #ifndef IP_ADDR_LEN
 #define IP_ADDR_LEN 4
 #endif
@@ -81,7 +82,7 @@ void _ip_register(ip_info_t *ipinfo,
 
 #define ip_addrisbcast(a) ((a[0] == 0xFF) && (a[1] == 0xFF)\
 			&& (a[2] == 0xFF) && (a[3] == 0xFF))
-
+#define ip_addrismcast(a) (((a[0] >> 4) & 0xf) == 0xe)
 #ifndef NET_IPADDR
 #define NET_IPADDR	0
 #define NET_NETMASK	1
@@ -92,6 +93,8 @@ void _ip_register(ip_info_t *ipinfo,
 #define NET_HOSTNAME	6
 #define NET_SPEED	7
 #define NET_LOOPBACK	8
+#define NET_ADD_GROUP	11 /* add a multicast group */
+#define NET_DROP_GROUP	12 /* remove a multicast group */
 #endif
 
 /**********************************************************************
@@ -121,3 +124,5 @@ icmp_info_t *_icmp_init(ip_info_t *ipi);
 void _icmp_uninit(icmp_info_t *icmp);
 
 int _icmp_ping(icmp_info_t *icmp, uint8_t *ipaddr, int seq, int len);
+
+#endif

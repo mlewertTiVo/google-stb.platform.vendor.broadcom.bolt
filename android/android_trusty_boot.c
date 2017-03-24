@@ -187,6 +187,7 @@ int android_trusty_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 	/* Adjust the wake-up timer */
 	android_wktmr_adjust();
 #endif
+	android_start_wdt();
 
 	/*
 	 * Boot bl31. It will launch with information about Trusty(BL32)

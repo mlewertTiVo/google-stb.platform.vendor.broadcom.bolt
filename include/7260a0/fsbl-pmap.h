@@ -20,47 +20,45 @@
 #ifndef BCHP_FSBL_PMAP_PRIV_H__
 #define BCHP_FSBL_PMAP_PRIV_H__
 
-#define AVS_RDB_DATE 20161124 /* %y%m%d */
-#define AVS_RDB_TIME 1157 /* %h%m */
+#define AVS_RDB_DATE 20170303 /* %y%m%d */
+#define AVS_RDB_TIME 1001 /* %h%m */
 
 const struct pmap_entry pmapTable[]
 	__attribute__ ((section(".pmaptable") unused)) = {
-#if defined(CONFIG_BCM7260)
 	{
 		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 2 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 12 },
-		.sysif_mdiv = 2,
+		.sysif_mdiv = 4,
 	},
 	{
 		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 3 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 16 },
-		.sysif_mdiv = 3,
+		.sysif_mdiv = 4,
 	},
 	{
 		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 3 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 14 },
-		.sysif_mdiv = 3,
+		.sysif_mdiv = 4,
 	},
 	{
 		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 3 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 13 },
-		.sysif_mdiv = 3,
+		.sysif_mdiv = 4,
 	},
 	{
 		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 2 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 12 },
-		.sysif_mdiv = 2,
+		.sysif_mdiv = 4,
 	},
 	{
 		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 2 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 10 },
-		.sysif_mdiv = 2,
+		.sysif_mdiv = 4,
 	},
 	{
 		.cpu = { .ndiv = 167, .pdiv = 3, .mdiv = 2 },
 		.scb = { .ndiv =   0, .pdiv = 0, .mdiv = 10 },
-		.sysif_mdiv = 2,
+		.sysif_mdiv = 4,
 	},
 };
-#endif
 #endif

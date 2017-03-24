@@ -309,7 +309,25 @@ void eth_sethwaddr(ether_info_t *eth, uint8_t *hwaddr)
 		  &(eth->eth_hwaddr[0]), sizeof(eth->eth_hwaddr), NULL, 0);
 
 }
+/**********************************************************************
+  *  eth_setmulticast_hwaddr(eth,hwaddr)
+  *
+  *  Set the multicast address.
+  *
+  *  Input parameters:
+  *	 eth - ethernet context
+  *	 hwaddr - new hardware address - 6 bytes
+  *
+  *  Return value:
+  *	 nothing
+  **********************************************************************/
+void eth_setmulticast_hwaddr(ether_info_t *eth, uint8_t *hwaddr)
+{
+	memcpy(eth->eth_hwaddr, hwaddr, ENET_ADDR_LEN);
+	bolt_ioctl(eth->eth_devhandle, IOCTL_ETHER_SETMULTICAST_HWADDR,
+		  &(eth->eth_hwaddr[0]), sizeof(eth->eth_hwaddr), NULL, 0);
 
+}
 /**********************************************************************
   *  eth_setspeed(eth,speed)
   *

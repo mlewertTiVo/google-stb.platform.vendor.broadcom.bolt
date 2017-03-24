@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,7 +10,8 @@
 #ifndef __NET_API_H__
 #define __NET_API_H__
 
-#include <stdbool.h>
+#include <net_ebuf.h>
+#include <stdint.h>
 
 /*  *********************************************************************
     *  Constants
@@ -125,6 +126,8 @@ int arp_delete(uint8_t * ipaddr);
 #define NET_HOSTNAME	6
 #define NET_SPEED	7
 #define NET_LOOPBACK	8
+#define NET_ADD_GROUP	11 /* add a multicast group */
+#define NET_DROP_GROUP	12 /* remove a multicast group */
 #endif
 #define NET_DEVNAME	10
 

@@ -1037,7 +1037,7 @@ static int queue_next_transfer(unsigned int transfer_size)
 
 static int fastboot_init(int fb_transport_mode, char *fb_flashdev_name)
 {
-	int fd;
+	int fd, attempts, delay;
 	int res = BOLT_OK;
 	char trans_devname[15];
 
@@ -1047,17 +1047,28 @@ static int fastboot_init(int fb_transport_mode, char *fb_flashdev_name)
 
 	if (fb_transport_mode == FB_TRANSPORT_TCP) {
 		os_sprintf(trans_devname, "%s", "tcpfastboot0");
+		attempts = 1;
+		delay = 0;
 	} else {
 		os_sprintf(trans_devname, "%s", "usbdev0");
+		attempts = 3;
+		delay = 500;
 	}
 
 	/* Open transport layer device and allocate memory for receive buffer
 	 * based on transport protocol requirement */		
 	DLOG("Try to open connection to '%s'...\n", trans_devname);
-	fd = bolt_open(trans_devname);
+	for(; attempts > 0; attempts--) {
+		fd = bolt_open(trans_devname);
+		if (fd >= 0)
+			break;
+		else
+			msleep(delay);
+	}
+
 	if (fd < 0) {
-		os_printf("Error opening %s for fastboot connection. fd=%d\n",
-							trans_devname, fd);
+		os_printf("Error opening %s for fastboot connection. fd=%d.\n",
+			  trans_devname, fd);
 		res = BOLT_ERR_IOERR;
 		goto exit;
 	}

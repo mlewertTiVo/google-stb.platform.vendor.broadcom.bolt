@@ -21,7 +21,7 @@ stored in the MEMSYS subsection of BOLT please see the
 * Find out which shmoo you are currently using. Look
 in your config file for the line 'gset MEMC_REV'
 The associated text is a subdirectory of shmoo,
-e.g. For 7364a0, it is 'B150_F002'. So, 'shmoo/B150_F002/mcb/'
+e.g. For 7364c0, it is 'B150_F002'. So, 'shmoo/B150_F002/mcb/'
 will show you associated mcb files. The memc IP block may
 be used in many different chips, so its shared this way.
 
@@ -35,8 +35,8 @@ the file name format is of the form:
 e.g.
 
 ----
-  7364A0_1067MHz_16b_dev4Gx16_DDR3-2133N_le.mcb
-  7364A0_800MHz_16b_dev4Gx8_DDR3-1600K_le.mcb
+  7364C0_1067MHz_16b_dev4Gx16_DDR3-2133N_le.mcb
+  7364C0_800MHz_16b_dev4Gx8_DDR3-1600K_le.mcb
 ----
 
 The build system needs MCB files to be named like the above to be
@@ -46,8 +46,8 @@ is a special name for MCB's that can be shared by multiple families.
 
 * The shmoo build process takes the contents of these files and
 creates mcb-\{family}.c which condenses all the available ones down
-into a single C file for BOLT to build in, e.g. for 7364a0 that is
-the file 'shmoo/B150_F002/mcb-7364a0.c'. Please note that the
+into a single C file for BOLT to build in, e.g. for 7364c0 that is
+the file 'shmoo/B150_F002/mcb-7364c0.c'. Please note that the
 existence of a family specific mcb-\{family}.c prevents mcb-common.c
 from being included in the family BOLT build.
 
@@ -60,8 +60,8 @@ e.g.
 [source,shell]
 ----
      [user@machine]$ make distclean
-     [user@machine]$ make ddr_update FAMILY=7364a0 MEMC_REV=B150_F002
-     [user@machine]$ make 7364a0
+     [user@machine]$ make ddr_update FAMILY=7364c0 MEMC_REV=B150_F002
+     [user@machine]$ make 7364c0
 ----
 
 

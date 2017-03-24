@@ -1,5 +1,5 @@
 ################################################################################
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 # 
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -1208,7 +1208,6 @@ sub mcp_wr_pairing_allowed($)
 	       "7271a0" => "1",
 	       "7271b0" => "1",
 	       "7278a0" => "1",
-	       "7364a0" => "1",
 	       "7364b0" => "1",
 	       "7364c0" => "1",
 	       "74371a0" => "1",
