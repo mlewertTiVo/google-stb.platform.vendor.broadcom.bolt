@@ -1,15 +1,16 @@
 $VAR1 = {
-          'rdb_sha1' => 'joTsEJmdlXMPMEfYxgn/S0VrkQQ',
+          'rdb_sha1' => 'zeHWme7RqARDPHYoXzkWADxMR9k',
           'fail' => 0,
-          'date' => 'Tue Oct  4 15:50:19 PDT 2016',
-          'rdb_version' => 'rdb-v2-26-g0960d99',
-          'rdb_dir' => '/home/stblinux/clkgen/7260a0/current',
-          'clkgen_version' => 'clkgen-v4-220-gc3c3e93',
+          'date' => 'Mon Mar 27 11:14:46 PDT 2017',
+          'rdb_version' => 'rdb-v2-55-gc04e3f6',
+          'rdb_dir' => '/projects/stbgit/stblinux/git/clkgen/7260a0/current',
+          'clkgen_version' => 'clkgen-v4-307-g9726c68',
+          'pm_ver' => '???',
           'chip' => '7260a0',
           'aliases' => {},
           'unhandled_linux_funcs' => 'CPU, MEMSYS0, MPI',
           'invocation' => 'clkgen.pl --sw_nodes -v -g -r -P -c 7260a0',
-          'num_clks' => 66,
+          'num_clks' => 86,
           'clks' => '	brcmstb-clks {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -365,11 +366,48 @@ $VAR1 = {
 			set-bit-to-disable;
 		};
 
+		sys0_mdiv_ch0 : sys0_mdiv_ch0@f04e0174 {
+			compatible = "divider-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e0174 0x4>;
+			bit-shift = <1>;
+			bit-mask = <0xff>;
+			index-starts-at-one;
+			clocks = <&fixed_syn0>; 
+			clock-names = "fixed_syn0"; 
+		};
+
+		sys0_dis_ch0 : sys0_dis_ch0@f04e0174 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0174 0x4>;
+			bit-shift = <0>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,read-only;
+			clocks = <&sys0_mdiv_ch0>; 
+			clock-names = "sys0_mdiv_ch0"; 
+		};
+
+		sys0_pdh_ch0 : sys0_pdh_ch0@f04e0174 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0174 0x4>;
+			bit-shift = <10>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,read-only;
+			clocks = <&sys0_dis_ch0>; 
+			clock-names = "sys0_dis_ch0"; 
+		};
+
 		sys_108_pcie0 : sys_108_pcie0@f04e0458 {
 			compatible = "brcm,brcmstb-gate-clk";
 			#clock-cells = <0>;
 			reg = <0xf04e0458 0x4>;
 			bit-shift = <0>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
 		};
 
 		sys_54_pcie0 : sys_54_pcie0@f04e0458 {
@@ -414,6 +452,205 @@ $VAR1 = {
 			bit-shift = <2>;
 		};
 
+		fixed_factor0 : fixed_factor0 {
+			compatible = "fixed-factor-clock";
+			#clock-cells = <0>;
+			clock-div = <8>;
+			clock-mult = <1>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
+		};
+
+		fixed_factor1 : fixed_factor1 {
+			compatible = "fixed-factor-clock";
+			#clock-cells = <0>;
+			clock-div = <6>;
+			clock-mult = <1>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
+		};
+
+		net_mdiv_ch1 : net_mdiv_ch1@f04e0094 {
+			compatible = "divider-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e0094 0x4>;
+			bit-shift = <1>;
+			bit-mask = <0xff>;
+			index-starts-at-one;
+			clocks = <&net_ndiv_int>; 
+			clock-names = "net_ndiv_int"; 
+		};
+
+		net_dis_ch1 : net_dis_ch1@f04e0094 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0094 0x4>;
+			bit-shift = <0>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,read-only;
+			clocks = <&net_mdiv_ch1>; 
+			clock-names = "net_mdiv_ch1"; 
+		};
+
+		net_pdh_ch1 : net_pdh_ch1@f04e0094 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0094 0x4>;
+			bit-shift = <10>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,read-only;
+			clocks = <&net_dis_ch1>; 
+			clock-names = "net_dis_ch1"; 
+		};
+
+		sys0_mdiv_ch1 : sys0_mdiv_ch1@f04e0178 {
+			compatible = "divider-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e0178 0x4>;
+			bit-shift = <1>;
+			bit-mask = <0xff>;
+			index-starts-at-one;
+			clocks = <&fixed_syn0>; 
+			clock-names = "fixed_syn0"; 
+		};
+
+		sys0_dis_ch1 : sys0_dis_ch1@f04e0178 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0178 0x4>;
+			bit-shift = <0>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,read-only;
+			clocks = <&sys0_mdiv_ch1>; 
+			clock-names = "sys0_mdiv_ch1"; 
+		};
+
+		sys0_pdh_ch1 : sys0_pdh_ch1@f04e0178 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0178 0x4>;
+			bit-shift = <10>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,read-only;
+			clocks = <&sys0_dis_ch1>; 
+			clock-names = "sys0_dis_ch1"; 
+		};
+
+		uart_sysctrl_uart_0 : uart_sysctrl_uart_0@f04e051c {
+			compatible = "brcm,mux-clock", "mux-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e051c 0x4>;
+			bit-shift = <0>;
+			bit-mask = <0x3>;
+			clocks = <&fixed_factor0>, <&fixed_factor1>, 
+			  <&net_pdh_ch1>, <&sys0_pdh_ch1>; 
+			clock-names = "fixed_factor0", "fixed_factor1", 
+			  "net_pdh_ch1", "sys0_pdh_ch1"; 
+		};
+
+		stb_sysctrl_uart_0 : sw_uart0 : stb_sysctrl_uart_0@f04e0488 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0488 0x4>;
+			bit-shift = <4>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,set-rate-parent;
+			brcm,read-only;
+			clocks = <&uart_sysctrl_uart_0>; 
+			clock-names = "uart_sysctrl_uart_0"; 
+		};
+
+		fixed_factor2 : fixed_factor2 {
+			compatible = "fixed-factor-clock";
+			#clock-cells = <0>;
+			clock-div = <8>;
+			clock-mult = <1>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
+		};
+
+		fixed_factor3 : fixed_factor3 {
+			compatible = "fixed-factor-clock";
+			#clock-cells = <0>;
+			clock-div = <6>;
+			clock-mult = <1>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
+		};
+
+		uart_sysctrl_uart_1 : uart_sysctrl_uart_1@f04e0520 {
+			compatible = "brcm,mux-clock", "mux-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e0520 0x4>;
+			bit-shift = <0>;
+			bit-mask = <0x3>;
+			clocks = <&fixed_factor2>, <&fixed_factor3>, 
+			  <&net_pdh_ch1>, <&sys0_pdh_ch1>; 
+			clock-names = "fixed_factor2", "fixed_factor3", 
+			  "net_pdh_ch1", "sys0_pdh_ch1"; 
+		};
+
+		stb_sysctrl_uart_1 : sw_uart1 : stb_sysctrl_uart_1@f04e0488 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0488 0x4>;
+			bit-shift = <5>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,set-rate-parent;
+			brcm,read-only;
+			clocks = <&uart_sysctrl_uart_1>; 
+			clock-names = "uart_sysctrl_uart_1"; 
+		};
+
+		fixed_factor4 : fixed_factor4 {
+			compatible = "fixed-factor-clock";
+			#clock-cells = <0>;
+			clock-div = <8>;
+			clock-mult = <1>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
+		};
+
+		fixed_factor5 : fixed_factor5 {
+			compatible = "fixed-factor-clock";
+			#clock-cells = <0>;
+			clock-div = <6>;
+			clock-mult = <1>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
+		};
+
+		uart_sysctrl_uart_2 : uart_sysctrl_uart_2@f04e0524 {
+			compatible = "brcm,mux-clock", "mux-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e0524 0x4>;
+			bit-shift = <0>;
+			bit-mask = <0x3>;
+			clocks = <&fixed_factor4>, <&fixed_factor5>, 
+			  <&net_pdh_ch1>, <&sys0_pdh_ch1>; 
+			clock-names = "fixed_factor4", "fixed_factor5", 
+			  "net_pdh_ch1", "sys0_pdh_ch1"; 
+		};
+
+		stb_sysctrl_uart_2 : sw_uart2 : stb_sysctrl_uart_2@f04e0488 {
+			compatible = "brcm,brcmstb-gate-clk";
+			#clock-cells = <0>;
+			reg = <0xf04e0488 0x4>;
+			bit-shift = <6>;
+			set-bit-to-disable;
+			brcm,inhibit-disable;
+			brcm,set-rate-parent;
+			brcm,read-only;
+			clocks = <&uart_sysctrl_uart_2>; 
+			clock-names = "uart_sysctrl_uart_2"; 
+		};
+
 		usb0_freerun : usb0_freerun@f04e049c {
 			compatible = "brcm,brcmstb-gate-clk";
 			#clock-cells = <0>;
@@ -434,6 +671,8 @@ $VAR1 = {
 			#clock-cells = <0>;
 			reg = <0xf04e04ac 0x4>;
 			bit-shift = <0>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
 		};
 
 		sys_54_usb20 : sys_54_usb20@f04e04ac {
@@ -455,6 +694,8 @@ $VAR1 = {
 			#clock-cells = <0>;
 			reg = <0xf04e04bc 0x4>;
 			bit-shift = <0>;
+			clocks = <&sys0_pdh_ch0>; 
+			clock-names = "sys0_pdh_ch0"; 
 		};
 
 		sys_scb_usbd : sys_scb_usbd@f04e04bc {
@@ -462,17 +703,6 @@ $VAR1 = {
 			#clock-cells = <0>;
 			reg = <0xf04e04bc 0x4>;
 			bit-shift = <1>;
-		};
-
-		sys0_mdiv_ch0 : sys0_mdiv_ch0@f04e0174 {
-			compatible = "divider-clock";
-			#clock-cells = <0>;
-			reg = <0xf04e0174 0x4>;
-			bit-shift = <1>;
-			bit-mask = <0xff>;
-			index-starts-at-one;
-			clocks = <&fixed_syn0>; 
-			clock-names = "fixed_syn0"; 
 		};
 
 		sys0_mdiv_ch2 : sys0_mdiv_ch2@f04e017c {
@@ -501,9 +731,9 @@ $VAR1 = {
 			compatible = "brcm,brcmstb-sw-clk";
 			#clock-cells = <0>;
 			clocks = <&cpu_mdiv_ch0>, <&cpu_mdiv_ch1>, 
-			  <&sys0_mdiv_ch0>, <&sys0_mdiv_ch2>; 
+			  <&sys0_pdh_ch0>, <&sys0_mdiv_ch2>; 
 			clock-names = "cpu_mdiv_ch0", "cpu_mdiv_ch1", 
-			  "sys0_mdiv_ch0", "sys0_mdiv_ch2"; 
+			  "sys0_pdh_ch0", "sys0_mdiv_ch2"; 
 		};
 
 		sw_genet0 : sw_genet0 {
@@ -544,8 +774,8 @@ $VAR1 = {
 		sw_memsys0 : sw_memsys0 {
 			compatible = "brcm,brcmstb-sw-clk";
 			#clock-cells = <0>;
-			clocks = <&sys0_mdiv_ch0>, <&sys0_mdiv_ch2>; 
-			clock-names = "sys0_mdiv_ch0", "sys0_mdiv_ch2"; 
+			clocks = <&sys0_pdh_ch0>, <&sys0_mdiv_ch2>; 
+			clock-names = "sys0_pdh_ch0", "sys0_mdiv_ch2"; 
 		};
 
 		sw_pcie0 : sw_pcie0 {
@@ -554,10 +784,10 @@ $VAR1 = {
 			clocks = <&osc_sata_pcie>, <&pcie0_alwayson>, 
 			  <&sys_108_pcie0>, <&sys_54_pcie0>, 
 			  <&sys_gisb_pcie0>, <&sys_scb_pcie0>, 
-			  <&sys0_mdiv_ch0>, <&sys0_mdiv_ch2>; 
+			  <&sys0_mdiv_ch2>; 
 			clock-names = "osc_sata_pcie", "pcie0_alwayson", 
 			  "sys_108_pcie0", "sys_54_pcie0", "sys_gisb_pcie0", 
-			  "sys_scb_pcie0", "sys0_mdiv_ch0", "sys0_mdiv_ch2"; 
+			  "sys_scb_pcie0", "sys0_mdiv_ch2"; 
 		};
 
 		sw_sata30 : sw_sata30 {
@@ -565,10 +795,10 @@ $VAR1 = {
 			#clock-cells = <0>;
 			clocks = <&osc_sata_pcie>, <&sys_54_sata30>, 
 			  <&sys_gisb_sata30>, <&sys_scb_sata30>, 
-			  <&sys0_mdiv_ch0>, <&sys0_mdiv_ch2>; 
+			  <&sys0_pdh_ch0>, <&sys0_mdiv_ch2>; 
 			clock-names = "osc_sata_pcie", "sys_54_sata30", 
-			  "sys_gisb_sata30", "sys_scb_sata30", 
-			  "sys0_mdiv_ch0", "sys0_mdiv_ch2"; 
+			  "sys_gisb_sata30", "sys_scb_sata30", "sys0_pdh_ch0", 
+			  "sys0_mdiv_ch2"; 
 		};
 
 		sw_sdio : sw_sdio {
@@ -585,19 +815,19 @@ $VAR1 = {
 			#clock-cells = <0>;
 			clocks = <&usb0_freerun>, <&usb0_gisb>, 
 			  <&sys_108_usb20>, <&sys_54_usb20>, <&sys_scb_usb20>, 
-			  <&sys0_mdiv_ch0>, <&sys0_mdiv_ch2>; 
+			  <&sys0_mdiv_ch2>; 
 			clock-names = "usb0_freerun", "usb0_gisb", 
 			  "sys_108_usb20", "sys_54_usb20", "sys_scb_usb20", 
-			  "sys0_mdiv_ch0", "sys0_mdiv_ch2"; 
+			  "sys0_mdiv_ch2"; 
 		};
 
 		sw_usbd : sw_usbd {
 			compatible = "brcm,brcmstb-sw-clk";
 			#clock-cells = <0>;
 			clocks = <&usb0_gisb>, <&sys_108_usbd>, 
-			  <&sys_scb_usbd>, <&sys0_mdiv_ch0>, <&sys0_mdiv_ch2>; 
+			  <&sys_scb_usbd>, <&sys0_mdiv_ch2>; 
 			clock-names = "usb0_gisb", "sys_108_usbd", 
-			  "sys_scb_usbd", "sys0_mdiv_ch0", "sys0_mdiv_ch2"; 
+			  "sys_scb_usbd", "sys0_mdiv_ch2"; 
 		};
 
 	};
@@ -605,6 +835,9 @@ $VAR1 = {
           'funcs' => {
                        'PCIE0' => [
                                     'sw_pcie0'
+                                  ],
+                       'UART2' => [
+                                    'sw_uart2'
                                   ],
                        'USB20' => [
                                     'sw_usb20'
@@ -630,12 +863,18 @@ $VAR1 = {
                        'MEMSYS0' => [
                                       'sw_memsys0'
                                     ],
+                       'UART0' => [
+                                    'sw_uart0'
+                                  ],
                        'SPI' => [
                                   'sw_spi'
                                 ],
                        'GENETEEE0' => [
                                         'sw_geneteee0'
                                       ],
+                       'UART1' => [
+                                    'sw_uart1'
+                                  ],
                        'SATA30' => [
                                      'sw_sata30'
                                    ]
@@ -653,6 +892,18 @@ $VAR1 = {
 #                                    /PDIV
 # [---] R fixed1 => fixed1
 # [---] R fixed2 => fixed2
+# [---]   fixed_factor0 => fixed_factor0
+#                                    /
+# [---]   fixed_factor1 => fixed_factor1
+#                                    /
+# [---]   fixed_factor2 => fixed_factor2
+#                                    /
+# [---]   fixed_factor3 => fixed_factor3
+#                                    /
+# [---]   fixed_factor4 => fixed_factor4
+#                                    /
+# [---]   fixed_factor5 => fixed_factor5
+#                                    /
 # [---] R fixed_syn0 => fixed_syn0
 # [---]   genet0_250 => CLKGEN_STB_GENET_TOP_INST_CLOCK_ENABLE
 #                                    /GENET0_CLK_250_CLOCK_ENABLE
@@ -692,16 +943,22 @@ $VAR1 = {
 #                                    /DISABLE_HIF_SPI_CLOCK
 # [---]   net_dis_ch0 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_0
 #                                    /CLOCK_DIS_CH0
+# [---]   net_dis_ch1 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_1
+#                                    /CLOCK_DIS_CH1
 # [---]   net_dis_ch2 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_2
 #                                    /CLOCK_DIS_CH2
 # [---]   net_mdiv_ch0 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_0
 #                                    /MDIV_CH0
+# [---]   net_mdiv_ch1 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_1
+#                                    /MDIV_CH1
 # [---]   net_mdiv_ch2 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_2
 #                                    /MDIV_CH2
 # [---]   net_ndiv_int => CLKGEN_PLL_NETWORK_PLL_DIV
 #                                    /NDIV_INT
 # [---]   net_pdh_ch0 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_0
 #                                    /POST_DIVIDER_HOLD_CH0
+# [---]   net_pdh_ch1 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_1
+#                                    /POST_DIVIDER_HOLD_CH1
 # [---]   net_pdh_ch2 => CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_2
 #                                    /POST_DIVIDER_HOLD_CH2
 # [---]   net_pdiv => CLKGEN_PLL_NETWORK_PLL_DIV
@@ -712,6 +969,12 @@ $VAR1 = {
 #                                    /osc_cml_sel_pd_sata_pcie
 # [---] R pcie0_alwayson => CLKGEN_STB_SATA3_PCIE_TOP_INST_CLOCK_DISABLE
 #                                    /DISABLE_PCIE0_ALWAYSON_CLOCK
+# [---]   stb_sysctrl_uart_0 aka sw_uart0 => CLKGEN_STB_SYS_CTRL_INST_CLOCK_DISABLE
+#                                    /DISABLE_SYSCTRL_UART_0_CLOCK
+# [---]   stb_sysctrl_uart_1 aka sw_uart1 => CLKGEN_STB_SYS_CTRL_INST_CLOCK_DISABLE
+#                                    /DISABLE_SYSCTRL_UART_1_CLOCK
+# [---]   stb_sysctrl_uart_2 aka sw_uart2 => CLKGEN_STB_SYS_CTRL_INST_CLOCK_DISABLE
+#                                    /DISABLE_SYSCTRL_UART_2_CLOCK
 # [---]   sw_cpu => sw_cpu
 # [---]   sw_genet0 => sw_genet0
 # [---]   sw_geneteee0 => sw_geneteee0
@@ -722,23 +985,33 @@ $VAR1 = {
 # [---]   sw_sdio => sw_sdio
 # [---]   sw_usb20 => sw_usb20
 # [---]   sw_usbd => sw_usbd
+# [---]   sys0_dis_ch0 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_0
+#                                    /CLOCK_DIS_CH0
+# [---]   sys0_dis_ch1 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1
+#                                    /CLOCK_DIS_CH1
 # [---]   sys0_dis_ch3 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3
 #                                    /CLOCK_DIS_CH3
 # [---]   sys0_mdiv_ch0 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_0
 #                                    /MDIV_CH0
+# [---]   sys0_mdiv_ch1 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1
+#                                    /MDIV_CH1
 # [---]   sys0_mdiv_ch2 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_2
 #                                    /MDIV_CH2
 # [---]   sys0_mdiv_ch3 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3
 #                                    /MDIV_CH3
 # [---]   sys0_mdiv_ch5 aka sw_mpi => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_5
 #                                    /MDIV_CH5
+# [---]   sys0_pdh_ch0 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_0
+#                                    /POST_DIVIDER_HOLD_CH0
+# [---]   sys0_pdh_ch1 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1
+#                                    /POST_DIVIDER_HOLD_CH1
 # [---]   sys0_pdh_ch3 => CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3
 #                                    /POST_DIVIDER_HOLD_CH3
-# [---] R sys_108_pcie0 => CLKGEN_STB_SATA3_PCIE_TOP_INST_CLOCK_ENABLE_PCIE0
+# [---]   sys_108_pcie0 => CLKGEN_STB_SATA3_PCIE_TOP_INST_CLOCK_ENABLE_PCIE0
 #                                    /SYSTEM_108_CLOCK_ENABLE_PCIE0
-# [---] R sys_108_usb20 => CLKGEN_STB_USB0_TOP_INST_CLOCK_ENABLE_USB20
+# [---]   sys_108_usb20 => CLKGEN_STB_USB0_TOP_INST_CLOCK_ENABLE_USB20
 #                                    /SYSTEM_108_CLOCK_ENABLE_USB20
-# [---] R sys_108_usbd => CLKGEN_STB_USB0_TOP_INST_CLOCK_ENABLE_USBD
+# [---]   sys_108_usbd => CLKGEN_STB_USB0_TOP_INST_CLOCK_ENABLE_USBD
 #                                    /SYSTEM_108_CLOCK_ENABLE_USBD
 # [---] R sys_54_pcie0 => CLKGEN_STB_SATA3_PCIE_TOP_INST_CLOCK_ENABLE_PCIE0
 #                                    /SYSTEM_54_CLOCK_ENABLE_PCIE0
@@ -758,6 +1031,12 @@ $VAR1 = {
 #                                    /SYSTEM_SCB_CLOCK_ENABLE_USB20
 # [---] R sys_scb_usbd => CLKGEN_STB_USB0_TOP_INST_CLOCK_ENABLE_USBD
 #                                    /SYSTEM_SCB_CLOCK_ENABLE_USBD
+# [---]   uart_sysctrl_uart_0 => CLKGEN_UART_0_CLOCK_MUX_SELECT
+#                                    /SYSCTRL_UART_0_CLOCK
+# [---]   uart_sysctrl_uart_1 => CLKGEN_UART_1_CLOCK_MUX_SELECT
+#                                    /SYSCTRL_UART_1_CLOCK
+# [---]   uart_sysctrl_uart_2 => CLKGEN_UART_2_CLOCK_MUX_SELECT
+#                                    /SYSCTRL_UART_2_CLOCK
 # [---] R usb0_freerun => CLKGEN_STB_USB0_TOP_INST_CLOCK_DISABLE
 #                                    /DISABLE_USB0_FREERUN_CLOCK
 # [---] R usb0_gisb => CLKGEN_STB_USB0_TOP_INST_CLOCK_ENABLE
