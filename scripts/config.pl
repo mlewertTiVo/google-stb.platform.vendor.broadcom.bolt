@@ -1374,13 +1374,15 @@ sub cmd_bt_rfkill_gpio($) {
 	my ($f) = @_;
 	check_in_chip_or_board();
 	shift @$f;
-	my $o = check_opts($f, [qw/name gpio pin pol/], []);
+	my $o = check_opts($f, [qw/name gpio pin pol pdelay/], []);
 	cfg_error("bad value for '-gpio'; must be 'upg_gio' or 'upg_gio_aon'")
 		if ($o->{gpio} !~ /^upg_gio(_aon)?$/);
 	cfg_error("bad value for '-pin'; must be a decimal number")
 		if ($o->{pin} !~ /^\d+$/);
 	cfg_error("bad value for '-pol'; must be a decimal number")
 		if ($o->{pol} !~ /^\d+$/);
+	cfg_error("bad value for '-pdelay'; must be a decimal number")
+		if ($o->{pdelay} !~ /^\d+$/);
 	$Current->add('bt_rfkill_gpio', BtRfkillGpio->new($o));
 	my $n = @{$Current->{bt_rfkill_gpio}};
 	$max_bt_rfkill_gpios = $n
@@ -2363,7 +2365,8 @@ sub check_bt_rfkill_gpio_nulls($) {
     if (!$m->{name}) { $m->{name} = "-"; }
     if (!$m->{gpio}) { $m->{gpio} = "-"; }
     if (scalar $m->{pin} < 0) { $m->{pin} = -1; }
-    if (scalar $m->{pol} < 0) { $m->{code} = -1; }
+    if (scalar $m->{pol} < 0) { $m->{pol} = -1; }
+    if (scalar $m->{pdelay} < 0) { $m->{pdelay} = 0; }
 
     foreach (qw/name gpio/) {
         if ( $m->{$_} =~ /^-$/ ) {
@@ -2489,11 +2492,12 @@ sub gen_bt_rfkill_gpio($) {
 		$text .= "\t\t\t\t.gpio  = " . $m->{gpio} . ",\n";
 		$text .= "\t\t\t\t.pin  = " . $m->{pin} . ",\n";
 		$text .= "\t\t\t\t.pol = " .  $m->{pol} . ",\n";
+		$text .= "\t\t\t\t.pdelay = " .  $m->{pdelay} . ",\n";
 		$text .= "\t\t\t},\n";
 		$index++;
 	}
 
-	return $text . "\t\t\t{ NULL, NULL, -1, -1}\n\t\t},\n";
+	return $text . "\t\t\t{ NULL, NULL, -1, -1, 0}\n\t\t},\n";
 }
 
 sub resolve_var

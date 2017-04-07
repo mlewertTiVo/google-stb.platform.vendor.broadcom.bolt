@@ -45,6 +45,7 @@ typedef struct bt_rfkill_params
 	const char *gpio; /* Name of the connected GPIO controller i.e. upg_gio or upg_gio_aon */
 	unsigned int pin; /* Pin value of the connected gpio */
 	unsigned int pol; /* Polarity of the connected gpio */
+	unsigned int pdelay; /* Delay required post change of GPIO state */
 }
 bt_rfkill_params;
 

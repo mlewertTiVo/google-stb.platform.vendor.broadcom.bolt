@@ -6,6 +6,16 @@
 Release changelog
 =================
 
+ v1.28
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2249[SWBOLT-2249] Updated AVS Firmware to v0.4.4.1 for 7260a0, 7271b0, 7268b0, and 7278a0.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.28%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.27
 ------
 

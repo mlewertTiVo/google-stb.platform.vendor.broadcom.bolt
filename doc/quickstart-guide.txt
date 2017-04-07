@@ -123,7 +123,7 @@ TOOLCHAIN variable or anything else to set up.
 In this example the Broadcom supplied GCC toolchain 
 package is called 'stbgcc-4.8-1.1.tar.bz2'
 and the BOLT source code package is called
-'bolt-v1.27.tgz' The exact names depend upon
+'bolt-v1.28.tgz' The exact names depend upon
 the release you get from us.
 
 First unpack and install the toolchain in
@@ -179,8 +179,8 @@ your development location. In this case we use the
 
 ----
  [user@machine]$mkdir ~/bolt
- [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.27.tgz
- [user@machine]$tar -xzf bolt-v1.27.tgz
+ [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.28.tgz
+ [user@machine]$tar -xzf bolt-v1.28.tgz
 ----
 
 
@@ -191,7 +191,7 @@ style line endings for the UNIX(R) style BOLT requires. BOLT will fail to
 build if this happens.
 
 ----
- [user@machine]$cd ~/bolt/bolt-v1.27
+ [user@machine]$cd ~/bolt/bolt-v1.28
 ----
 
 
@@ -236,10 +236,10 @@ bolt-$(VERSION)-$(FAMILY)-[ba|bb|xx]-bfw-$(BFW_VER).bin
 [source,shell]
 ----
 ls -l objs/7445d0/bolt-*.bin
-lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.27-7445d0-ba-bfw-4.1.5.bin
-lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.27-7445d0-bb-bfw-4.1.5.bin
--rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.27-7445d0-ba-bfw-4.1.5.bin
--rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.27-7445d0-bb-bfw-4.1.5.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.28-7445d0-ba-bfw-4.1.5.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.28-7445d0-bb-bfw-4.1.5.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.28-7445d0-ba-bfw-4.1.5.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.28-7445d0-bb-bfw-4.1.5.bin
 ----
 
 For brevity we also symlink the longer BOLT binary names
