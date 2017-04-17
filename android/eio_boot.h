@@ -21,6 +21,7 @@
 #define BOOT_SLOT_1_SUFFIX      "e"
 
 #define BOOT_SLOT_SYSTEM_PREFIX "system"
+#define BOOT_SLOT_VENDOR_PREFIX "vendor"
 #define BOOT_SLOT_BOOT_PREFIX   "boot"
 #define BOOT_SLOT_COMMANDER     "eio"
 

@@ -1402,6 +1402,37 @@ ret_legacy:
 	return 0;
 }
 
+static int has_slot(char *name)
+{
+	int fd=-1;
+	char *fb_flashdev_mode_str;
+	char flash_devname[20];
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (!fb_flashdev_mode_str) {
+		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
+		goto ret_legacy;
+	}
+	os_sprintf(flash_devname, "%s.%s_%s", fb_flashdev_mode_str, name, BOOT_SLOT_0_SUFFIX);
+	fd = bolt_open((char *)flash_devname);
+	if (fd < 0) {
+		os_printf("Error opening %s.\n", flash_devname);
+		goto ret_legacy;
+	}
+	bolt_close(fd);
+	os_sprintf(flash_devname, "%s.%s_%s", fb_flashdev_mode_str, name, BOOT_SLOT_1_SUFFIX);
+	fd = bolt_open((char *)flash_devname);
+	if (fd < 0) {
+		os_printf("Error opening %s.\n", flash_devname);
+		goto ret_legacy;
+	}
+	bolt_close(fd);
+	return 1;
+
+ret_legacy:
+	return 0;
+}
+
 static int get_boot_commander(struct eio_boot *eio)
 {
 	int fd=-1;
@@ -1468,9 +1499,7 @@ static void getvar_has_slot(char *cmd_var, char *response)
 {
 	os_strtok_r(NULL, ":", &cmd_var);
 	if (os_strlen(cmd_var) != 0) {
-		if (has_boot_commander() &&
-				(!os_strcmp(cmd_var, BOOT_SLOT_SYSTEM_PREFIX) ||
-				!os_strcmp(cmd_var, BOOT_SLOT_BOOT_PREFIX))) {
+		if (has_boot_commander() && has_slot(cmd_var)) {
 			os_sprintf(response, "%s", "yes");
 		} else {
 			os_sprintf(response, "%s", "no");
@@ -1712,7 +1741,19 @@ static int getvar_all()
 			len = os_sprintf(response, "INFO");
 			len += os_sprintf(response + len, "%s: ", getvar_dispatch[i].name);
 			if (has_boot_commander()) {
-				len += os_sprintf(response + len, "%s,%s", BOOT_SLOT_BOOT_PREFIX, BOOT_SLOT_SYSTEM_PREFIX);
+				int comma = 0;
+				if (has_slot(BOOT_SLOT_BOOT_PREFIX)) {
+					len += os_sprintf(response + len, "%s", BOOT_SLOT_BOOT_PREFIX);
+					comma = 1;
+				}
+				if (has_slot(BOOT_SLOT_SYSTEM_PREFIX)) {
+					len += os_sprintf(response + len, "%c%s", comma?',':' ', BOOT_SLOT_SYSTEM_PREFIX);
+					comma = 1;
+				}
+				if (has_slot(BOOT_SLOT_VENDOR_PREFIX)) {
+					len += os_sprintf(response + len, "%c%s", comma?',':' ', BOOT_SLOT_VENDOR_PREFIX);
+					comma = 1;
+				}
 			}
 			res = fastboot_tx_write_str(response);
 			if (res < 0)
