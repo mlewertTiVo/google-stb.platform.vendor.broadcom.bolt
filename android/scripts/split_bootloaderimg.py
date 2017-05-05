@@ -22,9 +22,9 @@ else:
     bl_img_filename = sys.argv[1]
 
 if input < 2:
-    bolt_bin_filename = sys.argv[2]
-else:
     bolt_bin_filename = "bolt.bin"
+else:
+    bolt_bin_filename = sys.argv[2]
 
 if input < 3:
     bsu_bin_filename = "android_bsu.elf"
@@ -70,8 +70,9 @@ if verbose:
     print 'bolt_img_size: %u' % bolt_img_size
     print 'bsu_img_offset: %u' % bsu_img_offset
     print 'bsu_img_size: %u' % bsu_img_size
-    print 'bl31_img_offset: %u' % bl31_img_offset
-    print 'bl31_img_size: %u' % bl31_img_size
+    if version >= 0x2:
+        print 'bl31_img_offset: %u' % bl31_img_offset
+        print 'bl31_img_size: %u' % bl31_img_size
 
 # read bolt binary content
 in_fd.seek(bolt_img_offset)
