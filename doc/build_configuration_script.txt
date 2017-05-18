@@ -2004,12 +2004,13 @@ See also: dt autogen gpio
 * <NAME_OF_GPIO_CONTROLLER> specifies the gpio controller that is connected to the Bluetooth chip, i.e. 'upg_gio' or 'upg_gio_aon'.
 * <GPIO_PIN> specifies the pin number of the gpio on the gpio controller used for the Bluetooth chip.
 * <POL> specifies the default polarity of the gpio pin (1 = HIGH and 0 = LOW).
+* <PDELAY> specifies the delay (in milliseconds) that needs to be introduced post the change of GPIO state.
 
 Examples:
 
 ----
-bt_rfkill_gpio -name brcm,vreg-gpio -gpio upg_gio_aon -pin 5 -pol 0
-bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1
+bt_rfkill_gpio -name brcm,vreg-gpio -gpio upg_gio_aon -pin 5 -pol 0 -pdelay 10
+bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1 -pdelay 5
 ----
 
 Appendix: Copyright Info

@@ -1586,7 +1586,7 @@ static int bolt_populate_gpio_key(void *fdt)
 	if (!m || !m->name || !m->gpio)
 		return rc;
 
-	root_node = bolt_devtree_node_from_path(fdt, DT_RDB_DEVNODE_BASE_PATH);
+	root_node = bolt_devtree_node_from_path(fdt, "/");
 	if (root_node < 0)
 		return root_node;
 
@@ -1654,6 +1654,7 @@ static int bolt_populate_bt_rfkill(void *fdt)
 	int rc = 0;
 	int property[3];
 	int bt_rfkill, phandle, root_node;
+	unsigned int post_delay = 0;
 	const char *rfkill_node = "bcmbt_rfkill";
 
 	const bt_rfkill_params *m = board_bt_rfkill_gpios();
@@ -1661,7 +1662,7 @@ static int bolt_populate_bt_rfkill(void *fdt)
 	if (!m || !m->name || !m->gpio)
 		return rc;
 
-	root_node = bolt_devtree_node_from_path(fdt, DT_RDB_DEVNODE_BASE_PATH);
+	root_node = bolt_devtree_node_from_path(fdt, "/");
 	if (root_node < 0)
 		return root_node;
 
@@ -1684,6 +1685,7 @@ static int bolt_populate_bt_rfkill(void *fdt)
 		property[0] = cpu_to_fdt32(phandle);
 		property[1] = cpu_to_fdt32(m->pin);
 		property[2] = cpu_to_fdt32(m->pol);
+		post_delay = max(post_delay, m->pdelay);
 
 		rc = bolt_devtree_at_node_addprop(fdt, bt_rfkill,
 					m->name, property, 3 * sizeof(int));
@@ -1693,7 +1695,8 @@ static int bolt_populate_bt_rfkill(void *fdt)
 		m++;
 	}
 
-	return 0;
+	return bolt_dt_addprop_u32(fdt, bt_rfkill,
+				   "brcm,post-delay", post_delay);
 }
 
 static int bolt_populate_enet(void *fdt)

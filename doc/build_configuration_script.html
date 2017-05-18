@@ -3015,12 +3015,17 @@ are used for a given platform.</p></div>
 &lt;POL&gt; specifies the default polarity of the gpio pin (1 = HIGH and 0 = LOW).
 </p>
 </li>
+<li>
+<p>
+&lt;PDELAY&gt; specifies the delay (in milliseconds) that needs to be introduced post the change of GPIO state.
+</p>
+</li>
 </ul></div>
 <div class="paragraph"><p>Examples:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>bt_rfkill_gpio -name brcm,vreg-gpio -gpio upg_gio_aon -pin 5 -pol 0
-bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1</code></pre>
+<pre><code>bt_rfkill_gpio -name brcm,vreg-gpio -gpio upg_gio_aon -pin 5 -pol 0 -pdelay 10
+bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1 -pdelay 5</code></pre>
 </div></div>
 </div>
 </div>
@@ -3038,7 +3043,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.37<br />
-Last updated 2017-03-30 01:53:14 PDT
+Last updated 2017-04-07 11:39:42 PDT
 </div>
 </div>
 </body>

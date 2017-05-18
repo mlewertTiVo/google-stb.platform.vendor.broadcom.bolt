@@ -776,20 +776,24 @@ asciidoc.install(4);
 </div>
 </div>
 <div id="content">
-<div class="sect1">
-<h2 id="_bolt_sqa_release_v1_27_17th_march_2017">1.  Bolt SQA Release v1.27, 17th March 2017</h2>
+<div id="preamble">
 <div class="sectionbody">
 <div class="literalblock">
 <div class="content">
-<pre><code>        o Supported chip families: 7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+<pre><code>Bolt Engineering Release v1.28, 4th April 2017</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>....
+        o Supported chip families: 7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
         o Toolchain: stbgcc-4.8-1.1
 
         o AVS version: v0.3.2.x
                 o 7250b0 7364a0 7364b0 7445d0 7439b0 7366c0 7445e0
         o AVS version: v0.3.3.x
                 o 74371a0 7364c0
-        o AVS version: v0.4.1.x
-                o 7271a0 7268a0 7260a0
+        o AVS version: v0.4.4.1
+                o 7271b0 7268b0 7260a0 7278a0
 
         o AVS Pending PVT testing:
 
@@ -820,154 +824,88 @@ asciidoc.install(4);
                         o 7268b0:  2.2.2.9
                         o 7271a0:  2.2.0.28
                         o 7271b0:  2.2.2.9
-                        o 7278a0:  5.1.0.4</code></pre>
-</div></div>
-<div class="sect2">
-<h3 id="_known_issues">1.1.  Known Issues</h3>
-<div class="ulist"><ul>
-<li>
-<p>
-None at this time.
-</p>
-</li>
-</ul></div>
-</div>
-<div class="sect2">
-<h3 id="_compatibility">1.2.  Compatibility</h3>
-<div class="ulist"><ul>
-<li>
-<p>
-URSR 15.4 or newer should be used, or the Magnum XPT PI should be updated with <a href="http://jira.broadcom.com/browse/SW7439-510">SW7439-510</a>. Otherwise, XPT PI will not work correctly against S3 Standby/Resume operation.
-</p>
-</li>
-<li>
-<p>
-7439b0 build supports corrected OTP 7439b1 and later.
-</p>
-<div class="ulist"><ul>
-<li>
-<p>
-7439b0 chips and uncorrected OTP 7439b1 will <span class="red">no longer</span> be supported going forward.
-</p>
-</li>
-</ul></div>
-</li>
-<li>
-<p>
-7366c0 build <span class="red">no longer</span> supports 7366b0
-</p>
-</li>
-<li>
-<p>
-7445d0 build supports 7445d1
-</p>
-</li>
-<li>
-<p>
-<a href="http://jira.broadcom.com/browse/SWBOLT-1895">SWBOLT-1895</a> Allow regular
+                        o 7278a0:  5.1.0.4
+....
+
+ Known Issues
+~~~~~~~~~~~~~~
+
+* None at this time.
+
+
+
+ Compatibility
+~~~~~~~~~~~~~~
+
+* URSR 15.4 or newer should be used, or the Magnum XPT PI should be updated with link:http://jira.broadcom.com/browse/SW7439-510[SW7439-510]. Otherwise, XPT PI will not work correctly against S3 Standby/Resume operation.
+
+* 7439b0 build supports corrected OTP 7439b1 and later.
+ ** 7439b0 chips and uncorrected OTP 7439b1 will [red]#no longer# be supported going forward.
+
+* 7366c0 build [red]#no longer# supports 7366b0
+
+* 7445d0 build supports 7445d1
+
+* link:http://jira.broadcom.com/browse/SWBOLT-1895[SWBOLT-1895] Allow regular
 (no-AON) GPIOs to wake up system from S2. BOLT v1.14 and above are incompatible
 with specific Linux versions 4.1-1.0 and 3.14-1.13.
-</p>
-</li>
-</ul></div>
-</div>
-<div class="sect2">
-<h3 id="_notes">1.3. Notes</h3>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Important</div>
-</td>
-<td class="content">The build product <em>bolt.bin</em> no longer exists as a final
+
+
+Notes
+~~~~~
+
+IMPORTANT: The build product 'bolt.bin' no longer exists as a final
 binary for flashing. It is now patched and renamed to reflect the
 BBL and BFW components added in post-compile. There now may be one or
 more patched binaries after building, depending upon which BBL
-version your chip requires.</td>
-</tr></table>
-</div>
-<div class="paragraph"><p>The build product(s) are now of the form:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>bolt/objs/&lt;FAMILY&gt;/bolt-&lt;VERSION&gt;-&lt;FAMILY&gt;-&lt;BBL&gt;-bfw-&lt;X.Y.Z&gt;.bin</code></pre>
-</div></div>
-<div class="ulist"><ul>
-<li>
-<p>
-&lt;VERSION&gt; is the release or build version.
-</p>
-</li>
-<li>
-<p>
-&lt;FAMILY&gt; is the chip family e.g. 7445d0
-</p>
-</li>
-<li>
-<p>
-&lt;BBL&gt; is either <em>xx</em> or b[a-z]
+version your chip requires.
+
+The build product(s) are now of the form:
+
+....
+bolt/objs/&lt;FAMILY&gt;/bolt-&lt;VERSION&gt;-&lt;FAMILY&gt;-&lt;BBL&gt;-bfw-&lt;X.Y.Z&gt;.bin
+....
+
+* &lt;VERSION&gt; is the release or build version.
+* &lt;FAMILY&gt; is the chip family e.g. 7445d0
+* &lt;BBL&gt; is either 'xx' or b[a-z]
  *&lt;X.Y.Z&gt; is the BFW version, of the form [0-9]?[0-9].[0-9].[0-9]
-</p>
-</li>
-</ul></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Important</div>
-</td>
-<td class="content">YOU MUST ALWAYS USE THE CORRECT BBL VERSION FOR YOUR CHIP OR IT
-<strong>WILL</strong> FAIL TO BOOT.</td>
-</tr></table>
-</div>
-<div class="ulist"><ul>
-<li>
-<p>
-Customers must verify with Broadcom which BBL version(s) of the
+
+IMPORTANT: YOU MUST ALWAYS USE THE CORRECT BBL VERSION FOR YOUR CHIP OR IT
+*WILL* FAIL TO BOOT.
+
+* Customers must verify with Broadcom which BBL version(s) of the
 chip(s) they have. Please add a sticker to your development
 platforms with the BBL version (ba, bb etc.) clearly marked on it.
 That sticker will save a lot of misdirected debugging.
-</p>
-</li>
-<li>
-<p>
-Recent Broadcom reference boards already have a sticker which will
+
+* Recent Broadcom reference boards already have a sticker which will
 tell you which bolt binary to use. The text you are looking for
-starts BCM&lt;FAMILY&gt; e.g. the boards below have <em>A</em> so use the BOLT
-binary with <em>ba</em> in the BBL position:
-</p>
-</li>
-</ul></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>BCM7445ZBKFSBA1G/P41
+starts BCM&lt;FAMILY&gt; e.g. the boards below have 'A' so use the BOLT
+binary with 'ba' in the BBL position:
+
+....
+BCM7445ZBKFSBA1G/P41
              ^
 BCM7366ZBKFSBA99G-P20
              ^
 bolt-&lt;VERSION&gt;-&lt;FAMILY&gt;-ba-bfw-&lt;X.Y.Z&gt;.bin
-                       ^^</code></pre>
-</div></div>
-<div class="ulist"><ul>
-<li>
-<p>
-For 7445/7252
-</p>
-<div class="ulist"><ul>
-<li>
-<p>
-Use bolt-&lt;VERSION&gt;-&lt;FAMILY&gt;-ba-bfw-&lt;X.Y.Z&gt;.bin if your SoC is one of following:
-</p>
-</li>
-</ul></div>
-</li>
-</ul></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>   BCM7445ZBKFSBAxx
-                ^</code></pre>
-</div></div>
-<div class="paragraph"><p>Else use bolt-&lt;VERSION&gt;-&lt;FAMILY&gt;-bb-bfw-&lt;X.Y.Z&gt;.bin,
-if your SoC is one of following:</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>     BCM7445ZBKFSBBxx
+                       ^^
+....
+
+* For 7445/7252
+
+ - Use bolt-&lt;VERSION&gt;-&lt;FAMILY&gt;-ba-bfw-&lt;X.Y.Z&gt;.bin if your SoC is one of following:
+....
+   BCM7445ZBKFSBAxx
+                ^
+....
+
+Else use bolt-&lt;VERSION&gt;-&lt;FAMILY&gt;-bb-bfw-&lt;X.Y.Z&gt;.bin,
+if your SoC is one of following:
+
+....
+     BCM7445ZBKFSBBxx
      BCM7448ZBKFSBBxx
      BCM7449ZBKFSBBxx
      BCM7444ZBKFSBBxx
@@ -975,122 +913,74 @@ if your SoC is one of following:</p></div>
     BCM74480ZBKFSBBxx
     BCM74490ZBKFSBBxx
     BCM72520ZBKFSBBxx
-                  ^</code></pre>
-</div></div>
-<div class="ulist"><ul>
-<li>
-<p>
-Runtime detection
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>The register at 0xf032d060 may be read (via
+                  ^
+....
+
+* Runtime detection
+
+The register at 0xf032d060 may be read (via
 BroadBandStudio) to find out which BBL is required
 for ZB parts. Below is a list of values read out from
-the register under which BBL type to select:</p></div>
-<div class="paragraph"><p>&#8658; <em>ba</em> for ZB parts, e.g.</p></div>
-<div class="literalblock">
-<div class="content">
-<pre><code>  BCM7445ZBKFSBAxx      0x7cf57343</code></pre>
-</div></div>
-<div class="paragraph"><p>&#8658; <em>bb</em> for ZB parts. Other values identify the chip as a <em>bb</em> part.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-For 7366b0
-</p>
-<div class="ulist"><ul>
-<li>
-<p>
-ALWAYS use the <em>bb</em> version on standard reference platforms.
-</p>
-</li>
-</ul></div>
-</li>
-</ul></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Important</div>
-</td>
-<td class="content">AVS UPDATE: BOLT now supports an alternate AVS binary image
+the register under which BBL type to select:
+
+=&gt; 'ba' for ZB parts, e.g.
+....
+  BCM7445ZBKFSBAxx      0x7cf57343
+....
+
+=&gt; 'bb' for ZB parts. Other values identify the chip as a 'bb' part.
+
+
+* For 7366b0
+
+ - ALWAYS use the 'bb' version on standard reference platforms.
+
+
+IMPORTANT: AVS UPDATE: BOLT now supports an alternate AVS binary image
 and will try to load it if the first one fails to load or run.
  This means if you update to this version of BOLT have a board that
 fails to start AVS (due to unvalidated or incorrect hardware i.e. very
 old or new boards) the default action of BOLT is to try the other image,
-but that image won&#8217;t exist on the reference build of BOLT and bootup
-will <em>ping-pong</em> back to the other image and not continue booting.
- To boot in such a scenario press the <em>8</em> key while resetting the
-STB to bypass AVS. Then at the BOLT commandline use the <em>setboard</em>
-command to set yout board but add the <em>-noavs</em> parameter. Then
+but that image won't exist on the reference build of BOLT and bootup
+will 'ping-pong' back to the other image and not continue booting.
+ To boot in such a scenario press the '8' key while resetting the
+STB to bypass AVS. Then at the BOLT commandline use the 'setboard'
+command to set yout board but add the '-noavs' parameter. Then
 COLD BOOT your board to pick up the changes. This workaround
 will not work if BOLT has been rebuilt with SECURE_BOOT=y, you
-must use the configuration script to turn AVS off and rebuild BOLT.</td>
-</tr></table>
-</div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Warning</div>
-</td>
-<td class="content">Running with AVS is <strong><span class="red">MANDATORY</span></strong> for production platforms.</td>
-</tr></table>
-</div>
-<div class="ulist"><ul>
-<li>
-<p>
-To compile bolt for e.g. 7445d0 AD parts: make 7445d0 BFW_HASH_LOCK=y
-</p>
-</li>
-<li>
-<p>
-Static CMA is deprecated. If you change the static CMA
+must use the configuration script to turn AVS off and rebuild BOLT.
+
+
+WARNING: Running with AVS is *[red]#MANDATORY#* for production platforms.
+
+* To compile bolt for e.g. 7445d0 AD parts: make 7445d0 BFW_HASH_LOCK=y
+
+* Static CMA is deprecated. If you change the static CMA
 values in BOLT (via the dt autogen command) but Linux does not
 seem to pick them up - you are using a newer dynamic CMA kernel.
-</p>
-</li>
-<li>
-<p>
-If you encounter the following error please update your toolchain
+
+* If you encounter the following error please update your toolchain
 to the version your BOLT release wants (in bolt/config/toolchain):
-</p>
-</li>
-</ul></div>
+
+[source,shell]</code></pre>
+</div></div>
+<div class="paragraph"><p>arm-linux-ld: error: no memory region specified for loadable section &#8216;.bss&#8217;</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt>arm-linux-ld<span style="color: #990000">:</span> error<span style="color: #990000">:</span> no memory region specified <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> loadable section `<span style="color: #990000">.</span>bss<span style="color: #FF0000">'</span></tt></pre></div></div>
-<hr />
-</div>
-<div class="sect2">
-<h3 id="_upgrade_to_v1_27_criteria">1.4.  Upgrade to v1.27 criteria</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2220">SWBOLT-2220</a> Added PMU compatible string to enable the PMU driver for ARM64.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2059">SWBOLT-2059</a> Added support for CoAP and SSDP.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2179">SWBOLT-2179</a> Fiexd problem where only one device was detected when two devices are plugged into BCM7278&#8217;s root ports from power-up or reset. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2196">SWBOLT-2196</a> Fixed USB host port on the BCM97268B0-USFF board&#8217;s Type-C port when used with a splitter cable and strap_usb_typec_enable=1. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2076">SWBOLT-2076</a> Fixed problem when using the <em>8</em> key to by-pass AVS on DVFS supported reference boards.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2180">SWBOLT-2180</a> Fixed problem where a high speed USB device can render a port unusable if the device was disconnected and connected fast enough.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2057">SWBOLT-2057</a> Getting a DHCP address got more reliable on 7439b0.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2188">SWBOLT-2188</a> Print AVS data from the SSBL.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2182">SWBOLT-2182</a> S2 power management for 7268b0 and 7271b0 has been fixed. Also, the Shmoo v2.2.2.9 is more stable than its predecessor v2.2.2.7. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2192">SWBOLT-2192</a> Support for 7364a0 has been dropped.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2217">SWBOLT-2217</a> Support for BCM972604_4L has been added.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2218">SWBOLT-2218</a> Support for BCM97271IPCQ has been added.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2215">SWBOLT-2215</a> Support for BCM97278VMS has been added.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2228">SWBOLT-2228</a> The Shmoo v5.1.0.4 is more stable than its predecessor, v5.1.0.3. Updating to v5.1.0.4 requires an SRAM layout change, which is packaged in BOLT v1.27. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2237">SWBOLT-2237</a> The default PMap for 7271b0 is now 2. <sup>[yellow silver-background]#major</sup></p></div>
-</div>
-<div class="sect2">
-<h3 id="_broadcom_fae_access">1.5.  Broadcom FAE access</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.27%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_documentation">2.  Documentation</h2>
-<div class="sectionbody">
+<div class="content">
+<pre><code>''''
+
+ Upgrade to v1.28 criteria
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+link:http://jira.broadcom.com/browse/SWBOLT-2249[SWBOLT-2249] Updated AVS Firmware to v0.4.4.1 for 7260a0, 7271b0, 7268b0, and 7278a0.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.28%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ Documentation</code></pre>
+</div></div>
 <div class="paragraph"><p><a href="quickstart-guide.html">Getting started with BOLT</a></p></div>
 <div class="paragraph"><p><a href="bolt_commands.html">BOLT commands</a></p></div>
 <div class="paragraph"><p><a href="devicetree.html">Device Tree information</a></p></div>
@@ -1108,7 +998,7 @@ http://www.gnu.org/software/src-highlite -->
 </div>
 </div>
 <div class="sect1">
-<h2 id="_appendix_copyright_info">3. Appendix: Copyright Info</h2>
+<h2 id="_appendix_copyright_info">1. Appendix: Copyright Info</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
 All Rights Reserved.
@@ -1119,7 +1009,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-03-30 01:53:14 PDT
+Last updated 2017-04-07 11:39:42 PDT
 </div>
 </div>
 </body>
