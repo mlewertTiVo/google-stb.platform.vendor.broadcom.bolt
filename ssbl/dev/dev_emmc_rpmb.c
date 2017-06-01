@@ -97,6 +97,7 @@ static int rpmb_command(struct emmc_chip *chip,
 			return res;
 		}
 
+		memset(resp_frame, 0, sizeof(*resp_frame));
 		resp_frame->req_resp = cpu_to_be16(RPMB_REQ_READ_RESULT);
 		res = emmc_cmd25_write_multiple_block(chip, 0,
 						(uint32_t)resp_frame,

@@ -41,12 +41,19 @@ struct at_initialization {
 	uint32_t single_domain;  /* set for 72xx boards with single regulator */
 	uint32_t cpu_offset;	 /* for devices with STB/CPU domains */
 	uint32_t product_id;	 /* this STB product ID */
-	uint32_t over_temp_flag; /* flag telling firmware init due to
-				  * over-temperature condition */
-	uint32_t resuming_s3;	 /* this startup is due to S3 resume */
+	uint32_t flags_1;        /* misc flags */
+	uint32_t flags_2;        /* misc flags */
 	uint32_t min_dvfs_voltage; /* minimum voltage for the CPU domain */
 	uint32_t slope_adj_factor; /* scaling factor when adjusting voltage */
 } at_initialization;
+
+/* Definitions for the miscellaneous flags: */
+#define AVS_FLAGS_1_OVER_TEMP   (1<<0)  /* firmware init due to over-temperature
+					 * condition */
+#define AVS_FLAGS_1_NO_CONVERGE (1<<1)  /* firware should not do AVS convergence
+					 * process */
+#define AVS_FLAGS_2_RESUME_S3   (1<<0)  /* this start-up is due to an S3 resume
+					 * condition */
 
 /* Initialization responses: */
 #define INIT_COMPLETE  0xFF	/* firmware initialized and running */

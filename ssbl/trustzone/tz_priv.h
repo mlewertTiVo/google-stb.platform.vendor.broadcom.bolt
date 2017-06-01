@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,6 +9,9 @@
 
 #ifndef _TZ_PRIV_H_
 #define _TZ_PRIV_H_
+
+#include <loader.h>
+#include <stdint.h>
 
 typedef enum { e_tz_spd_image, e_tz_tz_image, e_tz_nw_image } tz_payload_type;
 

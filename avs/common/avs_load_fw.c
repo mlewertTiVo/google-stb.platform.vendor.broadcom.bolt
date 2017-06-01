@@ -298,12 +298,15 @@ static void avs_get_default_params(struct at_initialization *params)
 	/* Let firmware know if this is a warm boot due to S3 resume */
 	if (fsbl_ack_warm_boot()) {
 		puts("AVS resuming S3...\n");
-		params->resuming_s3 = true;
+		params->flags_2 |= AVS_FLAGS_2_RESUME_S3;
 	}
 
 	/* The firmware needs to know if this reset was due to an
 	 * over-temperature situation. */
-	params->over_temp_flag = avs_check_temp_reset(true);
+	if (avs_check_temp_reset(true)) {
+		puts("AVS over-temp start...\n");
+		params->flags_1 |= AVS_FLAGS_1_OVER_TEMP;
+	}
 
 	/* tell the firmware what part we're running on */
 	params->chip_id = BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
@@ -559,7 +562,7 @@ static void avs_dump_results(void)
 }
 
 /* Firmware will signal when its running */
-static int avs_wait_for_firmware(void)
+static int avs_wait_for_firmware(int en)
 {
 	unsigned i;
 	int complete = AVS_TIMEOUT;
@@ -595,10 +598,8 @@ static int avs_wait_for_firmware(void)
 	} else {
 		if (AVS_DEBUG_STARTUP)
 			avs_print_string("AVS FW Running!\n");
-		avs_dump_results();
-		/* avs_print_string_val("loops=", i);
-		   avs_print_cr_lf(); */ /* actually
-		 * ms as we wait a millisecond between tests */
+		if (en)
+			avs_dump_results();
 	}
 
 	return complete;	/* SUCCESS means its started successfully */
@@ -616,15 +617,24 @@ static int avs_wait_for_firmware(void)
  * reset. */
 #define AVS_AON_MAGIC 0x99beef88	/* this is the bread-crumb we'll leave
 					 * to see if we finished */
+#define AVS_MAILBOX(a)	(BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE + 4*(a))
+#define RD_AVS_MAILBOX(a)		BDEV_RD(AVS_MAILBOX(a))
+#define WR_AVS_MAILBOX(a, v)		BDEV_WR(AVS_MAILBOX(a), (v))
+#define MAGIC_FLAG_MAILBOX		22
 
 static void setup_reset_flag(void)
 {
-	AON_REG(AON_REG_AVS_FLAGS) = AVS_AON_MAGIC;
+	WR_AVS_MAILBOX(MAGIC_FLAG_MAILBOX, AVS_AON_MAGIC);
 }
 
 static void clear_reset_flag(void)
 {
-	AON_REG(AON_REG_AVS_FLAGS) = 0;
+	WR_AVS_MAILBOX(MAGIC_FLAG_MAILBOX, 0);
+}
+
+static uint32_t read_reset_flag(void)
+{
+	return RD_AVS_MAILBOX(MAGIC_FLAG_MAILBOX);
 }
 
 static bool did_I_cause_the_last_reset(void)
@@ -658,7 +668,7 @@ static bool did_I_cause_the_last_reset(void)
 
 		/* If the AVS_AON_MAGIC is still there then the convergence
 		 * process CAUSED the reset! */
-		if (AON_REG(AON_REG_AVS_FLAGS) == AVS_AON_MAGIC) {
+		if (read_reset_flag() == AVS_AON_MAGIC) {
 			avs_print_string
 		("AVS caused the last reset -- not loading AVS firmware!\n");
 			result = true;
@@ -680,7 +690,7 @@ static void __maybe_unused avs_time_process_report(char *msg, unsigned was)
 /* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
 
 #if defined(AVS_DUAL_DOMAINS)
-static void setup_avs_params(int pmap_id)
+static void setup_avs_params(int en, int pmap_id)
 {
 	/* set for boards with single regulator */
 	struct board_type __maybe_unused *b = get_tmp_board();
@@ -703,7 +713,8 @@ static void setup_avs_params(int pmap_id)
 		param1 = 0x00000200;
 
 	param1 |= (pmap_id & 0x1F);
-	param1 |= (DEFAULT_PSTATE & 0x7) << 5;
+	if (en) /* if fw not enabled, default to pstate 0 */
+		param1 |= (DEFAULT_PSTATE & 0x7) << 5;
 #endif
 
 	/* pass AVS_PARAM_0 and AVS_PARAM_1 to AVS processor */
@@ -768,7 +779,7 @@ int avs_common_load(void)
 	return result;
 }
 
-int avs_common_start(int pmap_id)
+int avs_common_start(int en, int pmap_id)
 {
 	unsigned __maybe_unused time;
 	struct at_initialization params;
@@ -797,12 +808,17 @@ int avs_common_start(int pmap_id)
 		time = get_time_diff(0);
 
 #if defined(AVS_DUAL_DOMAINS)
-	setup_avs_params(pmap_id);
+	setup_avs_params(en, pmap_id);
 #endif
 
+	/* If they don't want firmware to run then just tell FW not to run */
+	if (!en)
+		params.flags_1 |= AVS_FLAGS_1_NO_CONVERGE;
+
+	/* But we ALWAYS start it now */
 	avs_start_firmware(&params);
 
-	result = avs_wait_for_firmware();
+	result = avs_wait_for_firmware(en);
 
 	/* enable this to stop everything after AVS starts */
 	if (1 && ENABLE_TEST_PROMPTS)

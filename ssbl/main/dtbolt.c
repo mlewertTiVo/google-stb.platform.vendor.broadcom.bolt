@@ -7,6 +7,7 @@
  *
  ***************************************************************************/
 
+#include <addr-mapping.h>
 #include <arch_ops.h>
 #include <bchp_aon_ctrl.h>
 #include <bchp_avs_cpu_ctrl.h>
@@ -23,11 +24,13 @@
 #include <devfuncs.h>
 #include <device.h>
 #include <devtree.h>
+#include <dt_ops.h>
 #include <env_subr.h>
 #include <flash.h>
 #include <ioctl.h>
 #include <lib_malloc.h>
 #include <lib_printf.h>
+#include <lib_queue.h>
 #include <lib_string.h>
 #include <lib_types.h>
 #include <macutils.h>
@@ -36,10 +39,12 @@
 #include <net_ebuf.h>
 #include <net_ether.h>
 #include <otp_status.h>
-#include <splash-api.h>
 #include <ssbl-common.h>
 #include <ssbl-sec.h>
 #include <zimage.h>
+#ifdef DVFS_SUPPORT
+#include <pmap.h>
+#endif
 
 /* ------------------------------------------------------------------------- */
 /* Remove me after a grace period */
@@ -75,6 +80,35 @@
 /* Some items can only be done once. */
 int dt_oneshot;
 
+/* ------------------------------------------------------------------------- */
+/*
+ * get_attributes() evaluates a set of attributes (eg V7_64).  Each
+ * attribute is represented by a single bit.  The function returns
+ * a uint16_t value which may be used to evalate conditions when
+ * a dt_op should be performed.
+ */
+uint16_t get_attributes()
+{
+	static int use_cached_val = false;
+	static uint16_t attr;
+	int i;
+
+	if (use_cached_val)
+		return attr;
+
+	for (i = 0; i < DT_OPS_ATTR_MAX; i++)
+		switch(i) {
+		case DT_OPS_ATTR_V7_64:
+			if (is_mmap_v7_64())
+				attr |= 1 << i;
+			break;
+		default:
+			xprintf("WARNING: Bolt compile out of sync with runtime!\n");
+			break;
+		}
+	use_cached_val = true;
+	return attr;
+}
 
 /* ------------------------------------------------------------------------- */
 
@@ -618,6 +652,156 @@ out:
 	return rc;
 }
 
+/**
+ * Populates a child node of /reserved-memory for a reserved memory area
+ *
+ * @fdt The FDT blob
+ * @node FDT offset to /reserved-memory
+ * @m pointer to reserved memory area
+ *
+ * @returns BOLT_OK on success, otherwise BOLT error code
+ */
+static int bolt_populate_reserved_memory_subnode(void *fdt, int node,
+	struct memory_area *m)
+{
+	int rc, subnode;
+	char *subnode_name;
+	uint64_t regs[2]; /* #address-cells and #size-cells are 2 */
+
+	/* no sanity check on fdt, node, m and
+	 * m->options & BOLT_RESERVE_MEMORY_OPTION_DT_NEW
+	 */
+
+	if (m->tag == NULL)
+		/* 12 == strlen("reserved_at_"), 20 == %llx + margin */
+		subnode_name = (char *) KMALLOC(12 + 20, 0);
+	else
+		/* 20 == @%llx */
+		subnode_name = (char *) KMALLOC(strlen(m->tag) + 20, 0);
+
+	if (subnode_name == NULL)
+		return BOLT_ERR_NOMEM;
+
+	if (m->tag == NULL)
+		sprintf(subnode_name, "reserved_at_%llx", m->offset);
+	else
+		sprintf(subnode_name, "%s@%llx", m->tag, m->offset);
+
+	rc = bolt_devtree_addnode_at(fdt, subnode_name, node, &subnode);
+	if (rc)
+		goto out;
+
+	regs[0] = cpu_to_fdt64(m->offset);
+	regs[1] = cpu_to_fdt64(m->size);
+	rc = bolt_devtree_at_node_addprop(fdt, subnode, "reg",
+		regs, sizeof(regs));
+	if (rc)
+		goto out;
+
+	if (m->options & BOLT_RESERVE_MEMORY_OPTION_DT_NOMAP) {
+		rc = bolt_dt_addprop_bool(fdt, subnode, "no-map");
+		if (rc)
+			goto out;
+	}
+
+	if (m->options & BOLT_RESERVE_MEMORY_OPTION_DT_REUSABLE) {
+		rc = bolt_dt_addprop_bool(fdt, subnode, "reusable");
+		if (rc)
+			goto out;
+	}
+
+	if (m->tag != NULL) {
+		rc = bolt_dt_addprop_str(fdt, subnode,
+			"reserved-names", m->tag);
+		if (rc)
+			goto out;
+	}
+
+out:
+	KFREE(subnode_name);
+	return BOLT_OK;
+}
+
+/**
+ * Populates /reserved-memory or /memreserve nodes for reserved memory areas
+ *
+ * Memory areas are marked reserved so that Linux does not use them.
+ * The list of reserved memory areas is retrieved, and added under
+ * /reserved-memory node (or as /memreserve for backward compatibility).
+ *
+ * @fdt The FDT blob
+ *
+ * @returns the number of processed devive tree nodes on success,
+ *      BOLT error code othrewise
+ */
+static int bolt_populate_reserved_memory(void *fdt)
+{
+	struct memory_area list;
+	int rc, actual_count, list_count, node;
+
+	list_count = bolt_reserve_memory_getlist(&list);
+	if (list_count <= 0)
+		return list_count;
+
+	/* /reserved-memory must exist */
+	node = bolt_devtree_node_from_path(fdt, "/reserved-memory");
+	if (node < 0) {
+		err_msg("/reserved-memory is missing\n");
+		return node;
+	}
+
+	actual_count = 0;
+	while (!q_isempty((queue_t *)&list)) {
+		struct memory_area *m =
+			(struct memory_area *) q_getfirst((queue_t *)&list);
+
+		/* A reserved memory area should not show up on both
+		 * the legacy and new DT nodes. But, it should be
+		 * filtered out or checked when a reservation is made.
+		 * Here, DT nodes are created based on any request.
+		 * It is also okay for a reservation to have no DT entry.
+		 */
+		if (m->options & BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY) {
+			rc = bolt_devtree_add_memreserve(fdt,
+				m->offset, m->size);
+			if (rc)
+				goto out;
+		}
+		if (m->options & BOLT_RESERVE_MEMORY_OPTION_DT_NEW) {
+			rc = bolt_populate_reserved_memory_subnode(fdt,
+				node, m);
+			if (rc)
+				goto out;
+		}
+
+		if (m->options & BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY &&
+		    m->options & BOLT_RESERVE_MEMORY_OPTION_DT_NEW)
+			warn_msg("dual DT entries of [%llx..%llx)\n",
+				m->offset, m->offset + m->size);
+
+		++actual_count;
+		q_dequeue((queue_t *)m);
+		KFREE(m);
+	}
+	rc = actual_count;
+
+out:
+	if (actual_count != list_count)
+		warn_msg("%d entries of reserved memory areas was reported, "
+			"but %d was processed from the list\n",
+			list_count, actual_count);
+
+	/* release remaining nodes if any */
+	while (!q_isempty((queue_t *)&list)) {
+		queue_t *q = q_getfirst((queue_t *)&list);
+
+		q_dequeue(q);
+		KFREE(q);
+	}
+
+	return rc;
+}
+
 /*
  * Populate the memory controller nodes with information about the DDR
  * frequency. Needed by performance monitoring tools.
@@ -835,9 +1019,6 @@ static int bolt_populate_cpus(void *fdt)
 		}
 	}
 
-#ifdef STUB64_START
-	(void)bolt_devtree_add_memreserve(fdt, PSCI_BASE, PSCI_SIZE);
-#endif
 	return 0;
 }
 
@@ -1649,6 +1830,67 @@ static int bolt_populate_gpio_key(void *fdt)
 	return 0;
 }
 
+static int bolt_populate_gpio_led(void *fdt)
+{
+	int rc = 0;
+	int property[3];
+	int gpio_leds, phandle, gpio_led, root_node;
+	const char *leds_node = "leds";
+	char buffer[20];
+
+	const gpio_led_params *m = board_gpio_leds();
+
+	if (!m || !m->name || !m->gpio)
+		return rc;
+
+	/* Skip re-creating if node already exists */
+	gpio_leds = bolt_devtree_node_from_path(fdt, "/leds");
+	if (gpio_leds >= 0)
+		return 0;
+
+	root_node = bolt_devtree_node_from_path(fdt, "/");
+	if (root_node < 0)
+		return root_node;
+
+	rc = bolt_devtree_addnode_at(fdt, leds_node, root_node,
+				&gpio_leds);
+	if (rc < 0)
+		return rc;
+
+	rc = bolt_dt_addprop_str(fdt, gpio_leds,
+				"compatible", "gpio-leds");
+	if (rc)
+		return rc;
+
+	/* generate sub node for each led */
+
+	while (m->name && m->gpio) {
+		rc = bolt_devtree_addnode_at(fdt, m->name, gpio_leds,
+					&gpio_led);
+		if (rc < 0)
+			return rc;
+
+		phandle = bolt_devtree_phandle_from_alias(fdt, m->gpio);
+
+		property[0] = cpu_to_fdt32(phandle);
+		property[1] = cpu_to_fdt32(m->pin);
+		property[2] = cpu_to_fdt32(m->pol);
+
+		rc = bolt_devtree_at_node_addprop(fdt, gpio_led,
+					"gpios", property, 3 * sizeof(int));
+		if (rc)
+			return rc;
+
+		xsprintf(buffer, "%s %d", m->gpio, m->pin);
+		buffer[19] = '\0';
+		env_setenv(m->name, buffer, ENV_FLG_BUILTIN | ENV_FLG_READONLY);
+
+		m++;
+	}
+
+	return 0;
+}
+
 static int bolt_populate_bt_rfkill(void *fdt)
 {
 	int rc = 0;
@@ -1709,6 +1951,7 @@ static int bolt_populate_enet(void *fdt)
 	char tmpstr[255];
 	unsigned int is_systemport = 0;
 	int compat_len;
+	const uint16_t attr = get_attributes();
 
 	if (m && MAC_str2bin(m, macaddr)) {
 		xprintf("warning: %s contains illegal MAC address '%s'\n",
@@ -1759,7 +2002,8 @@ static int bolt_populate_enet(void *fdt)
 	 */
 	for (; ops && ops->path; ops++) {
 		int node;
-		if (ops->op != DT_OP_MAC)
+		if (ops->op != DT_OP_MAC ||
+			((ops->attr_mask & attr) != ops->attr_val))
 			continue;
 		sprintf(tmpstr, "%s/%s", ops->path, ops->node);
 		/* If node doesn't exist, create it */
@@ -1782,160 +2026,6 @@ static int bolt_populate_enet(void *fdt)
 
 	return 0;
 }
-
-
-/* ------------------------------------------------------------------------- */
-
-#if CFG_SPLASH
-static int bolt_modify_cma(void *fdt, uint32_t mtop, uint32_t mlow)
-{
-	int rc = 0;
-	int proplen, subnode, memory, rlen, nlen;
-	const char *name, *pname, *region = "region";
-	const struct fdt_property *prop;
-	uint32_t cma_top, cma_low, cma_size;
-	int dep, depth;
-	uint32_t data[2];
-
-	rc = fdt_subnode_offset(fdt, 0 /* root */, "memory");
-	if (rc < 0)
-		return libfdt_error(rc);
-
-	memory = rc;
-
-	dep = fdt_node_depth(fdt, memory);
-	if (dep < 0)
-		return libfdt_error(dep);
-
-	rlen = strlen(region);
-
-	rc = fdt_subnode_offset_namelen(fdt, memory, region, rlen);
-	do { /* find the right /memory/region@ */
-
-		if (rc < 0)
-			break;
-
-		subnode = rc;
-		rc = 0; /* reset */
-
-		name = fdt_get_name(fdt, subnode, NULL);
-
-		/* '/memory' node might have other subnodes
-		 so we check the subnode name.
-		*/
-		do {
-			if (!name)
-				break;
-
-			nlen = strlen(region);
-			if (nlen < rlen)
-				break;
-
-			if (memcmp(name, region, rlen))
-				break;
-
-			prop = fdt_get_property(fdt, subnode, "reg", &proplen);
-			if (proplen < (int)(sizeof(uint32_t) * 2))
-				break;
-
-			cma_low  = DT_PROP_DATA_TO_U32(prop->data, 0);
-			cma_size = DT_PROP_DATA_TO_U32(prop->data,
-						       sizeof(uint32_t));
-
-			cma_top = cma_low + cma_size;
-
-			/* Splash memory is from the top of each ddr & grows
-			downward. At the moment we presume the CMA (NEXUS)
-			region has the same properties & we can carve out
-			the top from it.
-			Splitting regions might lead to unexpected NEXUS
-			behaviour. NB: mtop == cma_top in most cases &
-			it all has to fall within the span of a single
-			CMA region.
-			*/
-			if ((cma_top >= mlow) && (cma_top <= mtop)) {
-				uint32_t delta;
-
-				pname = fdt_string(fdt,
-						fdt32_to_cpu(prop->nameoff));
-
-				delta = ALIGN_UP_TO(cma_top - mlow,
-						CFG_CMA_DEF_ALIGN);
-
-				if (delta >= cma_size) {
-					xprintf("%s: region %s, "
-						"is not sufficiently "
-						"sized for splash memory "
-						"adjustment.\n",
-						__func__, name);
-
-					rc = BOLT_ERR_INV_PARAM;
-					break;
-				}
-
-				cma_size -= delta;
-
-				data[0] = cpu_to_fdt32(cma_low); /* unchanged */
-				data[1] = cpu_to_fdt32(cma_size); /* lower */
-
-				rc = bolt_devtree_at_node_addprop(fdt, subnode, pname,
-						data, sizeof(data));
-			}
-		} while (0);
-
-		/* check possible addprop failure */
-		if (rc < 0)
-			break;
-
-		rc = fdt_next_node(fdt, subnode, NULL);
-		if (rc < 0)
-			break;
-
-		depth = fdt_node_depth(fdt, subnode);
-
-	} while (dep < depth);
-
-	return (rc) ? libfdt_error(rc) : rc;
-}
-#endif /* CFG_SPLASH */
-
-
-static int bolt_populate_splash(void __maybe_unused *fdt)
-{
-	int rc = 0;
-#if CFG_SPLASH
-	int i;
-	uint32_t memtop, memlow;
-	uint64_t mtop, mlow;
-
-	/* Its either a oneshot, or go looping thru the values and
-	checking if we already have an entry. Might possibly need
-	this more bloaty solution later on if the user has
-	overlapping ranges with us.
-	*/
-	if (dt_oneshot)
-		return 0;
-
-	for (i = 0; i < MAX_DDR; i++) {
-		rc = splash_glue_getmem(i, &memtop, &memlow);
-		if (!rc && (memtop != memlow)) {
-			mtop = (uint64_t)memtop; /* should be top of a ddr */
-			/* Since the splash heap grows down, we align
-			  to the next lowest 4k page for Linux.
-			*/
-			mlow = ALIGN_TO((uint64_t)memlow, CFG_CMA_DEF_ALIGN);
-
-			(void)bolt_devtree_add_memreserve(fdt,
-						mlow, mtop - mlow);
-			(void)bolt_modify_cma(fdt, mtop, mlow);
-		}
-	}
-#endif /* CFG_SPLASH */
-	return rc;
-}
-
-
-/* ------------------------------------------------------------------------- */
 
 #define rm_nodes(f, s, p) \
 	do { \
@@ -2015,6 +2105,7 @@ static void bolt_otp_unpopulate(void *fdt)
 	*/
 }
 
+
 /* ------------------------------------------------------------------------- */
 
 /* Build time defined board or common chip specific devicetree items
@@ -2025,6 +2116,7 @@ void bolt_board_specific_mods(void *fdt)
 	dt_ops_s *ops = board_dt_ops();
 	dt_ops_s *cull = ops;
 	int __maybe_unused err = 0, parent, child;
+	const uint16_t attr = get_attributes();
 
 	if (!ops) {
 		if (CFG_CMD_LEVEL >= 5)
@@ -2033,6 +2125,10 @@ void bolt_board_specific_mods(void *fdt)
 	}
 
 	for ( ; ops->path != NULL; ops++) { /* path is REQUIRED */
+		/* See if this op is conditional */
+		if ((ops->attr_mask & attr) != ops->attr_val)
+			continue;
+
 		switch (ops->op) {
 		case DT_OP_MAC:
 			/* handled in bolt_populate_enet() */
@@ -2159,7 +2255,9 @@ void bolt_board_specific_mods(void *fdt)
 	a hanging property in a node that should have been 100% removed.
 	*/
 	while (cull->path != NULL) { /* path is REQUIRED */
-		if (cull->op == DT_OP_CULL) {
+		if (cull->op == DT_OP_CULL &&
+			((ops->attr_mask & attr) == ops->attr_val))
+		{
 			parent = bolt_devtree_node_from_path(fdt, cull->path);
 			if (parent >= 0) {
 				if (cull->prop) {
@@ -2257,6 +2355,44 @@ int sdio_handle_driver_strength(void *fdt, int node,
 	return bolt_dt_addprop_str(fdt, node, prop, val);
 }
 
+/*
+ * Set the environment variable 'EMMC_DEVNAME' that represents
+ * the name of the SDHCI device-tree node used for EMMC.
+ */
+static int bolt_set_emmc_devname(void *fdt, int sdhci_node)
+{
+	const char *sdhci_node_name;
+	const char *unit;
+	const struct fdt_property *prop;
+	int proplen, namelen;
+	uint32_t reg;
+	char emmc_devname[100];
+	char name[20];
+
+	sdhci_node_name = fdt_get_name(fdt, sdhci_node, NULL);
+	if (!sdhci_node_name)
+		return BOLT_ERR;
+	unit = strchr(sdhci_node_name, '@');
+	if (unit)
+		namelen = unit - sdhci_node_name;
+	else
+		namelen = strlen(sdhci_node_name);
+	if (namelen > (int)(sizeof(name)-1))
+		return BOLT_ERR;
+	strncpy(name, sdhci_node_name, namelen);
+	name[namelen] = '\0';
+
+	prop = fdt_get_property(fdt, sdhci_node, "reg", &proplen);
+	if (proplen < (int)(sizeof(uint32_t) * 4))
+		return BOLT_ERR;
+
+	reg = DT_PROP_DATA_TO_U32(prop->data, 0);
+
+	xsprintf(emmc_devname, "%08x.%s", reg, name);
+	env_setenv("EMMC_DEVNAME", emmc_devname, 0);
+
+	return BOLT_OK;
+}
 
 static int bolt_populate_sdhci(void __maybe_unused *fdt)
 {
@@ -2322,6 +2458,9 @@ static int bolt_populate_sdhci(void __maybe_unused *fdt)
 		}
 		if (non_removable) {
 			rc = bolt_dt_addprop_bool(fdt, sdhci, "non-removable");
+			if (rc)
+				break;
+			rc = bolt_set_emmc_devname(fdt, sdhci);
 			if (rc)
 				break;
 		}
@@ -2478,6 +2617,168 @@ int bolt_devtree_boltset_boot(void *fdt, struct dt_boot_mods *bm)
 	return BOLT_OK;
 }
 
+static int bolt_populate_pmap(void *fdt)
+{
+#ifndef PMAP_MAX_MUXES
+	return BOLT_OK; /* do nothing */
+#else
+	int rc = BOLT_OK;
+	char node[80];
+	unsigned int data, i;
+	unsigned int pmap_number = board_pmap();
+	int brcmstb_clk_node = 0, offset = 0, pmap_node;
+
+	brcmstb_clk_node = bolt_devtree_node_from_path(fdt,
+		DT_RDB_DEVNODE_BASE_PATH"/brcmstb-clks");
+	if (brcmstb_clk_node == 0) {
+		warn_msg("cannot find a clock tree\n");
+		return BOLT_OK; /* not a critical failure condition */
+	}
+
+	for (i = 0; i < PMAP_MAX_MUXES; i++) {
+		xsprintf(node, "pmap-mux%d:pmap-mux%d@%x",
+			i, i, BPHYSADDR(pmapMuxes[i].reg));
+
+		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
+		if (offset >= 0)
+			continue; /* skip re-creating */
+
+		rc = bolt_devtree_addnode_at(fdt, node, brcmstb_clk_node,
+				&pmap_node);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_str(fdt, pmap_node, "compatible",
+			"brcm,pmap-mux");
+		if (rc)
+			goto out;
+
+		data = cpu_to_fdt32(BPHYSADDR(pmapMuxes[i].reg));
+		rc = bolt_devtree_at_node_appendprop(fdt, pmap_node, "reg",
+				&data, sizeof(data));
+		if (rc)
+			goto out;
+
+		data = cpu_to_fdt32(sizeof(pmapMuxes[i].reg));
+		rc = bolt_devtree_at_node_appendprop(fdt, pmap_node, "reg",
+			&data, sizeof(data));
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "bit-mask",
+			pmapMuxes[i].mask);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "bit-shift",
+			pmapMuxes[i].shift);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
+			pmapMuxValues[pmap_number][i]);
+		if (rc)
+			goto out;
+	}
+
+	for (i = 0; i < PMAP_MAX_DIVIDERS; i++) {
+		xsprintf(node, "pmap-divider%d:pmap-divider%d@%x",
+			i, i, BPHYSADDR(pmapDividers[i].reg));
+
+		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
+		if (offset >= 0)
+			continue; /* skip re-creating */
+
+		rc = bolt_devtree_addnode_at(fdt, node, brcmstb_clk_node,
+			&pmap_node);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_str(fdt, pmap_node, "compatible",
+			"brcm,pmap-divider");
+		if (rc)
+			goto out;
+
+		data = cpu_to_fdt32(BPHYSADDR(pmapDividers[i].reg));
+		rc = bolt_devtree_at_node_appendprop(fdt, pmap_node, "reg",
+			&data, sizeof(data));
+		if (rc)
+			return rc;
+
+		data = cpu_to_fdt32(sizeof(pmapDividers[i].reg));
+		rc = bolt_devtree_at_node_appendprop(fdt, pmap_node, "reg",
+			&data, sizeof(data));
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "bit-mask",
+			pmapDividers[i].mask);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "bit-shift",
+			pmapDividers[i].shift);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
+			pmapDividerValues[pmap_number][i]);
+		if (rc)
+			goto out;
+	}
+
+#ifdef PMAP_MAX_MULTIPLIERS
+	for (i = 0; i < PMAP_MAX_MULTIPLIERS; i++) {
+		xsprintf(node, "pmap-multiplier%d:pmap-multiplier%d@%x",
+			i, i, BPHYSADDR(pmapMultipliers[i].reg));
+
+		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
+		if (offset >= 0)
+			continue; /* skip re-creating */
+
+		rc = bolt_devtree_addnode_at(fdt, node, brcmstb_clk_node,
+			&pmap_node);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_str(fdt, pmap_node, "compatible",
+			"brcm,pmap-multiplier");
+		if (rc)
+			goto out;
+
+		data = cpu_to_fdt32(BPHYSADDR(pmapMultipliers[i].reg));
+		rc = bolt_devtree_at_node_appendprop(fdt, pmap_node, "reg",
+			&data, sizeof(data));
+		if (rc)
+			return rc;
+
+		data = cpu_to_fdt32(sizeof(pmapMultipliers[i].reg));
+		rc = bolt_devtree_at_node_appendprop(fdt, pmap_node, "reg",
+			&data, sizeof(data));
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "bit-mask",
+			pmapMultipliers[i].mask);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "bit-shift",
+			pmapMultipliers[i].shift);
+		if (rc)
+			goto out;
+
+		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
+			pmapMultiplierValues[pmap_number][i]);
+		if (rc)
+			goto out;
+	}
+#endif /* PMAP_MAX_MULTIPLIERS */
+
+out:
+	return rc;
+#endif /* PMAP_MAX_MUXES */
+}
 
 int bolt_devtree_boltset(void *fdt)
 {
@@ -2493,6 +2794,10 @@ int bolt_devtree_boltset(void *fdt)
 
 	rc = bolt_populate_memory(fdt);
 	if (rc)
+		goto out;
+
+	rc = bolt_populate_reserved_memory(fdt);
+	if (rc < 0)
 		goto out;
 
 	rc = bolt_populate_memory_ctls(fdt);
@@ -2523,11 +2828,11 @@ int bolt_devtree_boltset(void *fdt)
 	if (rc)
 		goto out;
 
-	rc = bolt_populate_bt_rfkill(fdt);
+	rc = bolt_populate_gpio_led(fdt);
 	if (rc)
 		goto out;
 
-	rc = bolt_populate_splash(fdt);
+	rc = bolt_populate_bt_rfkill(fdt);
 	if (rc)
 		goto out;
 
@@ -2621,6 +2926,10 @@ int bolt_devtree_boltset(void *fdt)
 	if (rc)
 		goto out;
 #endif
+
+	rc = bolt_populate_pmap(fdt);
+	if (rc)
+		goto out;
 
 out:
 	bolt_populate_model_and_compatible(fdt);

@@ -7,42 +7,35 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_queue.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
-
-#include "bsp_config.h"
-#include "common.h"
-#include "iocb.h"
-#include "device.h"
-#include "console.h"
-#include "devfuncs.h"
-#include "timer.h"
-#include "ioctl.h"
-
-#include "error.h"
-
-#include "env_subr.h"
-#include "ui_command.h"
-#include "ui_init.h"
-#include "bolt.h"
-
-#include "net_ebuf.h"
-#include "net_ether.h"
-
-#include "net_api.h"
-#include "net_mdio.h"
-
-#include "fileops.h"
-#include "ssbl-common.h"
-#include "board.h"
-
-#include "board_init.h"
+#include <board.h>
+#include <board_init.h>
+#include <bolt.h>
+#include <bsp_config.h>
+#include <common.h>
+#include <console.h>
+#include <device.h>
+#include <devfuncs.h>
+#include <env_subr.h>
+#include <error.h>
+#include <fileops.h>
+#include <iocb.h>
+#include <ioctl.h>
+#include <lib_ctype.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_queue.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <net_api.h>
+#include <net_ebuf.h>
+#include <net_ether.h>
+#include <net_mdio.h>
+#include <ssbl-common.h>
+#include <timer.h>
+#include <ui_command.h>
+#include <ui_init.h>
 
 #define ip_addriszero(a) (((a)[0]|(a)[1]|(a)[2]|(a)[3]) == 0)
-#define isdigit(d) (((d) >= '0') && ((d) <= '9'))
 
 #if CFG_NETWORK
 static int ui_cmd_ifconfig(ui_cmdline_t *cmd, int argc, char *argv[]);

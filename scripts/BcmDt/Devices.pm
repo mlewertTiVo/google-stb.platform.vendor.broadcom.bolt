@@ -654,6 +654,12 @@ sub output_interrupt_prop($$)
 	return $t;
 }
 
+# This variable will be set/modified by start_uart_body()
+# and then later on it maybe used to insert the
+# "clock-frequency" property into the nodes by func
+# insert_clk_frequency_into_uarts().
+my @serial_names;
+
 sub start_uart_body($$$$$$)
 {
 	my ($rh, $info, $label, $addr, $regs_ref, $intr_ref) = @_;
@@ -661,7 +667,6 @@ sub start_uart_body($$$$$$)
 	my @regs = @$regs_ref;
 	my @intrs = @$intr_ref;
 	my %default = ("compatible" => "ns16550a",
-		       "clock-frequency" => [ "dec", 81000000 ],
 		       "reg-shift" => [ "hex", 2 ],
 		       "reg-io-width" => [ "hex", 4 ],
 		      );
@@ -677,6 +682,7 @@ sub start_uart_body($$$$$$)
 	}
 	my $t = sprintf("%s: serial@%x {\n", $label, $addr);
 	insert_label($label, sprintf("serial@%x", $addr));
+	push @serial_names, sprintf("serial@%x", $addr);
 	$t .= output_default(\%default);
 	my $reg_addrs;
 	my $reg_names;
@@ -1806,7 +1812,10 @@ sub add_gisb_arb($$$$)
 		= get_reg_range($rh, "BCHP_SUN_GISB_ARB");
 	my @intr;
 	$intr[0] = find_l2_interrupt($bchp_defines, "SUN_L2", "GISB_TIMEOUT");
-	$intr[1] = find_l2_interrupt($bchp_defines, "SUN_L2", "GISB_TEA");
+	$intr[1] = __find_l2_interrupt($bchp_defines, "SUN_L2", "GISB_BUS_ERROR");
+	if (!defined($intr[1])) {
+		$intr[1] = find_l2_interrupt($bchp_defines, "SUN_L2", "GISB_TEA");
+	}
 	my @intr_prop = (
 		{"name" => "GISB_TIMEOUT", "irq" => $intr[0], "parent_intc" => $l2_intr . "_intc"},
 		{"name" => "GISB_TEA", "irq" => $intr[1], "parent_intc" => $l2_intr . "_intc" },
@@ -2778,7 +2787,7 @@ sub add_pmu($$)
 	my ($dt, $rh) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my %default = (
-		"compatible" => [ 'string', [ 'arm,armv8-pmuv3', 'arm,cortex-a15-pmu', 'arm,cortex-a9-pmu' ] ],
+		"compatible" => [ 'string', [ 'arm,cortex-a53-pmu', 'arm,armv8-pmuv3', 'arm,cortex-a15-pmu', 'arm,cortex-a9-pmu' ] ],
 	);
 	my @intr_prop;
 	my $j;
@@ -2824,7 +2833,7 @@ sub add_sf2_mdio($$$$$)
 	my ($dt, $rh, $top_base, $sf2_rev, $chipid) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my %default = (
-		"compatible" => [ 'string', [ sprintf('brcm,bcm%x-mdio-v%x.%x',
+		"compatible" => [ 'string', [ sprintf('brcm,bcm%d-mdio-v%x.%x',
 					$chipid, ($sf2_rev >> 8) & 0xff, $sf2_rev & 0xff),
 					'brcm,unimac-mdio' ] ],
 		"reg-names" => [ 'string' , [ 'mdio', 'mdio_indir_rw' ] ],
@@ -3629,6 +3638,39 @@ sub add_dtu_config($$$)
 	}
 }
 
+sub add_dpfe($$$)
+{
+	my ($dt, $rh, $num) = @_;
+	my $bchp_defines = $rh->{rh_defines};
+	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
+
+	for (my $i = 0; $i < $num; $i++) {
+		my @regs;
+		my @reg_names;
+
+		foreach my $node (qw(cpu dmem imem)) {
+			push(@regs, get_reg_range($rh,
+				"BCHP_DPFE_".uc($node)."_$i"));
+			push(@reg_names, "dpfe-$node");
+		}
+		my %default = (
+			"compatible" => [ 'string',
+				[
+					sprintf("brcm,bcm%x-dpfe-cpu", $chipid),
+						"brcm,dpfe-cpu" ]
+				],
+			"reg" => [ 'hex', \@regs ],
+			"reg-names" => [ 'string', \@reg_names ],
+		);
+
+		# $regs[0] is the address of the DPFE CPU register space
+		my $t = sprintf("dpfe_cpu$i: dpfe-cpu\@%x {\n", $regs[0]);
+		$t .= output_default(\%default);
+		$t .= "};";
+		$dt->add_node(DevTree::node->new($t));
+	}
+}
+
 ###############################################################
 # FUNCTION:
 #   gen_clocks_prop
@@ -3680,11 +3722,39 @@ sub gen_clocks_prop
 	# change sata30 => sata3
 	$str1 =~ s/\b(sw_sata3)\d+\b/$1/g;
 
+	# change sw_uart0 => sw_baud
+	$str1 =~ s/\bsw_uart\d\b/sw_baud/g;
+	
+	# change sysport[01] => sysport
+	$str1 =~ s/\b(sw_sysport)\d+\b/$1/g;
+	$str1 =~ s/\b(sw_sysport)\d+(wol)\b/$1$2/g;
+
 	my $clks = DevTree::prop->new($str0);
 	my $clock_names = DevTree::prop->new($str1);
 	return { clks => $clks, clock_names => $clock_names };
 }
 
+###############################################################
+# FUNCTION:
+#
+###############################################################
+sub insert_clk_frequency_into_uarts($)
+{
+    my ($dt) = @_;
+    my $count = 0;
+
+    my $text = "clock-frequency = <81000000>;";
+
+    foreach my $uart (@serial_names) {
+	my $re = qr/$uart/;
+	my ($x) = $dt->find_node($re);
+	next if !$x;
+	$x->add_prop(DevTree::prop->new($text));
+	$count++;
+    }
+    return $count;
+}
+    
 
 ###############################################################
 # FUNCTION:
@@ -4008,7 +4078,11 @@ STOP
 
 	# SYSTEMPORT
 	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'partition',
-		qr/^SYSPORT/, qr/^ethernet\@/);
+		qr/^SYSPORT/, qr/^ethernet\@/)
+		if $rh_funcs->{SYSPORT} && !$rh_funcs->{SYSPORT0};
+	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'interleave',
+		qr/^SYSPORT0\w*?$/, qr/^ethernet\@/) if $rh_funcs->{SYSPORT0};
+
 	print "$P: WARN: no clocks inserted for systemport!\n"
 		if (!$ni && BcmUtils::get_num_systemport($bd));
 
@@ -4017,6 +4091,19 @@ STOP
 		qr/^SWITCH/, qr/^ethernet_switch\@/);
 	print "$P: WARN: no clocks inserted for switch!\n"
 		if (!$ni && BcmUtils::get_num_sf2_switch($bd));
+
+	# UART
+	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'none',
+		qr/^UART/, qr/^serial/);
+	if ($ni) {
+	    print "$P: WARN: no clocks inserted for uart!\n"
+		if (!$ni && BcmUtils::get_num_serial($bd));
+	} else {
+	    $ni = insert_clk_frequency_into_uarts($rdb);
+	    print "$P: WARN: no clocks or clock-freqs inserted for uart!\n"
+		if (!$ni && BcmUtils::get_num_serial($bd));
+	}
+
 
 	####################
 	# USB, old way

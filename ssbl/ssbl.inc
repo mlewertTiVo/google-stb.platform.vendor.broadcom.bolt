@@ -1,5 +1,5 @@
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -126,6 +126,7 @@ SSBL_S += \
 	ssbl/dev/dev_spiflash.c \
 	ssbl/dev/macutils.c \
 	ssbl/lib/hexdump.c \
+	ssbl/lib/lib_ctype.c \
 	ssbl/lib/lib_malloc.c \
 	ssbl/lib/lib_misc.c \
 	ssbl/lib/lib_printf.c \
@@ -156,6 +157,7 @@ SSBL_S += \
 	ssbl/main/main.c \
 	ssbl/main/macaddr.c \
 	ssbl/main/rawfs.c \
+	ssbl/main/reserve-memory.c \
 	ssbl/main/savedata.c \
 	ssbl/main/timer.c \
 	ssbl/main/xreq.c \

@@ -1462,7 +1462,7 @@ new file mode 100644
 index 0000000..c41f484
 --- /dev/null
 +++ libcoap-4.1.1/brcm/osal.h
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,42 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 + *
@@ -1474,13 +1474,15 @@ index 0000000..c41f484
 +#ifndef __POSIX_H__
 +#define __POSIX_H__
 +
++#include <lib_ctype.h>
++#include <lib_printf.h>
++#include <lib_string.h>
++#include <net_api.h>
++#include <net_ebuf.h>
++#include <net_ether.h>
++#include <net_ip.h>
++
 +#include <stdint.h>
-+#include "lib_string.h"
-+#include "lib_printf.h"
-+#include "net_ebuf.h"
-+#include "net_api.h"
-+#include "net_ether.h"
-+#include "net_ip.h"
 +
 +#undef strnchr
 +
@@ -1488,14 +1490,6 @@ index 0000000..c41f484
 +
 +#define NI_MAXHOST      1025
 +#define NI_MAXSERV      32
-+
-+#define isdigit(d) (((d) >= '0') && ((d) <= '9'))
-+#define isxdigit(d) ((((d) >= '0') && ((d) <= '9')) || \
-+					(((d) >= 'a') && ((d) <= 'f')) || \
-+					(((d) >= 'A') && ((d) <= 'F')))
-+
-+#define isspace(c) (c == '\t' || c == '\n' || c == '\v' || \
-+					c == '\f' || c == '\r' || c == ' ')
 +
 +typedef uint64_t time_t;
 +typedef int ssize_t;

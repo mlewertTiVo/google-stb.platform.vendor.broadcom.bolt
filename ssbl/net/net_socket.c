@@ -7,17 +7,14 @@
  *
  ***************************************************************************/
 
-
-#include "lib_types.h"
-
-#include "error.h"
-#include "fileops.h"
-#include "arch_ops.h"
-#include "lib_types.h"
-#include "lib_malloc.h"
 #include "net_socket.h"
 
-
+#include <arch_ops.h>
+#include <error.h>
+#include <fileops.h>
+#include <lib_ctype.h>
+#include <lib_malloc.h>
+#include <lib_types.h>
 
 #define DYNAMIC_UDP_PORTBASE 49152
 #define DYNAMIC_UDP_PORTMAX  65535
@@ -28,8 +25,6 @@ get_random_port() {
 	return (DYNAMIC_UDP_PORTBASE +
 		(arch_getticks() % DYNAMIC_UDP_NUM_PORTS));
 }
-
-#define isdigit(x) (((x) >= '0') && ((x) <= '9'))
 
 static int sockopt_to_boltparam(int option_name);
 

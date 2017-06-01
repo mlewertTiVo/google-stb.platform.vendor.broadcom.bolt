@@ -21,6 +21,9 @@ uint32_t ddr_get_restricted_size_mb(const struct ddr_info *ddr)
 	unsigned int i;
 	unsigned int num_entries = NUM_DRAM_MAPPING_ENTRIES;
 
+	if (ddr == NULL || ddr->base_mb >= 4096)
+		return 0;
+
 #ifdef BCHP_AON_CTRL_GLOBAL_ADDRESS_MAP_VARIANT_map_variant_MASK
 	if (is_mmap_v7_64()) {
 		num_entries = sizeof(dram_mapping_table_v7_64) /
@@ -30,9 +33,10 @@ uint32_t ddr_get_restricted_size_mb(const struct ddr_info *ddr)
 #endif
 
 	for (i = 0; i < num_entries; ++i) {
-		if (am_entry->to_mb == ddr->base_mb &&
-				am_entry->to_mb + am_entry->size_mb <= 4096) {
+		if (am_entry->to_mb == ddr->base_mb) {
 			size_mb = min(ddr->size_mb, am_entry->size_mb);
+			if (am_entry->to_mb + size_mb > 4096)
+				size_mb = 4096 - am_entry->to_mb;
 			break;
 		}
 		++am_entry;

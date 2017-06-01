@@ -1,12 +1,10 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
 #ifndef __LIB_MALLOC_H__
@@ -34,7 +32,6 @@ void *bmalloc(mempool_t * pool, unsigned int size, unsigned int align);
 int bmemchk(mempool_t * pool, int verbose);
 extern mempool_t bmempool;
 extern mempool_t bumempool;
-extern void	arch_mark_uncached(uintptr_t uc, unsigned int size);
 void *bmempoolbase(mempool_t * pool);
 int bmempoolsize(mempool_t * pool);
 int bmemstats(mempool_t * pool, memstats_t * stats);

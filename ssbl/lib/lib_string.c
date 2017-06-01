@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -7,11 +7,12 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
 #define _LIB_NO_MACROS_
-#include "lib_string.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
+#include <lib_ctype.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_string.h>
+#include <lib_types.h>
 
 char *lib_strcpy(char *dest, const char *src)
 {
@@ -294,21 +295,6 @@ void *lib_memset(void *dest, int c, size_t cnt)
 }
 #endif
 
-char lib_toupper(char c)
-{
-	if ((c >= 'a') && (c <= 'z'))
-		c -= 32;
-	return c;
-}
-
-char lib_tolower(char c)
-{
-
-	if ((c >= 'A') && (c <= 'Z'))
-		c += 32;
-	return c;
-}
-
 void lib_strupr(char *str)
 {
 	while (*str) {
@@ -330,8 +316,6 @@ char *lib_strcat(char *dest, const char *src)
 	return dest;
 }
 
-#define isspace(x) (((x) == ' ') || ((x) == '\t'))
-
 char *lib_gettoken(char **ptr)
 {
 	char *p = *ptr;
@@ -339,7 +323,7 @@ char *lib_gettoken(char **ptr)
 
 	/* skip white space */
 
-	while (*p && isspace(*p))
+	while (*p && lib_isspace(*p))
 		p++;
 	ret = p;
 
@@ -353,7 +337,7 @@ char *lib_gettoken(char **ptr)
 	/* skip non-whitespace */
 
 	while (*p) {
-		if (isspace(*p))
+		if (lib_isspace(*p))
 			break;
 
 		/* do quoted strings */

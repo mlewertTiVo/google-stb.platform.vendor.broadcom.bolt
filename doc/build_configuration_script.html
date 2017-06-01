@@ -1055,6 +1055,7 @@ No other text apart from comments must appear after it.</p></div>
     sdio
     usb
     gpio_key
+    gpio_led
     bt_rfkill_gpio</code></pre>
 </div></div>
 </div>
@@ -2811,12 +2812,51 @@ by adding the property "no-1-8-v".
 <div class="sect2">
 <h3 id="_vreg">5.28.  vreg</h3>
 <div class="paragraph"><p>Usage: vreg -name &lt;string&gt; -gpio &lt;gpio&gt; -pin &lt;int&gt; -active hi|lo \
-                -udelay &lt;int&gt;  -uvolts &lt;int&gt;</p></div>
+                [-udelay &lt;int&gt;]  [-uvolts &lt;int&gt;] [-on_at_boot &lt;int&gt;]</p></div>
 <div class="paragraph"><p>This per-board command was created to support the pcie turning
 off/on power supplies to its devices during boot, suspend, and
 resume.  If you use this command, you will reference the name
 of the voltage regulator with -vreg when using the per-board
 pcie command.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+-name &lt;string&gt;&#8201;&#8212;&#8201;name of the regulator
+</p>
+</li>
+<li>
+<p>
+-gpio &lt;gpio&gt;&#8201;&#8212;&#8201;type of gpio, either <em>upg_gio</em> or <em>upg_gio_aon</em>
+</p>
+</li>
+<li>
+<p>
+-pin &lt;int&gt;&#8201;&#8212;&#8201;pin number of gpio
+</p>
+</li>
+<li>
+<p>
+-active &lt;hi|lo&gt;&#8201;&#8212;&#8201;which level enables the gpio
+</p>
+</li>
+<li>
+<p>
+-udelay &lt;int&gt;&#8201;&#8212;&#8201;(opt) delay in usec between gpio being enabled and
+   the enable call returning.
+</p>
+</li>
+<li>
+<p>
+-uvolts &lt;int&gt;&#8201;&#8212;&#8201;(opt) voltage amount, doesn&#8217;t affect anything.
+</p>
+</li>
+<li>
+<p>
+-on_at_boot &lt;int&gt;&#8201;&#8212;&#8201;(opt) indicates whether the regulator should come
+   on at boot.  Off by default.
+</p>
+</li>
+</ul></div>
 <div class="paragraph"><p>Examples:</p></div>
 <div class="paragraph"><p>vreg -name wifi -gpio upg_gio -pin 14 -active lo</p></div>
 </div>
@@ -2988,7 +3028,41 @@ the gpio button.</p></div>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_bt_rfkill_gpio">5.32.  bt_rfkill_gpio</h3>
+<h3 id="_gpio_led">5.32.  gpio_led</h3>
+<div class="paragraph"><p>Usage: gpio_led -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -pol &lt;POLARITY&gt;</p></div>
+<div class="paragraph"><p>Note: Creates device node for the gpio led driver. You can create multiple gpio leds.</p></div>
+<div class="paragraph"><p>See also: dt autogen gpio</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+&lt;NAME&gt; is not used in kernel driver, it&#8217;s better to give a descriptive name based on the usage of gpio pin.
+</p>
+</li>
+<li>
+<p>
+&lt;NAME_OF_GPIO_CONTROLLER&gt; specifies the gpio controller that is connected to the button, i.e. <em>upg_gio</em> or <em>upg_gio_aon</em>.
+</p>
+</li>
+<li>
+<p>
+&lt;GPIO_PIN&gt; specified the pin number of the gpio on the gpio controller used for the button.
+</p>
+</li>
+<li>
+<p>
+&lt;POL&gt; specifies the default polarity of the gpio pin (1 = HIGH and 0 = LOW).
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Examples:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>  gpio_led -name led_A -gpio upg_gio_aon -pin 20 -pol 0
+  gpio_led -name led_B -gpio upg_gio -pin 36 -pol 0</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_bt_rfkill_gpio">5.33.  bt_rfkill_gpio</h3>
 <div class="paragraph"><p>Usage: bt_rfkill_gpio -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -pol &lt;POLARITY&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the Bluetooth rfkill gpio. You can have up to 2 GPIOs, one for vreg and another for reset.</p></div>
 <div class="paragraph"><p>Check the hardware schematics to ensure the correct &lt;NAME_OF_GPIO_CONTROLLER&gt; and &lt;GPIO_PIN&gt;
@@ -3043,7 +3117,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.37<br />
-Last updated 2017-04-07 11:39:42 PDT
+Last updated 2017-06-01 01:55:06 PDT
 </div>
 </div>
 </body>

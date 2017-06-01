@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -94,31 +94,11 @@ struct board_type {
 	struct	ddr_info ddr[MAX_DDR];
 };
 
-/* clock_divisors (and a multiplier)
- *
- * The output frequency of a clock is defined:
- *   freqOUT = freqVCO / MDIV, where freqVCO = refClock / PDIV * NDIV
- */
-struct clock_divisors {
-	uint16_t ndiv; /* 10-bit in register specification */
-	uint8_t pdiv; /* 4-bit in register specification */
-	uint8_t mdiv; /* 8-bit in register specification */
-};
-
-/* simplified PMap, only for CPU and SCB */
-struct pmap_entry {
-	struct clock_divisors cpu;
-	struct clock_divisors scb;
-	uint8_t sysif_mdiv;
-	uint8_t dummy[3]; /* For 4 byte alignment */
-};
-
 struct boards_nvm_list {
 	uint32_t magic;
 	uint32_t n_boards;
 	const struct board_type *board_types;
 	uint32_t n_pmaps;
-	const struct pmap_entry *pmap_table;
 };
 
 struct nand_chip {

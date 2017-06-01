@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -15,11 +13,13 @@
 #include <stdlib.h>
 #endif
 
-#include "lib_types.h"
-#include "lib_printf.h"
-#include "lib_malloc.h"
-#include "arch.h"
-#include "cache_ops.h"
+#include <lib_malloc.h>
+
+#include <arch.h>
+#include <arch_ops.h>
+#include <cache_ops.h>
+#include <lib_printf.h>
+#include <lib_types.h>
 
 /*  *********************************************************************
     *  Constants

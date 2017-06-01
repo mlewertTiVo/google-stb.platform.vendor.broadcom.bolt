@@ -91,14 +91,20 @@ int avs_start(int en, int pmap_id)
 {
 	int rc = AVS_DISABLED;
 	__puts("AVS start:");
-
 #if defined(ENABLE_AVS_FIRMWARE)
+#ifdef DVFS_SUPPORT
+	/* For DVFS parts AVS sets the system clocks so it always has to run */
+	rc = avs_common_start(en, pmap_id);
+	avs_perror(rc);
+#else
+	/* Only start AVS firmware if enabled */
 	if (en) {
-		rc = avs_common_start(pmap_id);
+		rc = avs_common_start(en, pmap_id);
 		avs_perror(rc);
 	} else {
 		puts("NO");
 	}
+#endif
 #else
 	puts("!EN");
 #endif

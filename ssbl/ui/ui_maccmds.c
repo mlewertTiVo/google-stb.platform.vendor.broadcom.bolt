@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,48 +7,93 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
-#include "lib_string.h"
-#include "ui_command.h"
-#include "ui_init.h"
-#include "bolt.h"
+#include <bolt.h>
+#include <byteorder.h>
+#include <env_subr.h>
+#include <error.h>
+#include <devfuncs.h>
+#include <lib_ctype.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <macaddr.h>
+#include <sha2.h>
+#include <ui_command.h>
+#include <ui_init.h>
 
-#include "board_init.h"
-#include "iocb.h"
-#include "devfuncs.h"
-#include "ioctl.h"
-#include "bsp_config.h"
-#include "byteorder.h"
-#include "error.h"
+#include <stdbool.h>
 
-#define PARAM_SZ 0x46
-#define NUMADDRS   8
-#define BUFLENGTH  (7 + 4 * NUMADDRS * 2)	/* matching non-os */
-#define	BOARD_TYPE_MASK	0x1F
-#define	SER_NBR_MASK	0xFF
-#define	ADDR_NBR_MASK	0x07
-#define BOARD_SER_NBR_OFFSET	1000
+/* MAC Address Block Large (MA_L) assigned to Broadcom Limited per:
+ * http://standards-oui.ieee.org/oui/oui.txt
+ */
+static const unsigned char MA_L[3] = { 0x00, 0x10, 0x18 };
 
 static char *macaddr_devname;
 
-static int write_macbuf(uint16_t *macbuf, const int buflength)
+static bool is_macstr_valid(char *str)
+{
+	int i;
+	char *p;
+	char delimiter;
+
+	/* acceptable formats: xx-xx-xx-xx-xx-xx or xx:xx:xx:xx:xx:xx */
+	if (str == NULL || strlen(str) != 17)
+		return false;
+
+	p = str;
+	/* Xx:xx:xx:xx:xx:xx
+	 * ^
+	 */
+	if (!isxdigit(*p))
+		return false;
+	++p;
+	/* xX:xx:xx:xx:xx:xx
+	 *  ^
+	 */
+	if (!isxdigit(*p))
+		return false;
+	++p;
+	/* xx:xx:xx:xx:xx:xx
+	 *   ^
+	 */
+	delimiter = *p;
+	if (delimiter != '-' && delimiter != ':')
+		return false;
+
+	/* 5 more groups to go as the first one has been checked */
+	for (i = 0; i < 5; i++) {
+		if (delimiter != *p)
+			return false;
+		delimiter = *p;
+		++p;
+		if (!isxdigit(*p))
+			return false;
+		++p;
+		if (!isxdigit(*p))
+			return false;
+		++p;
+	}
+
+	return true;
+}
+
+static int write_macbuf(unsigned char *macbuf, const int bufsize)
 {
 	int i;
 	int hdl;
 	int retval;
 	uint8_t checksum = 0;
 	char macstr[18];
-	const int bufsize_bytes = buflength * sizeof(uint16_t);
+	unsigned char *p;
 
 	/* calculate checksum. */
+	p = macbuf;
 	checksum = 0;
-	for (i = 0; i < PARAM_SZ; i++) {
-		checksum += ((macbuf[i] & 0xff00) >> 8);
-		checksum += (macbuf[i] & 0x00ff);
-	}
-	macbuf[PARAM_SZ] = ((checksum & 0xFF) << 8) | (checksum & 0xFF);
+	for (i = 0; i < (bufsize - 2); i++, p++)
+		checksum += *p;
+	*p++ = checksum;
+	*p = checksum; /* repeat */
 
 	hdl = bolt_open(macaddr_devname);
 	if (hdl < 0)
@@ -59,18 +102,18 @@ static int write_macbuf(uint16_t *macbuf, const int buflength)
 	xprintf("Programming flash...");
 
 	retval = bolt_writeblk(hdl, (bolt_offset_t) 0x0,
-			(unsigned char *)macbuf, bufsize_bytes);
+			(unsigned char *)macbuf, bufsize);
 	bolt_close(hdl);
 
 	xprintf("done\n");
 
-	if (retval == bufsize_bytes) {
+	if (retval == bufsize) {
 		macaddr_flash_get(BCM7038MAC, macstr, 0);
 		env_setenv(MACADDR_ENVSTR, macstr, ENV_FLG_BUILTIN);
 		retval = 0;
 	} else {
 		xprintf("Failure while writing to flash.\n");
-		xprintf("(%d != %d)\n", retval, bufsize_bytes);
+		xprintf("(%d != %d)\n", retval, bufsize);
 		retval = -1;
 	}
 
@@ -80,77 +123,53 @@ static int write_macbuf(uint16_t *macbuf, const int buflength)
 static int ui_cmd_macprog_nibble(ui_cmdline_t *cmd, int argc, char **argv)
 {
 	int i;
-	int mac_idx = 0;
-	uint16_t macbuf[BUFLENGTH];
-	uint32_t boardtype = 0;
-	uint16_t serialnum = 0;
-	uint16_t revnum = 0;
+	unsigned char *p, buf[MACADDR_FLASHBUFSIZE];
+	struct macaddr_header *header;
 	char *str;
-	char strtempa[3];
-	char strtempb[3];
 
-	for (i = 0; i < BUFLENGTH; i++)
-		macbuf[i] = 0xffff;
-
+	/* no sanity check as it was done by the caller in this file */
 	str = cmd_getarg(cmd, 0);
-	if (!str || (strlen(str) != 17) ||
-	    (str[2] != '-') || (str[5] != '-') ||
-	    (str[8] != '-') || (str[11] != '-') || (str[14] != '-')) {
-		xprintf("Invalid MAC address format\n");
-		return -1;
+
+	memset(buf, 0xff, sizeof(buf));
+	header = (struct macaddr_header *) buf;
+	memset(header, 0, sizeof(*header));
+	header->size = cpu_to_be16(MACADDR_SIZEUNTILCHKSUM);
+
+	p = buf + sizeof(struct macaddr_header);
+	for (i = 0; i < MACADDR_NUMADDRS; i++) {
+		char *q = str;
+
+		*p++ = xtoi(q);
+		q += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(q);
+		q += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(q);
+		q += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(q);
+		q += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(q);
+		q += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(q);
+		p += 2; /* skip two LSB's */
 	}
 
-	/* [xm] Is is for something else and will be corrected later */
-	macbuf[0] = __swap16(((boardtype >> 16) & 0x0FFF));
-	macbuf[1] = __swap16((boardtype & 0xFFFF));
-	/* Inject the number of bytes, starting at the next word. */
-	macbuf[2] = 0;
-	macbuf[3] = __swap16(NUMADDRS * 2 * 4 * 2 + 4);	/* Same as non-os */
-	macbuf[4] = __swap16(serialnum);
-	macbuf[5] = __swap16(revnum);
-
-	for (i = 0; i < NUMADDRS; i++) {
-		mac_idx = 6 + i * 4;
-		strncpy(strtempa, &str[0], 2);
-		strtempa[2] = '\0';
-		strncpy(strtempb, &str[3], 2);
-		strtempb[2] = '\0';
-		macbuf[mac_idx] =
-		    __swap16(((xtoi(strtempa) << 8) & 0xFF00) |
-			   (xtoi(strtempb) & 0xFF));
-		strncpy(strtempa, &str[6], 2);
-		strtempa[2] = '\0';
-		strncpy(strtempb, &str[9], 2);
-		strtempb[2] = '\0';
-		macbuf[mac_idx + 1] =
-		    __swap16(((xtoi(strtempa) << 8) & 0xFF00) |
-			   (xtoi(strtempb) & 0xFF));
-		strncpy(strtempa, &str[12], 2);
-		strtempa[2] = '\0';
-		strncpy(strtempb, &str[15], 2);
-		strtempb[2] = '\0';
-		macbuf[mac_idx + 2] =
-		    __swap16(((xtoi(strtempa) << 8) & 0xFF00) |
-			   (xtoi(strtempb) & 0xFF));
-		macbuf[mac_idx + 3] = __swap16(0);
-	}
-
-	return write_macbuf(macbuf, BUFLENGTH);
+	return write_macbuf(buf, MACADDR_FLASHBUFSIZE);
 }
 
 static int ui_cmd_macprog(ui_cmdline_t *cmd, int argc, char **argv)
 {
 	int i;
-	int mac_idx = 0;
-	unsigned short temp;
-	uint16_t macbuf[BUFLENGTH];
-	uint32_t boardtype = 0, btype = 0;
-	uint16_t ser, serialnum;
+	unsigned char *p, buf[MACADDR_FLASHBUFSIZE];
+	struct macaddr_header *header;
+	uint32_t boardtype = 0;
+	uint16_t serialnum;
 	uint16_t revnum = 0;
 	char *str;
+	sha256_ctx ctx;
+	unsigned char digest[SHA256_DIGEST_SIZE];
 
-	for (i = 0; i < BUFLENGTH; i++)
-		macbuf[i] = 0xffff;
+	memset(buf, 0xff, sizeof(buf));
+	header = (struct macaddr_header *) buf;
 
 	str = cmd_getarg(cmd, 0);
 	if (!str) {
@@ -159,28 +178,27 @@ static int ui_cmd_macprog(ui_cmdline_t *cmd, int argc, char **argv)
 		return -1;
 	}
 
-	if (strlen(str) == 17 && str[2] == '-' && str[5] == '-' && str[8] == '-'
-	    && str[11] == '-' && str[14] == '-')
+	/* acceptable formats: xx-xx-xx-xx-xx-xx or xx:xx:xx:xx:xx:xx */
+	if (is_macstr_valid(str))
 		return ui_cmd_macprog_nibble(cmd, argc, argv);
 
+	sha256_init(&ctx);
+	sha256_update(&ctx, (unsigned char *)str, strlen(str));
 	boardtype = xtoi(str);
-	boardtype = boardtype << 8;
-	macbuf[0] = __swap16(((boardtype >> 16) & 0x0FFF));
-	macbuf[1] = __swap16((boardtype & 0xFFFF));
-	boardtype = boardtype >> 8;
-	btype = boardtype % 0xff;
-	/* Inject the number of bytes, starting at the next word. */
-	macbuf[2] = 0;
-	macbuf[3] = __swap16(NUMADDRS * 2 * 4 * 2 + 4);	/* Same as non-os */
+	header->board_type = cpu_to_be32(boardtype << 8);
+	header->zero = 0;
+	header->size = cpu_to_be16(MACADDR_SIZEUNTILCHKSUM);
 
 	str = cmd_getarg(cmd, 1);
 	if (!str) {
 		xprintf("No serial number specified; type \"help macprog\".\n");
 		return -1;
 	}
+	sha256_update(&ctx, (unsigned char *)str, strlen(str));
+	sha256_final(&ctx, digest);
 
 	serialnum = atoi(str);
-	macbuf[4] = __swap16(serialnum);
+	header->board_serial = cpu_to_be16(serialnum);
 
 	str = cmd_getarg(cmd, 2);
 	if (!str) {
@@ -189,21 +207,16 @@ static int ui_cmd_macprog(ui_cmdline_t *cmd, int argc, char **argv)
 	}
 
 	revnum = atoi(str);
-	macbuf[5] = __swap16(revnum);
-	ser = 0x1800 | (serialnum >> 8);
+	header->board_revision = cpu_to_be16(revnum);
 
-	for (i = 0; i < NUMADDRS; i++) {
-		mac_idx = 6 + i * 4;
-		temp = (btype << 12) |
-			((i & ADDR_NBR_MASK) << 8) | (serialnum & 0xFF);
-
-		macbuf[mac_idx + 0] = cpu_to_be16(0x0010);
-		macbuf[mac_idx + 1] = cpu_to_be16(ser);
-		macbuf[mac_idx + 2] = cpu_to_be16(temp);
-		macbuf[mac_idx + 3] = cpu_to_be16(0);
+	p = buf + sizeof(struct macaddr_header);
+	for (i = 0; i < MACADDR_NUMADDRS; i++) {
+		memcpy(p, digest, MACADDR_STRIDE);
+		memcpy(p, MA_L, sizeof(MA_L));
+		p += MACADDR_STRIDE;
 	}
 
-	return write_macbuf(macbuf, BUFLENGTH);
+	return write_macbuf(buf, MACADDR_FLASHBUFSIZE);
 }
 
 int ui_init_maccmds(void)

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -7,21 +7,31 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_printf.h"
-#include "error.h"
-#include "devfuncs.h"
-#include "ddr.h"
-
-#include "bsp_config.h"
-#include "board.h"
-#include "board_init.h"
-
-#include "splash_magnum.h"
-#include "splash_bmp.h"
+#include <board.h>
+#include <board_init.h>
+#include <bolt.h>
+#include <bsp_config.h>
+#include <ddr.h>
+#include <devfuncs.h>
+#include <error.h>
+#include <lib_printf.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <splash_bmp.h>
+#include <splash_magnum.h>
+#include <ssbl-common.h>
 
 #define BITS2MASK(bits) ((1<<(bits))-1)
+
+/* 16 MB should be more than enough.
+ *
+ * 16 MB is not the final number. As starting splash progresses, memory
+ * keeps being allocated downward. Once it is done, the amount of memory
+ * actually allocated is passed when DT node is created.
+ *
+ * But, no one can reserve the gap between 16 MB and the actual amount.
+ */
+static const unsigned int RESERVATION_AMOUNT = _MB(16); /* 16 MB */
 
 static uint32_t	bmem_free[MAX_DDR];
 static uint32_t	bmem_ptop[MAX_DDR];
@@ -307,7 +317,8 @@ static struct bnode *alloc_from_free_list(struct bnode **head, size_t bytes,
 static int splash_glue_init_bmem(uint32_t memc, struct board_type *b)
 {
 	struct ddr_info *ddr;
-	uint32_t top, size_mb;
+	uint32_t top;
+	int64_t retval;
 	/* skip sanity check, the caller should make sure */
 
 	if (!b) {
@@ -322,20 +333,24 @@ static int splash_glue_init_bmem(uint32_t memc, struct board_type *b)
 		return 0;
 	}
 
-	/*
-	 * FSBL MMU code may have restrictions on what can be mapped.
-	 * (e.g. BOLT does not support LPAE on ARM)
+	/* For now, the most important is the highest memory offset that
+	 * splash can start allocating memory. As it allocates more, it
+	 * grows downward. Once completing setting up splash, it stops
+	 * growing. Then, the amount of memory actually used/allocated
+	 * can be figured out via splash_glue_getmem(), internally
+	 * bmem_free[memc] and bmem_ptop[memc], and should be reserved.
+	 *
+	 * The actual reservation will be taken care of by BOLT main.
 	 */
-	size_mb = ddr_get_restricted_size_mb(ddr);
-	if (!size_mb) {
-		err_msg("%s: Bad size for DDR %d.  Check your memory map.",
+	retval = bolt_reserve_memory(RESERVATION_AMOUNT, _KB(4),
+		(1 << memc) | BOLT_RESERVE_MEMORY_OPTION_DRYRUN, NULL);
+	if (retval < 0) {
+		err_msg("%s: failed to reserve memory on MEMC %d.",
 			__func__, memc);
-		return BOLT_ERR;
+		return retval;
 	}
-
 	/* heap grows down */
-	top = _MB(ddr->base_mb + size_mb);
-
+	top = retval + RESERVATION_AMOUNT;
 	bmem_free[memc] = top;
 	bmem_ptop[memc] = top;
 

@@ -487,6 +487,16 @@ sub gen_dt_ops_dts($)
 
 	for my $c (@$ops) {
 		my $nodes;
+
+		# If there is a condition to this property, then lets
+		# print it out at the top.
+		if ($c->{cond}) {
+			my $cond = $c->{cond};
+			$cond =~ s/\s*;\s*$//;
+			$cond =~ s/;/ && /g;
+			$text .= "/* This modification is made when  $cond  */\n";
+		}
+
 		# If we are not the top-level root, we need to
 		# create it
 		my $depth = 0;

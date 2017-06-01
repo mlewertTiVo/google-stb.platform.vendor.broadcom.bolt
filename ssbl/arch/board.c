@@ -12,6 +12,9 @@
 #include "board_params.h"
 #include <bchp_sun_top_ctrl.h>
 #include <ddr.h>
+#ifdef DVFS_SUPPORT
+#include <pmap.h>
+#endif
 
 
 /*
@@ -386,6 +389,16 @@ const gpio_key_params *board_gpio_keys(void)
 		return NULL;
 
 	return board_params[inf->board_idx].gpio_key;
+}
+
+const gpio_led_params *board_gpio_leds(void)
+{
+	struct fsbl_info *inf = get_inf();
+
+	if (!inf)
+		return NULL;
+
+	return board_params[inf->board_idx].gpio_led;
 }
 
 const bt_rfkill_params *board_bt_rfkill_gpios(void)

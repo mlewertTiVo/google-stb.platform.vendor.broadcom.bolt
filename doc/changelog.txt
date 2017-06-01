@@ -6,6 +6,50 @@
 Release changelog
 =================
 
+ v1.29
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2230[SWBOLT-2230] 'macprog' can now take a board serial number that is not decimal.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2277[SWBOLT-2277] Added PMU compatible string to enable the PMU driver for ARM64.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2242[SWBOLT-2242] Added support for BCM97271LC4L.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2264[SWBOLT-2264] Change SYSIF from 750 MHz to 1 GHz for 7260A0, PMAP 6.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2261[SWBOLT-2261] Fix SF2 MDIO compatible string.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2232[SWBOLT-2232] Fix emmc RPMB write key and write block errors.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2287[SWBOLT-2287] Fixed issue with AVS level increasing until it reaches the top. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2236[SWBOLT-2236] Increased SSBL size for 74371a0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2212[SWBOLT-2212] Increased kernel partition size in flash for A53 boards.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2265[SWBOLT-2265] Populate the device tree with clock dividers and mux settings for a selected PMap.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1946[SWBOLT-1946] Prevent BOLT hanging when SATA cable is removed after disk accesses. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2241[SWBOLT-2241] Probe CFI, then SFDP for spansion parts.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2138[SWBOLT-2138] Report the LPDDR4 temperature value that is available in the MR4 register.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2259[SWBOLT-2259] Set prop "regulator-boot_on" for voltage regulators by default.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2238[SWBOLT-2238] The MCB of LPDDR4-3733 has been updated for 7268b0 and 7271b0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2294[SWBOLT-2294] Updated AVS firmware to v0.4.9 for 7260a0, 7268b0, 7271b0 and 7278a0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2266[SWBOLT-2266] Updated PMap tables.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2207[SWBOLT-2207] Updated clock tree for 7271b0, 7260a0, and 7268b0. Added clock tree for 7278a0.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.29%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.28
 ------
 

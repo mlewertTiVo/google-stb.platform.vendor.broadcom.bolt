@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,10 +7,12 @@
  *
  ***************************************************************************/
 
+#include <lib_ctype.h>
+#include <lib_printf.h>
+#include <lib_string.h>
+#include <lib_types.h>
+
 #include <stdarg.h>
-#include "lib_types.h"
-#include "lib_printf.h"
-#include "lib_string.h"
 
 /*  *********************************************************************
     *  Globals								*
@@ -293,7 +293,6 @@ static int __llatox_n(size_t n, char *bufstart, char *buf,
     *  Return Value:
     *      number of characters copied
     ********************************************************************* */
-#define isdigit(x) (((x) >= '0') && ((x) <= '9'))
 int xvsprintf(char *outbuf, const char *format, va_list marker)
 {
 	char *optr;

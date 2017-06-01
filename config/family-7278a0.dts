@@ -8,6 +8,12 @@
 	model = "Broadcom STB (7278a0)";
 	compatible = "brcm,bcm7278a0", "brcm,brcmstb";
 
+	reserved-memory {
+		#address-cells = <0x2>;
+		#size-cells = <0x2>;
+		ranges;
+	};
+
 	rdb {
 		#address-cells = <0x1>;
 		#size-cells = <0x1>;

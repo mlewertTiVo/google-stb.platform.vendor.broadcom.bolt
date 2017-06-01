@@ -1,18 +1,22 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
 #ifndef __SSBL_COMMON_H__
 #define __SSBL_COMMON_H__
 
-#include "flash-partitions.h"
-#include "fsbl-common.h"
-#include "avs_dvfs.h"
+#include <avs_dvfs.h>
+#include <config.h> /* gen/${chip_family}/ */
+#include <flash-partitions.h>
+#include <fsbl-common.h>
+#include <lib_queue.h>
+
+#include <stdint.h>
 
 typedef struct enet_params {
 	int genet;
@@ -38,6 +42,15 @@ typedef struct {
 	unsigned int pin;  /* Pin Value of the connected gpio */
 	unsigned int code; /* Key Code generated from the gpio button */
 } gpio_key_params;
+
+typedef struct gpio_led_params
+{
+	const char *name; /* Name of the gpio */
+	const char *gpio; /* Name of the connected GPIO controller i.e. upg_gio or upg_gio_aon */
+	unsigned int pin; /* Pin value of the connected gpio */
+	unsigned int pol; /* Polarity of the connected gpio */
+}
+gpio_led_params;
 
 typedef struct bt_rfkill_params
 {
@@ -72,6 +85,8 @@ typedef struct {
 	const char *svalue;
 	uint32_t ivalue;
 	const uint32_t *vvalue;
+	uint16_t attr_mask;
+	uint16_t attr_val;
 } dt_ops_s;
 
 typedef enum {
@@ -118,6 +133,7 @@ typedef struct ssbl_board_params
 	sdio_params  sdio[NUM_SDIO+1];
 	struct reg_update sdio_pinsel;
 	gpio_key_params gpio_key[MAX_GPIO_KEY+1];
+	gpio_led_params gpio_led[MAX_GPIO_LED+1];
 	bt_rfkill_params bt_rfkill_gpio[MAX_BT_RFKILL_GPIO+1];
 	fpinmux_t   *pinmuxfn;
 	const dt_ops_s *dt_ops;
@@ -143,6 +159,32 @@ struct otp_status {
 	uint32_t  reg;
 	uint32_t  mask;
 	char     *name;
+};
+
+/* reserve memory that is not to be used by Linux, but by other software
+ * components
+ */
+#define BOLT_RESERVE_MEMORY_OPTION_MEMC_0 (1<<0)
+#define BOLT_RESERVE_MEMORY_OPTION_MEMC_1 (1<<1)
+#define BOLT_RESERVE_MEMORY_OPTION_MEMC_2 (1<<2) /* 3 MEMC's at most */
+#define BOLT_RESERVE_MEMORY_OPTION_MEMC_MASK 0xF /* least significant nibble */
+#define BOLT_RESERVE_MEMORY_OPTION_ABS    (1<<8) /* absolute offset */
+	/* 'alignment' becomes the offset of reservation */
+#define BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY (1<<9)  /* /memreserve */
+#define BOLT_RESERVE_MEMORY_OPTION_DT_NEW    (1<<10) /* /reserved-memory */
+/* the following DT options are valid only with DT_NEW */
+#define BOLT_RESERVE_MEMORY_OPTION_DT_NOMAP  (1<<11) /* no-map */
+#define BOLT_RESERVE_MEMORY_OPTION_DT_REUSABLE (1<<12) /* reusable */
+#define BOLT_RESERVE_MEMORY_OPTION_DRYRUN  (1<<30) /* no actual reservation */
+#define BOLT_RESERVE_MEMORY_OPTION_OVER4GB (1<<31) /* okay to go over 4GB */
+
+struct memory_area {
+	queue_t list;
+	unsigned int memc;
+	uint64_t offset; /* in bytes */
+	unsigned int size; /* in bytes, max of 4GB (one byte short) */
+	uint32_t options; /* preferred MEMC, 4GB boundary, offset and so on */
+	char *tag;
 };
 
 /* FSBL provided array of boards. */

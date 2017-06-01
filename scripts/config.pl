@@ -15,6 +15,7 @@ use BcmUtils;
 use DevTree;
 use BcmDt::Devices;
 use BcmDt::Board;
+use BcmDt::PcieRanges;
 
 my $P = basename $0;
 
@@ -572,6 +573,13 @@ sub new($$) {
 	return $s;
 }
 
+package GpioLed;
+sub new($$) {
+	my ($class, $s) = @_;
+	bless $s, $class;
+	return $s;
+}
+
 package BtRfkillGpio;
 sub new($$) {
 	my ($class, $s) = @_;
@@ -665,6 +673,7 @@ sub new($$) {
 	$s->{rdb} = "";
 	$s->{rtconfig} = [];
 	$s->{gpio_key} = [];
+	$s->{gpio_led} = [];
 	$s->{bt_rfkill_gpio} = [];
 	$s->{rtsbase} = undef;
 	$s->{section} = [];
@@ -701,6 +710,8 @@ sub add($$$) {
 		push @{$s->{pmux}}, $part;
 	} elsif ($item eq 'gpio_key') {
 		push @{$s->{gpio_key}}, $part;
+	} elsif ($item eq 'gpio_led') {
+		push @{$s->{gpio_led}}, $part;
 	} elsif ($item eq 'bt_rfkill_gpio') {
 		push @{$s->{bt_rfkill_gpio}}, $part;
 	} elsif ($item eq 'section') {
@@ -861,6 +872,7 @@ my $ProcessingState = eStateInNone;
 my $file_has_version = 0;
 my $use_fixed_memsys_alt = 0;
 my $max_gpio_keys = 0;
+my $max_gpio_leds = 0;
 my $max_bt_rfkill_gpios = 0;
 
 # family name are keys, values are pin dbase hashrefs
@@ -869,6 +881,17 @@ my %bchp_info;
 # ----------------------------------------
 #              helpers
 # ----------------------------------------
+sub get_family_name()
+{
+	return $Family->{familyname};
+}
+
+sub get_dt_autogen_presence($)
+{
+	my ($x) = @_;
+	return $dt_autogen{$x};
+}
+
 sub get_bchp_info($) {
 	my $family = shift or die;
 	$family = lc $family;
@@ -1370,6 +1393,23 @@ sub cmd_gpio_key($) {
 		if ($n > $max_gpio_keys);
 }
 
+sub cmd_gpio_led($) {
+	my ($f) = @_;
+	check_in_chip_or_board();
+	shift @$f;
+	my $o = check_opts($f, [qw/name gpio pin pol/], []);
+	cfg_error("bad value for '-gpio'; must be 'upg_gio' or 'upg_gio_aon'")
+		if ($o->{gpio} !~ /^upg_gio(_aon)?$/);
+	cfg_error("bad value for '-pin'; must be a decimal number")
+		if ($o->{pin} !~ /^\d+$/);
+	cfg_error("bad value for '-pol'; must be a decimal number")
+		if ($o->{pol} !~ /^\d+$/);
+	$Current->add('gpio_led', GpioLed->new($o));
+	my $n = @{$Current->{gpio_led}};
+	$max_gpio_leds = $n
+		if ($n > $max_gpio_leds);
+}
+
 sub cmd_bt_rfkill_gpio($) {
 	my ($f) = @_;
 	check_in_chip_or_board();
@@ -1432,7 +1472,7 @@ sub subcmd_dt_ops {
 	my ($cmd, $f, $b) = @_;
 	check_in_chip_or_board();
 	my $o = check_opts($f, [qw/root node/],
-		[qw/mac prop string int bool vec addnode/]);
+		[qw/mac prop string int bool vec addnode cond/]);
 	my $r = DTops->new($o);
 	$r->{command} = $cmd;
 	$r->{root} = quoted_null_check($r->{root});
@@ -1618,7 +1658,7 @@ sub cmd_vreg($)
 	check_family_onwards();
 	check_in_chip_or_board();
 	shift @$f; # drop 'vreg'.
-	my $o = check_opts($f, [qw/name gpio pin active/], [qw/udelay uvolts/]);
+	my $o = check_opts($f, [qw/name gpio pin active/], [qw/udelay uvolts on_at_boot/]);
 	cfg_error("bad value for '-gpio'; must be 'upg_gio' or 'upg_gio_aon'")
 		if ($o->{gpio} !~ /^upg_gio(_aon)?$/);
 	cfg_error("bad value for '-pin'; must be a decimal number")
@@ -1629,6 +1669,8 @@ sub cmd_vreg($)
 		if ($o->{udelay} && $o->{udelay} !~ /^\d+$/);
 	cfg_error("bad value for '-uvolts'; must be a decimal number")
 		if ($o->{uvolts} && $o->{uvolts} !~ /^\d+$/);
+	cfg_error("bad value for '-on_at_boot'; must be a decimal number")
+		if ($o->{on_at_boot} && $o->{on_at_boot} !~ /^\d+$/);
 	$o->{uvolts} ||= 3300000; # default value
 	$o->{udelay} ||= 1000; # default value
 	$o->{name} = annotate_vreg_name($o->{name});
@@ -1666,6 +1708,10 @@ sub cmd_vreg($)
 		'-bool' => $o->{active} eq 'hi'];
 	subcmd_dt_ops('prop', $args)
 		if ($o->{active} eq 'hi');
+	$args = ['-root' => '/rdb', '-node' => $o->{name}, '-prop' => 'regulator-boot-on',
+		'-bool' => $o->{on_at_boot}];
+	subcmd_dt_ops('prop', $args)
+		if ($o->{on_at_boot});
 	my $prop_val_str = sprintf("<\&/rdb/%s %d %d>", 
 		$h_gpio_names{$o->{gpio}}, $o->{pin}, $o->{active} eq 'lo');
 	$args = ['-root' => '/rdb', '-node' => $o->{name}, '-prop' => 'gpio',
@@ -1991,6 +2037,7 @@ my %commands = (
 		'rtsbase' =>	\&cmd_rtsbase,
 		'rtsconfig' =>	\&cmd_rtsconfig,
 		'gpio_key' =>	\&cmd_gpio_key,
+		'gpio_led' =>	\&cmd_gpio_led,
 		'bt_rfkill_gpio' => \&cmd_bt_rfkill_gpio,
 		'rtsdefault' =>	\&cmd_rtsdefault,
 		'section' =>	\&cmd_section,
@@ -2360,6 +2407,23 @@ sub check_gpio_key_nulls($) {
     return $m;
 };
 
+sub check_gpio_led_nulls($) {
+    my ($m) = @_;
+    if (!$m->{name}) { $m->{name} = "-"; }
+    if (!$m->{gpio}) { $m->{gpio} = "-"; }
+    if (scalar $m->{pin} < 0) { $m->{pin} = -1; }
+    if (scalar $m->{pol} < 0) { $m->{pol} = -1; }
+
+    foreach (qw/name gpio/) {
+        if ( $m->{$_} =~ /^-$/ ) {
+            $m->{$_} = "NULL";
+        } else {
+            $m->{$_} =  '"' . $m->{$_} . '"';
+        }
+    }
+    return $m;
+};
+
 sub check_bt_rfkill_gpio_nulls($) {
     my ($m) = @_;
     if (!$m->{name}) { $m->{name} = "-"; }
@@ -2474,6 +2538,24 @@ sub gen_gpio_key($) {
 		$text .= "\t\t\t\t.gpio  = " . $m->{gpio} . ",\n";
 		$text .= "\t\t\t\t.pin  = " . $m->{pin} . ",\n";
 		$text .= "\t\t\t\t.code = " .  $m->{code} . ",\n";
+		$text .= "\t\t\t},\n";
+		$index++;
+	}
+
+	return $text . "\t\t\t{ NULL, NULL, -1, -1}\n\t\t},\n";
+}
+
+sub gen_gpio_led($) {
+	my ($gpio_led) = @_;
+	my $text = "\t\t.gpio_led = {\n";
+	my $index = 0;
+	for my $m (@$gpio_led) {
+		$m = check_gpio_led_nulls($m);
+		$text .= "\t\t\t\{\n";
+		$text .= "\t\t\t\t.name = " . $m->{name} . ",\n";
+		$text .= "\t\t\t\t.gpio  = " . $m->{gpio} . ",\n";
+		$text .= "\t\t\t\t.pin  = " . $m->{pin} . ",\n";
+		$text .= "\t\t\t\t.pol = " .  $m->{pol} . ",\n";
 		$text .= "\t\t\t},\n";
 		$index++;
 	}
@@ -2759,7 +2841,16 @@ sub generate_vector_property_arrays() {
 				s/[-,]/_/g;
 				s/\@/_at_/g;
 			}
-			my $var_name = "${board}_${tmp0}_${tmp1}";
+			
+			my $tmp2 = '';
+			if ($c->{cond}) {
+				$tmp2 = '_' . $c->{cond};
+				$tmp2 =~ s/\s+//g;
+				$tmp2 =~ s/==/eq/g;
+				$tmp2 =~ s/;/_and_/g;
+			}
+
+			my $var_name = "${board}_${tmp0}_${tmp1}${tmp2}";
 			$text .= sprintf "static const uint32_t %s[] = {\n", $var_name;
 			my $count = 0;
 			foreach my $i (@{$c->{vec}}) {
@@ -2778,16 +2869,41 @@ sub generate_vector_property_arrays() {
 	return $text . "\n\n";
 }
 
+# Each dt_op may have a set of conditions associated with it.  The
+# operation is only performed if the set of conditions are met.
+# The hash var below, h_dt_ops_attr, contains as keys the possible
+# conditions and as values the bitwise offset.  The conditions
+# are evaluated in dtbolt.c.
+my %h_dt_ops_attr = 
+    (V7_64 => 0,  # V7_64 is a conditional for V7_64 memory map (eg 7278a0).
+    );
+
+# Generates the text for an include file whose contents contains
+# an enum which lists the "conditionals" and their bitwise offset.
+sub gen_dt_ops_attrs()
+{
+	my $t = "/* This enum defines the bit position of the attributes */\n";
+	$t .= "typedef enum {\n";
+	my @a = sort { $h_dt_ops_attr{$a} <=> $h_dt_ops_attr{$b} }
+		keys %h_dt_ops_attr;
+	for (my $i = 0; $i < @a; $i++) {
+		$t .= sprintf "\tDT_OPS_ATTR_%s = %d,\n", uc($a[$i]), $i
+	}
+	$t .= "\tDT_OPS_ATTR_MAX\n} dt_op_attr;\n\n";
+	return $t;
+}
 
 sub gen_dt_ops($) {
 	my ($ops) = @_;
 	return if (!$ops);
 	my $text = "";
-
+	
 	for my $c (@$ops) {
 		my $sval = "NULL";
 		my $ival = 0;
 		my $vval = 0;
+		my $attr_mask = 0;
+		my $attr_val = 0;
 
 		if ($c->{command} eq 'add_node') {
 			; # all is good
@@ -2820,6 +2936,25 @@ sub gen_dt_ops($) {
 		$text .= $sval . ", ";
 		$text .= $ival . ", ";
 		$text .= $vval . ", ";
+
+		# If there are any conditionals associated with
+		# this dt_op, modify the $attr_mask and $attr_val
+		# appropriately.
+		if ($c->{cond}) {
+			my @a = split /;/, $c->{cond};
+			foreach my $cond (@a) {
+				next if $cond =~ /^\s*$/;
+				die "$P: Err: bad dt_ops condition: '$cond'!  "
+					. "Use 'X==[01];'\n "
+				if $cond !~ /^\s*(\S+)\s*==\s*([01])\s*$/;
+				my ($t0, $t1) = (uc $1, $2);
+				die "$P: Err: unknown condition '$cond'!"
+					if (!exists $h_dt_ops_attr{$t0});
+				$attr_mask |= (1 << $h_dt_ops_attr{$t0});
+				$attr_val |= ($t1 << $h_dt_ops_attr{$t0});
+			}
+		}
+		$text .= sprintf "0x%x, 0x%x, ", $attr_mask, $attr_val;
 		$text .= "},";
 	}
 	$text .= "\n\t\t";
@@ -2859,316 +2994,13 @@ sub processed_flash_maps() {
 	return $t;
 }
 
-sub debug_pcie_dma_ranges($$)
-{
-	my ($ra_dma_ranges, $ra_scb_log_sizes) = @_;
-	my @a_dma_ranges = @$ra_dma_ranges;
-	my @a_scb_log_sizes = @$ra_scb_log_sizes;
-
-	die if scalar(@a_dma_ranges) % 7 != 0;
-
-	while (@a_dma_ranges) {
-		my $scb_info = '';
-		my @a_dma_range = splice(@a_dma_ranges, 0, 7);
-		my (undef, $pci_hi, $pci_lo, $mem_hi, $mem_lo, $size_hi, $size_lo)
-			= map { hex($_) } @a_dma_range;
-
-		if (!$mem_hi) {
-			my $log2_size = shift @a_scb_log_sizes;
-			$scb_info = Math::BigInt->new(1)->blsft($log2_size - 20);
-			$scb_info = $scb_info . 'MB'
-		}
-
-		printf "%2x.%08x => %2x.%08x of size %x.%08x    %s\n",
-			$mem_hi, $mem_lo, $pci_hi, $pci_lo, $size_hi, $size_lo,
-			$scb_info;
-	}
-	print "\n";
-}
-
-
-sub processed_pcie_dma_ranges() {
-	# This is merely a flag that indicates that a specific range is iomem.
-	my $pci_region_info = '0x02000000';
-
-	my $rh = get_bchp_info($Family->{familyname});
-	my $num_pcie = $dt_autogen{pcie}
-		? BcmUtils::get_num_pcie($rh->{rh_defines}) : 0;
-	return if !$num_pcie;
-
-	my @pcie_nodes;
-	for (my $i = 0; $i < $num_pcie; $i++) {
-		my ($beg, $size);
-	        if ($num_pcie > 1) {
-			($beg, $size) = BcmDt::Devices::get_reg_range_from_regexp(
-			$rh, "^BCHP_PCIE_${i}");
-		} else {
-			($beg, $size) = BcmDt::Devices::get_reg_range_from_regexp(
-			$rh, "^BCHP_PCIE_(?!DMA)");
-		}
-		die if !$beg;
-		$pcie_nodes[$i] = sprintf("pcie\@%x", $beg);
-	}
-
-	for my $b (get_valid_boards()) {
-		my $mmap = $b->{drammap};
-		my $ddr = $b->{ddr};
-
-		# Check for a dummy DDR configuration.
-		my $empty_ddr = 1;
-		for my $d (@$ddr) {
-			$empty_ddr = 0
-				if $d->{size_mb} && '-' ne $d->{size_mb};
-		}
-		next if $empty_ddr;
-
-		# Put the mmap information into a new arrayref ($map) where all
-		# mappings are collated by memc number; eg all entries
-		# pertaining to memc0 are in the arrayref $map->[0].
-		my $map = [];
-		foreach my $mm (@$mmap) {
-			my $i = $mm->{memc};
-			$map->[$i] = []
-				if (!defined $map->[$i]);
-			push @{$map->[$i]}, $mm;
-		}
-
-		# @dma_ranges is a collection of mappings concatenated together.
-		# Each "mapping" requires 7 integers:
-		# 	1 flags
-		# 	2 pcie_addr
-		# 	2 cpu_addr
-		# 	2 size
-		# So if @dma_ranges has 21 elements, it contains three mappings:
-		# @dma_ranges[0..6], @dma_ranges[7..13], @dma_ranges[14..20].
-		my @dma_ranges = ();
-
-		# @scb_log2_sizes is an array of size #mem controllers.
-		# Each entry is the log2 of the size of the SCB window
-		# that is mapped to PCIe space.  Note that we sometimes
-		# make this window larger than there is memory in the 
-		# controller as we "cover" gaps between successive 
-		# memc's to preserve the identity map.
-		my @scb_log2_sizes = ();
-
-		# Our PCIe controller wants to map all system memory to the PCIe
-		# space in a linear fashion.  That means all the memc0 memory
-		# is mapped at PCIe0, then comes memc1 memory, then comes memc2
-		# memory.  This mapping puts all of memory into a single 
-		# contiguous region so that an EndPoing may access the host's
-		# memory with a single BAR.  The downside of this is that 
-		# we may lose the preferred identity map and Linux will have
-		# to massage dma_addr_t values.  At any rate, $pcie_offset
-		# is where in PCIe space the next memc region is to be mapped.
-		my $pcie_offset = Math::BigInt->new(0);
-
-		# Use this for debugging specific boards.
-		my $interesting = 1 if $b->{board} eq 'xxx';
-
-		# When we can preserve the identity mapping, we do not need the
-		# dma_ranges information and $keep_dma_ranges will be 0.  When
-		# we cannot, $keep_dma_ranges is 1 and we must augment the DT
-		# with information so Linux knows how to massage the DMA
-		# addresses.
-		my $keep_dma_ranges;
-
-		for (my $i = 0; $i < @$ddr; $i++) {
-			my (@sys_addr, @pcie_addr, @size);
-			my $d = $ddr->[$i];
-			last if !$d->{size_mb} || '-' eq $d->{size_mb};
-			my $ddr_size = Math::BigInt->new($d->{size_mb}) * 1024 * 1024;
-			my $m = $map->[$i]->[0];
-			my $m_next = $map->[$i+1]->[0] if $map->[$i+1];
-			my $map_size = Math::BigInt->new($m->{size_bytes});
-			my $pcie_scb_size = Math::BigInt->new(1024*1024);
-			# Find a power of two size that contains the ddr.
-			while ($pcie_scb_size < $ddr_size) {
-				$pcie_scb_size *= 2;
-			}
-			if ($ddr_size > $map_size) {
-				# If we are here we will be using the extended
-				# memory for this ddr.
-				my $m_ext = $map->[$i]->[1];
-				die if !$m_ext;
-				my $map_ext_size = Math::BigInt->new(
-					$m_ext->{size_bytes});
-
-				# Calculate the first range.
-				@sys_addr = BcmUtils::bigint_to_two_hexint(
-					Math::BigInt->new($m->{to_bytes}));
-				@pcie_addr = BcmUtils::bigint_to_two_hexint($pcie_offset);
-				@size = BcmUtils::bigint_to_two_hexint($map_size);
-				# Push the first range.
-				push @dma_ranges, ($pci_region_info, @pcie_addr,
-					@sys_addr, @size);
-
-				# Calculate the second range.
-				@pcie_addr = BcmUtils::bigint_to_two_hexint(
-					$pcie_offset + $map_size);
-				@sys_addr = BcmUtils::bigint_to_two_hexint(
-					Math::BigInt->new($m_ext->{to_bytes}));
-				@size = BcmUtils::bigint_to_two_hexint(
-					$ddr_size - $map_size);
-				# Push the second range.
-				push @dma_ranges, ($pci_region_info,
-					@pcie_addr, @sys_addr, @size);
-
-				# If we are here, keep DMA ranges as we cannot
-				# support the identity map.
-				$keep_dma_ranges = 1;
-			} else {
-				# If we are here, we are not using extended
-				# memory for this ddr.
-				my $m_to = Math::BigInt->new($m->{to_bytes});
-				my $m_next_to = Math::BigInt->new(
-					$m_next ? $m_next->{to_bytes} : 0);
-				my $tmp = $ddr->[$i+1];
-				my $more_mem =  ($tmp && $tmp->{size_mb}
-					&& $tmp->{size_mb} ne '-');
-				if ($more_mem && $m_next_to != 0
-					&& $ddr_size + $m_to != $m_next_to) {
-					# We want to increase the scb_size so
-					# we can preserve an identity mapping
-					# from sys_mem to pcie space.
-					my $delta = $m_next_to - $m_to;
-					die 'cannot maintain identity map!'
-						if (!BcmUtils::bigint_is_power_of_two($delta));
-					$pcie_scb_size = $delta;
-				}
-				# Calculate the first and only range for this ddr.
-				@sys_addr = BcmUtils::bigint_to_two_hexint($m_to);
-				@pcie_addr = BcmUtils::bigint_to_two_hexint($pcie_offset);
-				@size = BcmUtils::bigint_to_two_hexint($ddr_size);
-				# Push the first and only range for this ddr.
-				push @dma_ranges, ($pci_region_info,
-					@pcie_addr, @sys_addr, @size);
-			}
-			$pcie_offset += $pcie_scb_size;
-			my $base = Math::BigInt->new(2);
-			push @scb_log2_sizes, $pcie_scb_size->blog($base) . '';
-		}
-
-		debug_pcie_dma_ranges(\@dma_ranges, \@scb_log2_sizes)
-			if $interesting;
-
-		# Now we compute the "ranges" vectors.  We used to
-		# do this at PCIe autogeneration time in Devices.pm,
-		# but certain boards' configurations require the
-		# outbound PCIe location to be moved higher in
-		# PCIe space.
-		#
-		# For chips with pre-v7 memory map, we start with four
-		# segments, starting at 0xc0000000, each with size 128M.
-		# Starting v7 memory map, two 128M size segments start
-		# at 0x30000000.
-		#
-		# Each outbound window is described by a range,
-		# currently a 7-tuple. The numbers in the range are:
-		#
-		# (<pci-info>,
-		#  <pci-addr-hi>,  <pci-addr-lo>,
-		#  <cpu-addr-hi>,  <cpu-addr-lo>,
-		#  <size-hi>  <size-lo>)
-		#
-		my @all_ranges;
-		for (my $i = 0; $i < $num_pcie; $i++) {
-			my @r0 = qw/0x02000000
-			    0x00000000 0xc0000000
-			    0x00000000 0xc0000000
-			    0x00000000 0x08000000/;
-			my @r1 = qw/0x02000000
-			    0x00000000 0xc8000000
-			    0x00000000 0xc8000000
-			    0x00000000 0x08000000/;
-			my @r2 = qw/0x02000000
-			    0x00000000 0xd0000000
-			    0x00000000 0xd0000000
-			    0x00000000 0x08000000/;
-			my @r3 = qw/0x02000000
-			    0x00000000 0xd8000000
-			    0x00000000 0xd8000000
-			    0x00000000 0x08000000/;
-			my @v7r0 = qw/0x02000000
-			    0x00000000 0x30000000
-			    0x00000000 0x30000000
-			    0x00000000 0x08000000/;
-			my @v7r1 = qw/0x02000000
-			    0x00000000 0x38000000
-			    0x00000000 0x38000000
-			    0x00000000 0x08000000/;
-
-			my @ranges;
-			my $chip = $Family->{familyname};
-
-			if ($chip =~ /^(7250|7260|7268|7271|7364|7366|74371|7439|7445)/
-				&& $num_pcie == 1) {
-				# The only device gets the full 512M.
-				@ranges = (@r0, @r1, @r2, @r3);
-				
-			} elsif ($chip =~ /^(7445|7439|7366)/ && $num_pcie == 2) {
-				# Each device gets 256M.
-				@ranges = ($i == 0) ? (@r0, @r1) : (@r2, @r3);
-			} elsif ($chip =~ /^(7278)/ && $num_pcie == 2) {
-				# V7 memory map: each device gets 128M.
-				@ranges = ($i == 0) ? @v7r0 : @v7r1;
-			} else {
-				die "$P: need to address PCIe ranges for $chip";
-			}
-			
-			if ($pcie_offset > 0xc0000000) {
-				# We need to push up the location of the
-				# outbound window.
-				my $delta = $pcie_offset - 0xc0000000;
-				my $start = scalar(@ranges) - 7;
-				for (my $j = $start; $j >= 0; $j-= 7) {
-					my $tmp = Math::BigInt->new($ranges[$j+2]);
-					$tmp += $delta;
-					my ($hi, $lo) = BcmUtils::bigint_to_two_hexint($tmp);
-					splice(@ranges, $j+1, 2, ($hi, $lo));
-				}
-			}
-			push @all_ranges, [@ranges];
-		}
-		
-		# Now call the appropriate functions that will have Bolt adding
-		# at runtime the PCIe ranges, dma-ranges and brcm,log2-scb-sizes
-		# information according to the board being used.  Not that the
-		# ranges property value is different for each PCIe device, whereas
-		# the other two are the same for all PCIe devices.
-		for (my $i = 0; $i < $num_pcie; $i++) {
-			my $node = $pcie_nodes[$i];
-
-			# Set property 'brcm,log2-scb-sizes'.
-			my $args = ['-root' => '/', '-node' => $node,
-				'-prop' => 'brcm,log2-scb-sizes',
-				'-vec' => \@scb_log2_sizes,];
-			subcmd_dt_ops('prop', $args, $b);
-
-			# Set property 'ranges'.
-			$args = ['-root' => '/', '-node' => $node,
-				'-prop' => 'ranges',
-				'-vec' => $all_ranges[$i]];
-			subcmd_dt_ops('prop', $args, $b);
-
-			next if !$keep_dma_ranges;
-
-			# Set property 'dma-ranges'.
-			$args = ['-root' => '/', '-node' => $node,
-				'-prop' => 'dma-ranges',
-				'-vec' => \@dma_ranges,];
-			subcmd_dt_ops('prop', $args, $b);
-		}
-	}
-}
-
-
 sub processed_dt_ops() {
 	my $text = generate_vector_property_arrays();
 
 	for my $b (get_valid_boards()) {
 		$text .= "static const __maybe_unused dt_ops_s " . $b->{board} . "_dt_ops[] = ";
 		$text .= "{" . gen_dt_ops($b->{dt_ops});
-		$text .=  "{DT_OP_NONE, NULL, NULL, NULL, NULL, 0, NULL}";
+		$text .=  "{DT_OP_NONE, NULL, NULL, NULL, NULL, 0, NULL, 0, 0}";
 		$text .=  "\n};\n\n";
 	}
 	$text .= "\n";
@@ -3286,6 +3118,7 @@ sub processed_board_params() {
 		$text .= gen_moca($b->{moca});
 		$text .= gen_avs_board_params($b->{avs});
 		$text .= gen_gpio_key($b->{gpio_key});
+		$text .= gen_gpio_led($b->{gpio_led});
 		$text .= gen_bt_rfkill_gpio($b->{bt_rfkill_gpio});
 		$text .= gen_pinmux_fn($b->{board});
 		$text .= gen_dt_ops_ptr($b->{board});
@@ -3358,6 +3191,7 @@ sub processed_makefile_cvars($) {
 	$text .= "#define MAX_DDR " . $maxddr . "\n";
 	$text .= "#define MAX_BOARDS " . $nb . "\n";
 	$text .= "#define MAX_GPIO_KEY " . $max_gpio_keys . "\n";
+	$text .= "#define MAX_GPIO_LED " . $max_gpio_leds . "\n";
 	$text .= "#define MAX_BT_RFKILL_GPIO " . $max_bt_rfkill_gpios . "\n";
 	$text .= "#define CFG_CMD_LEVEL " . $b->{cmdlevel} . "\n";
 	if (defined $b->{dts}) {
@@ -3823,6 +3657,8 @@ sub process_dev_tree($)
 		BcmUtils::get_num_dtu_map($rh->{rh_defines}) : 0;
 	my $num_dtu_config = $dt_autogen{dtu} ?
 		BcmUtils::get_num_dtu_config($rh->{rh_defines}) : 0;
+	my $num_dpfe = $dt_autogen{dpfe} ?
+		BcmUtils::get_num_dpfe($rh->{rh_defines}) : 0;
 
 	map { $dt_autogen{$_} ||= {} } keys %dt_autogen;
 
@@ -3943,6 +3779,11 @@ sub process_dev_tree($)
 		BcmDt::Devices::merge_clocks_file($rh->{rh_defines},
 			$dt, $clks_file)
 	} else {
+		# we must insert clock-frequency into the UARTS.
+		my $ni = BcmDt::Devices::insert_clk_frequency_into_uarts($rdb);
+		print "$P: WARN: no clocks or clock-freqs inserted for uart!\n"
+			if (!$ni && BcmUtils::get_num_serial($rh->{rh_defines}));
+
 		print "  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
 		print "  WARNING: no clock tree present\n";
 		print "  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
@@ -4010,6 +3851,9 @@ sub process_dev_tree($)
 		if (!empty($dt_autogen{dtu}) && $num_dtu_map);
 	BcmDt::Devices::add_dtu_config($rdb, $rh, $num_dtu_config)
 		if (!empty($dt_autogen{dtu}) && $num_dtu_config);
+
+	BcmDt::Devices::add_dpfe($rdb, $rh, $num_dpfe)
+		if (!empty($dt_autogen{dpfe}) && $num_dpfe);
 
 	BcmDt::Devices::add_cpu_clock($dt, $dt_autogen{cpuclock})
 		if (!empty($dt_autogen{cpuclock}));
@@ -4401,11 +4245,12 @@ sub main()
 
 	write_textfile("$D/board_params.c", BcmUtils::create_copyright_header("c") . $genmarker
 		. $partion_header_files . $pinmux_header_files);
-
+	write_textfile("$D/dt_ops.h", gen_dt_ops_attrs());
+	    
 	$text = processed_ssbl_pinmux();
 	append_textfile("$D/board_params.c",  $text);
 
-	processed_pcie_dma_ranges();
+	PcieRanges::processed_pcie_ranges();
 
 	$text = processed_dt_ops();
 	append_textfile("$D/board_params.c",  $text);

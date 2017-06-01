@@ -8,18 +8,18 @@ Release notes
 Broadcom Ltd <support@broadcom.com>
 
 
- Bolt Engineering Release v1.28, 4th April 2017
-------------------------------------------
+ Bolt SQA Release v1.29, 23rd May 2017
+----------------------------------------
 
 ....
-	o Supported chip families: 7250b0 7260a0 7268a0 7268b0 7271a0 7271b0 7278a0 7364a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+	o Supported chip families: 7250b0 7260a0 7268b0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
 	o Toolchain: stbgcc-4.8-1.1
 
-	o AVS version: v0.3.2.x
-		o 7250b0 7364a0 7364b0 7445d0 7439b0 7366c0 7445e0
-	o AVS version: v0.3.3.x
+	o AVS version: v0.3.2
+		o 7250b0 7364b0 7445d0 7439b0 7366c0 7445e0
+	o AVS version: v0.3.3
 		o 74371a0 7364c0
-	o AVS version: v0.4.4.1
+	o AVS version: v0.4.9
 		o 7271b0 7268b0 7260a0 7278a0
 
 	o AVS Pending PVT testing:
@@ -28,7 +28,6 @@ Broadcom Ltd <support@broadcom.com>
 		o DDR3
 			o 7250b0:  2.1.2.0
 			o 7260a0:  3.1.1.0
-			o 7364a0:  2.1.2.0
 			o 7364b0:  2.1.2.0
 			o 7364c0:  2.1.2.0
 			o 7366c0:  2.1.1.0
@@ -39,7 +38,6 @@ Broadcom Ltd <support@broadcom.com>
 		o DDR4
 			o 7250b0:  2.1.1.0
 			o 7260a0:  3.1.1.0
-			o 7364a0:  2.1.1.0
 			o 7364b0:  2.1.1.0
 			o 7364c0:  2.1.1.0
 			o 7366c0:  2.1.1.0
@@ -47,9 +45,7 @@ Broadcom Ltd <support@broadcom.com>
 			o 7445d0:  2.1.1.0
 			o 7445e0:  2.1.1.0
 		o LPDDR4
-			o 7268a0:  2.2.0.28
 			o 7268b0:  2.2.2.9
-			o 7271a0:  2.2.0.28
 			o 7271b0:  2.2.2.9
 			o 7278a0:  5.1.0.4
 ....
@@ -57,12 +53,16 @@ Broadcom Ltd <support@broadcom.com>
  Known Issues
 ~~~~~~~~~~~~~~
 
-* None at this time.
+* When Sage is enabled, S3 resume disables DTU mapping link:http://jira.broadcom.com/browse/SWBOLT-2280[SWBOLT-2280]
 
-
+* AVS cannot be disabled on B15 non-DVFS chips, such as 7445, 7439, 74371, 7366, 7364 and 7250 families
 
  Compatibility
 ~~~~~~~~~~~~~~
+
+* 7271a0 and 7268a0 are deprecated starting with BOLT v1.29.
+
+* For 7271b0, 7268b0, 7260a and 7278a0, BOLT v1.25 requires Linux 4.1-1.7 or later.  If using an earlier version of Linux, please disable DTU in BOLT in fsbl/fsbl-secparams.c
 
 * URSR 15.4 or newer should be used, or the Magnum XPT PI should be updated with link:http://jira.broadcom.com/browse/SW7439-510[SW7439-510]. Otherwise, XPT PI will not work correctly against S3 Standby/Resume operation.
 
@@ -196,14 +196,48 @@ arm-linux-ld: error: no memory region specified for loadable section `.bss'
 
 ''''
 
- Upgrade to v1.28 criteria
+ Upgrade to v1.29 criteria
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-link:http://jira.broadcom.com/browse/SWBOLT-2249[SWBOLT-2249] Updated AVS Firmware to v0.4.4.1 for 7260a0, 7271b0, 7268b0, and 7278a0.
+link:http://jira.broadcom.com/browse/SWBOLT-2230[SWBOLT-2230] 'macprog' can now take a board serial number that is not decimal.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2277[SWBOLT-2277] Added PMU compatible string to enable the PMU driver for ARM64.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2242[SWBOLT-2242] Added support for BCM97271LC4L.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2264[SWBOLT-2264] Change SYSIF from 750 MHz to 1 GHz for 7260A0, PMAP 6.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2261[SWBOLT-2261] Fix SF2 MDIO compatible string.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2232[SWBOLT-2232] Fix emmc RPMB write key and write block errors.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2287[SWBOLT-2287] Fixed issue with AVS level increasing until it reaches the top. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2236[SWBOLT-2236] Increased SSBL size for 74371a0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2212[SWBOLT-2212] Increased kernel partition size in flash for A53 boards.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2265[SWBOLT-2265] Populate the device tree with clock dividers and mux settings for a selected PMap.
+
+link:http://jira.broadcom.com/browse/SWBOLT-1946[SWBOLT-1946] Prevent BOLT hanging when SATA cable is removed after disk accesses. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2241[SWBOLT-2241] Probe CFI, then SFDP for spansion parts.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2138[SWBOLT-2138] Report the LPDDR4 temperature value that is available in the MR4 register.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2259[SWBOLT-2259] Set prop "regulator-boot_on" for voltage regulators by default.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2238[SWBOLT-2238] The MCB of LPDDR4-3733 has been updated for 7268b0 and 7271b0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2294[SWBOLT-2294] Updated AVS firmware to v0.4.9 for 7260a0, 7268b0, 7271b0 and 7278a0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2266[SWBOLT-2266] Updated PMap tables.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2207[SWBOLT-2207] Updated clock tree for 7271b0, 7260a0, and 7268b0. Added clock tree for 7278a0.
 
  Broadcom FAE access
 ~~~~~~~~~~~~~~~~~~~~
-http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.28%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.29%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
 
 
  Documentation

@@ -2,10 +2,10 @@ static struct partition_profile __maybe_unused partition_profile_STB_OLD[] = {
 	{ "bolt", BOLT_IMG_MAX, 0, PARTITION_BOOT_DEVICE },
 	{ "macadr", 144, 0, PARTITION_BOOT_DEVICE },
 	{ "nvram", 64 * 1024, 0, PARTITION_BOOT_DEVICE },
-	{ "kernel", 4 * 1024 * 1024, 0, 0 },
+	{ "kernel", KERN_IMG_MIN, 0, 0 },
 	{ "devtree", 64 * 1024, 0, 0 },
 	{ "splash", 512 * 1024, 0, PARTITION_BOOT_DEVICE },
-	{ "rootfs", 10 * 1024 * 1024, GROW_TO_PERCENT(100), PARTITION_SECONDARY | PARTITION_MIRROR },
+	{ "rootfs", 8 * 1024 * 1024, GROW_TO_PERCENT(100), PARTITION_SECONDARY | PARTITION_MIRROR },
 	{ NULL, 0, 0, 0 } /* Terminate */
 };
 
@@ -13,9 +13,9 @@ static struct partition_profile __maybe_unused partition_profile_STB[] = {
 	{ "bolt",          BOLT_IMG_MAX,                    0, PARTITION_BOOT_DEVICE },
 	{ "macadr",                 144,                    0, PARTITION_BOOT_DEVICE },
 	{ "nvram",            64 * 1024,                    0, PARTITION_BOOT_DEVICE },
-	{ "kernel",     4 * 1024 * 1024, GROW_TO_PERCENT(0.5), 0 },
+	{ "kernel",     KERN_IMG_MIN, GROW_TO_PERCENT(0.5), 0 },
 	{ "devtree",          64 * 1024,                    0, 0 },
 	{ "splash",          512 * 1024,                    0, 0 },
-	{ "rootfs",    10 * 1024 * 1024, GROW_TO_PERCENT(100), PARTITION_SECONDARY | PARTITION_MIRROR },
+	{ "rootfs",    8 * 1024 * 1024, GROW_TO_PERCENT(100), PARTITION_SECONDARY | PARTITION_MIRROR },
 	{ NULL,                       0,                    0, 0 } /* Terminate */
 };

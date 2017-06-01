@@ -1,34 +1,11 @@
-/*
- * Copyright (c) 2013, Marc Carino
- * All rights reserved.
+/***************************************************************************
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
  *
- * * Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- * * Redistributions in binary form must reproduce the above
- *   copyright notice, this list of conditions and the following disclaimer
- *   in the documentation and/or other materials provided with the
- *   distribution.
- * * Neither the name of the  nor the names of its
- *   contributors may be used to endorse or promote products derived from
- *   this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
+ ***************************************************************************/
 
 #include "um_ahci.h"
 #include "fifo.h"
@@ -416,7 +393,7 @@ static int wait_sata_reset(ahci_port_regs_t *pr)
 			break;
 		}
 		usleep(MS_TO_TICKS(50));
-	} while ((_getticks() - t_start) <= SECS_TO_TICKS(10));
+	} while ((_getticks() - t_start) <= SECS_TO_TICKS(2));
 
 	return status;
 }
@@ -1098,7 +1075,6 @@ int sata_scan(sata_dev_t *dev, uint32_t ports_to_scan, uint32_t *devs_found)
 				*devs_found |= BIT(port);
 		} else {
 			err_printf("Reset failed (%d)\n", status);
-			status = 0;
 		}
 	}
 

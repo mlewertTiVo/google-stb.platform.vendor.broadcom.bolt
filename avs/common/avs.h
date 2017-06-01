@@ -34,7 +34,7 @@ int avs_start(int en, int pmap_id);
 
 void avs_class_init(void);
 int avs_common_load(void);
-int avs_common_start(int pmap_id);
+int avs_common_start(int en, int pmap_id);
 
 void avs_warm_start(void);
 

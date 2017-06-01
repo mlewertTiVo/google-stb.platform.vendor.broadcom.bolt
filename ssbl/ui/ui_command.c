@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,22 +7,21 @@
  *
  ***************************************************************************/
 
+#include <ui_command.h>
+
+#include <bolt.h>
+#include <console.h>
+#include <device.h>
+#include <env_subr.h>
+#include <error.h>
+#include <iocb.h>
+#include <lib_ctype.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_string.h>
+#include <lib_queue.h>
+
 #include <stdarg.h>
-
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_queue.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
-
-#include "iocb.h"
-#include "device.h"
-#include "console.h"
-#include "error.h"
-#include "env_subr.h"
-#include "bolt.h"
-
-#include "ui_command.h"
 
 struct lexstate {
 	const char *rawline;
@@ -47,9 +44,6 @@ struct cmdtab {
 
 struct cmdtab *cmd_root;
 
-#define myisalpha(x) (((x) >= 'A') && ((x) <= 'Z') && \
-	((x) >= 'a') && ((x) <= 'z'))
-#define myisdigit(x) (((x) >= '0') && ((x) <= '9'))
 char *varchars =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_?";
 

@@ -214,6 +214,8 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	int bootargs_buflen = 0;
 	char dt_add_cmd[BOOT_ARGS_SIZE+64];
 	char *env_verity_pub_key;
+	int fd=-1;
+	char *fb_flashdev_mode_str;
 
 	bootargs_buflen = os_sprintf(bootargs_buf, "%s", cmdline);
 	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
@@ -225,12 +227,6 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android compatible s 'android,firmware'");
 	bolt_docommands(dt_add_cmd);
-	os_sprintf(dt_add_cmd, "dt add node /android fstab");
-	bolt_docommands(dt_add_cmd);
-   /* enable for early mount, need to populate the actual table content, then enable this node.
-	 *   os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab compatible s 'android,fstab'");
-	 *   bolt_docommands(dt_add_cmd);
-    */
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android serialno s '%s'", get_serial_no());
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android hardware s '%s'", get_hardware_name());
@@ -240,7 +236,66 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	os_sprintf(dt_add_cmd, "dt add prop /firmware/android wificountrycode s '00'");
 	bolt_docommands(dt_add_cmd);
 
+	// early-mount is available for treble devices onward which expose a vendor partition.  pre-treble
+	// devices do not have a vendor partition.
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (boot_path == BOOTPATH_LEGACY) {
+		os_sprintf(dt_add_cmd, "%s.vendor_verity", fb_flashdev_mode_str);
+	} else {
+		os_sprintf(dt_add_cmd, "%s.vendor_%s", fb_flashdev_mode_str, BOOT_SLOT_0_SUFFIX);
+	}
+	fd = bolt_open((char *)dt_add_cmd);
+	if (fd >= 0) {
+		bolt_close(fd);
+
+		os_sprintf(dt_add_cmd, "dt add node /firmware/android fstab");
+		bolt_docommands(dt_add_cmd);
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab compatible s 'android,fstab'");
+		bolt_docommands(dt_add_cmd);
+		os_sprintf(dt_add_cmd, "dt add node /firmware/android/fstab vendor");
+		bolt_docommands(dt_add_cmd);
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor compatible s 'android,vendor'");
+		bolt_docommands(dt_add_cmd);
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor dev s '/dev/block/platform/rdb/%s/by-name/vendor'",
+			env_getenv("EMMC_DEVNAME"));
+		bolt_docommands(dt_add_cmd);
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor mnt_flags s 'ro,barrier=1'");
+		bolt_docommands(dt_add_cmd);
+		// a|b system mode, we can only early-mount vendor since system is rootfs.  we also assume squashfs because that is
+		// the model to support within our bound emmc sizes.
+		if (boot_path != BOOTPATH_LEGACY) {
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor type s 'squashfs'");
+			bolt_docommands(dt_add_cmd);
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s 'wait,verify,slotselect'");
+			bolt_docommands(dt_add_cmd);
+		} else {
+		// legacy system mode, we can early-mount both vendor and system.
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor type s 'ext4'");
+			bolt_docommands(dt_add_cmd);
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s 'wait,verify'");
+			bolt_docommands(dt_add_cmd);
+
+			os_sprintf(dt_add_cmd, "dt add node /firmware/android/fstab system");
+			bolt_docommands(dt_add_cmd);
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system compatible s 'android,system'");
+			bolt_docommands(dt_add_cmd);
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system dev s '/dev/block/platform/rdb/%s/by-name/system'",
+				env_getenv("EMMC_DEVNAME"));
+			bolt_docommands(dt_add_cmd);
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system mnt_flags s 'ro,barrier=1'");
+			bolt_docommands(dt_add_cmd);
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system type s 'ext4'");
+			bolt_docommands(dt_add_cmd);
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system fsmgr_flags s 'wait,verify'");
+			bolt_docommands(dt_add_cmd);
+		}
+	}
+
 	if (boot_path != BOOTPATH_LEGACY) {
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android slot s '%s'",
+			slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
+		bolt_docommands(dt_add_cmd);
+		// redundant setting until it gets deprecated.
 		os_sprintf(dt_add_cmd, "dt add prop /firmware/android slot_suffix s '_%s'",
 			slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 		bolt_docommands(dt_add_cmd);
@@ -492,9 +547,20 @@ static enum bootpath select_boot_path(int *slot, int selected)
 			if (eio->current < EIO_BOOT_NUM_ALT_PART) {
 				if (eio->slot[eio->current].boot_ok) {
 					*slot = eio->current;
+					eio->slot[eio->current].boot_ok = 0; /* reset, let application mark it. */
+					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+					if (ret != sizeof(struct eio_boot)) {
+						os_printf("Error writing %s. Can't reset commander block: %d\n",
+							  flash_devname, ret);
+					}
 				} else if (eio->slot[eio->current].boot_fail) {
-					*slot = (eio->current == 0) ? 1 : 0;
+					*slot = (eio->current == 0) ? 1 : 0; /* switch slot. */
 					eio->current = *slot;
+					if (eio->slot[eio->current].boot_fail) {
+						/* all slots are marked 'fail', give up... */
+						*slot = -1;
+						goto ret_ab_bl_recovery;
+					}
 					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
 					if (ret != sizeof(struct eio_boot)) {
 						os_printf("Error writing %s. Can't swap current on commander block: %d\n",
@@ -504,7 +570,8 @@ static enum bootpath select_boot_path(int *slot, int selected)
 					if (++eio->slot[eio->current].boot_try < EIO_BOOT_TRY_ATTEMPT) {
 						*slot = eio->current;
 					} else {
-						eio->slot[eio->current].boot_fail = 1;
+						*slot = eio->current; /* last chance. */
+						eio->slot[eio->current].boot_fail = 1; /* on boot success, application reset. */
 					}
 					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
 					if (ret != sizeof(struct eio_boot)) {
@@ -517,7 +584,7 @@ static enum bootpath select_boot_path(int *slot, int selected)
 				goto ret_ab_bl_recovery;
 			}
 		} else {
-			/* empty commander, seed with default data. */
+			/* empty (or badly corrupted) commander, seed with default data. */
 			os_memset(eio, 0, sizeof(*eio));
 			eio->current = 0;
 			os_sprintf(eio->slot[0].suffix, "%s", BOOT_SLOT_0_SUFFIX);

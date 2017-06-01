@@ -706,18 +706,26 @@ static int spi_cfi_probe(struct spidev *softc)
  */
 static int spi_auto_detect(struct spidev *softc)
 {
-	int sts;
+	int sts = BOLT_ERR;
 
 	/*
 	 * As per Spansion datasheet :
 	 * Spansion SFDP parameter points to the ID-CFI address space.
 	 * SFDP and ID-CFI information can be accessed by either the RSFDP or
 	 * RDID commands, we use CFI to avoid SFDP indirection which does not
-	 * seem to work anyways
+	 * seem to work anyways for certain parts. And the probe does not
+	 * fail either.
+	 * Cypress SPI flash, FL-K and FL-P do not have CFI tables
+	 * implemented hence for CYPRESS S25FL116K, S25FL132K, S25FL164K and
+	 * the likes CFI probe will fail.
+	 *
+	 * So for spansion parts try CFI first and then try SFDP probe, so that
+	 * a probe works for all cases.
 	 */
 	if (softc->mfr_id == SPANSION_ID)
 		sts = spi_cfi_probe(softc);
-	else
+
+	if (sts)
 		sts = spi_sfdp_probe(softc);
 
 	return sts;

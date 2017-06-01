@@ -484,6 +484,8 @@ void     sec_handle_boot_status(int aon_reg_idx, int success);
 uint32_t sec_get_aon_boot_status(int aon_reg_idx);
 void     sec_set_aon_boot_status(int aon_reg_idx, int success);
 int      select_image(image_info *info);
+void     sec_save_trace(void);
+void     sec_write_back_trace(void);
 
 int      get_image_info(image_info *info);
 int      set_image_info(image_info *info);

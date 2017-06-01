@@ -48,27 +48,50 @@ void bolt_gisb_task(void *arg)
 
 	reg = BDEV_RD(BCHP_SUN_L2_CPU_STATUS);
 
+#ifndef BCHP_SUN_L2_CPU_STATUS_GISB_BUS_ERROR_MASK
 	if (reg & (BCHP_SUN_L2_CPU_STATUS_GISB_TIMEOUT_INTR_MASK |
-		    BCHP_SUN_L2_CPU_STATUS_GISB_TEA_INTR_MASK)) {
+		   BCHP_SUN_L2_CPU_STATUS_GISB_TEA_INTR_MASK)) {
 
 		/* print debug info */
 		xprintf("\n\nERROR: GISB %s\n",
 			reg & BCHP_SUN_L2_CPU_STATUS_GISB_TIMEOUT_INTR_MASK ?
 			"Timeout" : "TAE");
 
-		xprintf("GISB Address = %#08x\n",
+		xprintf("GISB Address = %#010x\n",
 			BDEV_RD(BCHP_SUN_GISB_ARB_ERR_CAP_ADDR));
 
-		xprintf("GISB Data = %#08x\n",
+		xprintf("GISB Data = %#010x\n",
 			BDEV_RD(BCHP_SUN_GISB_ARB_ERR_CAP_DATA));
 
 		/* clear timeout interrupt */
 		BDEV_WR(BCHP_SUN_GISB_ARB_ERR_CAP_CLR,
 			BCHP_SUN_GISB_ARB_ERR_CAP_CLR_clear_MASK);
-
 		BDEV_WR_F(SUN_L2_CPU_CLEAR, GISB_TEA_INTR, 1);
 		BDEV_WR_F(SUN_L2_CPU_CLEAR, GISB_TIMEOUT_INTR, 1);
 	}
+#else  /*GISBv7 */
+	if (reg & (BCHP_SUN_L2_CPU_STATUS_GISB_TIMEOUT_INTR_MASK |
+		   BCHP_SUN_L2_CPU_STATUS_GISB_BUS_ERROR_MASK)) {
+
+		/* print debug info */
+		xprintf("\n\nERROR: GISB %s\n",
+			reg & BCHP_SUN_L2_CPU_STATUS_GISB_TIMEOUT_INTR_MASK ?
+			"Timeout" : "TAE");
+
+		xprintf("GISB Address = %#012llx\n",
+			BDEV_RD64(BCHP_SUN_GISB_ARB_ERR_CAP_ADDR));
+
+		xprintf("GISB Data = %#018llx\n",
+			BDEV_RD64(BCHP_SUN_GISB_ARB_ERR_CAP_DATA));
+
+		/* clear timeout interrupt */
+		BDEV_WR(BCHP_SUN_GISB_ARB_ERR_CAP_CLR,
+			BCHP_SUN_GISB_ARB_ERR_CAP_CLR_clear_MASK);
+
+		BDEV_WR_F(SUN_L2_CPU_CLEAR, GISB_BUS_ERROR, 1);
+		BDEV_WR_F(SUN_L2_CPU_CLEAR, GISB_TIMEOUT_INTR, 1);
+	}
+#endif
 }
 
 uint32_t bolt_gisb_read(void)

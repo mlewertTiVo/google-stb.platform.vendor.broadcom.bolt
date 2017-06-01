@@ -180,6 +180,9 @@ static inline int bolt_devtree_at_handle_addprop_int(void *fdt,
 int bolt_devtree_at_node_addprop(void *fdt, int node,
 		const char *prop_name, const void *data, int datalen);
 
+int bolt_devtree_at_node_appendprop(void *fdt, int node,
+		const char *prop_name, const void *data, int datalen);
+
 int bolt_devtree_at_node_delprop(void *fdt, int node, const char *prop_name);
 
 

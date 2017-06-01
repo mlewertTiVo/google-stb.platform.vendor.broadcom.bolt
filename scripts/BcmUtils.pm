@@ -497,6 +497,29 @@ sub bigint_to_two_hexint($) {
 	return ($hi, $lo);
 }
 
+
+########################################################################
+# FUNCTION:
+#   bigint_to_two_int
+#
+# DESCRIPTION:
+#   Takes a Math::Bigint object number and split it in two 32-bits
+#   pairs (hi and lo).
+#
+# PARAMS:
+#   $bigint ... the large number to split
+#
+# RETURNS:
+#   $hi, $lo ... two scalars.
+########################################################################
+sub bigint_to_two_int($) {
+	my $bigint = Math::BigInt->new(shift);
+	my $lo = $bigint & 0xffffffff;
+	my $hi = $bigint->brsft(32);
+	return ($hi, $lo);
+}
+
+
 ########################################################################
 # FUNCTION:
 #   bigint_is_power_of_two
@@ -1170,6 +1193,18 @@ sub get_num_dtu_map($)
 
 
 	while ($bchp_defines->{"BCHP_MEMC_DTU_MAP_STATE_${count}_REG_START"}) {
+		$count++;
+	}
+
+	return $count;
+}
+
+sub get_num_dpfe($)
+{
+	my ($bchp_defines) = @_;
+	my $count = 0;
+
+	while ($bchp_defines->{"BCHP_DPFE_CPU_${count}_REG_START"}) {
 		$count++;
 	}
 

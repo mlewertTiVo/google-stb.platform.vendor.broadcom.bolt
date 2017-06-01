@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -144,6 +142,41 @@ static void irq_en(int n)
 #define SATA_TOP_CTRL_REGS_PER_PORT		2
 #define SATA_TOP_CTRL_1_PHY_DEFAULT_POWER_STATE	BIT(14)
 #define SATA_TOP_CTRL_2_PHY_GLOBAL_RESET	BIT(14)
+
+/* put the core back to power down state */
+static int dev_sata_uninit_phy(sata_softc *ctx)
+{
+	/* yfzhang@broadcom.com has stated that the core will only have (2)
+	 * ports. Further, the RDB currently lacks documentation for these
+	 * registers. So just keep a map of which port corresponds to these
+	 * magic registers.
+	 */
+	const uint32_t top_ctrl = BCHP_PHYSICAL_OFFSET +
+		BCHP_SATA_TOP_CTRL_REG_START;
+	const uint32_t port_to_phy_ctrl_ofs[NUM_SATA_PHY_CTL] = {
+		SATA_TOP_CTRL_PHY_CTRL_OFS + (0 * SATA_TOP_CTRL_PHY_CTRL_LEN),
+#if NUM_SATA_PHY_CTL > 1
+		SATA_TOP_CTRL_PHY_CTRL_OFS + (1 * SATA_TOP_CTRL_PHY_CTRL_LEN),
+#endif
+#if NUM_SATA_PHY_CTL > 2
+#error Need to specify another port ctrl register set.
+#endif
+	};
+	int port;
+	uint32_t reg;
+
+	for (port = 0; port < NUM_SATA_PHY_CTL; port++) {
+		uint32_t p;
+
+		/* clear PHY_DEFAULT_POWER_STATE */
+		p = top_ctrl + port_to_phy_ctrl_ofs[port] +
+			SATA_TOP_CTRL_PHY_CTRL_1;
+		reg = BDEV_RD(p) | SATA_TOP_CTRL_1_PHY_DEFAULT_POWER_STATE;
+		BDEV_WR(p, reg);
+	}
+
+	return 0;
+}
 
 static int dev_sata_init_phy(sata_softc *ctx)
 {
@@ -289,7 +322,19 @@ static int dev_sata_open(bolt_devctx_t *bctx)
 		/*
 		 * Scan for drives
 		 */
-		sata_scan(&root_ctx->sata_dev, BIT(port_ctx->port), &port_mask);
+		if (sata_scan(&root_ctx->sata_dev, BIT(port_ctx->port), &port_mask)) {
+			/* Some drives take longer to power up.  */
+			status = dev_sata_uninit_phy(root_ctx);
+			if (status)
+				return status;
+			msleep(100);
+			status = dev_sata_init_phy(root_ctx);
+			if (status)
+				return status;
+			status = sata_scan(&root_ctx->sata_dev, BIT(port_ctx->port), &port_mask);
+			if (status)
+				return status;
+		}
 		if (port_mask & (1 << port_ctx->port)) {
 			__sata_id(port_ctx);
 			port_ctx->ready = 1;

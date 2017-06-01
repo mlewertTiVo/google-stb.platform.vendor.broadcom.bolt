@@ -145,11 +145,6 @@ void fsbl_main(void)
 #ifndef SECURE_BOOT
 	int bypass_avs;
 	struct boards_nvm_list *nvm_boards;
-#ifdef DVFS_SUPPORT
-	struct clock_divisors cpu_clks;
-	struct clock_divisors scb_clks;
-	uint8_t sysif_mdiv;
-#endif
 #endif
 	uint32_t mhl_power;
 #endif
@@ -254,28 +249,13 @@ void fsbl_main(void)
 	do_shmoo_menu = board_select(&info, SHMOO_SRAM_ADDR);
 
 #ifndef SECURE_BOOT
-	/* save PMap data, or will be overwritten by loading Shmoo
-	 *
-	 * At SHMOO_SRAM_ADDR, 'struct boards_nvm_list' has been loaded
-	 * from the '.boards' flash partition.  The pointer to the table
-	 * of available PMap's has to be converted into FSBL's address
-	 * space from the flash partition address space.
-	 */
 	nvm_boards = (struct boards_nvm_list *) SHMOO_SRAM_ADDR;
-	nvm_boards->pmap_table = (struct pmap_entry *)
-		((physaddr_t)SHMOO_SRAM_ADDR +
-			(physaddr_t)nvm_boards->pmap_table);
 	pmap_id = FSBL_HARDFLAG_PMAP_ID(info.saved_board.hardflags);
 	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD)
 		/* board default PMap ID as it is overridden */
 		pmap_id = AVS_PMAP_ID(info.board_types[info.board_idx].avs);
 	if (pmap_id >= nvm_boards->n_pmaps)
 		pmap_id = 0; /* fall back to PMap ID #0 */
-#ifdef DVFS_SUPPORT
-	cpu_clks = nvm_boards->pmap_table[pmap_id].cpu;
-	scb_clks = nvm_boards->pmap_table[pmap_id].scb;
-	sysif_mdiv = nvm_boards->pmap_table[pmap_id].sysif_mdiv;
-#endif
 #else /* SECURE BOOT */
 #if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	pmap_id =  DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1) &
@@ -313,16 +293,6 @@ void fsbl_main(void)
 			avs_err = avs_start(avs_en, pmap_id);
 
 	info.avs_err = avs_err;
-
-#ifndef SECURE_BOOT
-#ifdef DVFS_SUPPORT
-	/* If AVS was bypassed or failed to start, it could not set
-	 * SCB and CPU speeds. We are on our own.
-	 */
-	if (bypass_avs || !avs_en)
-		apply_dvfs_clocks(cpu_clks, scb_clks, sysif_mdiv);
-#endif
-#endif
 
 	if (warm_boot)
 		memsys_warm_restart(b->nddr);

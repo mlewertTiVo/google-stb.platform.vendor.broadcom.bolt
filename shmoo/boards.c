@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -15,7 +15,7 @@
 #include <fsbl-common.h>
 #include <board_types.h>
 #ifdef DVFS_SUPPORT
-#include <fsbl-pmap.h>
+#include <pmap.h>
 #endif
 
 const struct boards_nvm_list nvm_boards
@@ -26,10 +26,8 @@ const struct boards_nvm_list nvm_boards
 	.board_types = board_types,
 #if defined(DVFS_SUPPORT)
 	.n_pmaps = ARRAY_SIZE(pmapTable),
-	.pmap_table = pmapTable,
 #else
 	.n_pmaps = 0,
-	.pmap_table = 0,
 #endif
 };
 

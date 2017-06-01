@@ -67,6 +67,8 @@ static const char * const logo[] = {
     ********************************************************************* */
 extern unsigned int _ftext, _etext, _fdata, _edata, _fbss, end, _end;
 
+static void reserve_memory_areas(void);
+static void reserve_memory_splash(void);
 #ifdef S_UNITTEST
 void bolt_aegis_cr_unblock(void);
 void bolt_aegis_flash_update_done(void);
@@ -682,6 +684,8 @@ void bolt_main(int a, int b)
 	/* USB uses DT, so do setup before board_final_init() */
 	bolt_devtree_prep_builtin_dtb();
 
+	reserve_memory_areas();
+
 	/* Setup after Devicetree is present but before
 	its been modified by any DT_OPs, and before
 	board_final_init() for USB, SYSTEMPORT. */
@@ -694,6 +698,7 @@ void bolt_main(int a, int b)
 	if (!(sflags & NO_SPLASH)) {
 		splash_api_start();
 		board_init_post_splash();
+		reserve_memory_splash();
 	}
 
 #if CFG_MONITOR_OVERTEMP
@@ -884,4 +889,60 @@ void bolt_master_reboot(void)
 {
 	BDEV_WR_F(SUN_TOP_CTRL_RESET_SOURCE_ENABLE, sw_master_reset_enable, 1);
 	BDEV_WR_F(SUN_TOP_CTRL_SW_MASTER_RESET, chip_master_reset, 1);
+}
+
+/* reserve_memory_areas -- reserves memory areas
+ *
+ * Reservation should be distinguished from allocation because reservation
+ * does not necessarily mean the reserved memory area is actually used
+ * in BOLT. It is for Linux to stay away from using it, including
+ * allocating and passing it to a user applicaiton.
+ */
+static void reserve_memory_areas(void)
+{
+#ifdef STUB64_START
+	int64_t retval;
+
+	retval = bolt_reserve_memory(PSCI_SIZE, PSCI_BASE,
+		BOLT_RESERVE_MEMORY_OPTION_ABS |
+		BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY,
+		"PSCI");
+	if (retval < 0) {
+		err_msg("failed to reserve %d bytes for PSCI %lld\n",
+			PSCI_SIZE, retval);
+	}
+#endif
+}
+
+static void reserve_memory_splash(void)
+{
+	struct board_type *b = board_thisboard();
+	unsigned int memc;
+
+	for (memc = 0; memc < b->nddr; memc++) {
+		int64_t retval;
+		uint32_t memtop, memlow;
+		uint32_t bottom;
+		unsigned int amount;
+		uint32_t options;
+		char tag[8]; /* strlen("splash") + memc# */
+
+		retval = splash_glue_getmem(memc, &memtop, &memlow);
+		if (retval != 0)
+			continue;
+		if (memtop == memlow)
+			continue;
+
+		bottom = ALIGN_TO(memlow, _KB(4));
+		amount = memtop - bottom;
+		options = 1 << memc;
+		options |= BOLT_RESERVE_MEMORY_OPTION_ABS;
+		options |= BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY;
+		xsprintf(tag, "splash%u", memc);
+		retval = bolt_reserve_memory(amount, bottom, options, tag);
+		if (retval < 0) {
+			err_msg("reserving splash memory [%08x..%08x) failed\n",
+				bottom, memtop);
+		}
+	}
 }

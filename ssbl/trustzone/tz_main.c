@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -7,23 +7,22 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_queue.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
-
-#include "error.h"
-#include "board.h"
-#include "mmap-dram.h"
-#include "chipid.h"
-
-#include "bchp_common.h"
-#include "bchp_sun_top_ctrl.h"
-
 #include "tz.h"
 #include "tz_priv.h"
 
+#include <bchp_common.h>
+#include <bchp_sun_top_ctrl.h>
+#include <board.h>
+#include <bolt.h>
+#include <chipid.h>
+#include <error.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_queue.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <mmap-dram.h>
+#include <ssbl-common.h>
 
 static struct tz_info s_tz_info;
 
@@ -37,81 +36,91 @@ struct tz_info *tz_info(void)
 static int tz_memory_init(void)
 {
 	struct tz_info *t;
+	struct memory_area list;
+	queue_t *qe;
+	int count;
+	int rc;
 	struct board_type *b;
-	uint32_t which;
-	uint32_t total_mb;
-	uint32_t top_mb;
-	int i;
+	unsigned int i;
+	unsigned int total_mb, reserve_mb;
+	int64_t retval;
 
 	t = tz_info();
 	if (!t)
 		return BOLT_ERR;
 
 	b = board_thisboard();
-	if (!b)
+	if (b == NULL)
 		return BOLT_ERR;
 
-	/* The algorithm is:
-	 *    - use the top memory segment (from any MEMC) below 4G;
-	 *    - carve out from the top of this memory segment;
-	 *    - use 16MB or 32MB, based on total memory:
-	 *        . if total memory < 1GB, use 16MB
-	 *        . otherwise, use 32MB
-	 */
 	total_mb = 0;
-	top_mb = 0;
-	which = 0;
 	for (i = 0; i < b->nddr; i++) {
-		struct ddr_info *ddr;
-		uint32_t dtop_mb;
-		uint32_t dsize_mb;
-		int j;
+		struct ddr_info *ddr = board_find_ddr(b, i);
 
-		ddr = board_find_ddr(b, i);
 		if (!ddr)
 			continue;
 
-		if (NUM_DRAM_MAPPING_ENTRIES > 0) {
-			/* Mapping table used, find top cpu addr of this DDR */
-			dtop_mb = 0;
-			dsize_mb = ddr->size_mb;
-			for (j = 0; j < (int)NUM_DRAM_MAPPING_ENTRIES; j++) {
-				const struct addr_mapping_entry *mapping =
-					&dram_mapping_table[j];
-
-				if (mapping->which != ddr->which)
-					continue;
-
-				if (mapping->to_mb >= 4096) /* over 4GB */
-					break;
-
-				if (dsize_mb > mapping->size_mb) {
-					dtop_mb = mapping->to_mb +
-						mapping->size_mb;
-					dsize_mb -= mapping->size_mb;
-				} else {
-					dtop_mb = mapping->to_mb + dsize_mb;
-					break;
-				}
-			}
-		} else {
-			/* No mapping table, use ddr->base_mb as cpu addr */
-			dtop_mb = ddr->base_mb + ddr->size_mb;
-		}
-
 		total_mb += ddr->size_mb;
-
-		if (top_mb < dtop_mb) {
-			top_mb = dtop_mb;
-			which = ddr->which;
-		}
 	}
 
-	t->which = which;
-	t->mem_size = (uint64_t)((total_mb > 1024) ? 32 : 16) * 0x100000;
-	t->mem_addr = (uint64_t)top_mb * 0x100000 - t->mem_size;
+	/* - 32MB if total is over 1GB, 16MB otherwise
+	 * - highest available under 4GB boundary
+	 * - no memory controller preferrence
+	 * - DT not to be created by dtbolt
+	 * - DT to be created under /reserved-memory by tz_dt
+	 */
+	reserve_mb = (total_mb > 1024) ? 32 : 16;
+	reserve_mb *= 1024 * 1024;
+	retval = bolt_reserve_memory(reserve_mb, _KB(4), 0, "TZOS");
+	if (retval < 0) {
+		reserve_mb /= 1024 * 1024;
+		err_msg("failed to reserve %d MB for TrustZone %lld\n",
+			reserve_mb, retval);
+	}
+	t->mem_addr = (uint64_t) retval;
 
-	return 0;
+	count = bolt_reserve_memory_getlist(&list);
+	if (count <= 0)
+		return BOLT_ERR_NOMEM;
+
+	rc = BOLT_OK;
+	qe = q_getfirst((queue_t *)&list);
+	for ( ; qe != (queue_t *)&list; qe = qe->q_next) {
+		struct memory_area *m = (struct memory_area *)qe;
+
+		if (t->mem_addr != m->offset)
+			continue;
+
+		/* match */
+		t->mem_size = m->size;
+		/* already done t->mem_addr */
+		switch (m->options & BOLT_RESERVE_MEMORY_OPTION_MEMC_MASK) {
+		case BOLT_RESERVE_MEMORY_OPTION_MEMC_0:
+			t->which = 0;
+			break;
+		case BOLT_RESERVE_MEMORY_OPTION_MEMC_1:
+			t->which = 1;
+			break;
+		case BOLT_RESERVE_MEMORY_OPTION_MEMC_2:
+			t->which = 2;
+			break;
+		default:
+			rc = BOLT_ERR_NOMEM;
+			goto out;
+		}
+
+		break;
+	}
+
+out:
+	while (!q_isempty((queue_t *)&list)) {
+		queue_t *q = q_getfirst((queue_t *)&list);
+
+		q_dequeue(q);
+		KFREE(q);
+	}
+
+	return rc;
 }
 
 static int tz_reg_group_init(void)

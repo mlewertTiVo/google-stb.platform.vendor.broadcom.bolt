@@ -210,6 +210,20 @@ int bolt_devtree_at_node_addprop(void *fdt, int node,
 	return libfdt_error(rc);
 }
 
+int bolt_devtree_at_node_appendprop(void *fdt, int node,
+		const char *prop_name, const void *data, int datalen)
+{
+	int rc = fdt_open_into(fdt, fdt, DT_MAX_SIZE);
+
+	if (!rc) {
+		rc = fdt_appendprop(fdt, node, prop_name, data, datalen);
+
+		_bolt_devtree_close(fdt);
+	}
+
+	return libfdt_error(rc);
+}
+
 int bolt_devtree_at_node_delprop(void *fdt, int node, const char *prop_name)
 {
 	int rc = fdt_open_into(fdt, fdt, DT_MAX_SIZE);

@@ -3688,39 +3688,163 @@ followed by a period (.)</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_rpmb_counter">42.  rpmb counter</h2>
+<h2 id="_rmem">42.  rmem</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>rpmb counter &#8230;&#8230; Read the RPMB Write Counter.</p></div>
 <div class="sect2">
 <h3 id="_summary_42">42.1. SUMMARY</h3>
-<div class="paragraph"><p>Print the RPMB Write Counter.</p></div>
+<div class="paragraph"><p>Reserves a memory area so that Linux does not override the area</p></div>
 </div>
 <div class="sect2">
 <h3 id="_usage_42">42.2. USAGE</h3>
+<div class="paragraph"><p>rmem &lt;amount&gt; [-4gb] [-abs] [-align=&lt;int&gt;] [-dt=&lt;n|m|r&gt;] [-memc=&lt;int&gt;] [-nomap] [-reuse] [-tag=&lt;string&gt;]</p></div>
+</div>
+<div class="sect2">
+<h3 id="_options_21">42.3. OPTIONS</h3>
+<div class="ulist"><ul>
+<li>
+<p>
+amount &#8230;&#8230;&#8230;. amount of memory to be reserved in bytes
+</p>
+</li>
+<li>
+<p>
+-4gb &#8230;&#8230;&#8230;&#8230; okay to exceed the 4GB boundary
+</p>
+</li>
+<li>
+<p>
+-abs &#8230;&#8230;&#8230;&#8230; the alignment is absolute offset
+</p>
+</li>
+<li>
+<p>
+-align=* &#8230;&#8230;.. specifies the alignment in bytes, default 1MB
+</p>
+</li>
+<li>
+<p>
+-dt=* &#8230;&#8230;&#8230;.. none, /Memreserve or /Reserved-memory, default N
+</p>
+</li>
+<li>
+<p>
+-memc=* &#8230;&#8230;&#8230; bit vector of preferred MEMC, default MEMC#0
+</p>
+</li>
+<li>
+<p>
+-nomap &#8230;&#8230;&#8230;. add no-map if /reserved-memory
+</p>
+</li>
+<li>
+<p>
+-reuse &#8230;&#8230;&#8230;. add reusable if /reserved-memory
+</p>
+</li>
+<li>
+<p>
+-tag=* &#8230;&#8230;&#8230;. tag that will be associated with reservation
+</p>
+</li>
+</ul></div>
+</div>
+<div class="sect2">
+<h3 id="_notes_43">42.4. NOTES</h3>
+<div class="paragraph"><p>The <em>rmem</em> command provides an online (dynamic) interface to
+bolt_reserve_memory() so that the interaction among BOLT, Linux and
+associated component can be tested without going through building
+BOLT multiple times.</p></div>
+<div class="paragraph"><p>Executing <em>rmem</em> without <em>amount</em>, reserved and available memory areas
+are displayed.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_example_41">42.5. EXAMPLE</h3>
+<div class="listingblock">
+<div class="content">
+<pre><code>BOLT&gt; rmem 262144 -align=4096 -tag=256KB -dt=m -4gb
+Reserved at 13ffc0000 (5368446976)
+*** command status = 0
+BOLT&gt; rmem
+Reserved memory areas in bytes:
+  0 003ff00000 00100000 00000401 "SRR"
+  1 007e000000 02000000 00000002 "reserved-tzos"
+  0 003fb00000 00400000 00000001
+  1 007dc00000 00400000 00000002
+  0 013ffc0000 00040000 80000201 "256KB"
+Available memory areas in bytes:
+  0 0000000000 3fb00000
+  1 0040000000 3dc00000
+  0 0100000000 3ffc0000
+*** command status = 0
+BOLT&gt; dt bolt
+DTB @ 0x7628000
+Command not done: dt modification is off, use 'dt on' to re-enable
+*** command status = -1
+BOLT&gt; dt show reserved-memory
+DTB @ 0x7628000
+/dts-v1/;
+
+/memreserve/ 0x3fc00000 0x300000;
+/memreserve/ 0x7dc00000 0x400000;
+
+/       reserved-memory {
+                #address-cells = &lt;0x2&gt;;
+                #size-cells = &lt;0x2&gt;;
+                ranges;
+
+                reserved-tzos@7e000000 {
+                        reg = &lt;0x0 0x7e000000 0x0 0x2000000&gt;;
+                };
+
+                SRR@3ff00000 {
+                        reserved-names = "SRR";
+                        reg = &lt;0x0 0x3ff00000 0x0 0x100000&gt;;
+                };
+
+                reserved-nodma@00000000 {
+                        reg = &lt;0x0 0x0 0x0 0x1000&gt;;
+                };
+        };
+*** command status = 0</code></pre>
+</div></div>
+<div class="paragraph"><p></p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_rpmb_counter">43.  rpmb counter</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>rpmb counter &#8230;&#8230; Read the RPMB Write Counter.</p></div>
+<div class="sect2">
+<h3 id="_summary_43">43.1. SUMMARY</h3>
+<div class="paragraph"><p>Print the RPMB Write Counter.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usage_43">43.2. USAGE</h3>
 <div class="paragraph"><p>rpmb counter [RPMBdevice]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_43">42.3. NOTES</h3>
+<h3 id="_notes_44">43.3. NOTES</h3>
 <div class="paragraph"><p>Applies to eMMC devices.</p></div>
 <div class="paragraph"><p></p></div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_rpmb_program_key">43.  rpmb program-key</h2>
+<h2 id="_rpmb_program_key">44.  rpmb program-key</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>rpmb program-key .. Program the authentication key.</p></div>
 <div class="sect2">
-<h3 id="_summary_43">43.1. SUMMARY</h3>
+<h3 id="_summary_44">44.1. SUMMARY</h3>
 <div class="paragraph"><p>Program the authentication key using the key specified by the <em>rpmb use-key</em>
 command.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_43">43.2. USAGE</h3>
+<h3 id="_usage_44">44.2. USAGE</h3>
 <div class="paragraph"><p>rpmb program-key [RPMBdevice]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_44">43.3. NOTES</h3>
+<h3 id="_notes_45">44.3. NOTES</h3>
 <div class="paragraph"><p>Applies to eMMC devices.</p></div>
 <div class="admonitionblock">
 <table><tr>
@@ -3735,19 +3859,19 @@ command.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_rpmb_use_key">44.  rpmb use-key</h2>
+<h2 id="_rpmb_use_key">45.  rpmb use-key</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>rpmb use-key &#8230;&#8230; Specify the key to be used for all RPMB operations.</p></div>
 <div class="sect2">
-<h3 id="_summary_44">44.1. SUMMARY</h3>
+<h3 id="_summary_45">45.1. SUMMARY</h3>
 <div class="paragraph"><p>Specify the RPMB authentication key to be used for subsquent RPMB operations.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_44">44.2. USAGE</h3>
+<h3 id="_usage_45">45.2. USAGE</h3>
 <div class="paragraph"><p>rpmb use-key [RPMBdevice] [byte1] [byte2]&#8230;[byte32]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_45">44.3. NOTES</h3>
+<h3 id="_notes_46">45.3. NOTES</h3>
 <div class="paragraph"><p>Applies to eMMC devices.</p></div>
 <div class="paragraph"><p>The key must be 32 bytes long.</p></div>
 <div class="paragraph"><p></p></div>
@@ -3755,15 +3879,15 @@ command.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_rts">45.  rts</h2>
+<h2 id="_rts">46.  rts</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>rts &#8230;&#8230;&#8230;&#8230; list all, or select an rts</p></div>
 <div class="sect2">
-<h3 id="_summary_45">45.1. SUMMARY</h3>
+<h3 id="_summary_46">46.1. SUMMARY</h3>
 <div class="paragraph"><p>Show RTS sets (box modes) available, or select another.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_45">45.2. USAGE</h3>
+<h3 id="_usage_46">46.2. USAGE</h3>
 <div class="paragraph"><p>rts [-set=&lt;N&gt; | -clear | ]</p></div>
 <div class="paragraph"><p>For no option, this lists all the box modes available and its associated
 RTS version name.</p></div>
@@ -3772,7 +3896,7 @@ RTS version name.</p></div>
 the current board.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_46">45.3. NOTES</h3>
+<h3 id="_notes_47">46.3. NOTES</h3>
 <div class="paragraph"><p>At build time, sets of RTS values can be specified for various
 operating modes, e.g. Video SD, PIP &amp; HD etc. You can choose which
 set you want at runtime by using this command. The RTS is then
@@ -3798,7 +3922,7 @@ you will see the message "RTS: not programed!" at startup.</p></div>
 change the rts set via "rts -set=&lt;N&gt;" then only the "*used"
 marker will be seen.</p></div>
 <div class="sect3">
-<h4 id="_changes_for_box_mode_0">45.3.1.  Changes for box mode #0</h4>
+<h4 id="_changes_for_box_mode_0">46.3.1.  Changes for box mode #0</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -3835,7 +3959,7 @@ build configuration script command.
 </div>
 </div>
 <div class="sect2">
-<h3 id="_example_41">45.4. EXAMPLE</h3>
+<h3 id="_example_42">46.4. EXAMPLE</h3>
 <div class="paragraph"><p>At first bootup after flashing bolt.bin:</p></div>
 <div class="literalblock">
 <div class="content">
@@ -3935,23 +4059,23 @@ board was k, now k (flags:0xffe00000)
 </div>
 </div>
 <div class="sect1">
-<h2 id="_save">46.  save</h2>
+<h2 id="_save">47.  save</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>save &#8230;&#8230;&#8230;&#8230;.. Save a region of memory to a remote file via TFTP</p></div>
 <div class="sect2">
-<h3 id="_summary_46">46.1. SUMMARY</h3>
+<h3 id="_summary_47">47.1. SUMMARY</h3>
 <div class="paragraph"><p>Save a region of memory to a remote file via TFTP</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_46">46.2. USAGE</h3>
+<h3 id="_usage_47">47.2. USAGE</h3>
 <div class="paragraph"><p>save host:filename startaddr length</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_47">46.3. NOTES</h3>
+<h3 id="_notes_48">47.3. NOTES</h3>
 <div class="paragraph"><p>The destination must exist and be writeable.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_42">46.4. EXAMPLE</h3>
+<h3 id="_example_43">47.4. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content"><!-- Generator: GNU source-highlight 3.1.6
 by Lorenzo Bettini
@@ -3970,25 +4094,25 @@ http://www.gnu.org/software/src-highlite -->
 </div>
 </div>
 <div class="sect1">
-<h2 id="_set_console">47.  set console</h2>
+<h2 id="_set_console">48.  set console</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>set console &#8230;&#8230;. Change the active console device</p></div>
 <div class="sect2">
-<h3 id="_summary_47">47.1. SUMMARY</h3>
+<h3 id="_summary_48">48.1. SUMMARY</h3>
 <div class="paragraph"><p>Change the active console device</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_47">47.2. USAGE</h3>
+<h3 id="_usage_48">48.2. USAGE</h3>
 <div class="paragraph"><p>set console device-name</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_48">47.3. NOTES</h3>
+<h3 id="_notes_49">48.3. NOTES</h3>
 <div class="paragraph"><p>Changes the console device to the specified device name.  The console
 must be a serial-style device.  Be careful not to change the console
 to a device that is not connected!</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_43">47.4. EXAMPLE</h3>
+<h3 id="_example_44">48.4. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; set console uart0
@@ -3999,19 +4123,19 @@ to a device that is not connected!</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_setboard">48.  setboard</h2>
+<h2 id="_setboard">49.  setboard</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>setboard &#8230;&#8230;&#8230;. Set board to use</p></div>
 <div class="sect2">
-<h3 id="_summary_48">48.1. SUMMARY</h3>
+<h3 id="_summary_49">49.1. SUMMARY</h3>
 <div class="paragraph"><p>set board number</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_48">48.2. USAGE</h3>
+<h3 id="_usage_49">49.2. USAGE</h3>
 <div class="paragraph"><p>setboard [boardnum] [options]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_49">48.3. NOTES</h3>
+<h3 id="_notes_50">49.3. NOTES</h3>
 <div class="paragraph"><p>After changing the board it is <strong>STRONGLY RECOMMENDED</strong> that
 you reset the board to pick up the new configuration.</p></div>
 <div class="paragraph"><p>The <em>-forget</em> option resets the automatic (<em>config BOARD_ID on</em>)
@@ -4032,7 +4156,7 @@ overridden the default, but at build time rather than at runtime.</td>
 <div class="paragraph"><p>See also: <em>boards</em> command.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_21">48.4. OPTIONS</h3>
+<h3 id="_options_22">49.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4072,7 +4196,7 @@ overridden the default, but at build time rather than at runtime.</td>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_44">48.5. EXAMPLE</h3>
+<h3 id="_example_45">49.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; setboard b
@@ -4093,24 +4217,24 @@ board was a, now ? (flags:0xf0000000)
 </div>
 </div>
 <div class="sect1">
-<h2 id="_setenv">49.  setenv</h2>
+<h2 id="_setenv">50.  setenv</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>setenv &#8230;&#8230;&#8230;&#8230; Set an environment variable.</p></div>
 <div class="sect2">
-<h3 id="_summary_49">49.1. SUMMARY</h3>
+<h3 id="_summary_50">50.1. SUMMARY</h3>
 <div class="paragraph"><p>Set an environment variable.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_49">49.2. USAGE</h3>
+<h3 id="_usage_50">50.2. USAGE</h3>
 <div class="paragraph"><p>setenv [-ro] [-p] varname value</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_50">49.3. NOTES</h3>
+<h3 id="_notes_51">50.3. NOTES</h3>
 <div class="paragraph"><p>This command sets an environment variable.  By default, an environment variable
 is stored only in memory and will not be retained across system restart.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_22">49.4. OPTIONS</h3>
+<h3 id="_options_23">50.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4125,7 +4249,7 @@ is stored only in memory and will not be retained across system restart.</p></di
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_45">49.5. EXAMPLE</h3>
+<h3 id="_example_46">50.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; setenv MESSAGE "Hello!"
@@ -4142,25 +4266,25 @@ Variable Name        Value
 </div>
 </div>
 <div class="sect1">
-<h2 id="_sha">50.  sha</h2>
+<h2 id="_sha">51.  sha</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_summary_50">50.1. SUMMARY</h3>
+<h3 id="_summary_51">51.1. SUMMARY</h3>
 <div class="paragraph"><p>Calculate SHA256 of a memory region</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_50">50.2. USAGE</h3>
+<h3 id="_usage_51">51.2. USAGE</h3>
 <div class="paragraph"><p>sha -addr=&lt;addr&gt; -size=&lt;size&gt; -channel=&lt;n&gt;</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_51">50.3. NOTES</h3>
+<h3 id="_notes_52">51.3. NOTES</h3>
 <div class="paragraph"><p>If the build configuration option <em>HARDWARE_SHA</em> is not
 set to <em>on</em> then the -channel flag will not be available.</p></div>
 <div class="paragraph"><p>If -channel is available but not specified then a software
 SHA method is used instead of the hardware XPT DMA.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_23">50.4. OPTIONS</h3>
+<h3 id="_options_24">51.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4180,7 +4304,7 @@ SHA method is used instead of the hardware XPT DMA.</p></div>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_46">50.5. EXAMPLE</h3>
+<h3 id="_example_47">51.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; sha -addr=0x6008000 -size=256 -channel=0
@@ -4207,25 +4331,25 @@ Software SHA:
 </div>
 </div>
 <div class="sect1">
-<h2 id="_show_usb">51.  show usb</h2>
+<h2 id="_show_usb">52.  show usb</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>show usb &#8230;&#8230;&#8230;. Display devices connected to USB bus.</p></div>
 <div class="sect2">
-<h3 id="_summary_51">51.1. SUMMARY</h3>
+<h3 id="_summary_52">52.1. SUMMARY</h3>
 <div class="paragraph"><p>Display devices connected to USB bus.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_51">51.2. USAGE</h3>
+<h3 id="_usage_52">52.2. USAGE</h3>
 <div class="paragraph"><p>usb show [bus [device]]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_52">51.3. NOTES</h3>
+<h3 id="_notes_53">52.3. NOTES</h3>
 <div class="paragraph"><p>Displays the configuration descriptors for devices connected to the USB
 If you specify a bus, the entire bus is displayed.  If you specify the
 device number as well, only the specified device is displayed</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_24">51.4. OPTIONS</h3>
+<h3 id="_options_25">52.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4235,7 +4359,7 @@ device number as well, only the specified device is displayed</p></div>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_47">51.5. EXAMPLE</h3>
+<h3 id="_example_48">52.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; show usb
@@ -4257,24 +4381,24 @@ Bus 1 Device 2   Class 255 Vendor 0B95 Product 7720  [DEVICE]
 </div>
 </div>
 <div class="sect1">
-<h2 id="_show_heap">52.  show heap</h2>
+<h2 id="_show_heap">53.  show heap</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>show heap &#8230;&#8230;&#8230; Display information about BOLT&#8217;s heap</p></div>
 <div class="sect2">
-<h3 id="_summary_52">52.1. SUMMARY</h3>
+<h3 id="_summary_53">53.1. SUMMARY</h3>
 <div class="paragraph"><p>Display information about BOLT&#8217;s heap</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_52">52.2. USAGE</h3>
+<h3 id="_usage_53">53.2. USAGE</h3>
 <div class="paragraph"><p>show heap</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_53">52.3. NOTES</h3>
+<h3 id="_notes_54">53.3. NOTES</h3>
 <div class="paragraph"><p>This is a debugging command that can be used to determine the health
 of BOLT&#8217;s internal memory manager.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_48">52.4. EXAMPLE</h3>
+<h3 id="_example_49">53.4. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; show heap
@@ -4294,24 +4418,24 @@ Heap status:       CONSISTENT
 </div>
 </div>
 <div class="sect1">
-<h2 id="_show_devices">53.  show devices</h2>
+<h2 id="_show_devices">54.  show devices</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>show devices &#8230;&#8230; Display information about the installed devices.</p></div>
 <div class="sect2">
-<h3 id="_summary_53">53.1. SUMMARY</h3>
+<h3 id="_summary_54">54.1. SUMMARY</h3>
 <div class="paragraph"><p>Display information about the installed devices.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_53">53.2. USAGE</h3>
+<h3 id="_usage_54">54.2. USAGE</h3>
 <div class="paragraph"><p>show devices</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_54">53.3. NOTES</h3>
+<h3 id="_notes_55">54.3. NOTES</h3>
 <div class="paragraph"><p>This command displays the names and descriptions of the devices BOLT is
 configured to support.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_49">53.4. EXAMPLE</h3>
+<h3 id="_example_50">54.4. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; show devices
@@ -4342,23 +4466,23 @@ Device Name          Description
 </div>
 </div>
 <div class="sect1">
-<h2 id="_sleep">54.  sleep</h2>
+<h2 id="_sleep">55.  sleep</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>sleep &#8230;&#8230;&#8230;&#8230;. Sleep for specified milliseconds.</p></div>
 <div class="sect2">
-<h3 id="_summary_54">54.1. SUMMARY</h3>
+<h3 id="_summary_55">55.1. SUMMARY</h3>
 <div class="paragraph"><p>Sleep for specified milliseconds.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_54">54.2. USAGE</h3>
+<h3 id="_usage_55">55.2. USAGE</h3>
 <div class="paragraph"><p>sleep [timeout]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_55">54.3. NOTES</h3>
+<h3 id="_notes_56">55.3. NOTES</h3>
 <div class="paragraph"><p>This command sleeps for a specified time in mS (default is 1000 mS).</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_50">54.4. EXAMPLE</h3>
+<h3 id="_example_51">55.4. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; sleep 500
@@ -4369,24 +4493,24 @@ Device Name          Description
 </div>
 </div>
 <div class="sect1">
-<h2 id="_switchcfg">55.  switchcfg</h2>
+<h2 id="_switchcfg">56.  switchcfg</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>switchcfg &#8230;&#8230;&#8230; Configure integrated Ethernet switch settings.</p></div>
 <div class="sect2">
-<h3 id="_summary_55">55.1. SUMMARY</h3>
+<h3 id="_summary_56">56.1. SUMMARY</h3>
 <div class="paragraph"><p>Configure integrated Ethernet switch settings.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_55">55.2. USAGE</h3>
+<h3 id="_usage_56">56.2. USAGE</h3>
 <div class="paragraph"><p>switchcfg -port=&lt;port&gt; -isolate_mask=0x1ff</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_56">55.3. NOTES</h3>
+<h3 id="_notes_57">56.3. NOTES</h3>
 <div class="paragraph"><p>This command controls the integrate switch per-port isolation mask, useful to
 allow e.g: Port 0 and Port 1 to share the same LAN segment.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_51">55.4. EXAMPLE</h3>
+<h3 id="_example_52">56.4. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; switchcfg -port=0 -isolate_mask=0x1fff
@@ -4397,23 +4521,23 @@ allow e.g: Port 0 and Port 1 to share the same LAN segment.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_t">56.  t</h2>
+<h2 id="_t">57.  t</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>t &#8230;&#8230;&#8230;&#8230;&#8230;.. Test contents of memory.</p></div>
 <div class="sect2">
-<h3 id="_summary_56">56.1. SUMMARY</h3>
+<h3 id="_summary_57">57.1. SUMMARY</h3>
 <div class="paragraph"><p>Test contents of memory.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_56">56.2. USAGE</h3>
+<h3 id="_usage_57">57.2. USAGE</h3>
 <div class="paragraph"><p>t [-b|-h|-w] [-lt|-eq|-gt] addr pattern</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_57">56.3. NOTES</h3>
+<h3 id="_notes_58">57.3. NOTES</h3>
 <div class="paragraph"><p>This command tests the contents of memory against the specified pattern.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_25">56.4. OPTIONS</h3>
+<h3 id="_options_26">57.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4468,7 +4592,7 @@ allow e.g: Port 0 and Port 1 to share the same LAN segment.</p></div>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_52">56.5. EXAMPLE</h3>
+<h3 id="_example_53">57.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; d 0x100 1
@@ -4487,23 +4611,23 @@ BOLT&gt; t -b -eq  -pr 0x100 0x87
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tcp_constest">57.  tcp constest</h2>
+<h2 id="_tcp_constest">58.  tcp constest</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>tcp constest &#8230;&#8230; TCP console test.</p></div>
 <div class="sect2">
-<h3 id="_summary_57">57.1. SUMMARY</h3>
+<h3 id="_summary_58">58.1. SUMMARY</h3>
 <div class="paragraph"><p>TCP console test.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_57">57.2. USAGE</h3>
+<h3 id="_usage_58">58.2. USAGE</h3>
 <div class="paragraph"><p>tcp constest device.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_58">57.3. NOTES</h3>
+<h3 id="_notes_59">58.3. NOTES</h3>
 <div class="paragraph"><p>Requires BOLT TCP support.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_53">57.4. EXAMPLE</h3>
+<h3 id="_example_54">58.4. EXAMPLE</h3>
 <div class="paragraph"><p>Two machines running BOLT and connected via an Ethernet switch:</p></div>
 <div class="listingblock">
 <div class="title">A</div>
@@ -4550,22 +4674,22 @@ console for <em>A</em>.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tcp_listen">58.  tcp listen</h2>
+<h2 id="_tcp_listen">59.  tcp listen</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>tcp listen &#8230;&#8230;.. Port listener.</p></div>
 <div class="sect2">
-<h3 id="_summary_58">58.1. SUMMARY</h3>
+<h3 id="_summary_59">59.1. SUMMARY</h3>
 </div>
 <div class="sect2">
-<h3 id="_usage_58">58.2. USAGE</h3>
+<h3 id="_usage_59">59.2. USAGE</h3>
 <div class="paragraph"><p>tcp listen portnum</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_59">58.3. NOTES</h3>
+<h3 id="_notes_60">59.3. NOTES</h3>
 <div class="paragraph"><p>Requires BOLT <em>TCP</em> support.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_26">58.4. OPTIONS</h3>
+<h3 id="_options_27">59.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4585,7 +4709,7 @@ console for <em>A</em>.</p></div>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_54">58.5. EXAMPLE</h3>
+<h3 id="_example_55">59.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; ifconfig eth0 -auto
@@ -4629,23 +4753,23 @@ BOLT&gt;</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tcp_connect">59.  tcp connect</h2>
+<h2 id="_tcp_connect">60.  tcp connect</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>tcp connect &#8230;&#8230;. TCP connection test.</p></div>
 <div class="sect2">
-<h3 id="_summary_59">59.1. SUMMARY</h3>
+<h3 id="_summary_60">60.1. SUMMARY</h3>
 <div class="paragraph"><p>TCP connection test.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_59">59.2. USAGE</h3>
+<h3 id="_usage_60">60.2. USAGE</h3>
 <div class="paragraph"><p>tcp connect hostname [portnum]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_60">59.3. NOTES</h3>
+<h3 id="_notes_61">60.3. NOTES</h3>
 <div class="paragraph"><p>Requires BOLT <em>TCP</em> support.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_27">59.4. OPTIONS</h3>
+<h3 id="_options_28">60.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4670,7 +4794,7 @@ BOLT&gt;</code></pre>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_55">59.5. EXAMPLE</h3>
+<h3 id="_example_56">60.5. EXAMPLE</h3>
 <div class="paragraph"><p>Two machines running BOLT and connected via an Ethernet switch:</p></div>
 <div class="listingblock">
 <div class="title">A</div>
@@ -4722,25 +4846,25 @@ Could not connect to remote host
 </div>
 </div>
 <div class="sect1">
-<h2 id="_testenv">60.  testenv</h2>
+<h2 id="_testenv">61.  testenv</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>testenv &#8230;&#8230;&#8230;.. Tests environment variable.</p></div>
 <div class="sect2">
-<h3 id="_summary_60">60.1. SUMMARY</h3>
+<h3 id="_summary_61">61.1. SUMMARY</h3>
 <div class="paragraph"><p>Tests environment variable for various conditions. The default is to
 test the existence of the variable.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_60">60.2. USAGE</h3>
+<h3 id="_usage_61">61.2. USAGE</h3>
 <div class="paragraph"><p>testenv [-n] [-lt][-eq][-gt] varname [value]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_61">60.3. NOTES</h3>
+<h3 id="_notes_62">61.3. NOTES</h3>
 <div class="paragraph"><p>Tests environment variable for various conditions. The default is to
 test the existence of the variable.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_28">60.4. OPTIONS</h3>
+<h3 id="_options_29">61.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4765,7 +4889,7 @@ test the existence of the variable.</p></div>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_56">60.5. EXAMPLE</h3>
+<h3 id="_example_57">61.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; setenv VAR 10
@@ -4789,23 +4913,23 @@ BOLT&gt; testenv VAR -gt 10
 </div>
 </div>
 <div class="sect1">
-<h2 id="_time">61.  time</h2>
+<h2 id="_time">62.  time</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>time &#8230;&#8230;&#8230;&#8230;.. Timing utility.</p></div>
 <div class="sect2">
-<h3 id="_summary_61">61.1. SUMMARY</h3>
+<h3 id="_summary_62">62.1. SUMMARY</h3>
 <div class="paragraph"><p>Measures and prints time taken for executing a bolt command in ms and us.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_61">61.2. USAGE</h3>
+<h3 id="_usage_62">62.2. USAGE</h3>
 <div class="paragraph"><p>time COMMAND</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_29">61.3. OPTIONS</h3>
+<h3 id="_options_30">62.3. OPTIONS</h3>
 <div class="paragraph"><p>none</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_57">61.4. EXAMPLE</h3>
+<h3 id="_example_58">62.4. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; time "load 192.168.0.42:vmlinuz-initrd-7439b0"
@@ -4826,24 +4950,24 @@ Command executed in : 5741 ms (5741738 us)
 </div>
 </div>
 <div class="sect1">
-<h2 id="_ttcp">62.  ttcp</h2>
+<h2 id="_ttcp">63.  ttcp</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>TCP test command.</p></div>
 <div class="sect2">
-<h3 id="_summary_62">62.1. SUMMARY</h3>
+<h3 id="_summary_63">63.1. SUMMARY</h3>
 <div class="paragraph"><p>TCP test command.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_62">62.2. USAGE</h3>
+<h3 id="_usage_63">63.2. USAGE</h3>
 <div class="paragraph"><p>ttcp -t [-options] host</p></div>
 <div class="paragraph"><p>ttcp -r [-options]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_62">62.3. NOTES</h3>
+<h3 id="_notes_63">63.3. NOTES</h3>
 <div class="paragraph"><p>Requires BOLT <em>TCP</em> support.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_30">62.4. OPTIONS</h3>
+<h3 id="_options_31">63.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4878,7 +5002,7 @@ Command executed in : 5741 ms (5741738 us)
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_58">62.5. EXAMPLE</h3>
+<h3 id="_example_59">63.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; ifconfig eth0 -auto
@@ -4909,19 +5033,19 @@ http://www.gnu.org/software/src-highlite -->
 </div>
 </div>
 <div class="sect1">
-<h2 id="_u">63.  u</h2>
+<h2 id="_u">64.  u</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>u &#8230;&#8230;&#8230;&#8230;&#8230;.. Disassemble instructions.</p></div>
 <div class="sect2">
-<h3 id="_summary_63">63.1. SUMMARY</h3>
+<h3 id="_summary_64">64.1. SUMMARY</h3>
 <div class="paragraph"><p>Disassemble instructions.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_63">63.2. USAGE</h3>
+<h3 id="_usage_64">64.2. USAGE</h3>
 <div class="paragraph"><p>u [addr [length]]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_63">63.3. NOTES</h3>
+<h3 id="_notes_64">64.3. NOTES</h3>
 <div class="paragraph"><p>This command disassembles instructions at the specified address.
 BOLT will display standard register names and symbolic names for
 certain CP0 registers.  The <em>u</em> command remembers the last address
@@ -4931,7 +5055,7 @@ to continue a previous request.
 flush &amp; invalidate is performed if the -p' option is used.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_31">63.4. OPTIONS</h3>
+<h3 id="_options_32">64.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -4946,7 +5070,7 @@ flush &amp; invalidate is performed if the -p' option is used.</p></div>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_59">63.5. EXAMPLE</h3>
+<h3 id="_example_60">64.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; u 0x800 4
@@ -4961,11 +5085,11 @@ flush &amp; invalidate is performed if the -p' option is used.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_uncache">64.  uncache</h2>
+<h2 id="_uncache">65.  uncache</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>uncache &#8230;&#8230;&#8230;.. Make all ddr memory access via the mmu as uncached</p></div>
 <div class="sect2">
-<h3 id="_summary_64">64.1. SUMMARY</h3>
+<h3 id="_summary_65">65.1. SUMMARY</h3>
 <div class="literalblock">
 <div class="content">
 <pre><code> Mark (all ddr) memory access via the mmu as uncached. Various effects depending
@@ -4973,11 +5097,11 @@ upon the architecture.</code></pre>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_64">64.2. USAGE</h3>
+<h3 id="_usage_65">65.2. USAGE</h3>
 <div class="paragraph"><p>uncache [options]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_64">64.3. NOTES</h3>
+<h3 id="_notes_65">65.3. NOTES</h3>
 <div class="paragraph"><p>This command is targeted at debugging memory issues. For ARM, going between
 the ddr range (MMU_MEMTOP) to the start of EBI &amp; RDB (flash &amp; register spaces)
 may result in BOLT hanging (a crash) if the mmu is on, as the pages for this
@@ -4991,7 +5115,7 @@ board configuration are marked as uncached in the mmu (if the mmu is on.)</p></d
 <div class="paragraph"><p>This command has no effect if BOLT is built CFG_UNCACHED.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_32">64.4. OPTIONS</h3>
+<h3 id="_options_33">65.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -5006,7 +5130,7 @@ board configuration are marked as uncached in the mmu (if the mmu is on.)</p></d
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_60">64.5. EXAMPLE</h3>
+<h3 id="_example_61">65.5. EXAMPLE</h3>
 <div class="literalblock">
 <div class="content">
 <pre><code> In these examples the board has two 1Gb ddrs starting at
@@ -5046,24 +5170,24 @@ disable mmu...ok
 </div>
 </div>
 <div class="sect1">
-<h2 id="_unsetenv">65.  unsetenv</h2>
+<h2 id="_unsetenv">66.  unsetenv</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>unsetenv &#8230;&#8230;&#8230;. Delete an environment variable.</p></div>
 <div class="sect2">
-<h3 id="_summary_65">65.1. SUMMARY</h3>
+<h3 id="_summary_66">66.1. SUMMARY</h3>
 <div class="paragraph"><p>Delete an environment variable.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_65">65.2. USAGE</h3>
+<h3 id="_usage_66">66.2. USAGE</h3>
 <div class="paragraph"><p>unsetenv varname</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_65">65.3. NOTES</h3>
+<h3 id="_notes_66">66.3. NOTES</h3>
 <div class="paragraph"><p>This command deletes an environment variable from memory and also
 removes it from the NVRAM device (if present).</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_61">65.4. EXAMPLE</h3>
+<h3 id="_example_62">66.4. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; unsetenv ETH_DBG
@@ -5074,19 +5198,19 @@ removes it from the NVRAM device (if present).</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_usb_init">66.  usb init</h2>
+<h2 id="_usb_init">67.  usb init</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>usb init &#8230;&#8230;&#8230;. Initialize the USB controller.</p></div>
 <div class="sect2">
-<h3 id="_summary_66">66.1. SUMMARY</h3>
+<h3 id="_summary_67">67.1. SUMMARY</h3>
 <div class="paragraph"><p>Initialize the USB controller.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_66">66.2. USAGE</h3>
+<h3 id="_usage_67">67.2. USAGE</h3>
 <div class="paragraph"><p>usb init</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_66">66.3. NOTES</h3>
+<h3 id="_notes_67">67.3. NOTES</h3>
 <div class="paragraph"><p>The environment variable USBMODE may be used to set the USB startup mode
 prior to the USB driver starting:</p></div>
 <div class="ulist"><ul>
@@ -5114,7 +5238,7 @@ time then <em>setenv -p USBMODE &lt;mode&gt;;reboot</em> will ensure that USBMOD
 is respected from inital bootup.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_33">66.4. OPTIONS</h3>
+<h3 id="_options_34">67.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -5139,7 +5263,7 @@ is respected from inital bootup.</p></div>
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_62">66.5. EXAMPLE</h3>
+<h3 id="_example_63">67.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; usb init
@@ -5163,28 +5287,28 @@ BOLT&gt;</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_usb_exit">67.  usb exit</h2>
+<h2 id="_usb_exit">68.  usb exit</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>usb exit &#8230;&#8230;&#8230;. Stop &amp; reset the USB controller.</p></div>
 <div class="sect2">
-<h3 id="_summary_67">67.1. SUMMARY</h3>
+<h3 id="_summary_68">68.1. SUMMARY</h3>
 <div class="paragraph"><p>Stop &amp; reset the USB controller.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_67">67.2. USAGE</h3>
+<h3 id="_usage_68">68.2. USAGE</h3>
 <div class="paragraph"><p>usb exit</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_67">67.3. NOTES</h3>
+<h3 id="_notes_68">68.3. NOTES</h3>
 <div class="paragraph"><p>This is paired with <em>usb init</em> so the USB driver can be started and
 stopped within BOLT.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_34">67.4. OPTIONS</h3>
+<h3 id="_options_35">68.4. OPTIONS</h3>
 <div class="paragraph"><p>None.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_example_63">67.5. EXAMPLE</h3>
+<h3 id="_example_64">68.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; usb exit
@@ -5200,25 +5324,25 @@ BOLT&gt;</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_waitusb">68.  waitusb</h2>
+<h2 id="_waitusb">69.  waitusb</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>waitusb &#8230;&#8230;&#8230;.. Wait for USB device to be installed.</p></div>
 <div class="sect2">
-<h3 id="_summary_68">68.1. SUMMARY</h3>
+<h3 id="_summary_69">69.1. SUMMARY</h3>
 <div class="paragraph"><p>Wait for USB device to be installed.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usage_68">68.2. USAGE</h3>
+<h3 id="_usage_69">69.2. USAGE</h3>
 <div class="paragraph"><p>waitusb [-t=timeout] [-d=device_name]</p></div>
 </div>
 <div class="sect2">
-<h3 id="_notes_68">68.3. NOTES</h3>
+<h3 id="_notes_69">69.3. NOTES</h3>
 <div class="paragraph"><p>This command waits for a USB device to be recognized and installed.
 The wait will time out after the specified time in seconds
 (the default is 10 seconds).</p></div>
 </div>
 <div class="sect2">
-<h3 id="_options_35">68.4. OPTIONS</h3>
+<h3 id="_options_36">69.4. OPTIONS</h3>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -5233,7 +5357,7 @@ The wait will time out after the specified time in seconds
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_example_64">68.5. EXAMPLE</h3>
+<h3 id="_example_65">69.5. EXAMPLE</h3>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; waitusb -t=20 -d='USB Disk'
@@ -5248,7 +5372,7 @@ BOLT&gt;</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_appendix_copyright_info">69. Appendix: Copyright Info</h2>
+<h2 id="_appendix_copyright_info">70. Appendix: Copyright Info</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
 All Rights Reserved.
@@ -5259,7 +5383,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-04-07 11:39:42 PDT
+Last updated 2017-06-01 01:55:06 PDT
 </div>
 </div>
 </body>

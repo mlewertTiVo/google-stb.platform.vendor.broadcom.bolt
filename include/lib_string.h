@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -31,8 +31,6 @@ void *lib_memchr(const void *s, int c, size_t n);
 void *lib_memset(void *dest, int c, size_t cnt);
 char *lib_strdup(const char *str);
 void lib_strupr(char *s);
-char lib_toupper(char c);
-char lib_tolower(char c);
 char *lib_strcat(char *dest, const char *src);
 char *lib_gettoken(char **str);
 char *lib_strnchr(const char *dest, int c, size_t cnt);
@@ -75,8 +73,6 @@ static inline void *lib_xtop(const char *s)
 #define bcopy(s, d, c) lib_memcpy(d, s, c)
 #define bzero(d, c) lib_memset(d, 0, c)
 #define strupr(s) lib_strupr(s)
-#define toupper(c) lib_toupper(c)
-#define tolower(c) lib_tolower(c)
 #define strcat(d, s) lib_strcat(d, s)
 #define gettoken(s) lib_gettoken(s)
 #define strnchr(d,ch,cnt) lib_strnchr(d,ch,cnt)

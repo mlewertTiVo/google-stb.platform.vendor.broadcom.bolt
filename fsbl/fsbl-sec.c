@@ -29,6 +29,8 @@
 
 #ifndef CFG_EMULATION
 
+static uint32_t sec_trace_val;
+
 uint32_t sec_get_aon_boot_status(int reg_idx_shift)
 {
 	uint32_t status;
@@ -329,6 +331,10 @@ void sec_bfw_load(bool warm_boot)
 	uint32_t aon_reg;
 #endif
 	g_info.image_type = IMAGE_TYPE_BFW;
+
+	/* write back trace register with the saved value */
+	sec_write_back_trace();
+
 	if (select_image(&g_info))
 		sys_die(DIE_NO_BFW_IMAGE, "no BFW image");
 
@@ -527,6 +533,15 @@ void sec_set_errcode(uint16_t die_code)
 	REG(BCHP_SUN_TOP_CTRL_UNCLEARED_SCRATCH) = value;
 }
 
+void sec_save_trace(void)
+{
+	sec_trace_val = BDEV_RD(BCHP_SUN_TOP_CTRL_UNCLEARED_SCRATCH);
+}
+
+void sec_write_back_trace(void)
+{
+	BDEV_WR(BCHP_SUN_TOP_CTRL_UNCLEARED_SCRATCH, sec_trace_val);
+}
 
 /* ------------------------------------------------------------------------- */
 /* Anti-glitch

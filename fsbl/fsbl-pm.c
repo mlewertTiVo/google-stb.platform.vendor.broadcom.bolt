@@ -19,6 +19,8 @@
 #include "bchp_hif_top_ctrl.h"
 #include "psci.h"
 
+#define MCPB_DW2_LAST_DESC		(1 << 0)
+
 /* we're assuming the PA:VA mapping is a 1:1 identity function in FSBL */
 static inline dma_addr_t va_to_pa(void *p)
 {
@@ -128,6 +130,30 @@ static int s3_compare_hash(uint32_t *orig, uint32_t *new)
 	return 0;
 }
 
+static bool entry_in_mcpb(struct mcpb_dma_desc *head, unsigned int max_descs,
+			uintptr_t entry_addr)
+{
+	struct mcpb_dma_desc *curr = head;
+	uintptr_t dma_start_addr;
+	unsigned int count = 0;
+
+	if (!curr)
+		return false;
+
+	for (count = 0; count < max_descs; count++, curr++) {
+		dma_start_addr = curr->buf_lo;
+		dma_start_addr |= shift_left_32((uintptr_t)curr->buf_hi);
+		if ((entry_addr >= dma_start_addr) &&
+			(entry_addr <= (dma_start_addr + curr->size)))
+			return true;
+
+		if (curr->next_offs == MCPB_DW2_LAST_DESC)
+			break;
+	}
+
+	return false;
+}
+
 static int verify_s3_params(struct brcmstb_s3_params *params, uint32_t flags)
 {
 	struct mcpb_dma_desc *desc;
@@ -200,7 +226,9 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 	uint32_t hash[BRCMSTB_HASH_LEN / 4];
 	volatile int status;
 	size_t len;
-	int maxdescs = IMAGE_DESCRIPTORS_BUFSIZE / sizeof(struct mcpb_dma_desc);
+	unsigned int maxdescs = IMAGE_DESCRIPTORS_BUFSIZE /
+					sizeof(struct mcpb_dma_desc);
+	bool entry_found = false;
 
 #ifndef SECURE_BOOT
 	if (!fsbl_pm_mem_verify(flags)) {
@@ -213,6 +241,16 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 		desc2 = desc1 + params->desc_offset_2;
 	else
 		desc2 = 0;
+
+	entry_found = entry_in_mcpb((struct mcpb_dma_desc *)pa_to_va(desc1),
+					maxdescs, params->reentry);
+	entry_found |= entry_in_mcpb((struct mcpb_dma_desc *)pa_to_va(desc2),
+					 maxdescs, params->reentry);
+
+	if (!entry_found) {
+		puts("PM: re-entry not covered by hash");
+		return -1;
+	}
 
 	len = mcpb_get_dma_chain_len(
 		(struct mcpb_dma_desc *)pa_to_va(desc1), maxdescs);

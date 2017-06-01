@@ -1,36 +1,30 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_queue.h"
-#include "lib_malloc.h"
-#include "lib_printf.h"
-
-#include "timer.h"
-
-#include "error.h"
-#include "console.h"
-
-#include "ui_command.h"
-#include "bolt.h"
-
-#include "iocb.h"
-#include "devfuncs.h"
-
-#include "config.h"
+#include <bolt.h>
+#include <config.h>
+#include <console.h>
+#include <devfuncs.h>
+#include <error.h>
+#include <iocb.h>
+#include <lib_ctype.h>
+#include <lib_malloc.h>
+#include <lib_printf.h>
+#include <lib_queue.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <ui_command.h>
+#include <timer.h>
 
 #if CFG_TCP
-#include "net_ebuf.h"
-#include "net_api.h"
+#include <net_api.h>
+#include <net_ebuf.h>
 #endif
 
 /*  *********************************************************************
@@ -50,7 +44,6 @@ static int ui_cmd_connect(ui_cmdline_t * cmd, int argc, char *argv[]);
 static int ui_cmd_listen(ui_cmdline_t * cmd, int argc, char *argv[]);
 static int ui_cmd_tcpconstest(ui_cmdline_t * cmd, int argc, char *argv[]);
 static int ui_cmd_ttcp(ui_cmdline_t * cmd, int argc, char *argv[]);
-#define isdigit(d) (((d) >= '0') && ((d) <= '9'))
 
 /*  *********************************************************************
     *  ui_init_tcpcmds()

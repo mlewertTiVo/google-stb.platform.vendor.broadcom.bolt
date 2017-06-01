@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,6 +9,9 @@
 
 #ifndef __BOLT_H__
 #define __BOLT_H__
+
+#include <ssbl-common.h>
+#include <stdint.h>
 
 /*  *********************************************************************
     *  Version number
@@ -43,7 +46,6 @@ extern const char buildtag[];
     ********************************************************************* */
 
 /* Please keep these in alphabetical order */
-const char *bolt_errortext(int err);
 void board_device_init(void);
 void board_device_reset(void);
 void board_final_exit(unsigned long *start_address);
@@ -52,17 +54,22 @@ void board_init_post_splash(void);
 void bolt_command_loop(void);
 void bolt_config_info(int detail);
 int  bolt_docommands(const char *buf);
+const char *bolt_errortext(int err);
 void bolt_free_envdevname(void);
 void bolt_leds(unsigned int val);
 void bolt_main(int, int);
+void bolt_psci_init(void);
 void bolt_restart(void);
+int64_t bolt_reserve_memory(unsigned int amount, uint64_t alignment,
+	uint32_t options, const char *tag);
+int bolt_reserve_memory_getlist(struct memory_area *list);
+void bolt_reserve_memory_getstatus(void);
 int  bolt_set_console(char *);
 int  bolt_set_envdevice(char *);
 void bolt_set_envdevname(char *name);
 int  bolt_set_macdevice(char *);
 void bolt_warmstart(unsigned long long);
 void console_init(void);
-void bolt_psci_init(void);
 
 /*  _start() are 'c' wrappers for assembly code _launch()
  * functions.

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,25 +7,14 @@
  *
  ***************************************************************************/
 
-#include "lib_types.h"
-#include "lib_printf.h"
-#include "lib_string.h"
+#include <bolt.h>
+#include <devfuncs.h>
+#include <error.h>
+#include <lib_printf.h>
+#include <lib_types.h>
+#include <macaddr.h>
 
-#include "iocb.h"
-#include "device.h"
-#include "bolt.h"
-
-#include "env_subr.h"
-#include "devfuncs.h"
-
-
-#define FLASH_LENGTH   0x8A
-#define FIRSTMAC_ADDR   0xC
-#define MACADDR_STRIDE  0x8
-
-
-/* don't presume U8 alignment WRT U64, so use these macros:
-*/
+/* don't presume U8 alignment WRT U64, so use these macros: */
 #ifdef __LITTLE_ENDIAN
 
 #define MACtoU64(m) \
@@ -73,15 +60,16 @@
 void macaddr_flash_get(int addrnum, char *macstr, int flashprog_off)
 {
 	int sfd;
-	uint8_t macaddr[256];
-	int macoffset = FIRSTMAC_ADDR + addrnum * MACADDR_STRIDE;
+	unsigned char macaddr[MACADDR_FLASHBUFSIZE];
+	int macoffset = sizeof(struct macaddr_header) +
+		addrnum * MACADDR_STRIDE;
 
 	/* retreive mac address from flash */
-	sfd = bolt_open("flash0.macadr");
+	sfd = bolt_open(MACADDR_FLASHDEVICE);
 	if (sfd < 0)
-		xprintf("cannot open flash0.macadr\n");
+		xprintf("cannot open %s\n", MACADDR_FLASHDEVICE);
 
-	if (bolt_read(sfd, (unsigned char *)macaddr, 256) < 0)
+	if (bolt_read(sfd, macaddr, MACADDR_FLASHBUFSIZE) < 0)
 		xprintf("!!!cannot read mac address\n");
 
 	bolt_close(sfd);
@@ -114,41 +102,37 @@ void macaddr_decrement(uint8_t *macaddr, int decrement)
 
 int macaddr_flash_verify(int flashprog_off)
 {
-	uint8_t fcksum;
-	uint8_t chksum;
-	uint16_t *src;
-	int retval = 0;
+	unsigned char fcksum;
+	unsigned char chksum;
+	int retval;
 	int sfd;
-	uint8_t macaddr[256];
+	unsigned int i;
+	unsigned char *p, macaddr[MACADDR_FLASHBUFSIZE];
 
 	/* retreive mac address from flash */
-	sfd = bolt_open("flash0.macadr");
+	sfd = bolt_open(MACADDR_FLASHDEVICE);
 	if (sfd < 0) {
-		err_msg("cannot open flash0.macadr");
-		return -1;
+		err_msg("cannot open %s\n", MACADDR_FLASHDEVICE);
+		return BOLT_ERR_DEVOPEN;
 	}
 
-	if (bolt_read(sfd, (unsigned char *)macaddr, 256) < 0) {
-		err_msg("cannot read mac address");
-		return -1;
-	}
+	retval = bolt_read(sfd, macaddr, MACADDR_FLASHBUFSIZE);
 	bolt_close(sfd);
+	if (retval < 0) {
+		err_msg("cannot read mac address");
+		return retval;
+	}
 
 	/* Check checksum */
 	chksum = 0;
-	for (src = (uint16_t *) (macaddr);
-	     src <= (uint16_t *) (macaddr + FLASH_LENGTH);) {
-		chksum += ((*src) & 0xFF00) >> 8;
-		chksum += (*src) & 0x00FF;
-		src++;
-	}
+	for (i = 0, p = macaddr; i < (MACADDR_FLASHBUFSIZE - 2); ++i, ++p)
+		chksum += *p;
 
-	fcksum = (*src) & 0x00FF;
-
-	if (chksum != fcksum) {
+	fcksum = *p++; /* the last two bytes should be identical */
+	if (fcksum != *p || chksum != fcksum) {
 		err_msg("MAC ADDRESS CHECKSUM FAILED");
-		retval = -1;
+		return BOLT_ERR;
 	}
 
-	return retval;
+	return BOLT_OK;
 }

@@ -20,8 +20,11 @@
 #ifndef BCHP_PMAP_PRIV_H__
 #define BCHP_PMAP_PRIV_H__
 
+#include <bchp_clkgen.h>
+
 #define AVS_RDB_DATE 20161101 /* %y%m%d */
 #define AVS_RDB_TIME 1430 /* %h%m */
+#define AVS_DOC_VER 4
 
 struct pmapParameters {
 	uint16_t ndiv_int;
@@ -33,25 +36,89 @@ struct pmapParameters {
 	uint8_t mdiv_p4;
 	unsigned int num_domains;
 	char *desc;
-} pmapParameters;
+};
 
 #ifndef AVS_ONCE
 #define AVS_ONCE
 static const struct pmapParameters pmapTable[] = {
 	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
 	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 2, .desc = "PMap0"},
-	{ .ndiv_int = 222, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 2, .desc = "PMap1"},
-	{ .ndiv_int = 167, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 8, .num_domains = 2, .desc = "PMap2"},
-	{ .ndiv_int = 206, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 2, .desc = "PMap3"},
 	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 1, .desc = "PMap4"},
-	{ .ndiv_int = 222, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 10, .num_domains = 1, .desc = "PMap5"},
+	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 1, .desc = "PMap1"},
+	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
+	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 2, .desc = "PMap2"},
 };
 
 static const int PMAP_MAX = sizeof(pmapTable)/sizeof(pmapTable[0]);
+
+struct pmapReg {
+	uint32_t reg;
+	uint32_t mask;
+	uint8_t shift;
+};
+
+static const struct pmapReg pmapMuxes[] = {
+	{ BCHP_CLKGEN_ITU656_0_MUX_SELECT,
+	BCHP_CLKGEN_ITU656_0_MUX_SELECT_VEC_ITU656_0_CLOCK_MASK,
+	BCHP_CLKGEN_ITU656_0_MUX_SELECT_VEC_ITU656_0_CLOCK_SHIFT
+	},
+	{ BCHP_CLKGEN_RAAGA_DSP_TOP_0_INST_RAAGA0,
+	BCHP_CLKGEN_RAAGA_DSP_TOP_0_INST_RAAGA0_DSP_CLOCK_SELECT_RAAGA0_MASK,
+	BCHP_CLKGEN_RAAGA_DSP_TOP_0_INST_RAAGA0_DSP_CLOCK_SELECT_RAAGA0_SHIFT
+	},
+	{ BCHP_CLKGEN_SMARTCARD_MUX_SELECT,
+	BCHP_CLKGEN_SMARTCARD_MUX_SELECT_SC0_CLOCK_MASK,
+	BCHP_CLKGEN_SMARTCARD_MUX_SELECT_SC0_CLOCK_SHIFT
+	},
+	{ BCHP_CLKGEN_SMARTCARD_MUX_SELECT,
+	BCHP_CLKGEN_SMARTCARD_MUX_SELECT_SC1_CLOCK_MASK,
+	BCHP_CLKGEN_SMARTCARD_MUX_SELECT_SC1_CLOCK_SHIFT
+	}
+};
+
+#define PMAP_MAX_MUXES (sizeof(pmapMuxes)/sizeof(pmapMuxes[0]))
+
+static const uint8_t pmapMuxValues[][PMAP_MAX_MUXES] = {
+	{0, 0, 0, 0},
+	{0, 0, 0, 0},
+	{0, 0, 0, 0}
+};
+
+static const struct pmapReg pmapDividers[] = {
+	{ BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_0,
+	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_0_MDIV_CH0_MASK,
+	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_0_MDIV_CH0_SHIFT
+	},
+	{ BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_1,
+	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_1_MDIV_CH1_MASK,
+	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_1_MDIV_CH1_SHIFT
+	},
+	{ BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_2,
+	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_2_MDIV_CH2_MASK,
+	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_2_MDIV_CH2_SHIFT
+	},
+	{ BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_5,
+	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_MASK,
+	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_SHIFT
+	},
+	{ BCHP_CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_5,
+	BCHP_CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_MASK,
+	BCHP_CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_SHIFT
+	},
+	{ BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4,
+	BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4_MDIV_CH4_MASK,
+	BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4_MDIV_CH4_SHIFT
+	}
+};
+
+#define PMAP_MAX_DIVIDERS \
+	(sizeof(pmapDividers)/sizeof(pmapDividers[0]))
+
+static const uint8_t pmapDividerValues[][PMAP_MAX_DIVIDERS] = {
+	{8, 6, 7, 6, 3, 7},
+	{8, 6, 7, 6, 3, 7},
+	{8, 6, 7, 6, 3, 7},
+};
+
 #endif
 #endif

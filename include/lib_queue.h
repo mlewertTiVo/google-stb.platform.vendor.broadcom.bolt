@@ -1,12 +1,10 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
 #ifndef __LIB_QUEUE_H__
@@ -39,6 +37,8 @@ void q_dequeue(queue_t *);
 
 queue_t *q_deqnext(queue_t *qb);
 queue_t *q_deqprev(queue_t *qb);
+void q_enqnext(queue_t *qe, queue_t *item);
+void q_enqprev(queue_t *qe, queue_t *item);
 
 int q_map(queue_t * qb, int (*func) (queue_t *, unsigned int, unsigned int),
 	  unsigned int a, unsigned int b);

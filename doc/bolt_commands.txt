@@ -2503,6 +2503,94 @@ EXAMPLE
 
 ------------------------------------------------------------------------- {qwe}
 
+ rmem
+-------
+
+SUMMARY
+~~~~~~~
+Reserves a memory area so that Linux does not override the area
+
+USAGE
+~~~~~
+rmem <amount> [-4gb] [-abs] [-align=<int>] [-dt=<n|m|r>] [-memc=<int>] [-nomap] [-reuse] [-tag=<string>]
+
+
+OPTIONS
+~~~~~~~
+
+* amount .......... amount of memory to be reserved in bytes
+* -4gb ............ okay to exceed the 4GB boundary
+* -abs ............ the alignment is absolute offset
+* -align=* ........ specifies the alignment in bytes, default 1MB
+* -dt=* ........... none, /Memreserve or /Reserved-memory, default N
+* -memc=* ......... bit vector of preferred MEMC, default MEMC#0
+* -nomap .......... add no-map if /reserved-memory
+* -reuse .......... add reusable if /reserved-memory
+* -tag=* .......... tag that will be associated with reservation
+
+
+NOTES
+~~~~~
+The 'rmem' command provides an online (dynamic) interface to
+bolt_reserve_memory() so that the interaction among BOLT, Linux and
+associated component can be tested without going through building
+BOLT multiple times.
+
+Executing 'rmem' without 'amount', reserved and available memory areas
+are displayed.
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> rmem 262144 -align=4096 -tag=256KB -dt=m -4gb
+Reserved at 13ffc0000 (5368446976)
+*** command status = 0
+BOLT> rmem
+Reserved memory areas in bytes:
+  0 003ff00000 00100000 00000401 "SRR"
+  1 007e000000 02000000 00000002 "reserved-tzos"
+  0 003fb00000 00400000 00000001
+  1 007dc00000 00400000 00000002
+  0 013ffc0000 00040000 80000201 "256KB"
+Available memory areas in bytes:
+  0 0000000000 3fb00000
+  1 0040000000 3dc00000
+  0 0100000000 3ffc0000
+*** command status = 0
+BOLT> dt bolt
+DTB @ 0x7628000
+Command not done: dt modification is off, use 'dt on' to re-enable
+*** command status = -1
+BOLT> dt show reserved-memory
+DTB @ 0x7628000
+/dts-v1/;
+
+/memreserve/ 0x3fc00000 0x300000;
+/memreserve/ 0x7dc00000 0x400000;
+
+/       reserved-memory {
+                #address-cells = <0x2>;
+                #size-cells = <0x2>;
+                ranges;
+
+                reserved-tzos@7e000000 {
+                        reg = <0x0 0x7e000000 0x0 0x2000000>;
+                };
+
+                SRR@3ff00000 {
+                        reserved-names = "SRR";
+                        reg = <0x0 0x3ff00000 0x0 0x100000>;
+                };
+
+                reserved-nodma@00000000 {
+                        reg = <0x0 0x0 0x0 0x1000>;
+                };
+        };
+*** command status = 0
+----
+
+------------------------------------------------------------------------- {qwe}
+
  rpmb counter
 -------------
 rpmb counter ...... Read the RPMB Write Counter.

@@ -26,6 +26,7 @@
 #define DIE_BFW(d)	(d | 0x0800)
 #define DIE_MEMSYS(d)	(d | 0x0900)
 #define DIE_PM(d)	(d | 0x0A00)
+#define DIE_KERNEL(d)	(d | 0x0B00)
 
 
 /* Fail codes */
@@ -109,5 +110,13 @@
 /* PM */
 #define	DIE_PM_RET_FROM_S3			DIE_PM(1)
 #define	DIE_PM_NO_S3_SUPPORT			DIE_PM(2)
+
+/* KERNEL */
+#define	DIE_KERNEL_DEFINE_REGION		DIE_KERNEL(1)
+#define	DIE_KERNEL_ENABLE_REGION		DIE_KERNEL(2)
+#define	DIE_KERNEL_VERIFY_REGION		DIE_KERNEL(3)
+#define	DIE_KERNEL_DISABLE_REGION		DIE_KERNEL(4)
+#define	DIE_KERNEL_KEY_1			DIE_KERNEL(5)
+#define	DIE_KERNEL_DECRYPT			DIE_KERNEL(6)
 
 #endif /* __FSBL_DIE_H__ */

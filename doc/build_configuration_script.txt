@@ -332,6 +332,7 @@ Commands that enact a configuration at runtime.
     sdio
     usb
     gpio_key
+    gpio_led
     bt_rfkill_gpio
 ----
 
@@ -1852,13 +1853,23 @@ by adding the property "no-1-8-v".
  vreg
 ~~~~~
 Usage: vreg -name <string> -gpio <gpio> -pin <int> -active hi|lo \
-		-udelay <int>  -uvolts <int>
+		[-udelay <int>]  [-uvolts <int>] [-on_at_boot <int>]
 
 This per-board command was created to support the pcie turning
 off/on power supplies to its devices during boot, suspend, and
 resume.  If you use this command, you will reference the name
 of the voltage regulator with -vreg when using the per-board
 pcie command.
+
+* -name <string> -- name of the regulator
+* -gpio <gpio> -- type of gpio, either 'upg_gio' or 'upg_gio_aon'
+* -pin <int> -- pin number of gpio
+* -active <hi|lo> -- which level enables the gpio
+* -udelay <int> -- (opt) delay in usec between gpio being enabled and
+   the enable call returning.
+* -uvolts <int> -- (opt) voltage amount, doesn't affect anything.
+* -on_at_boot <int> -- (opt) indicates whether the regulator should come
+   on at boot.  Off by default.
 
 Examples:
 
@@ -1986,6 +1997,27 @@ Examples:
 ----
   gpio_key -name button_A -gpio upg_gio -pin 93 -code 218
   gpio_key -name button_B -gpio upg_gio -pin 90 -code 529
+----
+
+ gpio_led
+~~~~~~~~~
+
+Usage: gpio_led -name <NAME> -gpio <NAME_OF_GPIO_CONTROLLER> -pin <GPIO_PIN> -pol <POLARITY>
+
+Note: Creates device node for the gpio led driver. You can create multiple gpio leds.
+
+See also: dt autogen gpio
+
+* <NAME> is not used in kernel driver, it's better to give a descriptive name based on the usage of gpio pin.
+* <NAME_OF_GPIO_CONTROLLER> specifies the gpio controller that is connected to the button, i.e. 'upg_gio' or 'upg_gio_aon'.
+* <GPIO_PIN> specified the pin number of the gpio on the gpio controller used for the button.
+* <POL> specifies the default polarity of the gpio pin (1 = HIGH and 0 = LOW).
+
+Examples:
+
+----
+  gpio_led -name led_A -gpio upg_gio_aon -pin 20 -pol 0
+  gpio_led -name led_B -gpio upg_gio -pin 36 -pol 0
 ----
 
  bt_rfkill_gpio

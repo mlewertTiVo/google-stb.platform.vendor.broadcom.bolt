@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,14 +7,14 @@
  *
  ***************************************************************************/
 
-#include "board_init.h"
-#include "board.h"
-#include "bsp_config.h"
-#include "ssbl-common.h"
-#include "flash.h"
-#include "splash-api.h"
-#include "bchp_common.h"
-#include "bchp_ebi.h"
+#include <bchp_common.h>
+#include <bchp_ebi.h>
+#include <board.h>
+#include <board_init.h>
+#include <flash.h>
+#include <macaddr.h>
+#include <splash-api.h>
+#include <ssbl-common.h>
 
 static void turnoff_xor_cs0()
 {
@@ -163,13 +161,13 @@ void board_init_flash(void)
 	/* Set macadr/nvram
 	*/
 	bolt_set_envdevice("flash0.nvram");
-	bolt_set_macdevice("flash0.macadr");
+	bolt_set_macdevice(MACADDR_FLASHDEVICE);
 
 	/* retreive mac address from flash
 	*/
-	sfd = bolt_open("flash0.macadr");
+	sfd = bolt_open(MACADDR_FLASHDEVICE);
 	if (sfd < 0)
-		xprintf("cannot open flash0.macadr\n");
+		xprintf("cannot open %s\n", MACADDR_FLASHDEVICE);
 
 	if (bolt_ioctl(sfd, IOCTL_FLASH_GETPARTINFO,
 		      &flashinfo, sizeof(flashinfo), NULL, 0) != 0) {

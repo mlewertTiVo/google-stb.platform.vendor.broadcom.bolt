@@ -23,6 +23,7 @@ ZLIB_VER		:= 1.2.8
 SCRIPT_ENG		:= scripts/config.pl
 SCRIPT_MODULES		:= scripts/BcmDt/Board.pm \
 			   scripts/BcmDt/Devices.pm \
+			   scripts/BcmDt/PcieRanges.pm \
 			   scripts/BcmSdio.pm \
 			   scripts/BcmUtils.pm \
 			   scripts/DevTree.pm
@@ -113,6 +114,7 @@ CFG_GEN_FILES := $(addprefix $(GEN)/$(FAMILY)/, \
 	otp_status.h \
 	rts.c \
 	board_params.h \
+	dt_ops.h \
 	) \
 	$(DTS) \
 	$(BOARD_DTS)

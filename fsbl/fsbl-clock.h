@@ -15,13 +15,5 @@
 unsigned int get_cpu_freq_mhz(void);
 void adjust_clocks(struct board_type *b, uint32_t mhl_power);
 
-#ifdef DVFS_SUPPORT
-void apply_dvfs_clocks(struct clock_divisors cpu_clks,
-	struct clock_divisors scb_clks, uint8_t sysif_mdiv);
-#else
-static inline void apply_dvfs_clocks(struct clock_divisors cpu_clks,
-	struct clock_divisors scb_clks, uint8_t sysif_mdiv) {}
-#endif
-
 #endif /* _FSBL_CLOCK_H */
 
