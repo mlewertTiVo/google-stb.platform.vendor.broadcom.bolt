@@ -213,7 +213,6 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 {
 	int bootargs_buflen = 0;
 	char dt_add_cmd[BOOT_ARGS_SIZE+64];
-	char *env_verity_pub_key;
 	int fd=-1;
 	char *fb_flashdev_mode_str;
 
@@ -299,18 +298,8 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 		os_sprintf(dt_add_cmd, "dt add prop /firmware/android slot_suffix s '_%s'",
 			slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 		bolt_docommands(dt_add_cmd);
-
-		env_verity_pub_key = env_getenv("AB_VERITY_PUB_KEY");
-		if (env_verity_pub_key) {
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
-			bolt_docommands(dt_add_cmd);
-			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " buildvariant=userdebug");
-		        bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " veritykeyid=%s", env_verity_pub_key);
-		} else {
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "disabled");
-			bolt_docommands(dt_add_cmd);
-			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " buildvariant=eng");
-		}
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
+		bolt_docommands(dt_add_cmd);
 
 		if ((boot_path == BOOTPATH_AB_SYSTEM) && (la != NULL)) {
 			char *p = NULL;
@@ -613,14 +602,6 @@ ret_ab_bl_recovery:
 	return BOOTPATH_AB_BOOTLOADER_RECOVERY;
 
 ret_ab_system:
-	{
-		char *env_verity_pub_key = env_getenv("AB_VERITY_PUB_KEY");
-		if (!env_verity_pub_key && !eio->slot[eio->current].boot_ok) {
-			DLOG("Marking slot %d as booted, no dm-verity enforcement. \n", eio->current);
-			eio->slot[eio->current].boot_ok = 1;
-			bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
-		}
-	}
 	if (fd >= 0)
 		bolt_close(fd);
 	if (slot != NULL) {
