@@ -190,6 +190,20 @@ char *get_hardware_name()
 
 	return env_hwname;
 }
+
+#define ANDROID_VDR_IMG_TYPE "ext4"
+char *get_vendor_image_type()
+{
+	char *env_vdrimgname;
+
+	env_vdrimgname = env_getenv("AB_VDR_IMG_TYPE");
+	if (!env_vdrimgname) {
+		env_vdrimgname = ANDROID_VDR_IMG_TYPE;
+	}
+
+	return env_vdrimgname;
+}
+
 /*  *********************************************************************
     *  gen_bootargs(la,bootargs_buf,cmdline,boot_path,slot)
     *
@@ -263,7 +277,7 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 		// a|b system mode, we can only early-mount vendor since system is rootfs.  we also assume squashfs because that is
 		// the model to support within our bound emmc sizes.
 		if (boot_path != BOOTPATH_LEGACY) {
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor type s 'squashfs'");
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor type s '%s'", get_vendor_image_type());
 			bolt_docommands(dt_add_cmd);
 			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s 'wait,verify,slotselect'");
 			bolt_docommands(dt_add_cmd);
