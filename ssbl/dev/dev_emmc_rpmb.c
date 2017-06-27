@@ -1,4 +1,4 @@
-w/***************************************************************************
+/***************************************************************************
  *     Copyright (c) 2012-2015, Broadcom Corporation
  *     All Rights Reserved
  *     Confidential Property of Broadcom Corporation
