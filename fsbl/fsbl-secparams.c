@@ -84,7 +84,7 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x25] = 0x00000000,
 	[0x26] = 0x00000000,
 #if CFG_ZEUS4_2_1
-	[0x27] = 0x80000000,
+	[0x27] = 0x00000000,
 #else
 	[0x27] = 0x00000000,
 #endif
@@ -104,7 +104,7 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x35] = 0x00000000,
 	[0x36] = 0x00000000,
 	[0x37] = 0x00000000,
-	[0x38] = 0x00000000,
+	[0x38] = 0x00000020, /* SRR size in MB */
 	[0x39] = 0x00000000,
 	[0x3a] = 0x00000000,
 	[0x3b] = 0x00000000,
@@ -148,7 +148,7 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x25] = 0x00000000,
 	[0x26] = SSBL_RAM_ADDR,
 #if CFG_ZEUS4_2_1
-	[0x27] = 0x80000000,
+	[0x27] = 0x00000000,
 #else
 	[0x27] = 0x00000000,
 #endif
