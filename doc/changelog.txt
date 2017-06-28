@@ -6,6 +6,16 @@
 Release changelog
 =================
 
+ v1.30
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2374[SWBOLT-2374] Disabled DTU in 7268b0, 7271b0, 7260a0. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.30%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.29
 ------
 

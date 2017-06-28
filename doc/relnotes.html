@@ -777,7 +777,7 @@ asciidoc.install(4);
 </div>
 <div id="content">
 <div class="sect1">
-<h2 id="_bolt_sqa_release_v1_29_23rd_may_2017">1.  Bolt SQA Release v1.29, 23rd May 2017</h2>
+<h2 id="_bolt_engineering_release_v1_30_21st_june_2017">1.  Bolt Engineering Release v1.30, 21st June 2017</h2>
 <div class="sectionbody">
 <div class="literalblock">
 <div class="content">
@@ -823,7 +823,7 @@ asciidoc.install(4);
 <div class="ulist"><ul>
 <li>
 <p>
-When Sage is enabled, S3 resume disables DTU mapping <a href="http://jira.broadcom.com/browse/SWBOLT-2280">SWBOLT-2280</a>
+When Sage and DTU are enabled, S3 resume disables DTU mapping <a href="http://jira.broadcom.com/browse/SWBOLT-2280">SWBOLT-2280</a>
 </p>
 </li>
 <li>
@@ -1076,29 +1076,12 @@ http://www.gnu.org/software/src-highlite -->
 <hr />
 </div>
 <div class="sect2">
-<h3 id="_upgrade_to_v1_29_criteria">1.4.  Upgrade to v1.29 criteria</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2230">SWBOLT-2230</a> <em>macprog</em> can now take a board serial number that is not decimal.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2277">SWBOLT-2277</a> Added PMU compatible string to enable the PMU driver for ARM64.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2242">SWBOLT-2242</a> Added support for BCM97271LC4L.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2264">SWBOLT-2264</a> Change SYSIF from 750 MHz to 1 GHz for 7260A0, PMAP 6.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2261">SWBOLT-2261</a> Fix SF2 MDIO compatible string.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2232">SWBOLT-2232</a> Fix emmc RPMB write key and write block errors.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2287">SWBOLT-2287</a> Fixed issue with AVS level increasing until it reaches the top. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2236">SWBOLT-2236</a> Increased SSBL size for 74371a0. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2212">SWBOLT-2212</a> Increased kernel partition size in flash for A53 boards.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2265">SWBOLT-2265</a> Populate the device tree with clock dividers and mux settings for a selected PMap.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-1946">SWBOLT-1946</a> Prevent BOLT hanging when SATA cable is removed after disk accesses. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2241">SWBOLT-2241</a> Probe CFI, then SFDP for spansion parts.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2138">SWBOLT-2138</a> Report the LPDDR4 temperature value that is available in the MR4 register.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2259">SWBOLT-2259</a> Set prop "regulator-boot_on" for voltage regulators by default.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2238">SWBOLT-2238</a> The MCB of LPDDR4-3733 has been updated for 7268b0 and 7271b0. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2294">SWBOLT-2294</a> Updated AVS firmware to v0.4.9 for 7260a0, 7268b0, 7271b0 and 7278a0.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2266">SWBOLT-2266</a> Updated PMap tables.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2207">SWBOLT-2207</a> Updated clock tree for 7271b0, 7260a0, and 7268b0. Added clock tree for 7278a0.</p></div>
+<h3 id="_upgrade_to_v1_30_criteria">1.4.  Upgrade to v1.30 criteria</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2374">SWBOLT-2374</a> Disabled DTU in 7268b0, 7271b0, 7260a0. <sup><span class="yellow silver-background">major</span></sup></p></div>
 </div>
 <div class="sect2">
 <h3 id="_broadcom_fae_access">1.5.  Broadcom FAE access</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.29%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.30%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
 </div>
 </div>
 </div>
@@ -1133,7 +1116,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-06-01 01:55:06 PDT
+Last updated 2017-06-28 11:24:19 PDT
 </div>
 </div>
 </body>
