@@ -190,6 +190,20 @@ char *get_hardware_name()
 
 	return env_hwname;
 }
+
+#define ANDROID_VDR_IMG_TYPE "ext4"
+char *get_vendor_image_type()
+{
+	char *env_vdrimgname;
+
+	env_vdrimgname = env_getenv("AB_VDR_IMG_TYPE");
+	if (!env_vdrimgname) {
+		env_vdrimgname = ANDROID_VDR_IMG_TYPE;
+	}
+
+	return env_vdrimgname;
+}
+
 /*  *********************************************************************
     *  gen_bootargs(la,bootargs_buf,cmdline,boot_path,slot)
     *
@@ -213,7 +227,6 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 {
 	int bootargs_buflen = 0;
 	char dt_add_cmd[BOOT_ARGS_SIZE+64];
-	char *env_verity_pub_key;
 	int fd=-1;
 	char *fb_flashdev_mode_str;
 
@@ -264,7 +277,7 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 		// a|b system mode, we can only early-mount vendor since system is rootfs.  we also assume squashfs because that is
 		// the model to support within our bound emmc sizes.
 		if (boot_path != BOOTPATH_LEGACY) {
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor type s 'squashfs'");
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor type s '%s'", get_vendor_image_type());
 			bolt_docommands(dt_add_cmd);
 			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s 'wait,verify,slotselect'");
 			bolt_docommands(dt_add_cmd);
@@ -299,18 +312,8 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 		os_sprintf(dt_add_cmd, "dt add prop /firmware/android slot_suffix s '_%s'",
 			slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 		bolt_docommands(dt_add_cmd);
-
-		env_verity_pub_key = env_getenv("AB_VERITY_PUB_KEY");
-		if (env_verity_pub_key) {
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
-			bolt_docommands(dt_add_cmd);
-			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " buildvariant=userdebug");
-		        bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " veritykeyid=%s", env_verity_pub_key);
-		} else {
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "disabled");
-			bolt_docommands(dt_add_cmd);
-			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen, " buildvariant=eng");
-		}
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
+		bolt_docommands(dt_add_cmd);
 
 		if ((boot_path == BOOTPATH_AB_SYSTEM) && (la != NULL)) {
 			char *p = NULL;
@@ -613,14 +616,6 @@ ret_ab_bl_recovery:
 	return BOOTPATH_AB_BOOTLOADER_RECOVERY;
 
 ret_ab_system:
-	{
-		char *env_verity_pub_key = env_getenv("AB_VERITY_PUB_KEY");
-		if (!env_verity_pub_key && !eio->slot[eio->current].boot_ok) {
-			DLOG("Marking slot %d as booted, no dm-verity enforcement. \n", eio->current);
-			eio->slot[eio->current].boot_ok = 1;
-			bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
-		}
-	}
 	if (fd >= 0)
 		bolt_close(fd);
 	if (slot != NULL) {
