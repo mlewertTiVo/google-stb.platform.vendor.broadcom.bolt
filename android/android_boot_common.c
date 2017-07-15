@@ -550,20 +550,9 @@ static enum bootpath select_boot_path(int *slot, int selected)
 			if (eio->current < EIO_BOOT_NUM_ALT_PART) {
 				if (eio->slot[eio->current].boot_ok) {
 					*slot = eio->current;
-					eio->slot[eio->current].boot_ok = 0; /* reset, let application mark it. */
-					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
-					if (ret != sizeof(struct eio_boot)) {
-						os_printf("Error writing %s. Can't reset commander block: %d\n",
-							  flash_devname, ret);
-					}
 				} else if (eio->slot[eio->current].boot_fail) {
-					*slot = (eio->current == 0) ? 1 : 0; /* switch slot. */
+					*slot = (eio->current == 0) ? 1 : 0;
 					eio->current = *slot;
-					if (eio->slot[eio->current].boot_fail) {
-						/* all slots are marked 'fail', give up... */
-						*slot = -1;
-						goto ret_ab_bl_recovery;
-					}
 					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
 					if (ret != sizeof(struct eio_boot)) {
 						os_printf("Error writing %s. Can't swap current on commander block: %d\n",
@@ -573,8 +562,7 @@ static enum bootpath select_boot_path(int *slot, int selected)
 					if (++eio->slot[eio->current].boot_try < EIO_BOOT_TRY_ATTEMPT) {
 						*slot = eio->current;
 					} else {
-						*slot = eio->current; /* last chance. */
-						eio->slot[eio->current].boot_fail = 1; /* on boot success, application reset. */
+						eio->slot[eio->current].boot_fail = 1;
 					}
 					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
 					if (ret != sizeof(struct eio_boot)) {
@@ -587,7 +575,7 @@ static enum bootpath select_boot_path(int *slot, int selected)
 				goto ret_ab_bl_recovery;
 			}
 		} else {
-			/* empty (or badly corrupted) commander, seed with default data. */
+			/* empty commander, seed with default data. */
 			os_memset(eio, 0, sizeof(*eio));
 			eio->current = 0;
 			os_sprintf(eio->slot[0].suffix, "%s", BOOT_SLOT_0_SUFFIX);
