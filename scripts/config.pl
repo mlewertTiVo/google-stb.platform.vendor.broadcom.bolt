@@ -3774,7 +3774,7 @@ sub process_dev_tree($)
 	BcmDt::Devices::add_sf2($rdb, $rh, $dt_autogen{sf2_switch})
 		if ($num_sf2_switch && !empty($dt_autogen{sf2_switch}));
 
-	my $clks_file = "config/clks-" . $family->{familyname} . ".plx";
+	my $clks_file = "./config/clks-" . $family->{familyname} . ".plx";
 	if (-f $clks_file) {
 		BcmDt::Devices::merge_clocks_file($rh->{rh_defines},
 			$dt, $clks_file)
