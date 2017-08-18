@@ -761,13 +761,26 @@ void bcm_sf2_exit(void)
 	if (timeout == 0)
 		err_msg("failed to software reset switch!\n");
 }
-void bcm_sf2_multicast_enable(void)
+void bcm_sf2_multicast_enable(unsigned int *multicast_filter_cnt,
+			bool enable)
 {
 	uint32_t reg;
-	/* Accept only broadcast, multicast  and unicast for IMP port */
-	reg = BDEV_RD(BCHP_SWITCH_CORE_IMP_CTL);
-	reg |= BCHP_SWITCH_CORE_IMP_CTL_RX_UCST_EN_MASK |
-		BCHP_SWITCH_CORE_IMP_CTL_RX_MCST_EN_MASK |
-		BCHP_SWITCH_CORE_IMP_CTL_RX_BCST_EN_MASK;
-	BDEV_WR(BCHP_SWITCH_CORE_IMP_CTL, reg);
+
+	if (enable) {
+		/* Accept only broadcast, multicast  and unicast for IMP port */
+		reg = BDEV_RD(BCHP_SWITCH_CORE_IMP_CTL);
+		reg |= BCHP_SWITCH_CORE_IMP_CTL_RX_UCST_EN_MASK |
+			BCHP_SWITCH_CORE_IMP_CTL_RX_MCST_EN_MASK |
+			BCHP_SWITCH_CORE_IMP_CTL_RX_BCST_EN_MASK;
+		BDEV_WR(BCHP_SWITCH_CORE_IMP_CTL, reg);
+		*multicast_filter_cnt += 1;
+	} else {
+		*multicast_filter_cnt -= 1;
+		if (!(*multicast_filter_cnt)) {
+			/* disable multicast for IMP port */
+			reg = BDEV_RD(BCHP_SWITCH_CORE_IMP_CTL);
+			reg &= ~(BCHP_SWITCH_CORE_IMP_CTL_RX_MCST_EN_MASK);
+			BDEV_WR(BCHP_SWITCH_CORE_IMP_CTL, reg);
+		}
+	}
 }

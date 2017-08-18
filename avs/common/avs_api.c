@@ -93,11 +93,11 @@ int avs_start(int en, int pmap_id)
 	__puts("AVS start:");
 #if defined(ENABLE_AVS_FIRMWARE)
 #ifdef DVFS_SUPPORT
-	/* For DVFS parts AVS sets the system clocks so it always has to run */
+	/* DVFS firmware always starts and is told whether to converge */
 	rc = avs_common_start(en, pmap_id);
 	avs_perror(rc);
 #else
-	/* Only start AVS firmware if enabled */
+	/* non-DVFS should only start if enabled */
 	if (en) {
 		rc = avs_common_start(en, pmap_id);
 		avs_perror(rc);

@@ -596,7 +596,8 @@ INITSEG void __noreturn handle_boot_err(uint32_t err_code)
 
 	if ((err_code <= ERR_WARM_BOOT_FAILED) ||
 		(err_code == ERR_S3_PARAM_HASH_FAILED) ||
-		(err_code == ERR_S3_DDR_HASH_FAILED)) {
+		(err_code == ERR_S3_DDR_HASH_FAILED) ||
+		(err_code == ERR_S3_DTU_REMAP_FAILED)) {
 		/* TBD: need to clear warm boot indicator in AON */
 
 		/* reset for ERR_BAD_IMAGE, ERR_WARM_BOOT_FAILED */

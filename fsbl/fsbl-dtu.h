@@ -19,12 +19,12 @@
 #ifdef BCHP_MEMC_DTU_CONFIG_0_REG_START
 
 void dtu_load(struct board_type *b, bool warm_boot);
-void dtu_enable(unsigned int num_memc);
+void dtu_verify(unsigned int num_memc);
 
 #else
 
 static inline void dtu_load(struct board_type *b, bool warm_boot) { }
-static inline void dtu_enable(unsigned int num_memc) { }
+static inline void dtu_verify(unsigned int num_memc) { }
 
 #endif
 

@@ -1,5 +1,5 @@
 ################################################################################
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 # 
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -14,6 +14,7 @@ use Data::Dumper;
 use File::Basename;
 use BcmUtils;
 use Carp;
+use Math::BigInt;
 our $Debug = 0;
 
 my $P = basename $::0;
@@ -1445,8 +1446,9 @@ sub add_pcie($$$$$)
 			"#address-cells" => [ 'dec', 3 ],
 			"#size-cells"  => [ 'dec', 2 ],
 			"tot-num-pcie" => [ 'dec', $n_pcie ],
+			"bus-range" => [ 'hex', [0, 0xff]],
 			"#interrupt-cells" => [ 'dec', 1 ],
-			"interrupt-map-mask" => [ 'hex', [ 0xf800, 0, 0, 7] ],
+			"interrupt-map-mask" => [ 'hex', [ 0x0, 0, 0, 7] ],
 			);
 	override_default(\%default, $info);
 
@@ -1537,10 +1539,22 @@ sub add_pcie($$$$$)
 		# pcie driver uses the following line to get intr offset.
 		$t .= sprintf("reg = <0x0 0x%x 0x0 0x%x>;\n", $beg, $size);
 		$t .= output_interrupt_prop($rh, \@intr_prop);
+		$t .= "msi-controller;\n";
+		$t .= "msi-parent = <\&$pcie_label>;\n";
 		$t .= output_default(\%default);
 		$t .= "interrupt-map = <";
 		for (my $j=0; $j<4; $j++) {
-			$t .= sprintf("%d %d %d %d \&intc %d %d ", 0,0,0,$j+1,$intrs[$j],3);
+			# Some day we will switch to using the proper legacy
+			# interrupt settings, but to keep compatible with
+			# old Linux we must use the incorrect ones.
+			my $USE_BKWD_COMPAT_SETTINGS = 1;
+			if ($USE_BKWD_COMPAT_SETTINGS) {
+				$t .= sprintf("%d %d %d %d \&intc %d %d ",
+				    0, 0, 0, $j+1, $intrs[$j], 4);
+			} else {
+				$t .= sprintf("%d %d %d %d \&intc 0 %d %d ",
+				    0, 0, 0, $j+1, $intrs[$j], 4);
+			}
 		}
 		$t .= ">;\n";
 		$t .= "};\n";
@@ -1586,6 +1600,69 @@ sub add_moca($$$$$)
 	$dt->add_node(DevTree::node->new($t));
 
 	add_reference_alias($dt, "bmoca", "bmoca");
+}
+
+sub add_ext_moca($$$)
+{
+	my ($dt, $rh, $info) = @_;
+	my $node = $info->{"-node"}[0];
+	my $parent = $info->{"-parent"}[0];
+	my $cs = $info->{"-cs"}[0];
+	my $interrupt_parent = $info->{"-interrupt_parent"}[0];
+	my @interrupt = @{$info->{"-interrupt"}};
+	my $max_frequency = $info->{"-frequency"}[0];
+	my $cpol = $info->{"-spi-clock-polarity"}[0];
+	my $cpha = $info->{"-spi-clock-phase"}[0];
+	my $band = $info->{"-moca_band"}[0];
+
+	die("Invalid moca_band parameter: $band\n")
+		if (defined($band) && $band !~
+			/^(-|highrf|midrf|wanrf|ext_d|d_low|d_high|e|f|g|h)$/);
+
+	$max_frequency = 12000000 if (!defined($max_frequency));
+	$cpol = 1 if (!defined($cpol));
+	$cpha = 1 if (!defined($cpha));
+
+	my %default = (
+		"compatible" => 'brcm,bcm6802',
+		"reg" => [ 'dec', $cs ],
+		"spi-max-frequency" => [ 'dec', $max_frequency ],
+		"spi-cpol" => [ 'bool', $cpol ],
+		"spi-cpha" => [ 'bool', $cpha ],
+		"hw-rev" => [ 'hex', 0x2002 ],
+		"interrupt-parent" => [ 'phandle', $interrupt_parent ],
+		"rf-band" => [ 'string', $band ],
+		"status" => [ 'string', "disabled" ],
+	);
+	my $intr_prop = "interrupts = <";
+	my $n_intrs = scalar @interrupt;
+	my $i = 0;
+	my $t = "";
+
+	foreach (@interrupt) {
+		$i++;
+		my $sep = ($i == $n_intrs - 1) ? " " : "";
+		$intr_prop .= sprintf("%d%s", $_, $sep);
+	}
+	$intr_prop .= ">;\n";
+
+	override_default(\%default, $info);
+	$t .= sprintf("%s: moca\@%x {\n", $node, $cs);
+	$t .= output_default(\%default);
+	$t .= $intr_prop;
+	$t .= "ethernet-ports {\n";
+	$t .= "rgmii0 {\n";
+	$t .= "};\n";
+	$t .= "rgmii1 {\n";
+	$t .= "};\n";
+	$t .= "};\n";
+	$t .= "};\n};\n";
+
+	my ($p_node) = $dt->find_node(qr/$parent/);
+
+	$p_node->add_node(DevTree::node->new($t));
+
+	add_reference_alias($dt, $node, $node);
 }
 
 sub add_periph_intc($$)
@@ -1832,9 +1909,9 @@ sub add_gisb_arb($$$$)
 	$dt->add_node(DevTree::node->new($t));
 }
 
-sub add_waketimer($$$$)
+sub add_waketimer($$$$$)
 {
-	my ($dt, $rh, $info, $l2_intr) = @_;
+	my ($dt, $rh, $info, $l2_intr, $clks_file_exists) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my %defaults = (compatible => 'brcm,brcmstb-waketimer');
 	override_default(\%defaults, $info);
@@ -1847,6 +1924,11 @@ sub add_waketimer($$$$)
 		"parent_intc" => $l2_intr . "_intc",
 		"irq" => $intr,
 	);
+	if ($clks_file_exists) {
+		$defaults{"clocks"} = [ 'phandle', 'upg_fixed'];
+	} else {
+		$defaults{"clock-frequency"} = [ 'dec', 27000000 ];
+	}
 	$t .= output_default(\%defaults);
 	$t .= sprintf("reg = <0x%x 0x%x>;\n", $reg, $size);
 	$t .= output_interrupt_prop($rh, \%intr_prop);
@@ -1991,6 +2073,35 @@ sub add_aon_ctrl($$$)
 	$dt->add_node(DevTree::node->new($t));
 }
 
+sub add_map_to_cpu($$)
+{
+	my ($memc_idx, $mmap) = @_;
+
+	my @map;
+	foreach my $mm (@$mmap) {
+		next if ($mm->{memc} != $memc_idx);
+		push @map, $mm;
+	}
+
+	return "" if (scalar @map == 0);
+
+	# brcm,map-to-cpu = < FROM_HI FROM_LO TO_HI TO_LO SIZE_HI SIZE_LO >;
+	my $t = "brcm,map-to-cpu = <";
+	foreach my $m (@map) {
+		my $dram_offset = Math::BigInt->new($m->{from_bytes});
+		my $cpu_offset = Math::BigInt->new($m->{to_bytes});
+		my $size_bytes = Math::BigInt->new($m->{size_bytes});
+
+		$t .= sprintf "0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+			BcmUtils::bigint_to_two_int($dram_offset),
+			BcmUtils::bigint_to_two_int($cpu_offset),
+			BcmUtils::bigint_to_two_int($size_bytes);
+	}
+	$t .= ">;\n";
+
+	return $t;
+}
+
 sub add_ddr_phy($$$$)
 {
 	my ($dt, $rh, $phy_idx, $info) = @_;
@@ -2006,7 +2117,7 @@ sub add_ddr_phy($$$$)
 		$bchp_defines->{BCHP_DDR34_PHY_CONTROL_REGS_0_PRIMARY_REVISION_MINOR_DEFAULT});
 		($reg, $size) = get_reg_range($rh, "BCHP_DDR34_PHY_CONTROL_REGS_${phy_idx}");
 	} elsif (defined($bchp_defines->{BCHP_DDR34_PHY_COMMON_REGS_0_PRIMARY_REVISION})) {
-		# 7271A0
+		# LPDDR4 platforms
 		$compatible = sprintf("brcm,brcmstb-ddr-phy-v%d.%d",
 		$bchp_defines->{BCHP_DDR34_PHY_COMMON_REGS_0_PRIMARY_REVISION_MAJOR_DEFAULT},
 		$bchp_defines->{BCHP_DDR34_PHY_COMMON_REGS_0_PRIMARY_REVISION_MINOR_DEFAULT});
@@ -2727,7 +2838,6 @@ sub add_systemport($$$$$)
 	override_default(\%default, $info);
 
 	for ($num = 0; $num < $n_systemport; $num++) {
-		next if ($info->{'-choose'} && !$info->{'-choose'}->[$num]);
 		my ($inst_name, $wol_name);
 		my @intr_prop;
 
@@ -2767,6 +2877,9 @@ sub add_systemport($$$$$)
 		insert_label($label, $unit);
 		$t .= output_default(\%default);
 		$t .= sprintf("%s = <0x%x 0x%x>;\n", 'reg', $beg, $size);
+		$t .= "status = \"disabled\";\n"
+			if ($info->{'-choose'} && !$info->{'-choose'}->[$num]);
+
 		if (@intr_prop) {
 			$intr = find_l2_interrupt($bchp_defines, uc($l2_intr), "WOL_$wol_name");
 			push @intr_prop, { "irq" => $intr,
@@ -3014,9 +3127,9 @@ sub add_sf2($$$)
 	$dt->add_node(DevTree::node->new($t));
 }
 
-sub add_memc($$$$)
+sub add_memc($$$$$)
 {
-	my ($dt, $rh, $memc_idx, $info) = @_;
+	my ($dt, $rh, $memc_idx, $mmap, $info) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my %default = (
 		"compatible" => [ 'string', [ 'brcm,brcmstb-memc', 'simple-bus' ] ],
@@ -3030,6 +3143,7 @@ sub add_memc($$$$)
 	$t .= sprintf("memc@%d {\n", $memc_idx);
 	$t .= output_default(\%default);
 	$t .= "ranges;\n";
+	$t .= add_map_to_cpu($memc_idx, $mmap);
 	$t .= "};\n";
 
 	my $node = DevTree::node->new($t);
@@ -3042,9 +3156,9 @@ sub add_memc($$$$)
 	add_memc_ddr($node, $rh, $memc_idx, $info);
 }
 
-sub add_memcs($$$$)
+sub add_memcs($$$$$)
 {
-	my ($dt, $rh, $n_memc, $info) = @_;
+	my ($dt, $rh, $n_memc, $mmap, $info) = @_;
 	my $i;
 	my $t = '';
 
@@ -3059,7 +3173,7 @@ sub add_memcs($$$$)
 
 	# Each memc is a child
 	for ($i = 0; $i < $n_memc; $i++) {
-		add_memc($node, $rh, $i, $info);
+		add_memc($node, $rh, $i, $mmap, $info);
 	}
 }
 
@@ -3349,7 +3463,7 @@ sub add_gpio($$$)
 
 sub add_watchdog($$$$)
 {
-	my ($dt, $rh, $info, $clks_file) = @_;
+	my ($dt, $rh, $info, $clks_file_exists) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 
 	foreach $b (@{$info->{"-type"}}) {
@@ -3382,7 +3496,7 @@ sub add_watchdog($$$$)
 		$t = sprintf("%s: %s {\n", $label, $unit);
 		insert_label($label, $unit);
 
-		if (-e $clks_file) {
+		if ($clks_file_exists) {
 			$default{"clocks"} = [ 'phandle', 'upg_fixed'];
 		} else {
 			$default{"clock-frequency"} = [ 'dec', 27000000 ];
@@ -4080,8 +4194,8 @@ STOP
 	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'partition',
 		qr/^SYSPORT/, qr/^ethernet\@/)
 		if $rh_funcs->{SYSPORT} && !$rh_funcs->{SYSPORT0};
-	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'interleave',
-		qr/^SYSPORT0\w*?$/, qr/^ethernet\@/) if $rh_funcs->{SYSPORT0};
+	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'partition',
+		qr/^SYSPORT\d\w*?$/, qr/^ethernet\@/) if $rh_funcs->{SYSPORT0};
 
 	print "$P: WARN: no clocks inserted for systemport!\n"
 		if (!$ni && BcmUtils::get_num_systemport($bd));

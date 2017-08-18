@@ -67,7 +67,6 @@ void bolt_reserve_memory_getstatus(void);
 int  bolt_set_console(char *);
 int  bolt_set_envdevice(char *);
 void bolt_set_envdevname(char *name);
-int  bolt_set_macdevice(char *);
 void bolt_warmstart(unsigned long long);
 void console_init(void);
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2016, Broadcom Corporation
+ *     Copyright (c) 2012-2017, Broadcom Corporation
  *     All Rights Reserved
  *     Confidential Property of Broadcom Corporation
  *
@@ -452,7 +452,7 @@ typedef struct xhci_s {
 	ring_t			evr;
 	volatile uint8_t	*slots[MAX_SLOTS];
 	dev_t			devs[MAX_SLOTS];
-	uint64_t		scratch_buf;	/* holds address of array */
+	void		*scratch_buf;	/* holds address of array */
 	volatile uint64_t	scratch[MAX_SCRATCH];
 	int			nslots;
 	int			ndp;

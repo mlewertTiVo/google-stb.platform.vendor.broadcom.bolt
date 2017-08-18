@@ -195,9 +195,6 @@ sub identity_map_alg($)
 		$scb_size_sum_mb += $e->{scb_size_mb};
 	}
 
-	die 'need to check this out'
-	    if ($last_pci_addr_mb > (0xc0000000 >> 20));
-
 	$p->{pci_bar2_size_mb} = round_up_to_pow2($scb_size_sum_mb);
 	$p->{pci_bar2_val_mb} = 0;
 	$p->{success} = 'identity_map';

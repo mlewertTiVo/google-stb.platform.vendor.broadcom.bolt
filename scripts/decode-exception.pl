@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 # *
 # *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -40,7 +40,7 @@
 #
 # cat data | ./scripts/decode-exception.pl
 #
-# ./scripts/decode-exception.pl -f bolt_uart_bad.log -g gen/7271a0 -d -k
+# ./scripts/decode-exception.pl -f bolt_uart_bad.log -g gen/7271b0 -d -k
 #
 # Add '-g' if you are in the BOLT root dir and gen/$FAMILY files
 # are present. Add '-d' to that if you also have the build objects

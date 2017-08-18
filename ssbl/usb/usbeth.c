@@ -33,6 +33,8 @@
 
 #include "usbd.h"
 #include "usbeth.h"
+#include "mii.h"
+#include "if_axgereg.h"
 
 #if CFG_NETWORK
 #include "net_ebuf.h"
@@ -40,6 +42,7 @@
 #endif
 
 #define FAIL -1
+#define USBETH_MAX_MCAST_ADDRS 6
 
 
 #define USBETH_TRACE(x, ...)	{\
@@ -63,20 +66,24 @@ static int usbeth_trace;
     * Interface functions for USB-Ethernet adapters
     ********************************************************************* */
 
-enum { PEGASUS, PEGASUS_II, NETMATE, REALTEK, ASIX, ASIX772A, ASIX772B, ASIX178,
-	USB_CDC,
-	MAX_CHIP_ID
+#define ETH_ALEN 6
+#define ASIX179_PHYID 0x03
+
+enum {
+	PEGASUS, PEGASUS_II, NETMATE, REALTEK, ASIX, ASIX772A, ASIX772B,
+	ASIX178, USB_CDC, ASIX179, MAX_CHIP_ID
 };
-enum { VEN_NONE, _3_COM, LINKSYS, LINKSYS_10, LINKSYS_100,
+enum {
+	VEN_NONE, _3_COM, LINKSYS, LINKSYS_10, LINKSYS_100,
 	CATC_NM, BELKIN_CATC, BELKIN, LINKSYS_100M, SIEMENS,
-	HAWKING, D_LINK, NETGEAR, GEN_PEG, GEN_ASIX, CDC,
+	HAWKING, D_LINK, NETGEAR, GEN_PEG, GEN_ASIX, CDC, GEN_ASIX179,
 	MAX_VEN_ID
 };
 static char *VENDOR_NAMES[] = {
 	"?", "3-COM", "LinkSys", "LinkSys-10TX", "LinkSys-100TX",
 	"CATC-Netmate", "Belkin/CATC", "Belkin", "Linksys-100M", "Siemens",
 	"Hawking", "D-Link", "Netgear", "Pegasus-Based", "ASIX-Based",
-	"USB CDC",
+	"USB CDC", "ASIX AX88179 Gigabit",
 	"Yikes!"
 };
 
@@ -87,9 +94,13 @@ typedef struct usbeth_devif_s {
 	void (*open)(usbeth_softc_t *softc);
 	void (*close)(usbeth_softc_t *softc);
 	int (*rx)(usbeth_softc_t *softc, uint8_t *buf);
+	int (*tx)(usbeth_softc_t *softc, uint8_t *buf, int len);
+	int (*multicast)(usbeth_softc_t *softc, uint8_t *buf, int set);
+	int (*ioctl_getlink)(usbeth_softc_t *softc);
 } usbeth_devif_t;
 
-#define RX_PACKET_SIZE 2048 /* arbitrary but enough for ethernet packet */
+ /* arbitrary but enough for USB combined ethernet packet */
+#define RX_PACKET_SIZE (16 * 1024)
 
 struct usbeth_softc_s {
 	usbdev_t *dev;
@@ -103,9 +114,69 @@ struct usbeth_softc_s {
 	usbreq_t *rx_ur;
 	uint8_t *rxbuf;
 	char *fullname;
+	uint8_t mcast_addrs[USBETH_MAX_MCAST_ADDRS][ENET_ADDR_LEN];
+};
+
+static const struct {
+	uint8_t	ctrl;
+	uint8_t timer_l;
+	uint8_t	timer_h;
+	uint8_t	size;
+	uint8_t	ifg;
+} __packed axge_bulk_size[] = {
+	{ 7, 0x4f, 0x00, 0x12, 0xff },
+	{ 7, 0x20, 0x03, 0x16, 0xff },
+	{ 7, 0xae, 0x07, 0x18, 0xff },
+	{ 7, 0xcc, 0x4c, 0x18, 0x08 }
 };
 
 static void usbeth_queue_rx(usbeth_softc_t *softc);
+
+/* Add the specified multicast address to the multicast address array */
+static int add_mcast_addr(usbeth_softc_t *softc, unsigned char *buf)
+{
+	uint8_t *addr;
+	int x;
+
+	/* If it's already enabled just return */
+	for (x = 0; x < USBETH_MAX_MCAST_ADDRS; x++) {
+		addr = &softc->mcast_addrs[x][0];
+		if (memcmp(buf, addr, ENET_ADDR_LEN) == 0)
+			return 0;
+	}
+
+	/* find first unused entry */
+	for (x = 0; x < USBETH_MAX_MCAST_ADDRS; x++) {
+		addr = &softc->mcast_addrs[x][0];
+		if (addr[0] == 0)
+			break;
+	}
+
+	/* no free entries */
+	if (x == USBETH_MAX_MCAST_ADDRS) {
+		xprintf("Exceeded max number of multicast addresses\n");
+		return 1;
+	}
+	memcpy(addr, buf, ENET_ADDR_LEN);
+	return 0;
+}
+
+/* Delete the specified multicast address from the multicast address array */
+static int delete_mcast_addr(usbeth_softc_t *softc, unsigned char *buf)
+{
+	uint8_t *addr;
+	int x;
+
+	/* Zero the address in the array */
+	for (x = 0; x < USBETH_MAX_MCAST_ADDRS; x++) {
+		addr = &softc->mcast_addrs[x][0];
+		if (memcmp(buf, addr, ENET_ADDR_LEN) == 0) {
+			memset(addr, 0, ENET_ADDR_LEN);
+			return 0;
+		}
+	}
+	return 1;	/* error if the address was not found */
+}
 
 /* **************************************
    *  CATC I/F Functions
@@ -185,11 +256,56 @@ static void catc_open_device(usbeth_softc_t *softc)
 	catc_set_reg(softc->dev, CATC_ETH_CTRL_REG, 0x09);
 }
 
+static int usbeth_send_eth_frame(usbeth_softc_t *softc, unsigned char *buf,
+				 int len)
+{
+	usbreq_t *ur;
+	int txlen = len;
+	unsigned char *txbuf;
+
+	if (softc->embed_tx_len) {
+		txbuf = KMALLOC((len + softc->embed_tx_len), DMA_BUF_ALIGN);
+		txbuf[0] = txlen & 0xff; /* 1st two bytes...little endian */
+		txbuf[1] = (txlen >> 8) & 0xff;
+		if (softc->embed_tx_len == 4) {
+			/* 2nd two bytes...1's complement */
+			txbuf[2] = txbuf[0] ^ 0xff;
+			txbuf[3] = txbuf[1] ^ 0xff;
+		}
+		memcpy(&txbuf[softc->embed_tx_len], buf, txlen);
+		txlen += softc->embed_tx_len;
+	} else {
+		if (softc->dev_id == REALTEK) {
+			/* Now for some Realtek chip workarounds */
+			if (txlen < 60)	/* some strange limitation */
+				txlen = 60;
+		}
+		txbuf = KMALLOC(txlen, DMA_BUF_ALIGN);
+		memcpy(txbuf, buf, txlen);
+	}
+
+	/* Modify tx length to handle modulo 64 packets...
+	adapter will discard extra byte */
+	if (!(txlen % 64))
+		++txlen;
+
+	ur = usb_make_request(softc->dev, softc->bulk_outpipe,
+			      txbuf, txlen, UR_FLAG_OUT);
+	usb_sync_request(ur);
+	usb_free_request(ur);
+	KFREE(txbuf);
+
+	return len;
+}
+
 static const usbeth_devif_t catc_if = {
 	catc_init_device,
 	catc_open_device,
 	catc_close_device,
-	NULL
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 };
 
 /* **************************************
@@ -333,7 +449,10 @@ static const usbeth_devif_t peg_if = {
 	peg_init_device,
 	peg_open_device,
 	peg_close_device,
-	NULL
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 };
 
 /* **************************************
@@ -412,7 +531,10 @@ static const usbeth_devif_t rtek_if = {
 	rtek_init_device,
 	rtek_open_device,
 	rtek_close_device,
-	NULL
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 };
 
 /* **************************************
@@ -420,17 +542,49 @@ static const usbeth_devif_t rtek_if = {
    ************************************** */
 
 static int asix_get_reg(usbdev_t *dev, uint8_t cmd, int16_t val, int16_t index,
-			uint8_t *buf, int16_t len)
+			void *buf, int16_t len)
 {
 	return usb_std_request(dev, (USBREQ_TYPE_VENDOR | USBREQ_DIR_IN),
 			       cmd, val, index, buf, len);
 }
 
 static int asix_set_reg(usbdev_t *dev, uint8_t cmd, int16_t val, int16_t index,
-			uint8_t *buf, int16_t len)
+			void *buf, int16_t len)
 {
 	return usb_std_request(dev, (USBREQ_TYPE_VENDOR | USBREQ_DIR_OUT),
 			       cmd, val, index, buf, len);
+}
+
+static uint32_t bitswap32(uint32_t value)
+{
+	uint32_t swapped = 0;
+	uint32_t bit = 1;
+	int x;
+
+	for (x = 0; x < 32; x++) {
+		swapped <<= 1;
+		if (value & bit)
+			swapped |= 1;
+		bit <<= 1;
+	}
+	return swapped;
+}
+
+/* set the multicast filter from the multicast address array */
+static void asix_set_mcast_filter(usbeth_softc_t *softc, unsigned char *filter)
+{
+	uint8_t *addr;
+	uint32_t bits;
+	int x;
+
+	memset(filter, 0, ASIX_MCAST_FILTER_LEN);
+	for (x = 0; x < USBETH_MAX_MCAST_ADDRS; x++) {
+		addr = &softc->mcast_addrs[x][0];
+		if (addr[0]) {
+			bits = bitswap32(lib_crc32(addr, ENET_ADDR_LEN)) >> 26;
+			filter[bits >> 3] |=  (1 << (bits & 7));
+		}
+	}
 }
 
 static int asix_get_mac_addr(usbeth_softc_t *softc, uint8_t *mac_addr)
@@ -570,6 +724,264 @@ static void asix178_open_device(usbeth_softc_t *softc)
 	asix_set_reg(softc->dev, ASIX_MED_WRITE_CMD, 0x37e, 0, NULL, 0);
 }
 
+/* **************************************
+   *  ASIX 88179 Gigabit Ethernet I/F Functions
+   ************************************** */
+
+
+static int asix179_get_mac_addr(usbeth_softc_t *softc, uint8_t *mac_addr)
+{
+	int status;
+
+	status = asix_get_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_NIDR,
+			ETH_ALEN, mac_addr, ETH_ALEN);
+	return status;
+}
+
+static int asix179_ioctl_getlink(usbeth_softc_t *softc)
+{
+	uint16_t bmsr = 0;
+
+	asix_get_reg(softc->dev, AXGE_ACCESS_PHY, ASIX179_PHYID, MII_BMSR,
+		(uint8_t *)&bmsr, 2);
+	return bmsr & BMSR_LINKSTAT;
+}
+
+static int asix179_link_reset(usbeth_softc_t *softc)
+{
+	uint8_t link_sts;
+	uint16_t mode;
+	uint16_t tmp16;
+	uint32_t tmp32;
+	int timeoutms = 1000;
+
+	while (timeoutms) {
+		tmp16 = 0;
+		asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_RCR,
+			2, &tmp16, 2);
+		tmp16 = RCR_DROP_CRCERR | RCR_START | RCR_ACPT_BCAST;
+		asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_RCR,
+			2, &tmp16, 2);
+		asix_get_reg(softc->dev, 0x81, 0x8c, 0, &tmp32, 4);
+		if ((tmp32 & 0x40000000) == 0)
+			break;
+		usb_delay_ms(NULL, 10);
+		timeoutms -= 10;
+	}
+
+	asix_get_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_PLSR,
+		1, &link_sts, 1);
+
+	timeoutms = 10000;
+	while (timeoutms) {
+
+		asix_get_reg(softc->dev, AXGE_ACCESS_PHY, ASIX179_PHYID,
+			GMII_PHY_PHYSR, &tmp16, 2);
+		if (tmp16 & GMII_PHY_PHYSR_LINK)
+			break;
+		timeoutms -= 10;
+		usb_delay_ms(NULL, 10);
+	}
+
+	if (!(tmp16 & GMII_PHY_PHYSR_LINK)) {
+		xprintf("ax88179_link_reset: timeout: 0x%x\n", tmp16);
+		return 0;
+	}
+
+	/* RX bulk configuration */
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_RX_BULKIN_QCTRL,
+		sizeof(axge_bulk_size[0]), (void *)&axge_bulk_size[0],
+		sizeof(axge_bulk_size[0]));
+
+	mode = MSR_TFC | MSR_RFC | MSR_RE;
+	if (tmp16 & GMII_PHY_PHYSR_FULL)
+		mode |= MSR_FD;	/* Bit 1 : FD */
+	if (tmp16 & GMII_PHY_PHYSR_GIGA)
+		mode |= MSR_GM;	/* Bit 1 : FD */
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_MSR,
+		2, &mode, 2);
+	return 0;
+}
+
+static void asix179_init_device(usbeth_softc_t *softc)
+{
+	/* Read the adapter's MAC addr */
+	asix179_get_mac_addr(softc, softc->mac_addr);
+}
+
+static void asix179_open_device(usbeth_softc_t *softc)
+{
+	uint8_t buf[5];
+	uint8_t data8;
+	uint16_t data16;
+
+	/* Power up ethernet PHY */
+	data16 = 0;
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_EPPRCR, 2, &data16, 2);
+	data16 = EPPRCR_IPRL;
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_EPPRCR, 2, &data16, 2);
+	usb_delay_ms(NULL, 200);
+
+	data8 = AXGE_CLK_SELECT_ACS | AXGE_CLK_SELECT_BCS;
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_CLK_SELECT,
+		1, &data8, 1);
+	usb_delay_ms(NULL, 100);
+
+	/* RX bulk configuration */
+	memcpy(buf, &axge_bulk_size[0], 5);
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_RX_BULKIN_QCTRL,
+		5, buf, 5);
+	data8 = 0x34;
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_PWLLR, 1, &data8, 1);
+	data8 = 0x52;
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_PWLHR, 1, &data8, 1);
+
+	/* Configure RX control register => start operation */
+	data16 = RCR_DROP_CRCERR | RCR_START | RCR_ACPT_BCAST;
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_RCR,
+		2, &data16, 2);
+
+	data8 = MMSR_PME_TYPE | MMSR_PME_POL |	MMSR_RWMP;
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_MMSR, 1, &data8, 1);
+
+	/* Configure default medium type => giga */
+	data16 = MSR_RE | MSR_TFC | MSR_RFC | MSR_FD | MSR_GM;
+
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_MSR,
+		2, &data16, 2);
+
+	/* restart autonegotation */
+	asix_get_reg(softc->dev, AXGE_ACCESS_PHY, ASIX179_PHYID,
+		MII_BMCR, &data16, 2);
+	data16 |= BMCR_RESTARTAN;
+	asix_set_reg(softc->dev, AXGE_ACCESS_PHY, ASIX179_PHYID,
+		MII_BMCR, &data16, 2);
+	asix179_link_reset(softc);
+}
+
+/* Handles multiple ethernet frames per USB packet. */
+static int asix179_get_eth_frame(usbeth_softc_t *softc, unsigned char *buf)
+{
+	static uint8_t *rbuf;
+	static struct axge_frame_rxhdr *pkt_hdr;
+	static int pkt_cnt;
+	int re_queue_rx = 0;
+	uint16_t hdr_off;
+	uint32_t rx_hdr;
+	uint16_t pkt_len = 0;
+
+	if (pkt_cnt == 0) {
+		rbuf = softc->rxbuf;
+		if (softc->rx_ur->ur_xferred == 0) {
+			xprintf("get_eth_frame: ur_xferred == 0\n");
+			goto requeue;
+		}
+		if (softc->rx_ur->ur_inprogress) {
+			xprintf("get_eth_frame: inprogress\n");
+			goto requeue;
+		}
+		memcpy(&rx_hdr, rbuf + softc->rx_ur->ur_xferred - 4,
+			sizeof(rx_hdr));
+		pkt_cnt = rx_hdr & 0xffff;
+		hdr_off = (rx_hdr >> 16) & 0xffff;
+		pkt_hdr = (struct axge_frame_rxhdr *)(rbuf + hdr_off);
+
+		/*
+		 * This indicates a truncated packet with incorrect
+		 * trailer information
+		 */
+		if (pkt_cnt > 32) {
+			xprintf("pkt_cnt > 32!!!: %d\n", pkt_cnt);
+			re_queue_rx = 1;
+			pkt_cnt = 0;
+			goto requeue;
+		}
+	}
+	pkt_cnt--;
+	pkt_len = AXGE_RXBYTES(pkt_hdr->status);
+
+	if (AXGE_RX_ERR(pkt_hdr->status) != 0) {
+		int skip_len;
+		xprintf("DROP packet flag set, packet: 0x%x, pkt_cnt: %d\n",
+			pkt_hdr->status, pkt_cnt);
+		if (pkt_cnt == 0) {
+			re_queue_rx = 1;
+			goto requeue;
+		}
+		skip_len = (pkt_len + 7) & ~7;
+		rbuf += skip_len;
+		pkt_hdr++;
+		return 0;
+	}
+
+	/* Skip IP alignment psudo header */
+	memcpy(buf, rbuf, pkt_len);
+	if (pkt_cnt) {
+		rbuf += (pkt_len + 7) & ~7;
+		pkt_hdr++;
+	} else {
+		re_queue_rx = 1;
+	}
+
+requeue:
+	if (re_queue_rx) {
+		usb_free_request(softc->rx_ur);
+		usbeth_queue_rx(softc);
+	}
+	return pkt_len;
+}
+
+static int asix179_send_eth_frame(usbeth_softc_t *softc, unsigned char *buf,
+				int len)
+{
+	usbreq_t *ur;
+	int txlen = len;
+	unsigned char *txbuf;
+	uint32_t hdr1;
+	uint32_t hdr2;
+
+	txbuf = KMALLOC((len + sizeof(hdr1) + sizeof(hdr2)), DMA_BUF_ALIGN);
+	hdr1 = txlen;
+	hdr2 = 0;
+	memcpy(&txbuf[0], &hdr1, sizeof(hdr1));
+	memcpy(&txbuf[sizeof(hdr1)], &hdr2, sizeof(hdr2));
+	memcpy(&txbuf[sizeof(hdr1) + sizeof(hdr2)], buf, txlen);
+	txlen += sizeof(hdr1) + sizeof(hdr2);
+
+	ur = usb_make_request(softc->dev, softc->bulk_outpipe,
+			      txbuf, txlen, UR_FLAG_OUT);
+	usb_sync_request(ur);
+	usb_free_request(ur);
+	KFREE(txbuf);
+
+	return len;
+}
+
+static int asix179_multicast(usbeth_softc_t *softc, unsigned char *buf, int set)
+{
+	uint8_t filter[ASIX_MCAST_FILTER_LEN];
+	uint16_t data16;
+
+	if (set) {
+		if (add_mcast_addr(softc, buf))
+			return 1;		/* exceeded max */
+	} else {
+		if (delete_mcast_addr(softc, buf))
+			return 1;		/* address not found */
+	}
+
+	asix_set_mcast_filter(softc, filter);
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, ASIX_SET_MCAST_FILTER,
+		sizeof(filter), filter, sizeof(filter));
+
+	/* Configure RX control register => start operation */
+	data16 = RCR_DROP_CRCERR | RCR_START | RCR_ACPT_BCAST | RCR_ACPT_MCAST;
+	asix_set_reg(softc->dev, AXGE_ACCESS_MAC, AXGE_RCR,
+		2, &data16, 2);
+	return 0;
+}
+
+
 /*	 For 88772 and 88178. Handles multiple ethernet frames per USB packet
 	and fragments across USB packets
 */
@@ -684,25 +1096,63 @@ static int asix2_get_eth_frame(usbeth_softc_t *softc, unsigned char *buf)
 	return len;
 }
 
+static int asix772_multicast(usbeth_softc_t *softc, unsigned char *buf, int set)
+{
+	uint8_t filter[ASIX_MCAST_FILTER_LEN];
+
+	if (set) {
+		if (add_mcast_addr(softc, buf))
+			return 1;		/* exceeded max */
+	} else {
+		if (delete_mcast_addr(softc, buf))
+			return 1;		/* address not found */
+	}
+
+	asix_set_mcast_filter(softc, filter);
+	asix_set_reg(softc->dev, ASIX_SET_MCAST_FILTER, 0, 0,
+		filter, sizeof(filter));
+	asix_set_reg(softc->dev, ASIX_RXCTL_CMD, 0x98, 0, NULL, 0);
+	return 0;
+}
+
 static const usbeth_devif_t asix_if = {
 	asix_init_device,
 	asix_open_device,
 	asix_close_device,
-	NULL
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 };
 
 static const usbeth_devif_t asix772_if = {
 	asix_init_device,
 	asix772_open_device,
 	asix_close_device,
-	asix2_get_eth_frame
+	asix2_get_eth_frame,
+	NULL,
+	asix772_multicast,
+	NULL,
 };
 
 static const usbeth_devif_t asix178_if = {
 	asix_init_device,
 	asix178_open_device,
 	asix_close_device,
-	asix2_get_eth_frame
+	asix2_get_eth_frame,
+	NULL,
+	NULL,
+	NULL,
+};
+
+static const usbeth_devif_t asix179_if = {
+	asix179_init_device,
+	asix179_open_device,
+	asix_close_device,
+	asix179_get_eth_frame,
+	asix179_send_eth_frame,
+	asix179_multicast,
+	asix179_ioctl_getlink,
 };
 
 /* **************************************
@@ -760,7 +1210,10 @@ static const usbeth_devif_t cdc_if = {
 	cdc_init_device,
 	cdc_open_device,
 	cdc_close_device,
-	NULL
+	NULL,
+	NULL,
+	NULL,
+	NULL,
 };
 
 /* *********************** USB-ETH I/F Functions **************************** */
@@ -860,6 +1313,8 @@ static const int ID_TBL[] = {
 	0x0b95, 0x772b, ASIX772B, GEN_ASIX, (int)&asix772_if,
 	/* AX88772B 10/100 */
 	0x0b95, 0x7e2b, ASIX772B, GEN_ASIX, (int)&asix772_if,
+	/* TrendNet TU3-ETG */
+	0x0b95, 0x1790, ASIX179, GEN_ASIX179, (int)&asix179_if,
 	-1, 0, 0, 0, 0
 };
 
@@ -997,48 +1452,6 @@ static int usbeth_get_eth_frame(usbeth_softc_t *softc, unsigned char *buf)
 		}
 	} else
 		xprintf("Bulk data is not available yet!\n");
-
-	return len;
-}
-
-static int usbeth_send_eth_frame(usbeth_softc_t *softc, unsigned char *buf,
-				 int len)
-{
-	usbreq_t *ur;
-	int txlen = len;
-	unsigned char *txbuf;
-
-	if (softc->embed_tx_len) {
-		txbuf = KMALLOC((len + softc->embed_tx_len), DMA_BUF_ALIGN);
-		txbuf[0] = txlen & 0xff; /* 1st two bytes...little endian */
-		txbuf[1] = (txlen >> 8) & 0xff;
-		if (softc->embed_tx_len == 4) {
-			/* 2nd two bytes...1's complement */
-			txbuf[2] = txbuf[0] ^ 0xff;
-			txbuf[3] = txbuf[1] ^ 0xff;
-		}
-		memcpy(&txbuf[softc->embed_tx_len], buf, txlen);
-		txlen += softc->embed_tx_len;
-	} else {
-		if (softc->dev_id == REALTEK) {
-			/* Now for some Realtek chip workarounds */
-			if (txlen < 60)	/* some strange limitation */
-				txlen = 60;
-		}
-		txbuf = KMALLOC(txlen, DMA_BUF_ALIGN);
-		memcpy(txbuf, buf, txlen);
-	}
-
-	/* Modify tx length to handle modulo 64 packets...
-	adapter will discard extra byte */
-	if (!(txlen % 64))
-		++txlen;
-
-	ur = usb_make_request(softc->dev, softc->bulk_outpipe,
-			      txbuf, txlen, UR_FLAG_OUT);
-	usb_sync_request(ur);
-	usb_free_request(ur);
-	KFREE(txbuf);
 
 	return len;
 }
@@ -1271,12 +1684,12 @@ static int usbeth_ether_read(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		return BOLT_ERR_NOTREADY;
 
 	buffer->buf_retlen =
-	    usbeth_get_eth_frame((usbeth_softc_t *) ctx->dev_softc,
-				 buffer->buf_ptr);
+		usbeth_get_eth_frame((usbeth_softc_t *) ctx->dev_softc,
+				buffer->buf_ptr);
 
 #ifdef DATA_DUMP
-	xprintf("Incoming packet:\n");
-	hexdump(buffer->buf_ptr, buffer->buf_retlen);
+	xprintf("Incoming packet: length: %d\n", buffer->buf_retlen);
+		hexdump(buffer->buf_ptr, buffer->buf_retlen);
 #endif
 
 	return 0;
@@ -1294,13 +1707,17 @@ static int usbeth_ether_inpstat(bolt_devctx_t *ctx, iocb_inpstat_t *inpstat)
 
 static int usbeth_ether_write(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 {
+	usbeth_softc_t *softc = (usbeth_softc_t *)ctx->dev_softc;
+
 	if (!Dev_cnt)
 		return BOLT_ERR_NOTREADY;
 
 	/* Block until hw notifies you data is sent. */
-	usbeth_send_eth_frame((usbeth_softc_t *) ctx->dev_softc,
-			      buffer->buf_ptr, buffer->buf_length);
-
+	if (softc->intf->tx)
+		softc->intf->tx(softc, buffer->buf_ptr, buffer->buf_length);
+	else
+		usbeth_send_eth_frame(softc, buffer->buf_ptr,
+				buffer->buf_length);
 	return 0;
 }
 
@@ -1308,16 +1725,18 @@ static int usbeth_ether_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 {
 	int retval = 0;
 	char *unimplemented = NULL;
+	usbeth_softc_t *softc = (usbeth_softc_t *)ctx->dev_softc;
+	int cmd;
 
 	if (!Dev_cnt)
 		return BOLT_ERR_NOTREADY;
 
-	switch ((int)buffer->buf_ioctlcmd) {
+	cmd = (int)buffer->buf_ioctlcmd;
+	switch (cmd) {
 	case IOCTL_ETHER_GETHWADDR:
 		USBETH_TRACE("IOCTL_ETHER_GETHWADDR called. Dev_cnt: %d",
 			Dev_cnt);
-		usbeth_get_dev_addr((usbeth_softc_t *) ctx->dev_softc,
-				    buffer->buf_ptr);
+		usbeth_get_dev_addr(softc, buffer->buf_ptr);
 		break;
 
 	case IOCTL_ETHER_SETHWADDR:
@@ -1330,13 +1749,39 @@ static int usbeth_ether_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		unimplemented = "SETSPEED";
 		break;
 	case IOCTL_ETHER_GETLINK:
-		unimplemented = "GETLINK";
+		USBETH_TRACE("IOCTL_ETHER_GETLINK called. Dev_cnt: %d",
+			Dev_cnt);
+		if (buffer->buf_length != sizeof(int)) {
+			retval = -1;
+			break;
+		}
+		if (softc->intf->ioctl_getlink)
+			*((int *)buffer->buf_ptr) =
+				softc->intf->ioctl_getlink(softc);
+		else
+			unimplemented = "GETLINK";
 		break;
 	case IOCTL_ETHER_GETLOOPBACK:
 		unimplemented = "GETLOOPBACK";
 		break;
 	case IOCTL_ETHER_SETLOOPBACK:
 		unimplemented = "SETLOOPBACK";
+		break;
+	case IOCTL_ETHER_SETMULTICAST_HWADDR:
+	case IOCTL_ETHER_UNSETMULTICAST_HWADDR:
+		if (softc->intf->multicast) {
+			int set;
+
+			if (cmd == IOCTL_ETHER_SETMULTICAST_HWADDR)
+				set = 1;
+			else
+				set = 0;
+			retval = softc->intf->multicast(softc,
+							buffer->buf_ptr,
+							set);
+		} else {
+			unimplemented = "SETMULTICAST_HWADDR";
+		}
 		break;
 
 	default:

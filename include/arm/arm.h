@@ -1,12 +1,10 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
- * 
+ *
  ***************************************************************************/
 
 #ifndef __ARM_H__
@@ -19,6 +17,16 @@
  */
 //                                      p15,    op1,    dest reg,   CRn,    CRm,    op2
 #define MIDR(reg)                       "p15,    0,    " reg ",      c0,     c0,     0"	// Main ID Register
+#define MIDR_IMPLEMENTER_SHIFT          24
+#define MIDR_IMPLEMENTER_MASK           (0xFF << MIDR_IMPLEMENTER_SHIFT)
+#define MIDR_VARIANT_SHIFT              20
+#define MIDR_VARIANT_MASK               (0xF << MIDR_VARIANT_SHIFT)
+#define MIDR_ARCH_SHIFT                 16
+#define MIDR_ARCH_MASK                  (0xF << MIDR_ARCH_SHIFT)
+#define MIDR_PARTNUM_SHIFT              4
+#define MIDR_PARTNUM_MASK               (0xFFF << MIDR_PARTNUM_SHIFT)
+#define MIDR_REVISION_SHIFT             0
+#define MIDR_REVISION_MASK              (0xF << MIDR_REVISION_SHIFT)
 
 #define CTR(reg)                        "p15,    0,    " reg ",      c0,     c0,     1"	// Cache Type Register
 

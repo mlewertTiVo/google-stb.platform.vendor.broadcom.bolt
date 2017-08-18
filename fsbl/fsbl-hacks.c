@@ -17,6 +17,7 @@
 #include <bchp_timer.h>
 
 #if defined(CONFIG_BCM7260A0)
+#include <bchp_ccl.h>
 #include <bchp_mpm_cpu_ctrl.h>
 #include <bchp_mpm_cpu_data_mem.h>
 #endif
@@ -80,6 +81,10 @@ void bcm7260a0_patch_mpm(void)
 	BDEV_WR(BCHP_MPM_CPU_CTRL_RESET_CTRL,
 		(1 << BCHP_MPM_CPU_CTRL_RESET_CTRL_CPU_RESET_ONE_SHOT_SHIFT));
 	__puts("O");
+
+	udelay(50000); /* 50 ms, otherwise new debounce may get overridden */
+	BDEV_WR_F(CCL_TIMING_0, T_CC_DEBOUNCE, 100); /* 100 ms */
+	__puts("D");
 
 	/* wait for MPM to complete negotiation, FOREVER */
 	while (!is_patch_done()) ;

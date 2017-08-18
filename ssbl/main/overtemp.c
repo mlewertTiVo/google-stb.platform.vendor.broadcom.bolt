@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -59,8 +57,12 @@ static void ot_splash_image_change(void)
 	smt = (otalarm) ? SplashMediaType_eOverTemp : SplashMediaType_eBoot;
 
 	smi = splash_open_media(smt, SplashMediaFormat_eBmp, NULL);
-	if (smi->buf)
-		splash_api_replace_bmp(smi->buf, &rgb);
+	if (smi == NULL || smi->buf == NULL) {
+		err_msg("splash: failed to open media %d", (int)smt);
+		return;
+	}
+
+	splash_api_replace_bmp(smi->buf, &rgb);
 #endif
 }
 

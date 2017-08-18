@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -168,8 +168,8 @@ static int tz_cmd_boot_common(ui_cmdline_t *cmd, tz_payload_type tz_prog)
 		/* Need to save the mon load args for later */
 		la = &bolt_tz_mon_loadargs;
 		la->la_flags |= LOADFLG_EL3_EXEC|LOADFLG_APP64;
-		la->la_address = t->mem_addr + mem_layout->spd_offset;
-		la->la_maxsize = BOOT_AREA_SIZE;
+		la->la_address = t->bl31_addr;
+		la->la_maxsize = t->bl31_size;
 		tz_monitor_loaded = 1;
 #endif
 		break;

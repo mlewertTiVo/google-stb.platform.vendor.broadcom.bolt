@@ -552,6 +552,8 @@ int ssdp_recv(ssdp_context_t *ctx)
 	if (NULL == ctx)
 		return BOLT_ERR;
 
+	client_addr_len = sizeof(struct sockaddr);
+
 	/* listen for multicast messages */
 	mcast_msg_len = recvfrom(ctx->sockfd, mcast_msg,
 					(MAX_SSDP_MSG_LEN - 1), 0,
@@ -589,6 +591,7 @@ int ssdp_net_init(ssdp_context_t *ctx)
 	}
 
 	/* setup the server interface */
+	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	server_addr.sin_port = htons(MULTICAST_PORT);
@@ -610,8 +613,8 @@ int ssdp_net_init(ssdp_context_t *ctx)
 	/* interface to join group */
 
 	/* request to join group */
-	if (0 > setsockopt(ctx->sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,
-		(void *) &ctx->group, sizeof(ctx->group))) {
+	if (setsockopt(ctx->sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+		&ctx->group, sizeof(ctx->group)) < 0) {
 		err_msg("%s: failed to join multicast group\n", __func__);
 		close(ctx->sockfd);
 		return BOLT_ERR;
@@ -699,7 +702,7 @@ int register_search_targets(ssdp_context_t *ctx)
 int ssdp_init(ssdp_context_t *ctx)
 {
 	/* initialize a context */
-	memset(ctx, 0, sizeof(ssdp_context_t));
+	memset(ctx, 0, sizeof(*ctx));
 
 	/* just use the default max-age */
 	ctx->max_age = SSDP_MAX_AGE_DEFAULT;
@@ -722,6 +725,30 @@ int ssdp_init(ssdp_context_t *ctx)
 		err_msg("%s: failed to register search targets\n", __func__);
 		return BOLT_ERR;
 	}
+	return BOLT_OK;
+}
+/**********************************************************************
+  *  ssdp_term()
+  *
+  *  terminate ssdp services
+  *  Input parameters:
+  *	 ctx:ssdp instance
+  *  Return value:
+  *  If successful,return BOLT_OK.
+  *  BOLT_ERR for failure
+**********************************************************************/
+int ssdp_term(ssdp_context_t *ctx)
+{
+	/* request to drop group */
+	if (setsockopt(ctx->sockfd, IPPROTO_IP, IP_DROP_MEMBERSHIP,
+		&ctx->group, sizeof(ctx->group)) < 0) {
+		err_msg("%s: failed to drop multicast group\n", __func__);
+		close(ctx->sockfd);
+		return BOLT_ERR;
+	}
+	close(ctx->sockfd);
+	/* initialize a context */
+	memset(ctx, 0, sizeof(*ctx));
 	return BOLT_OK;
 }
 /**********************************************************************

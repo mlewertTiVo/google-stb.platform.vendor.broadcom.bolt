@@ -297,6 +297,10 @@ Read only. Reports the current console device e.g. 'uart0'. Use of the BOLT
 ~~~~~~~~~~
 Read only. Reports the current board name string.
 
+ BOARD_SERIAL
+~~~~~~~~~~~~~
+Reports the board serial number, set by 'setsn' BOLT command.
+
  CHIP_FAMILY_ID
 ~~~~~~~~~~~~~~~
 Read only. Contains the chip ID register value, read as a hexadecimal number.
@@ -601,10 +605,9 @@ servers may not support the non-default block size.
  ETH0_HWADDR
 ~~~~~~~~~~~~
 The MAC address of the principal Ethernet device. This is set by the
-'macprog' BOLT command and saved to flash in the 'flash0.macadr'
-partition. It may be overridden by your own value but a reboot is
-required to pick that new value up. It can be restored to the value
-in 'flash0.macadr' by 'unsetenv ETH0_HWADDR' and another reboot.
+'setsn' BOLT command and saved to flash in the 'flash0.macadr' partition
+if the partition is invalid. It may be overridden by your own value via
+the 'macprog' BOLT command.
 
 ------------------------------------------------------------------------- {qwe}
 
@@ -1132,6 +1135,6 @@ unsetenv  USBMOUSETEST
  Appendix: Copyright Info
 -------------------------
 
-Copyright (C) 2016, Broadcom Ltd.
+Copyright (C) 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.

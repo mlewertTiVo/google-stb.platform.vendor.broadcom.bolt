@@ -20,8 +20,20 @@
 #include "splash-media.h"
 #include "splash_script_load.h"
 #include "timer.h"
+#include "bchp_rdc.h"
 
 #include <stdbool.h>
+
+/* Enable 64 bit register read and write if RDC registers are 64 bit wide*/
+#ifdef BCHP_RDC_desc_0_addr_reserved0_SHIFT
+#define RDC_IS_64BIT
+#endif
+
+#ifdef RDC_IS_64BIT
+#define BREG_WriteAddr BREG_Write64
+#else
+#define BREG_WriteAddr BREG_Write32
+#endif
 
 #define SPLASH_HDR_SIZE 128 /* BMP file format, fixed. */
 #define MAX_SPLASH_SIZE	(512*1024)	/* 512Kb */

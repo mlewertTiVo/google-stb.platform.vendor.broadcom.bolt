@@ -86,20 +86,20 @@ static void fsbl_banner(void)
 #ifndef CFG_EMULATION
 static void fsbl_setup_mmu(struct board_type *b)
 {
-	unsigned int i;
+	unsigned long size;
 
 	mmu_initialize_pagetable();
 
-	for (i = 0; i < b->nddr; i++) {
-		const struct ddr_info *ddr = &(b->ddr[i]);
-		unsigned long size;
-
-		size = ddr_get_restricted_size(ddr);
-		if (size == 0)
-			continue;
-
-		mmu_add_pages(_MB(ddr->base_mb), size);
-	}
+	/* add PTE's from the base of MEMC#0 to the end of to-be-coped SSBL */
+	size = SSBL_RAM_ADDR - _MB(b->ddr[0].base_mb) + SSBL_SIZE;
+	mmu_add_pages(_MB(b->ddr[0].base_mb), size);
+	/* TODO: What if 'size' is smaller than the installed memory on MEMC#0?
+	 * The following code might be added for checking such a condition:
+	 *      if (size > _MB(b->ddr[0].size_mb))
+	 *             puts("Too small amount of memory on MEMC#0");
+	 * But, such a check would not be needed because copying SSBL code
+	 * to DRAM will fail anyway.
+	 */
 
 	/* Modify the very first table entry so we can catch
 	 * such things as NULL pointer exceptions.
@@ -128,6 +128,56 @@ void select_rescue_loader(void)
 
 	/* OEM may want to set some status in AON to indicate that the
 	Rescue Loader will be run */
+}
+
+void fsbl_set_srr(struct board_type *b, struct fsbl_info *info)
+{
+	static const uint32_t MAX_SRR_SIZE_MB = 255;
+	uint32_t size_mb;
+	uint32_t offset_mb;
+
+	if (b == NULL || info == NULL)
+		return;
+
+	/* retrieve the required size of SRR */
+	size_mb = *((uint32_t *)(SRAM_ADDR + PARAM_SRR_SIZE_MB));
+	if (size_mb > MAX_SRR_SIZE_MB) {
+		size_mb = 0;
+		offset_mb = 0;
+	}
+
+	/* find a suitable location */
+	if (size_mb != 0) {
+#if CFG_ZEUS4_2
+		uint32_t dram0_size_mb =
+			ddr_get_restricted_size_mb(&(b->ddr[0]));
+
+		if (dram0_size_mb > size_mb) {
+			offset_mb = dram0_size_mb - size_mb;
+		} else {
+			size_mb = 0;
+			offset_mb = 0;
+		}
+#else
+		size_mb = 0;
+		offset_mb = 0;
+#endif
+	}
+
+	/* set ARCH, otherwise SAGE will be unhappy */
+	if (size_mb != 0) {
+		if (sec_set_arch(_MB(offset_mb), _MB(size_mb))) {
+			__puts("ARCH: ");
+			writeint(size_mb);
+			__puts("@");
+			writeint(offset_mb);
+			puts(" failed");
+		}
+	}
+
+	/* pass the information to SSBL so that it is passed up to Linux */
+	info->srr_size_mb = (uint16_t) size_mb;
+	info->srr_offset_mb = (uint16_t) offset_mb;
 }
 
 void fsbl_main(void)
@@ -319,7 +369,9 @@ void fsbl_main(void)
 
 	sec_scramble_sdram(warm_boot);
 
+#if CFG_ZEUS5_0
 	dtu_load(b, warm_boot);
+#endif
 
 	/*
 	 * Only 16 bit of AON_SYSTEM_DATA[0] is used to check s3 warm boot in
@@ -334,6 +386,19 @@ void fsbl_main(void)
 
 	sec_bfw_load(warm_boot);
 #endif
+	if (warm_boot) {
+		fsbl_init_warm_boot(restore_val);
+#if CFG_ZEUS5_0
+		dtu_verify(b->nddr);
+#endif
+	}
+
+#if CFG_ZEUS4_2
+	dtu_load(b, warm_boot);
+#endif
+
+	fsbl_set_srr(b, &info); /* after loading BFW */
+
 	for (i = 0; i < (int)b->nddr; i++) {
 		const struct ddr_info *ddr;
 
@@ -343,7 +408,7 @@ void fsbl_main(void)
 	}
 
 	if (warm_boot)
-		fsbl_finish_warm_boot(restore_val, b->nddr);
+		fsbl_finish_warm_boot(restore_val);
 
 	fsbl_setup_mmu(b);
 

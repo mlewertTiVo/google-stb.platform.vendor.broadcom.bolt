@@ -381,6 +381,25 @@ const moca_params *board_moca(void)
 	return board_params[inf->board_idx].moca;
 }
 
+const ext_moca_params *board_ext_moca(int instance)
+{
+	struct fsbl_info *inf = get_inf();
+	const ext_moca_params *m;
+
+	if (!inf)
+		return NULL;
+
+	m = board_params[inf->board_idx].external_moca;
+
+	while (m->rgmii != -1) {
+		if (m->rgmii == instance)
+			return m;
+		m++;
+	}
+
+	return NULL;
+}
+
 const gpio_key_params *board_gpio_keys(void)
 {
 	struct fsbl_info *inf = get_inf();

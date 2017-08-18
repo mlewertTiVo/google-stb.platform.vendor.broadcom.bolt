@@ -226,14 +226,6 @@ static void print_otp(void)
 #endif
 }
 
-static uint32_t chip_id_without_rev(const uint32_t chip_id)
-{
-	/* 4-digit part numbers look like: 0x7445_0000
-	 * 5-digit part numbers look like: 0x0743_7100
-	 */
-	return chip_id & 0xf0000000 ? chip_id >> 16 : chip_id >> 8;
-}
-
 static void say_hello(int blink)
 {
 	uint32_t prod, fam;
@@ -263,8 +255,8 @@ static void say_hello(int blink)
 	prod = REG(BCHP_SUN_TOP_CTRL_PRODUCT_ID);
 	fam = REG(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
 	xprintf("SYS_CTRL: product=%04x, family=%04x%02x, strap=%08x",
-		chip_id_without_rev(prod),
-		chip_id_without_rev(fam),
+		chipid_without_rev(prod),
+		chipid_without_rev(fam),
 		(fam & CHIPID_REV_MASK) + 0xa0,
 		REG(BCHP_SUN_TOP_CTRL_STRAP_VALUE_0));
 #ifdef BCHP_SUN_TOP_CTRL_STRAP_VALUE_1
@@ -287,8 +279,8 @@ static void say_hello(int blink)
 		if (prid_board != prid_reg) {
 			warn_msg("Overriding chip ID to be %04x, actual "
 				"chip ID %04x",
-				chip_id_without_rev(prid_board),
-				chip_id_without_rev(prid_reg));
+				chipid_without_rev(prid_board),
+				chipid_without_rev(prid_reg));
 		}
 	}
 }
@@ -299,7 +291,7 @@ static void print_clock_info(void)
 
 	xprintf("CPU: %dx %s [%08x] %d MHz\n",
 		arch_get_num_processors(),
-		arch_get_cpu_bootname(),
+		arch_get_cpuname(),
 		arch_get_midr(),
 		get_cpu_freq_mhz());
 
@@ -489,7 +481,7 @@ static void bolt_autostart(void)
 			xsprintf(bolt_cmd, "ifconfig %s -auto",
 				netdev->dev_fullname);
 			if (!bolt_docommands(bolt_cmd)) {
-				bolt_docommands("ssdp");
+				bolt_docommands("ssdp start");
 				bolt_docommands("coap listen");
 				/* check the env variable
 				 * "COAP_HALT_CMD"
@@ -900,9 +892,51 @@ void bolt_master_reboot(void)
  */
 static void reserve_memory_areas(void)
 {
-#ifdef STUB64_START
-	int64_t retval;
+	int64_t retval = 0;
+	struct fsbl_info *info;
+	unsigned int srr_size = 0;
+	uint64_t srr_offset;
 
+	info = board_info();
+	if (info == NULL) {
+		err_msg("failed to obtain FSBL info\n");
+	} else {
+		/* available only 'fsbl_info' version 3 or higher */
+		if (FSBLINFO_VERSION(info->n_boards) >= 3) {
+			if (info->srr_size_mb != 0) {
+				srr_size = _MB(info->srr_size_mb);
+				srr_offset = _MB(1); /* two step for 64-bit */
+				srr_offset *= info->srr_offset_mb;
+			}
+		}
+	}
+
+	/* SRR shall be the first to reserve so that what FSBL has specified
+	 * is reserved.
+	 */
+	if (srr_size != 0)
+		retval = bolt_reserve_memory(srr_size, srr_offset,
+			BOLT_RESERVE_MEMORY_OPTION_ABS |
+			BOLT_RESERVE_MEMORY_OPTION_DT_NEW |
+			BOLT_RESERVE_MEMORY_OPTION_DT_NOMAP |
+			BOLT_RESERVE_MEMORY_OPTION_OVER4GB,
+			"SRR");
+	if (retval < 0) {
+		err_msg("failed to reserve %d MB @ %d MB for SRR %lld\n",
+			info->srr_size_mb, info->srr_offset_mb, retval);
+	}
+
+#if CFG_TRUSTZONE_MON
+	/* TZ_MON ("BL31") follows right after SRR. */
+	retval = bolt_reserve_memory(_MB(CFG_TRUSTZONE_MON_SIZE_MB), _KB(4),
+		BOLT_RESERVE_MEMORY_OPTION_DT_NEW, "BL31");
+	if (retval < 0) {
+		err_msg("failed to reserve %d MB for BL31 %lld\n",
+			CFG_TRUSTZONE_MON_SIZE_MB, retval);
+	}
+#endif
+
+#ifdef STUB64_START
 	retval = bolt_reserve_memory(PSCI_SIZE, PSCI_BASE,
 		BOLT_RESERVE_MEMORY_OPTION_ABS |
 		BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY,
@@ -916,9 +950,12 @@ static void reserve_memory_areas(void)
 
 static void reserve_memory_splash(void)
 {
-	struct board_type *b = board_thisboard();
+	struct board_type *b;
 	unsigned int memc;
 
+	b = board_thisboard();
+	if (b == NULL)
+		return;
 	for (memc = 0; memc < b->nddr; memc++) {
 		int64_t retval;
 		uint32_t memtop, memlow;

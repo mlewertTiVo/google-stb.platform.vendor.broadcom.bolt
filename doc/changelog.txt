@@ -6,6 +6,109 @@
 Release changelog
 =================
 
+ v1.32
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2407[SWBOLT-2407] 7260a0 Shmoo has been updated to 3.4.0.22 for DDR4 and 3.4.0.0 for DDR3. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2251[SWBOLT-2251] Add support in the scripting language to represent external MoCA chips and make them configurable enough based on the board design.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2403[SWBOLT-2403] Added DT function in Bolt for SATA regulator.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2084[SWBOLT-2084] Added property for start delay to vreg. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2396[SWBOLT-2396] Added wlan partition to bolt for storage to WIFI PA trimming data.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2384[SWBOLT-2384] BFW for 7278a0 has been updated to v1.1.0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2401[SWBOLT-2401] Disabled DTU in 7278a0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2206[SWBOLT-2206] Enabling splash in BOLT v1.32 for 7278A0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2381[SWBOLT-2381] FSBL constructs page table entries corresponding to the range betweenthe base address of MEMC#0 and the end of to-be-copied SSBL, and then SSBL re-constructs for the total DRAM installed.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2376[SWBOLT-2376] Fixed XHCI driver external USB hubs USB 2.0 enumeration.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2397[SWBOLT-2397] Fixed do operator with newer Perl versions.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2369[SWBOLT-2369] Provided "clocks" property for the wake-timer.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2404[SWBOLT-2404] Re-enabled DTU in 7271 and 7268. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2386[SWBOLT-2386] Shmoo for 7268b0 and 7271b0 has been updated to v2.3.1.0. At the moment, Samsung DRAM parts are not supported with v2.3.1.0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2379[SWBOLT-2379] The DRAM portion of the system memory map is passed via Device Tree.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2398[SWBOLT-2398] The configuration for the built-in Ethernet port of BCM97278IPA has been fixed.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2380[SWBOLT-2380] The default BFW has been updated to 4.2.5 for 7250b0, 7260a0. 7268b0, 7271b0, 7364b0, 7364c0, 7366c0, 7439b0, 7445d0 and 7445e0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2410[SWBOLT-2410] Updated 7260 PMap clock freq setting to support UHD upscaling. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2385[SWBOLT-2385] Updated DTU initialization sequence for BFWs.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2390[SWBOLT-2390] Updated PCIe DT node with proper information for Linux PCIe improvements.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.32%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.31
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2222[SWBOLT-2222] 32MB (default) of memory is reserved for SAGE. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2300[SWBOLT-2300] A new 'setsn' command has been added, to set a board serial number.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2356[SWBOLT-2356] Added a new 'splash/splash.bin' example, to be flashed into "flash0.splash".
+
+link:http://jira.broadcom.com/browse/SWBOLT-2253[SWBOLT-2253] Added support for Gigabit ethernet adapter TU3-ETG.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2274[SWBOLT-2274] Added support for starting and stopping of SSDP services.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2255[SWBOLT-2255] Fixed "usbeth_ether_ioctl: Invalid IOCTL 16" error with USB dongle.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2280[SWBOLT-2280] Fixed DTU that got disabled on S3 cycle on B53 families of chips. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2285[SWBOLT-2285] Fixed device mode in DRD mode on 7439C0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2349[SWBOLT-2349] Fixed invalid clocks assignment when there are two SYSTEMPORT.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2298[SWBOLT-2298] Fixed issue with repeated "ifconfig -auto" getting different IP addresses.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2293[SWBOLT-2293] Fixed problem with ping and CoAP services stopping after ssdp command.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2279[SWBOLT-2279] Implemented CoAP block transfer to handle long bolt command output logs.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2321[SWBOLT-2321] Improved GISB debugging by printing master.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2358[SWBOLT-2358] Improved Shmoo stability with Micron DDR4 for all 28nmB15 based SoCs. All users of prior DDR4 versions should update to this
+version. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2276[SWBOLT-2276] PINMUX'ing for DVB-CI/MPOD is not done by BOLT. It should be done by its software driver.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2271[SWBOLT-2271] Support for 7268a0 has been obsoleted. BCM7268 development shall be done only with B0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2272[SWBOLT-2272] Support for 7271a0 has been obsoleted. BCM7271 development shall be done only with B0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2214[SWBOLT-2214] Support for BCM97268VMS_V10 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2302[SWBOLT-2302] Support for BCM97271DB4L has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2359[SWBOLT-2359] Support for BCM97278HB_V10 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2288[SWBOLT-2288] Support for BCM97278IPA has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2341[SWBOLT-2341] The CC debounce time for USB-C has been reduced to 100 ms.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2355[SWBOLT-2355] Updated AVS firmware to v0.5.0:  Enabled AVS watchdog reset on B53 chips.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.31%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.30
 ------
 

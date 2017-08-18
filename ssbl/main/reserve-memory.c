@@ -70,7 +70,7 @@ static void debug_print_board_memory(
 static void debug_print_memory_areas(
 	struct memory_area *table_ma, const char *name, bool areas_only);
 
-static int build_board_memory_map(void);
+static int build_board_memory_map(struct board_memory_chunk **bmt);
 static int build_available_memory_map(struct memory_area *amm,
 	unsigned int max_entries_bmm, struct board_memory_chunk *bmm);
 static unsigned int combine_chunks(unsigned int offset_mb,
@@ -135,19 +135,17 @@ int64_t bolt_reserve_memory(unsigned int amount, uint64_t alignment,
 	 * areas that should not be reserved
 	 */
 	if (table_bm == NULL) {
-		retval = build_board_memory_map();
+		retval = build_board_memory_map(&table_bm);
 		if (retval < 0)
 			return retval;
-		/* table_bm has been constructed and,
-		 * retval is the max #entries in table_bm
+		/* table_bm cannot be NULL with retval >= 0. But, check
+		 * whether it is NULL to satisfy static code analysis tools.
 		 */
+		if (table_bm == NULL)
+			return BOLT_ERR;
 
-		num_entries_table_bm = 0;
-		while (num_entries_table_bm < (unsigned int) retval) {
-			if (table_bm[num_entries_table_bm].size_mb == 0)
-				break;
-			++num_entries_table_bm;
-		}
+		/* retval is the number of valid entries in table_bm */
+		num_entries_table_bm = retval;
 		debug_print_board_memory(num_entries_table_bm, table_bm);
 
 		q_init((queue_t *)&table_am);
@@ -242,8 +240,10 @@ int64_t bolt_reserve_memory(unsigned int amount, uint64_t alignment,
 			q_dequeue((queue_t *)m);
 			/* then, put (enqueue) in table_rm */
 			m->options = update_memc_option(options, memc);
-			if (tag != NULL)
-				m->tag = strdup(tag);
+			if (tag != NULL) {
+				strncpy(m->tag, tag, sizeof(m->tag)-1);
+				m->tag[sizeof(m->tag)-1] = 0; /* ensure '\0' */
+			}
 			q_enqueue((queue_t *)&table_rm, (queue_t *)m);
 			break;
 		case SUBSET_EXTRA_TOP:
@@ -387,7 +387,17 @@ void bolt_reserve_memory_getstatus(void)
 	print_memory_areas(&table_am, "Available memory areas", true);
 }
 
-static int build_board_memory_map(void)
+/* build_board_memory_map -- builds a table of available memory based on
+ *      board configuration
+ *
+ * Parameter:
+ *  bmt [out] pointer to a pointer to struct board_memory_chunk
+ *
+ * Returns:
+ *  number of valid entries in bmt on success
+ *  BOLT error code otherwise
+ */
+static int build_board_memory_map(struct board_memory_chunk **bmt)
 {
 	const struct addr_mapping_entry *am_entry = dram_mapping_table;
 	unsigned int num_entries = NUM_DRAM_MAPPING_ENTRIES;
@@ -403,9 +413,6 @@ static int build_board_memory_map(void)
 		am_entry = dram_mapping_table_v7_64;
 	}
 #endif
-
-	if (table_bm != NULL)
-		return num_entries; /* has already built */
 
 	DEBUGMSG(("building board configured memory map from %d entries\n",
 		num_entries));
@@ -448,7 +455,7 @@ static int build_board_memory_map(void)
 			}
 
 			bmm[index].memc = memc;
-			/* .offset_mb was filled in by combint_chunks() */
+			/* .offset_mb was filled in by combine_chunks() */
 			bmm[index].size_mb =
 				min(size_left_mb, am_entry[i].size_mb);
 			size_left_mb -= bmm[index].size_mb;
@@ -457,8 +464,20 @@ static int build_board_memory_map(void)
 		}
 	}
 
-	table_bm = bmm; /* now, no need to construct again */
-	return num_entries;
+	/* count the number of valid entries in bmm */
+	i = 0;
+	while (i < num_entries) {
+		if (bmm[i].size_mb == 0)
+			break;
+		++i;
+	}
+
+	if (bmt == NULL)
+		KFREE(bmm); /* not needed by the caller */
+	else
+		*bmt = bmm;
+
+	return i;
 }
 
 static int build_available_memory_map(struct memory_area *amm,
@@ -581,7 +600,8 @@ static struct memory_area *create_memory_area_node(unsigned int memc,
 	p->offset = offset;
 	p->size = size;
 	if (tag != NULL)
-		p->tag = strdup(tag);
+		strncpy(p->tag, tag, sizeof(p->tag)-1);
+		/* no need to ensure '\0' due to memset(p, 0, sizeof(*p)) */
 
 	return p;
 }
@@ -693,7 +713,7 @@ static void print_memory_areas(struct memory_area *table_ma, const char *name,
 		if (!areas_only) {
 			/* options and tag if exists */
 			printf(" %08x", m->options);
-			if (m->tag)
+			if (m->tag[0] != '\0')
 				printf(" \"%s\"", m->tag);
 		}
 		printf("\n");

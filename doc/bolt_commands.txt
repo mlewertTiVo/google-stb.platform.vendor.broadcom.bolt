@@ -1421,26 +1421,11 @@ Erasing flash...Programming...done. 65536 bytes written
 ----
 
 ----
-This is the old way where only bmp image was flashed and displayed.
-
-BOLT> flash  -noheader 192.168.0.42:splash.bmp flash0.splash
+BOLT> flash -noheader 192.168.0.42:splash.bin flash0.splash
 Warning: deprecated option '-noheader' will be removed soon
-Reading 192.168.0.42:splash.bmp: .
-Done. 440466 bytes read
-Programming...done. 440466 bytes written
-*** command status = 0
-----
-
-----
-This is the new way where, along with a bmp image, a pcm audio file can be 
-played. This is achieved by flashing a combined(pcm audio + bmp) file named
-splashFile. Below is the command to do it. But, splashFile is created using
-the splash_create_flash_file utility in /scritps.
-
-BOLT> flash -noheader 192.168.0.42:splashFile flash0.splash
-Reading 192.168.0.42:splashFile: .
-Done. 442576 bytes read
-Programming...done. 442576 bytes written
+Reading 192.168.0.42:splash.bin: .
+Done. 460044 bytes read
+Programming...done. 460044 bytes written
 *** command status = 0
 ----
 
@@ -1920,12 +1905,12 @@ Entry address is 0x00008000
 ----
 
 ----
-BOLT> load -raw -splash 192.168.0.42:splash.bmp
-Loader:raw Filesys:tftp Dev:eth0 File:192.168.0.42:splash.bmp Options:(null)
+BOLT> load -raw -splash 192.168.0.42:splash.bin
+Loader:raw Filesys:tftp Dev:eth0 File:192.168.0.42:splash.bin Options:(null)
 Loading: .
- 440466 bytes read
+ 460044 bytes read
 Entry address is 0x8000
-*** command status = 440466
+*** command status = 460044
 ----
 
 ------------------------------------------------------------------------- {qwe}
@@ -1982,25 +1967,19 @@ USAGE
 ~~~~~
 macprog XX-XX-XX-XX-XX-XX
 
-macprog <board-type> <serial-num> <board-rev>
-
 
 NOTES
 ~~~~~
-This command has two modes: the first mode sets the specific value of
-the MAC to the address you specify.  The second mode sets the MAC based
-to a pseudo random setting based on the board-type, serial number, and
-board-rev.  Here are two example usages:
-
-macprog 00-60-6E-70-0D-A2
-
-macprog 97110 1549734 3
+Please use the 'setsn' command unless a specific MAC address value is
+required.
 
 
 EXAMPLE
 ~~~~~~~
+The specific MAC address value in the following example is just an example.
+It should be used as is unless it is a really intended value.
 ----
-BOLT> macprog BCM97445VMSVMB_SFFV00 1234 5
+BOLT> macprog BA-B0-BA-B0-BA-B0
 Programming flash...done
 *** command status = 0
 ----
@@ -2259,18 +2238,15 @@ BOLT> ping -E -x -c=4 192.168.0.42
 
  pmap
 ----
-pmap ............ list all, or select a pmap
+pmap ............ select or clear a pmap
 
 SUMMARY
 ~~~~~~~
-Show PMap ID's (power profiles) available, or select another.
+Select a PMap ID (power profiles) or clear it.
 
 USAGE
 ~~~~~
 pmap [-set=<N> | -clear]
-
-Without any command line argument, available PMap ID's will be
-listed along with associated number of power domains.
 
 For -set=<N> option, <N> is a PMap ID.
 
@@ -2279,21 +2255,13 @@ the default one for the current board.
 
 NOTES
 ~~~~~
-A PMap specified at build time can be checked and replaced with
-a new one using the 'pmap' command. For the newly selected PMap
-to be effective, the board has to reboot (or reset).
-
-Without any command line argument, selectable PMap's are listed
-with numbers at beginning of their lines while non-selectable are
-with asterisk. The number of power domains is marked at the end of
-a line, enclosed in parenthesis. 0 (zero) means "don't care".
-The asterisk at the end of a line indicates the currently selected
-PMap.
+A PMap specified at build time can be replaced with a new one
+using the 'pmap' command. For the newly selected PMap to be
+effective, the board has to reboot (or reset).
 
 Trying to select a PMap that is incompatible with the number of
-power domains on the current board or unavailable in the list will
-result in a failure message, and will not change the existing PMap
-selection.
+power domains on the current board will result in a failure message
+and will not change the existing PMap selection.
 
 NOTES
 ~~~~~
@@ -2304,28 +2272,6 @@ EXAMPLE
 ~~~~~~~
 
 ----
-BOLT> pmap
-*)	PMap0 (1)
-*)	PMap1 (1)
-*)	PMap2 (1)
-*)	PMap3 (1)
-4)	PMap4 (2)
-5)	PMap5 (2)
-6)	PMap6 (2)
-7)	PMap7 (2) *
-8)	PMap8 (2)
-*** command status = 0
-----
-
-----
-BOLT> pmap
-0)      PMap0 (0)
-1)      PMap1 (0)
-2)      PMap2 (0) *
-*** command status = 0
-----
-
-----
 BOLT> pmap -set=1
 board selection update!
 board was f, now f (flags:0xffe00008)
@@ -2334,7 +2280,7 @@ board was f, now f (flags:0xffe00008)
 
 ----
 BOLT> pmap -set=5
-PMap must be [0..2]. 5 is invalid.
+PMap 5 is invalid.
 *** command status = -1
 ----
 
@@ -3024,6 +2970,50 @@ Variable Name        Value
              MESSAGE Hello!
 *** command status = 0
 
+----
+
+------------------------------------------------------------------------- {qwe}
+
+ setsn
+-------
+setsn ............. Sets a board serial number
+
+
+SUMMARY
+~~~~~~~
+Sets a board serial number
+
+
+USAGE
+~~~~~
+setsn [-f] [-ro] <board-serial>
+
+
+NOTES
+~~~~~
+This command sets a given serial number to the environment variable,
+BOARD_SERIAL, If the board does not have a valid MAC address stored
+in a designated flash partition, one is generated based on the serial
+number and stored in the designated flash partition.
+
+
+OPTIONS
+~~~~~~~
+* -f ............... Force MAC programming
+* -ro .............. BOARD_SERIAL cannot change in the future. The '-f' option cannot work as well.
+
+
+EXAMPLE
+~~~~~~~
+----
+BOLT> setsn -f not-a-serial-number
+*** command status = 0
+BOLT> printenv
+Variable Name        Value
+-------------------- --------------------------------------------------
+        BOARD_SERIAL NOT-A-SERIAL-NUMBER
+         ETH0_HWADDR 00:10:18:35:78:D9
+*** command status = 0
 ----
 
 ------------------------------------------------------------------------- {qwe}
@@ -3981,7 +3971,7 @@ BOLT>
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2016, Broadcom Ltd.
+Copyright (C) 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.
 

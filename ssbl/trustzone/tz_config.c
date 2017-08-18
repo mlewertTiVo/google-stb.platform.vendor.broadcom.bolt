@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -66,17 +66,9 @@ struct tz_mem_layout s_tz_mem_layout_32MB = {
 	.tzioc_offset   = 0x00000000,
 	.tzioc_size     = 0x01000000,
 
-#ifdef STUB64_START
-	.os_offset      = 0x01000000,
-	.os_size        = 0x00f00000,
-	.spd_offset     = 0x01f00000,
-	.spd_size       = 0x00100000,
-#else
 	.os_offset      = 0x01000000,
 	.os_size        = 0x01000000,
-	.spd_offset     = 0x00000000,		/* Unused on 32 bit builds */
-	.spd_size       = 0x00000000,
-#endif
+
 	.t2n_offset     = 0x00001000,
 	.t2n_size       = 0x001ff000,
 	.n2t_offset     = 0x00200000,
@@ -93,17 +85,9 @@ struct tz_mem_layout s_tz_mem_layout_16MB = {
 	.tzioc_offset   = 0x00000000,
 	.tzioc_size     = 0x00400000,
 
-#ifdef STUB64_START
-	.os_offset      = 0x00400000,
-	.os_size        = 0x00600000,
-	.spd_offset     = 0x00a00000,
-	.spd_size       = 0x00600000,
-#else
 	.os_offset      = 0x00400000,
 	.os_size        = 0x00c00000,
-	.spd_offset     = 0x00000000,		/* Unused on 32 bit builds */
-	.spd_size       = 0x00000000,
-#endif
+
 	.t2n_offset     = 0x00001000,
 	.t2n_size       = 0x0007f000,
 	.n2t_offset     = 0x00080000,
