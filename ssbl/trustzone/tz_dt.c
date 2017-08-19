@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -25,10 +25,6 @@
 
 #include "tz.h"
 #include "tz_priv.h"
-
-
-#define NWOS_USE_RESERVED_MEM 1
-
 
 static int tz_devtree_cpprop(void *fdt, int node,
 	void *fdt_src, int node_src, const char *prop_name)
@@ -754,122 +750,6 @@ static int tz_populate_model_and_compatible(void *fdt)
 	return 0;
 }
 
-
-#if NWOS_USE_RESERVED_MEM
-static int tz_reserve_mem_nwos(void *fdt)
-{
-	int rc;
-	struct tz_info *t;
-	int rmem_node;
-	int node;
-	char pname[128];
-	uint64_t addr;
-	uint64_t size;
-	uint64_t regs[2];
-
-	t = tz_info();
-	if (!t)
-		return BOLT_ERR;
-
-	/* Get reserved-memory node */
-	rmem_node = fdt_subnode_offset(fdt, 0, "reserved-memory");
-	if (rmem_node < 0) {
-		if (rmem_node != -FDT_ERR_NOTFOUND)
-			return BOLT_ERR;
-
-		/* Add reserved-memory node if not found */
-		rc = bolt_devtree_addnode_at(fdt, "reserved-memory", 0,
-								&rmem_node);
-		if (rc)
-			return rc;
-	}
-
-	addr = t->mem_addr;
-	size = t->mem_size;
-
-	xsprintf(pname, "reserved-tzos@%08x",
-			(unsigned int)(addr & 0xffffffff));
-
-	/* Add reserved-tzos node */
-	rc = bolt_devtree_addnode_at(fdt, pname, rmem_node, &node);
-	if (rc)
-		return rc;
-
-	regs[0] = cpu_to_fdt64(addr);
-	regs[1] = cpu_to_fdt64(size);
-
-	rc = bolt_devtree_at_node_addprop(fdt, node, "reg",
-						regs, sizeof(regs));
-	if (rc)
-		return rc;
-
-	return 0;
-}
-
-#else
-
-static int tz_patch_memory_nwos(void *fdt)
-{
-	int rc;
-	struct tz_info *t;
-	int node;
-	const struct fdt_property *prop;
-	int prop_len;
-	uint64_t *regs;
-	int count;
-	int i;
-
-	t = tz_info();
-	if (!t)
-		return BOLT_ERR;
-
-	node = fdt_subnode_offset(fdt, 0, "memory");
-	if (node < 0)
-		return BOLT_ERR;
-
-	prop = fdt_get_property(fdt, node, "reg", &prop_len);
-	if (!prop)
-		return BOLT_ERR;
-
-	regs = KMALLOC(prop_len, 0);
-	if (!regs)
-		return BOLT_ERR_NOMEM;
-
-	memcpy((void *)regs, prop->data, prop_len);
-	count = prop_len / (sizeof(uint64_t)*2);
-
-	for (i = 0; i < count; i++) {
-		uint64_t addr;
-		uint64_t size;
-
-		addr = fdt64_to_cpu(regs[i*2]);
-		size = fdt64_to_cpu(regs[i*2+1]);
-
-		if ((addr + size) == (t->mem_addr + t->mem_size)) {
-			size -= t->mem_size;
-			regs[i*2+1] = cpu_to_fdt64(size);
-			break;
-		}
-	}
-
-	if (i == count) {
-		rc = BOLT_ERR;
-		goto out;
-	}
-
-	rc = bolt_devtree_at_node_addprop(fdt, node, "reg", regs, prop_len);
-
-	/* fall through */
-
-out:
-	KFREE(regs);
-
-	return rc;
-}
-
-#endif /* NWOS_USE_RESERVED_MEM */
-
-
 static int tz_patch_chosen_nwos(void *fdt)
 {
 	int rc;
@@ -1027,14 +907,6 @@ int tz_devtree_init_nwos(void)
 		if (!rc)
 			xprintf("DT_OFF: DT modification is now off\n");
 	}
-
-#if NWOS_USE_RESERVED_MEM
-	rc = tz_reserve_mem_nwos(fdt);
-#else
-	rc = tz_patch_memory_nwos(fdt);
-#endif
-	if (rc)
-		goto out;
 
 	rc = tz_populate_tzioc(fdt, false);
 	if (rc)

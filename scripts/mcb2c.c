@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,7 +9,7 @@
 
 static const char *COPYRIGHT_HEADER =
 "/***************************************************************************\n"
-" * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.\n"
+" * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.\n"
 " *\n"
 " *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE\n"
 " *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR\n"
@@ -595,7 +595,7 @@ static int does_chip_id_match_filename(const char *fname, const char *chip_id)
 	 * 7445d1 == 7445dx
 	 * 7445d0 == 7445d0
 	 * 7445d1 != 7445d0
-	 * 7271A0 == 7271A_
+	 * 7271B0 == 7271B_
 	 */
 	size_t len;
 	char last_char;

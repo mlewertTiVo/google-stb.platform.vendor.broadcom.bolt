@@ -26,6 +26,7 @@
 #include "env_subr.h"
 
 #define INTR_PIPE
+#define EHCI_NUM_MIN_FREE_EP	(EHCI_QHPOOL_SIZE - 4)
 
 /*  *********************************************************************
     *  Macros for dealing with hardware
@@ -171,7 +172,7 @@ void ehci_dump_async(ehci_softc_t *softc)
 }
 #endif
 
-static void eptstats(ehci_softc_t *softc)
+static int eptused(ehci_softc_t *softc)
 {
 	int cnt;
 	ehci_endpoint_t *e;
@@ -182,6 +183,14 @@ static void eptstats(ehci_softc_t *softc)
 		e = e->ep_next;
 		cnt++;
 	}
+	return cnt;
+}
+
+static void eptstats(ehci_softc_t *softc)
+{
+	int cnt;
+
+	cnt = eptused(softc);
 	printf("EHCI %d left, %d inuse\n", cnt, (EHCI_QHPOOL_SIZE - cnt));
 }
 
@@ -540,19 +549,6 @@ static int ehci_start(usbbus_t *bus)
 	for (idx = 1; idx <= softc->ehci_ndp; idx++)
 		EHCI_WRITECSR(softc, R_EHCI_PORTSC(idx), M_EHCI_PORTSC_PP);
 	usb_delay_ms(softc->ehci_bus, 100);
-
-	/*
-	 * Enable async and periodic lists
-	 */
-
-#ifdef INTR_PIPE
-	reg =
-	    EHCI_READCSR(softc,
-			 R_EHCI_USBCMD) | M_EHCI_USBCMD_ASE | M_EHCI_USBCMD_PSE;
-#else
-	reg = EHCI_READCSR(softc, R_EHCI_USBCMD) | M_EHCI_USBCMD_ASE;
-#endif
-	EHCI_WRITECSR(softc, R_EHCI_USBCMD, reg);
 
 	return 0;
 }
@@ -1153,7 +1149,6 @@ static usbbus_t *ehci_create(physaddr_t addr)
 	usbbus_t *bus;
 
 	ehcidebug = env_getval("EHCIDBG");
-
 	if (ehcidebug < 0)
 		ehcidebug = 0;
 	else
@@ -1225,7 +1220,7 @@ error:
 static usb_ept_t *ehci_ept_create(usbbus_t *bus,
 				  int usbaddr, int eptnum, int mps, int flags)
 {
-	uint32_t eptflags, hport = 0, haddr = 0, spd;
+	uint32_t eptflags, hport = 0, haddr = 0, spd, reg;
 	ehci_endpoint_t *ept;
 	ehci_qh_t *qh;
 	ehci_transfer_t *dummyxfer;
@@ -1318,6 +1313,18 @@ static usb_ept_t *ehci_ept_create(usbbus_t *bus,
 			printf("EHCI No INTR entries available!\n");
 	}
 #endif
+
+	/* Enable async and periodic lists if device connected */
+	if (eptused(softc) < EHCI_NUM_MIN_FREE_EP) {
+		reg = EHCI_READCSR(softc, R_EHCI_USBCMD);
+		if (!(reg & M_EHCI_USBCMD_ASE))
+			reg |= M_EHCI_USBCMD_ASE;
+#ifdef INTR_PIPE
+		if (!(reg & M_EHCI_USBCMD_PSE))
+			reg |= M_EHCI_USBCMD_PSE;
+#endif
+		EHCI_WRITECSR(softc, R_EHCI_USBCMD, reg);
+	}
 
 	return (usb_ept_t *) ept;
 }
@@ -1450,7 +1457,9 @@ static void ehci_ept_cleartoggle(usbbus_t *bus, usb_ept_t *uept)
 
 static void ehci_ept_delete(usbbus_t *bus, usb_ept_t *uept)
 {
+	ehci_softc_t *softc = (ehci_softc_t *) bus->ub_hwsoftc;
 	ehci_endpoint_t *ept = (ehci_endpoint_t *) uept;
+	uint32_t reg;
 
 	if (ept->ep_flags & (UP_TYPE_CONTROL | UP_TYPE_BULK))
 		_ehci_async_ept_delete(bus, uept);
@@ -1460,6 +1469,13 @@ static void ehci_ept_delete(usbbus_t *bus, usb_ept_t *uept)
 #endif
 	else
 		printf("EHCI Invalid endpoint\n");
+
+	/* Disable async and periodic lists if no devices connected */
+	if (eptused(softc) >= EHCI_NUM_MIN_FREE_EP) {
+		reg = EHCI_READCSR(softc, R_EHCI_USBCMD);
+		reg &= ~(M_EHCI_USBCMD_ASE | M_EHCI_USBCMD_PSE);
+		EHCI_WRITECSR(softc, R_EHCI_USBCMD, reg);
+	}
 }
 
 /*  *********************************************************************

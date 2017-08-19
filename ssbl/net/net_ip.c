@@ -28,6 +28,31 @@ typedef struct {
 } hole_t;
 
 /**********************************************************************
+  *  multicast_addr_to_phyaddr(ipi)
+  *
+  *  first 24 bits are fixed for all multicast physical addresses
+  *  map the last 23 bits of the multicast address
+
+  *  Input parameters:
+  *	src - IP address
+  *  Output parameters:
+  *	dest - multicast physical addresses
+  *
+  *  Return value:
+  *	 nothing
+  **********************************************************************/
+static inline void
+multicast_addr_to_phyaddr(uint8_t *dest, uint8_t *src)
+{
+	*dest++ = 0x01;
+	*dest++ = 0x00;
+	*dest++ = 0x5E;
+	*dest++ = src[2] & 0x7f;
+	*dest++ = src[2];
+	*dest++ = src[3];
+}
+
+/**********************************************************************
   *  Forward declarations
   **********************************************************************/
 
@@ -177,15 +202,7 @@ int _ip_send(ip_info_t *ipi, ebuf_t *buf, uint8_t *destaddr, uint8_t proto)
 	if (ip_addrismcast(destaddr)) {
 		uint8_t eth_multicast[6];
 
-		/* first 24 bits are fixed for all
-		multicast physical addresses */
-		eth_multicast[0] = 0x01;
-		eth_multicast[1] = 0x00;
-		eth_multicast[2] = 0x5E;
-		/* map the last 23 bits of the multicast address */
-		eth_multicast[3] = destaddr[2] & 0x7f;
-		eth_multicast[4] = destaddr[2];
-		eth_multicast[5] = destaddr[3];
+		multicast_addr_to_phyaddr(eth_multicast, destaddr);
 
 		res = eth_send(buf, (uint8_t *) eth_multicast);
 		eth_free(buf);
@@ -642,38 +659,36 @@ void _ip_free(ip_info_t *ipi, ebuf_t *buf)
 int _ip_setmcastgroup(ip_info_t *ipi, uint8_t *buf, uint32_t flags)
 {
 	int cur_group;
-	int drop = flags & NET_DROP_GROUP;
+	uint8_t eth_multicast[6];
 
+	if (flags == NET_ADD_GROUP && ip_addr_in_mcgroup(ipi, buf))
+		return BOLT_OK;
+
+	multicast_addr_to_phyaddr(eth_multicast, buf);
 
 	for (cur_group = 0; cur_group < MAX_MC_GROUPS; cur_group++) {
-		if (ipi->mc_list[cur_group].flags &
-					MC_FLAG_VALID && drop) {
+		if ((ipi->mc_list[cur_group].flags & MC_FLAG_VALID) &&
+					(flags == NET_DROP_GROUP)) {
 			if (0 == ip_compareaddr(
 				ipi->mc_list[cur_group].mc_group_addr, buf)) {
 				ipi->mc_list[cur_group].flags &= ~MC_FLAG_VALID;
 				/* clear the valid flag */
-				return 0;
+				eth_unsetmulticast_hwaddr(ipi->eth_info,
+						&eth_multicast[0]);
+				memset(ipi->mc_list[cur_group].mc_group_addr,
+							0, IP_ADDR_LEN);
+				return BOLT_OK;
 			}
-		} else {
-			uint8_t eth_multicast[6];
-
+		} else if (!(ipi->mc_list[cur_group].flags) &&
+					(flags == NET_ADD_GROUP)) {
 			memcpy(ipi->mc_list[cur_group].mc_group_addr,
 						buf, IP_ADDR_LEN);
 			/* copy the group address */
 			ipi->mc_list[cur_group].flags |= MC_FLAG_VALID;
 			/* set the valid flag */
-			/* first 24 bits are fixed for all
-			multicast physical addresses */
-			eth_multicast[0] = 0x01;
-			eth_multicast[1] = 0x00;
-			eth_multicast[2] = 0x5E;
-			/* map the last 23 bits of the multicast address */
-			eth_multicast[3] = buf[2] & 0x7f;
-			eth_multicast[4] = buf[2];
-			eth_multicast[5] = buf[3];
 			eth_setmulticast_hwaddr(ipi->eth_info,
 					&eth_multicast[0]);
-			return 0;
+			return BOLT_OK;
 		}
 	}
 

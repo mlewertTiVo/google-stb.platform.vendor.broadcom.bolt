@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2016, Broadcom Corporation
+ *     Copyright (c) 2012-2017, Broadcom Corporation
  *     All Rights Reserved
  *     Confidential Property of Broadcom Corporation
  *
@@ -477,7 +477,7 @@ static int xhci_config_ep(xhci_softc_t *softc, dev_t *dev, int ep,
 			int hub)
 {
 	inp_ctx_t *ictx = dev->ictx;
-	trb_t *tr;
+	trb_t *tr = NULL;
 	uint32_t dw3, mask, *p;
 	int epidx, maxctx;
 	int ttt = 0;
@@ -707,8 +707,8 @@ static void xhci_init_data(xhci_softc_t *softc, physaddr_t base)
 	/*  scratch pad */
 	val = G_PARAMS2_MSBL(XHCI_READCSR(softc, R_HCSPARAMS2));
 	if (val) {
-		xhci->scratch_buf = U64(xhci_KUMALLOC((val*sizeof(uint64_t)),
-							DMA_BUF_ALIGN));
+		xhci->scratch_buf =
+			xhci_KUMALLOC(val*sizeof(uint64_t), DMA_BUF_ALIGN);
 		for (i = 0; i < val; ++i) {
 			xhci->scratch[i] = U64(xhci_KUMALLOC(SCRATCH_BUF_SIZE,
 								_KB(4)));
@@ -1253,8 +1253,11 @@ static usbbus_t *xhci_create(physaddr_t addr)
 	memset(bus, 0, sizeof(usbbus_t));
 
 	softc->hc = xhci_KUMALLOC(sizeof(xhci_t), DMA_BUF_ALIGN);
-	if (!softc->hc)
+	if (!softc->hc) {
+		KUFREE(bus);
+		KUFREE(softc);
 		return NULL;
+	}
 	memset(softc->hc, 0, sizeof(xhci_t));
 
 	bus->ub_hwsoftc = (usb_hc_t *) softc;

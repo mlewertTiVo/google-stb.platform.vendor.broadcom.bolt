@@ -101,6 +101,7 @@ my @configs = (
 	       "SPLASH_FILE",
 	       "SPLASH_PAL",
 	       "SREC_LDR",
+	       "SRR_SIZE_MB",
 	       "SSBL_CONSOLE",
 	       "STACK_PROTECT_FSBL",
 	       "STACK_PROTECT_SSBL",
@@ -112,6 +113,7 @@ my @configs = (
 	       "COAP",
 	       "TRUSTZONE_CMD",
 		   "TRUSTZONE_MON",
+	       "TRUSTZONE_MON_SIZE_MB",
 	       "UI",
 	       "UNCACHED",
 	       "USB",
@@ -537,6 +539,13 @@ sub new($$) {
 	return $s;
 }
 
+package ExtMoca;
+sub new($$) {
+	my ($class, $s) = @_;
+	bless $s, $class;
+	return $s;
+}
+
 package RtsBase;
 sub new($$$) {
 	my ($class, $s) = (shift, {});
@@ -779,6 +788,15 @@ sub add($$$) {
 		}
 		push @{$s->{moca}}, $part
 			if (!$found);
+	} elsif ($item eq 'ext_moca') {
+		for $r (@{$s->{ext_moca}}) {
+			if ($r->{enet_node} eq $part->{enet_node}) {
+				$found = $r = $part;
+				last;
+			}
+		}
+		push @{$s->{ext_moca}}, $part
+			if (!$found);
 	} elsif ($item eq 'nandchip') {
 		for $r (@{$s->{nandchip}}) {
 			if ($r->{name} eq $part->{name}) {
@@ -864,7 +882,7 @@ my %dt_autogen = map {($_,'')}
 	pwm watchdog upg_main_irq upg_main_aon_irq upg_bsc_irq
 	upg_bsc_aon_irq upg_spi_aon_irq nexus_upg_main_irq
 	nexus_upg_main_aon_irq nexus_upg_bsc_irq nexus_upg_bsc_aon_irq
-	nexus_upg_spi_aon_irq wlan v3d_mmu/;
+	nexus_upg_spi_aon_irq wlan v3d_mmu ext_moca/;
 my $Current = Board->new("");
 my $Family = $Current;
 my $ProcessingState = eStateInNone;
@@ -1318,6 +1336,13 @@ sub cmd_dt($) {
 						if ($i == $#watchdog);
 				}
 			}
+		} elsif ($node eq 'ext_moca') {
+			foreach (qw/-node -parent -cs -interrupt_parent
+				 -interrupt/)
+			{
+				cfg_error("missiong option '$_' for 'dt autogen'")
+					if (!defined $h{$_});
+			}
 		}
 	}
 
@@ -1522,9 +1547,19 @@ sub cmd_moca($) {
 	cfg_error("bad arg for moca_band; must be one of {highrf,midrf,wanrf,ext_d,d_low,d_high,e,f,g,h}")
 		if (defined($o->{moca_band}) && $o->{moca_band} !~
 			/^(-|highrf|midrf|wanrf|ext_d|d_low|d_high|e|f|g|h)$/);
+
 	$Current->add('moca', Moca->new($o));
 }
 
+sub cmd_ext_moca($) {
+	my ($f) = @_;
+	check_in_heading();
+	shift @$f; # drop 'ext_moca'
+	my $o = check_opts($f, [qw/enet_node rgmii phy_type/],
+			   [qw/mdio_mode phy_speed phy_id/]);
+
+	$Current->add('ext_moca', ExtMoca->new($o));
+}
 
 sub cmd_pmux($) {
 	my ($f) = @_;
@@ -1672,7 +1707,6 @@ sub cmd_vreg($)
 	cfg_error("bad value for '-on_at_boot'; must be a decimal number")
 		if ($o->{on_at_boot} && $o->{on_at_boot} !~ /^\d+$/);
 	$o->{uvolts} ||= 3300000; # default value
-	$o->{udelay} ||= 1000; # default value
 	$o->{name} = annotate_vreg_name($o->{name});
 	cfg_error("The '$o->{name} regulator has been previously defined!")
 		if ($h_vreg_names{$o->{name}}
@@ -1704,6 +1738,12 @@ sub cmd_vreg($)
 	$args = ['-root' => '/rdb', '-node' => $o->{name}, '-prop' => 'regulator-max-microvolt',
 		-int => $o->{uvolts}];
 	subcmd_dt_ops('prop', $args);
+
+	$args = ['-root' => '/rdb', '-node' => $o->{name}, '-prop' => 'startup-delay-us',
+		-int => $o->{udelay}];
+	subcmd_dt_ops('prop', $args)
+		if ($o->{udelay});
+
 	$args = ['-root' => '/rdb', '-node' => $o->{name}, '-prop' => 'enable-active-high',
 		'-bool' => $o->{active} eq 'hi'];
 	subcmd_dt_ops('prop', $args)
@@ -1795,6 +1835,43 @@ sub cmd_pcie($) {
 				'-string' => "<$prop_val_str>",];
 			subcmd_dt_ops('compile_prop', $args);
 		}
+	}
+}
+
+sub cmd_sata($) {
+	my ($f) = @_;
+	check_family_onwards();
+	check_in_chip_or_board();
+	shift @$f; # drop 'sata'.
+	my $o = check_opts($f, [qw/controller/], [qw/pwr/]);
+	# Locate the address for the SATA node.
+	my $rh = ::get_bchp_info($Family->{familyname});
+	my $num_sata = BcmUtils::get_num_sata($rh->{rh_defines});
+	my $sata = sprintf("BCHP_SATA%s_AHCI_GHC",
+			   $num_sata > 1 ? $o->{controller} : "");
+	my @reg = BcmDt::Devices::get_reg_range($rh, $sata);
+	cfg_error('bad SATA controller number: ' . $o->{controller})
+		if (!defined($reg[0]));
+
+	my @pwr;
+	if ($o->{pwr}) {
+		my @a = split /,/, $o->{pwr};
+		@a = map { annotate_vreg_name($_); } @a;
+		foreach my $vr (@a) {
+			cfg_error("unknown voltage regulator '$vr'!")
+				if (!$h_vreg_names{$vr});
+		}
+		@pwr = @a;
+	}
+
+	# Turn this into 'dt prop' operation(s).
+	if (@pwr) {
+		my $prop_val_str = join(' ', map { "\&/rdb/$_"; } @pwr);
+		my $args = ['-root' => sprintf("/rdb/sata@%x", $reg[0]),
+			'-node' => sprintf("sata-port@%d", $o->{controller}),
+			'-prop' => "target-supply",
+			'-string' => "<$prop_val_str>",];
+		subcmd_dt_ops('compile_prop', $args);
 	}
 }
 
@@ -2021,8 +2098,11 @@ my %commands = (
 		'dts' =>	\&cmd_dts,
 		'dtsinclude' =>	\&cmd_dtsinclude,
 		'enet' =>	\&cmd_enet,
+		'ext_moca' =>	\&cmd_ext_moca,
+		'gpio_key' =>	\&cmd_gpio_key,
 		'gset' =>	\&cmd_gset,
 		'i2cbus' =>	\&cmd_i2cbus,
+		'ldfile' =>	\&cmd_ldfile,
 		'map' =>	\&cmd_map,
 		'mapselect' =>	\&cmd_map_select,
 		'memsys' =>	\&cmd_memsys,
@@ -2040,10 +2120,10 @@ my %commands = (
 		'gpio_led' =>	\&cmd_gpio_led,
 		'bt_rfkill_gpio' => \&cmd_bt_rfkill_gpio,
 		'rtsdefault' =>	\&cmd_rtsdefault,
-		'section' =>	\&cmd_section,
+		'sata' =>	\&cmd_sata,
 		'sdio' =>	\&cmd_sdio,
+		'section' =>	\&cmd_section,
 		'usb' =>	\&cmd_usb,
-		'ldfile' =>	\&cmd_ldfile,
 		'vreg' =>	\&cmd_vreg,
 	);
 
@@ -2526,6 +2606,37 @@ sub gen_moca($) {
 
 	return $text . "\t\t\t{ 0, NULL, NULL}\n\t\t},\n";
 }
+
+sub gen_ext_moca($) {
+	my ($ext_moca) = @_;
+	my $text = "\t\t.external_moca = {\n";
+	my $phy_id;
+	for my $m (@$ext_moca) {
+		$m = check_moca_nulls($m);
+		$m = check_enet_nulls($m);
+
+		next if ($m->{phy_type} eq "NULL");
+		# Do not accept PHY addresses that are neither PHY_ID_NONE
+		# (0x101), PHY_ID_AUTO (0x100) and not in the range from 0 to
+		# 31 (inclusive)
+		if ($m->{phy_id} =~ /\"([0-9a-f]+)\"/) {
+			$phy_id = $1;
+			die "invalid PHY address: $phy_id"
+				if (($phy_id < 0 or $phy_id >= 32)
+					and $phy_id != 0x100 and $phy_id != 0x101);
+		}
+		$text .= "\t\t\t{\n";
+		$text .= "\t\t\t\t.enet_node = " . $m->{enet_node} . ",\n";
+		$text .= "\t\t\t\t.rgmii = " . $m->{rgmii} . ",\n";
+		$text .= "\t\t\t\t.phy_type = " . $m->{phy_type}  . ",\n";
+		$text .= "\t\t\t\t.mdio_mode = " . $m->{mdio_mode} . ",\n";
+		$text .= "\t\t\t\t.phy_speed = " . $m->{phy_speed} . ",\n";
+		$text .= "\t\t\t\t.phy_id = " . $m->{phy_id} . ",\n";
+		$text .= "\t\t\t},\n";
+	};
+
+	return $text . "\t\t\t{ NULL, -1, NULL, NULL, NULL, NULL}\n\t\t},\n";
+};
 
 sub gen_gpio_key($) {
 	my ($gpio_key) = @_;
@@ -3116,6 +3227,7 @@ sub processed_board_params() {
 		$text .= gen_rtsdefault($b->{rtsdefault});
 		$text .= gen_enet($b->{enet});
 		$text .= gen_moca($b->{moca});
+		$text .= gen_ext_moca($b->{ext_moca});
 		$text .= gen_avs_board_params($b->{avs});
 		$text .= gen_gpio_key($b->{gpio_key});
 		$text .= gen_gpio_led($b->{gpio_led});
@@ -3154,6 +3266,7 @@ sub process_board_dev_trees($$) {
 		$text .= BcmDt::Board::gen_cpu_dts($b->{cset});
 		$text .= BcmDt::Board::gen_enet_dts($b->{enet});
 		$text .= BcmDt::Board::gen_moca_dts($b->{moca});
+		$text .= BcmDt::Board::gen_ext_moca_dts($b->{ext_moca});
 		$text .= BcmDt::Board::gen_gpio_key_dts($b->{gpio_key});
 		$text .= BcmDt::Board::gen_sdio_dts($b->{sdio});
 		$text .= BcmDt::Board::gen_memc_dts($b->{ddr});
@@ -3541,6 +3654,8 @@ sub processed_config() {
 	$ctext .= "#define NUM_BSC " . gen_num_bsc($Family) . "\n";
 	$ctext .= "#define NUM_SDIO " . BcmSdio::get_num($Family) . "\n";
 	$ctext .= "#define NUM_ENET " . ($n_genet, $n_switch_ports)[$n_genet < $n_switch_ports] . "\n";
+	# BCM6802/3 have 2 configurable Ethernet ports
+	$ctext .= "#define NUM_EXT_MOCA 2\n";
 	$ctext .= "#define NUM_SATA ". gen_num_sata($Family) . "\n";
 	$ctext .= "#define MAX_SATA_PHY_PORTS " .
 					gen_max_sata_phy_ports($Family) . "\n";
@@ -3659,6 +3774,7 @@ sub process_dev_tree($)
 		BcmUtils::get_num_dtu_config($rh->{rh_defines}) : 0;
 	my $num_dpfe = $dt_autogen{dpfe} ?
 		BcmUtils::get_num_dpfe($rh->{rh_defines}) : 0;
+	my $clks_file = "./config/clks-" . $family->{familyname} . ".plx";
 
 	map { $dt_autogen{$_} ||= {} } keys %dt_autogen;
 
@@ -3742,7 +3858,7 @@ sub process_dev_tree($)
 	BcmDt::Devices::add_avs_cpu($rdb, $rh)
 		if ($num_avs_cpu && !empty($dt_autogen{avs_cpu}));
 	BcmDt::Devices::add_waketimer($rdb, $rh, $dt_autogen{waketimer},
-		"aon_pm_l2")
+		"aon_pm_l2", -f $clks_file)
 		if ($num_waketimer && !empty($dt_autogen{waketimer}));
 	BcmDt::Devices::add_avs_tmon($rdb, $rh, $dt_autogen{avs_tmon},
 		"avs_host_l2")
@@ -3750,7 +3866,7 @@ sub process_dev_tree($)
 	BcmDt::Devices::add_thermal_zones($dt, $rh, $dt_autogen{thermal_zones})
 		if ($num_avs_tmon && !empty($dt_autogen{thermal_zones}));
 	BcmDt::Devices::add_aon_ctrl($rdb, $rh, $dt_autogen{aon_ctrl});
-	BcmDt::Devices::add_memcs($rdb, $rh, $num_memcs, $dt_autogen{memcs})
+	BcmDt::Devices::add_memcs($rdb, $rh, $num_memcs, $Family->{drammap}, $dt_autogen{memcs})
 		if ($num_memcs && !empty($dt_autogen{memcs}));
 	BcmDt::Devices::add_spi($rdb, $rh, $dt_autogen{spi})
 		if ($num_spi && !empty($dt_autogen{spi}));
@@ -3774,7 +3890,6 @@ sub process_dev_tree($)
 	BcmDt::Devices::add_sf2($rdb, $rh, $dt_autogen{sf2_switch})
 		if ($num_sf2_switch && !empty($dt_autogen{sf2_switch}));
 
-	my $clks_file = "./config/clks-" . $family->{familyname} . ".plx";
 	if (-f $clks_file) {
 		BcmDt::Devices::merge_clocks_file($rh->{rh_defines},
 			$dt, $clks_file)
@@ -3828,7 +3943,7 @@ sub process_dev_tree($)
 		$dt_autogen{upg_spi_aon_irq}, "upg_spi_aon_irq")
 		if !empty($dt_autogen{upg_spi_aon_irq}) && $num_upg_spi_aon_irq;
 
-	BcmDt::Devices::add_watchdog($rdb, $rh, $dt_autogen{watchdog}, $clks_file)
+	BcmDt::Devices::add_watchdog($rdb, $rh, $dt_autogen{watchdog}, -f $clks_file)
 		if (!empty($dt_autogen{watchdog}));
 
 	BcmDt::Devices::add_bsp($rdb, $rh, $dt_autogen{bsp})
@@ -3856,7 +3971,7 @@ sub process_dev_tree($)
 		if (!empty($dt_autogen{dpfe}) && $num_dpfe);
 
 	BcmDt::Devices::add_cpu_clock($dt, $dt_autogen{cpuclock})
-		if (!empty($dt_autogen{cpuclock}));
+		if (!empty($dt_autogen{cpuclock}) && -f $clks_file);
 
 	# Generate these nodes if not on MIPS arch
 	if ($rh->{chip_arch} ne "MIPS") {
@@ -3868,6 +3983,9 @@ sub process_dev_tree($)
 		BcmDt::Devices::add_cpu_biu_ctrl($rdb, $rh, $family->{familyname});
 		BcmDt::Devices::add_hif_cont($rdb, $rh);
 	}
+
+	BcmDt::Devices::add_ext_moca($rdb, $rh, $dt_autogen{ext_moca})
+		if (!empty($dt_autogen{ext_moca}));
 
 	BcmDt::Devices::final_write_all_rdb_syscon_references($dt);
 

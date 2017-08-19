@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -31,7 +31,7 @@ int		arch_mark_executable(uintptr_t addr, unsigned int size,
 void		arch_config(void);
 int		arch_pte_type(bool first_level, uint32_t pte);
 void		arch_call_bolt_main(unsigned int new_stack_pointer);
-const char	*arch_get_cpu_bootname(void);
+const char	*arch_get_cpuname(void);
 int		arch_booted64(void);
 void		arch_abort_enable(void);
 void		arch_abort_disable(void);

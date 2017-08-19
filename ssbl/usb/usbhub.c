@@ -874,24 +874,19 @@ static void usbhub_scan_ports(usbdev_t *dev, void *arg)
 
 					/*
 					 * Set up the max packet size for the control endpoint,
+					 * set the new device's address and
 					 * then get the rest of the descriptor.
 					 */
 
 					usb_set_ep0mps(newdev,
 						       newdev->
 						       ud_devdescr.bMaxPacketSize0);
+					addr = usb_new_address(newdev->ud_bus);
+					usb_set_address(newdev, addr);
 					res =
 					    usb_get_device_descriptor(newdev,
 								      &(newdev->ud_devdescr),
 								      FALSE);
-
-					/*
-					 * Obtain a new address and set the address of the
-					 * root hub to this address.
-					 */
-
-					addr = usb_new_address(newdev->ud_bus);
-					res = usb_set_address(newdev, addr);
 
 					/*
 					 * Get the configuration descriptor and all the

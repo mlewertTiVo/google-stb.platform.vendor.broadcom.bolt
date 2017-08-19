@@ -17,7 +17,7 @@
 ifeq ($(FAMILY),7445d0)
  SEC_PFX := ba,ba,bb,bb
  SEC_BBL := 1.0.0,1.0.0,1.0.1,1.0.1
- SEC_BFW := 2.1.0,4.1.5,2.1.0,4.1.5
+ SEC_BFW := 2.1.0,4.2.5,2.1.0,4.2.5
 endif
 
 ifeq ($(CFG_ZEUS4_1),1)
@@ -28,7 +28,7 @@ endif
 
 #default
 ifeq ($(SEC_PFX),)
- SEC_PFX := ba,ba,bb,bb,bb,bb,bb,bb
- SEC_BBL := 1.0.0,1.0.0,1.0.1,1.0.1,3.0.0,3.0.0,3.1.1,3.1.1
- SEC_BFW := 1.0.0,2.0.0,2.1.0,4.1.5,4.1.5,4.2.3,4.1.5,4.2.3
+ SEC_PFX := ba,ba,ba,bb,bb
+ SEC_BBL := 1.0.0,1.0.0,1.0.0,1.0.1,3.1.1
+ SEC_BFW := 1.0.0,1.1.0,2.0.0,4.2.5,4.2.5
 endif

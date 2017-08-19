@@ -93,9 +93,9 @@ extern "C" {
 #define MEMSYS_FW_VERSION_ENG_SHIFT         0
     
 #define MEMSYS_FW_VERSION_MAJOR             2
-#define MEMSYS_FW_VERSION_MINOR             2
-#define MEMSYS_FW_VERSION_PATCH             2
-#define MEMSYS_FW_VERSION_ENG               9
+#define MEMSYS_FW_VERSION_MINOR             3
+#define MEMSYS_FW_VERSION_PATCH             1
+#define MEMSYS_FW_VERSION_ENG               0
     
 #define MEMSYS_FW_VERSION                                         \
     ((MEMSYS_FW_VERSION_MAJOR << MEMSYS_FW_VERSION_MAJOR_SHIFT) | \

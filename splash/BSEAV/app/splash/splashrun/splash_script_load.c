@@ -232,7 +232,7 @@ static void InitializeSlot
             }
 #endif
 			/* flush previous RUL: we just appended cmd to it to link the current RUL start addr */
-			BMEM_Heap_FlushCache(hHeap, apulCached[iRUL-1], sizeof(uint32_t)*(iPrvNumEntries+6));
+			BMEM_Heap_FlushCache(hHeap, apulCached[iRUL-1], sizeof(uint32_t)*(iPrvNumEntries+iRdcEntries));
 
 			/* Remember this slot */
 			if (iSlotIndex > s_highSlot) s_highSlot = iSlotIndex;
@@ -300,7 +300,7 @@ static void InitializeSlot
     if(rc)
         BDBG_ERR(("Error Converting %d", rc));
 
-    BREG_Write32(hRegister, BCHP_RDC_desc_0_addr + ulSlotOffset,
+    BREG_WriteAddr(hRegister, BCHP_RDC_desc_0_addr + ulSlotOffset,
         ulAddrOffset);
 
 #ifdef BCHP_RDC_sync_0_arm
@@ -347,11 +347,11 @@ BREG_Handle hRegister, SplashBufInfo *pSplashBufInfo, SplashData* pSplashData)
 	for (ii=0; ii<pSplashData->iNumDisplay; ii++)
 	{
 		iSurIdx = pSplashData->pDispInfo[ii].iSurIdx;
-		BREG_Write32(hRegister, pSplashData->pDispInfo[ii].ulRdcScratchReg0,
+		BREG_WriteAddr(hRegister, pSplashData->pDispInfo[ii].ulRdcScratchReg0,
 			pSplashBufInfo->aulSurfaceBufOffset[iSurIdx]);
 		if (pSplashData->pDispInfo[ii].ulRdcScratchReg1)
 		{
-			BREG_Write32(
+			BREG_WriteAddr(
 				hRegister, pSplashData->pDispInfo[ii].ulRdcScratchReg1,
 				pSplashBufInfo->aulSurfaceBufOffset[iSurIdx]);
 		}

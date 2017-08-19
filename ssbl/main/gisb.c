@@ -63,6 +63,9 @@ void bolt_gisb_task(void *arg)
 		xprintf("GISB Data = %#010x\n",
 			BDEV_RD(BCHP_SUN_GISB_ARB_ERR_CAP_DATA));
 
+		xprintf("GISB Master = %#010x\n",
+			BDEV_RD(BCHP_SUN_GISB_ARB_ERR_CAP_MASTER));
+
 		/* clear timeout interrupt */
 		BDEV_WR(BCHP_SUN_GISB_ARB_ERR_CAP_CLR,
 			BCHP_SUN_GISB_ARB_ERR_CAP_CLR_clear_MASK);
@@ -83,6 +86,9 @@ void bolt_gisb_task(void *arg)
 
 		xprintf("GISB Data = %#018llx\n",
 			BDEV_RD64(BCHP_SUN_GISB_ARB_ERR_CAP_DATA));
+
+		xprintf("GISB Master = %#010x\n",
+			BDEV_RD(BCHP_SUN_GISB_ARB_ERR_CAP_MASTER));
 
 		/* clear timeout interrupt */
 		BDEV_WR(BCHP_SUN_GISB_ARB_ERR_CAP_CLR,

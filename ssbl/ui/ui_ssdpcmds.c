@@ -37,7 +37,8 @@
     ********************************************************************* */
 
 #if CFG_SSDP
-static int ui_cmd_ssdp(ui_cmdline_t *cmd, int argc, char *argv[]);
+static int ui_cmd_ssdp_start(ui_cmdline_t *cmd, int argc, char *argv[]);
+static int ui_cmd_ssdp_stop(ui_cmdline_t *cmd, int argc, char *argv[]);
 
 /*  *********************************************************************
     *  ui_init_ssdpcmds()
@@ -51,19 +52,25 @@ static int ui_cmd_ssdp(ui_cmdline_t *cmd, int argc, char *argv[]);
 int ui_init_ssdpcmds(void)
 {
 
-	cmd_addcmd("ssdp",
-			ui_cmd_ssdp,
+	cmd_addcmd("ssdp start",
+			ui_cmd_ssdp_start,
 			NULL,
 			"Starts SSDP discovery protocol",
-			"ssdp",
+			"ssdp start",
 			"");
 
+	cmd_addcmd("ssdp stop",
+			ui_cmd_ssdp_stop,
+			NULL,
+			"Stops SSDP discovery protocol",
+			"ssdp stop",
+			"");
 	return 0;
 }
 
 ssdp_context_t g_ctx;
 
-static int ui_cmd_ssdp(ui_cmdline_t *cmd, int argc, char *argv[])
+static int ui_cmd_ssdp_start(ui_cmdline_t *cmd, int argc, char *argv[])
 {
 	ssdp_context_t *ctx = &g_ctx;
 
@@ -78,4 +85,14 @@ static int ui_cmd_ssdp(ui_cmdline_t *cmd, int argc, char *argv[])
 	return BOLT_OK;
 }
 
+static int ui_cmd_ssdp_stop(ui_cmdline_t *cmd, int argc, char *argv[])
+{
+	ssdp_context_t *ctx = &g_ctx;
+
+	/* remove it as a background task */
+	bolt_bg_remove(ssdp_poll);
+
+	/* terminate ssdp */
+	return ssdp_term(ctx);
+}
 #endif /* CFG_SSDP */

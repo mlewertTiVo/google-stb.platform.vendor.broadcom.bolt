@@ -151,6 +151,7 @@
 #define ERR_S3_PARAM_HASH_FAILED                22
 #define ERR_S3_DDR_HASH_FAILED                  23
 #define ERR_S3_BAD_PSCI_BASE                    24
+#define ERR_S3_DTU_REMAP_FAILED                 25
 
 /* boot status */
 #define BOOT_BFW_STATUS_SHIFT                   0
@@ -272,6 +273,8 @@
 #define PARAM_AVS_PARAM_1                       0x000000E4
 #define PARAM_AVS_PARAM_1_PMAP_MASK             0x1F
 #endif
+
+#define PARAM_SRR_SIZE_MB                       0x00000120
 
 /* flag for booting from eMMC data partition*/
 #define AON_EMMC_DATA_PART_BOOT_MASK            0x0F000000

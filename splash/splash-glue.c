@@ -350,9 +350,13 @@ static int splash_glue_init_bmem(uint32_t memc, struct board_type *b)
 		return retval;
 	}
 	/* heap grows down */
+	/* subtract 1 byte to work around a boundary condition and avoid
+	 * integer overflow. But, note that the amount of the memory loss will
+	 * depend on the required alignment.
+	 */
 	top = retval + RESERVATION_AMOUNT;
-	bmem_free[memc] = top;
-	bmem_ptop[memc] = top;
+	bmem_free[memc] = top - 1;
+	bmem_ptop[memc] = top - 1;
 
 #if (CFG_CMD_LEVEL >= 3)
 	xprintf("SPLASH BMEM init @ %x\n", bmem_ptop[memc]);

@@ -201,6 +201,7 @@ void sec_verify_memsys(void);
 void sec_memsys_region_disable(void);
 void sec_memsys_set_status(int success);
 void sec_set_memc(struct fsbl_info *pinfo);
+int sec_set_arch(uint64_t offset, unsigned int size);
 void sec_mitch_check(void);
 void sec_print_version(void);
 void __noreturn fsbl_end(struct fsbl_info *info);

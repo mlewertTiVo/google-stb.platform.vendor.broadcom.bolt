@@ -1083,28 +1083,32 @@ the splash screen.</p></div>
 <div class="paragraph"><p>Read only. Reports the current board name string.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_chip_family_id">4.3.  CHIP_FAMILY_ID</h3>
+<h3 id="_board_serial">4.3.  BOARD_SERIAL</h3>
+<div class="paragraph"><p>Reports the board serial number, set by <em>setsn</em> BOLT command.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_chip_family_id">4.4.  CHIP_FAMILY_ID</h3>
 <div class="paragraph"><p>Read only. Contains the chip ID register value, read as a hexadecimal number.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_version">4.4.  VERSION</h3>
+<h3 id="_version">4.5.  VERSION</h3>
 <div class="paragraph"><p>Read only. The BOLT version.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_buildtag">4.5.  BUILDTAG</h3>
+<h3 id="_buildtag">4.6.  BUILDTAG</h3>
 <div class="paragraph"><p>Read only. The BOLT build tag (git commit ID), if applicable.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_memorysize">4.6.  MEMORYSIZE</h3>
+<h3 id="_memorysize">4.7.  MEMORYSIZE</h3>
 <div class="paragraph"><p>Read only. The total memory for the current board.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_dram_lt_n_gt__size">4.7.  DRAM&lt;N&gt;_SIZE</h3>
+<h3 id="_dram_lt_n_gt__size">4.8.  DRAM&lt;N&gt;_SIZE</h3>
 <div class="paragraph"><p>Read only. Set after executing the BOLT <em>info</em> command. Reports
 the total memory for each DDR (MEMC).</p></div>
 </div>
 <div class="sect2">
-<h3 id="_prompt">4.8.  PROMPT</h3>
+<h3 id="_prompt">4.9.  PROMPT</h3>
 <div class="paragraph"><p>The current BOLT prompt. Defaults to "BOLT&gt; "</p></div>
 <div class="listingblock">
 <div class="title">Example</div>
@@ -1117,7 +1121,7 @@ Smoke me a kipper&gt;</code></pre>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_cmd_echo">4.9.  CMD_ECHO</h3>
+<h3 id="_cmd_echo">4.10.  CMD_ECHO</h3>
 <div class="paragraph"><p>If set, echo all commands to the console device.
 Each command is then prefixed by <em>{CMD}</em>.</p></div>
 <div class="listingblock">
@@ -1377,12 +1381,7 @@ and the server started to provide IP addresses to BOLT on a local
 LAN:</p></div>
 <div class="listingblock">
 <div class="title">Example</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="font-style: italic"><span style="color: #9A1900"># http://dhcp-dns-server.sourceforge.net</span></span>
-<span style="color: #009900">BootFileName</span><span style="color: #990000">=</span>vmlinuz-initrd-7445d0</tt></pre></div></div>
+<div class="content"></div></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; ifconfig eth0 -auto
@@ -1417,10 +1416,9 @@ servers may not support the non-default block size.</p></div>
 <div class="sect2">
 <h3 id="_eth0_hwaddr">6.6.  ETH0_HWADDR</h3>
 <div class="paragraph"><p>The MAC address of the principal Ethernet device. This is set by the
-<em>macprog</em> BOLT command and saved to flash in the <em>flash0.macadr</em>
-partition. It may be overridden by your own value but a reboot is
-required to pick that new value up. It can be restored to the value
-in <em>flash0.macadr</em> by <em>unsetenv ETH0_HWADDR</em> and another reboot.</p></div>
+<em>setsn</em> BOLT command and saved to flash in the <em>flash0.macadr</em> partition
+if the partition is invalid. It may be overridden by your own value via
+the <em>macprog</em> BOLT command.</p></div>
 <div class="paragraph"><p></p></div>
 </div>
 </div>
@@ -1896,7 +1894,7 @@ USB: Bus 7 Hub 1 port 1 in overcurrent state... not re-enabling power</code></pr
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_board_serial">9.6.  BOARD_SERIAL</h3>
+<h3 id="_board_serial_2">9.6.  BOARD_SERIAL</h3>
 <div class="paragraph"><p>Applies only to the USB BDC driver. If an external USB master
 requests the STB USB serial number string, it will return
 this value. If not set it will default to:</p></div>
@@ -2162,7 +2160,7 @@ unsetenv  USBMOUSETEST
 <div class="sect1">
 <h2 id="_appendix_copyright_info">10.  Appendix: Copyright Info</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+<div class="paragraph"><p>Copyright &#169; 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.</p></div>
 </div>
@@ -2171,7 +2169,8 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-06-28 11:24:19 PDT
+Last updated
+ 2017-08-17 23:27:50 PDT
 </div>
 </div>
 </body>

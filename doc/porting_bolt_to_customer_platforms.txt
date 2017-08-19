@@ -977,10 +977,10 @@ options as shown below:
 [user@linuxbox] ./gen/scripts/splash_create_flash_file \
 	-b splash/splash.bmp  \
 	-p splash/audio-testtones.bin \
-	-o splashFile
+	-o splash/splash.bin
 
-[user@linuxbox] ls -l splashFile 
--rw-rw-r-- 1 user user 442576 Jan 1 12:00 splashFile
+[user@linuxbox] ls -l splash/splash.bin
+-rw-rw-r-- 1 user user 442576 Jan 1 12:00 splash/splash.bin
 ----
 
 Alternately, compression (via the '-z' flag) of the meda file is now supported:
@@ -993,10 +993,10 @@ Alternately, compression (via the '-z' flag) of the meda file is now supported:
 	-b splash/splash.bmp \
 	-p splash/audio-testtones.bin \
 	-t splash/fire.bmp \
-	-z -o splashFile.zb
+	-z -o splash/splash.zb
 
-[user@linuxbox] ls -l splashFile.zb
--rw-rw-r-- 1 user user 184877 Jan 1 12:00 splashFile
+[user@linuxbox] ls -l splash/splash.zb
+-rw-rw-r-- 1 user user 184877 Jan 1 12:00 splash/splash.zb
 ----
 
 As you can see in the above example the compressed media file is approximately 41% smaller
@@ -1009,7 +1009,7 @@ IMPORTANT: Only little endian, 32 bit signed pcm audio data, sampled at 48Khz is
  Flashing the splash media file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Flash 'splashFile' or 'splashFile.zb' to 'flash0.splash' in BOLT, both
+Flash 'splash/splash.bin' or 'splash/splash.zb' to 'flash0.splash' in BOLT, both
 are supported without any other BOLT build or runtime configuration.
 
 Example:
@@ -1021,8 +1021,8 @@ Device eth0:  hwaddr 00-10-18-85-63-0B, ipaddr 192.168.0.40, mask 255.255.255.0
         gateway 192.168.0.42, nameserver not set
 *** command status = 0
 
-BOLT> flash 192.168.0.42:splashFile flash0.splash
-Reading 192.168.0.42:splashFile: .
+BOLT> flash 192.168.0.42:splash.bin flash0.splash
+Reading 192.168.0.42:splash.bin: .
 Done. 442576 bytes read
 Programming...done. 442576 bytes written
 *** command status = 0

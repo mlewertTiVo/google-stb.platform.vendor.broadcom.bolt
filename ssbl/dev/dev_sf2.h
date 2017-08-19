@@ -79,5 +79,6 @@
 void bcm_sf2_init(void);
 mdio_info_t *bcm_sf2_mdio_init(void);
 void bcm_sf2_exit(void);
-void bcm_sf2_multicast_enable(void);
+void bcm_sf2_multicast_enable(unsigned int *filter_cnt,
+		bool enable);
 #endif /* _BCMSF2_H */

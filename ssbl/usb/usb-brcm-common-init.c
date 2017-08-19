@@ -408,7 +408,6 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 	msleep(1);
 #endif
 #if defined(BCHP_USB_CTRL_USB_PM_soft_reset_MASK)
-	/* 7271a0. */
 	USB_CTRL_UNSET(ctrl, USB_PM, soft_reset);
 	msleep(1);
 #endif
