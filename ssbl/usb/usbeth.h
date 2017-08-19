@@ -76,6 +76,8 @@
    *  ASIX AX88172/AX88178 adapters
    ************************************** */
 
+#define ASIX_MCAST_FILTER_LEN	8
+
 #define ASIX_MII_SWOP_CMD	0x06
 #define ASIX_MII_READ_CMD	0x07
 #define ASIX_MII_WRITE_CMD	0x08
@@ -84,6 +86,7 @@
 #define ASIX_IPG1_CMD		0x12
 #define ASIX_IPG2_CMD		0x13
 #define ASIX_IPG3_CMD		0x14
+#define ASIX_SET_MCAST_FILTER	0x16
 #define ASIX_MAC_ADDR_CMD	0x17
 #define ASIX_PHYID_CMD		0x19
 #define ASIX_MED_WRITE_CMD	0x1b

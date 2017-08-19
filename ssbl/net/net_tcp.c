@@ -1031,7 +1031,7 @@ static void _tcp_dumppktstate(char *label, uint16_t flags,
 		printf("ACK ");
 	if (flags & TCPFLG_URG)
 		printf("URG ");
-	printf("Ack=%u Seq=%u Data=%d\n", ack, seq, len);
+	printf("Ack=%u Seq=%u Length=%d\n", ack, seq, len);
 }
 #endif
 
@@ -1272,12 +1272,6 @@ static void _tcp_protosend(tcp_info_t * ti, tcb_t * tcb)
 		hdrlen = TCP_HDR_LENGTH;
 	}
 
-#ifdef _TCP_DEBUG_
-	if (_tcp_dumpflags)
-		_tcp_dumppktstate("TX_CTL", flags,
-				  tcb->tcb_sendnext, tcb->tcb_rcvack, 0);
-#endif
-
 	/* 
 	 * The (receive) window is whatever it takes to fill the buffer.
 	 */
@@ -1285,6 +1279,12 @@ static void _tcp_protosend(tcp_info_t * ti, tcb_t * tcb)
 	window = tmb_remlen(&(tcb->tcb_rxbuf));
 	if (window > 65000)
 		window = 65000;
+
+#ifdef _TCP_DEBUG_
+	if (_tcp_dumpflags)
+		_tcp_dumppktstate("TX_CTL", flags,
+				  tcb->tcb_sendnext, tcb->tcb_rcvack, window);
+#endif
 
 	/*
 	 * Fill in the fields according to the RFC.
@@ -1563,9 +1563,10 @@ static void _tcp_procack(tcp_info_t * ti, tcb_t * tcb, uint32_t ack,
 			tcb->tcb_txflags = TCPFLG_ACK;
 			tcb->tcb_sendunack = ack;
 			tcb->tcb_dup_ackcnt = 0;	/* not a duplicate */
-		} else {
+		} else if (unacklen) {	/* only a dup if un-acked bytes */
 			tcb->tcb_dup_ackcnt++;
-			DEBUGMSG(("Duplicate ack received\n"));
+			DEBUGMSG(("Duplicate ack %d received\n",
+					tcb->tcb_dup_ackcnt++));
 			/* 
 			 * Duplicate ack received 
 			 * XXX This is where we'd be doing stuff for
@@ -1739,11 +1740,8 @@ static void _tcp_procdata(tcp_info_t * ti, tcb_t * tcb, uint32_t seqnum,
 				DEBUGMSG(("Dropping out-of-order packet %u %u %u\n",
 					  seqnum, tcb->tcb_rcvnext, endseqnum));
 			}
-			/* If there is a pending ACK, then just at least
-			 * send the last valid received MSG */
-			if (tcb->tcb_flags & TCB_FLG_DLYACK) {
-				 _tcp_preparectlmsg(tcb,TCPFLG_ACK);
-			}
+			/* Always send an ACK */
+			_tcp_preparectlmsg(tcb, TCPFLG_ACK);
 			return;
 		}
 
@@ -1835,7 +1833,6 @@ static void _tcp_procdata(tcp_info_t * ti, tcb_t * tcb, uint32_t seqnum,
 			 * it, so send the ack now, to encourage us to
 			 * ack every other segment at least.
 			 */
-
 			if (tcb->tcb_flags & TCB_FLG_DLYACK) {
 				_tcp_preparectlmsg(tcb, TCPFLG_ACK);
 			} else {
@@ -1965,6 +1962,9 @@ static int _tcp_rx_callback(void *ref, ebuf_t * buf, uint8_t * destaddr,
 	calccksum = ~calccksum;
 
 	if (calccksum != origcksum) {
+#ifdef _TCP_DEBUG_
+		xprintf("Checksum error, drop packet\n");
+#endif
 		return ETH_DROP;
 	}
 
@@ -1980,6 +1980,9 @@ static int _tcp_rx_callback(void *ref, ebuf_t * buf, uint8_t * destaddr,
 
 	/* Skip options in header */
 	if (TCPHDRSIZE(flags) < TCP_HDR_LENGTH) {
+#ifdef _TCP_DEBUG_
+		xprintf("HDR flags error, drop packet\n");
+#endif
 		return ETH_DROP;
 	}
 	ebuf_skip(buf, (TCPHDRSIZE(flags) - TCP_HDR_LENGTH));
@@ -2265,7 +2268,7 @@ static void _tcp_fasttimo(tcp_info_t * ti)
 void _tcp_poll(void *arg)
 {
 	tcb_t *tcb;
-	queue_t *qb;
+	queue_t *qb, *temp;
 	tcp_info_t *ti = (tcp_info_t *) arg;
 
 	/*
@@ -2281,9 +2284,9 @@ void _tcp_poll(void *arg)
 	 * Check the TCBs for the "slow" timers.  
 	 */
 
-	for (qb = ti->ti_tcblist.q_next; qb != &(ti->ti_tcblist);
-	     qb = qb->q_next) {
+	for (qb = ti->ti_tcblist.q_next; qb != &(ti->ti_tcblist); qb = temp) {
 		tcb = (tcb_t *) qb;
+		temp = qb->q_next;
 
 		/*
 		 * Check the retransmit timer.  This is used during connection

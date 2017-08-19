@@ -59,6 +59,11 @@ typedef void * BMEM_Handle ;
 #define BREG_Write32(RegHandle, reg, data) (*((volatile uint32_t *)((uintptr_t)REG_ADDR(reg)))=data)
 #define BREG_Read32(RegHandle, reg) (*((volatile uint32_t *)((uintptr_t)REG_ADDR(reg))))
 
+#define BREG_Write64(RegHandle, reg, data) \
+	(*((volatile uint64_t *)((uintptr_t)REG_ADDR(reg)))=data)
+#define BREG_Read64(RegHandle, reg) \
+	(*((volatile uint64_t *)((uintptr_t)REG_ADDR(reg))))
+
 /* Private pixel format types */
 #define BPXL_P_ALPHA           0x01000000
 #define BPXL_P_COLOR           0x02000000

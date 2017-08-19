@@ -135,7 +135,6 @@ uint64_t arch_get_cpu_vco_hz(void)
 static unsigned int arch_get_cpu_mdiv(void)
 {
 #if defined(BCHP_CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0_4K)
-	/* 7271a0, 7268a0, 7260a0 */
 	return BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0_4K, MDIV_CH0);
 #else
 	return BDEV_RD_F(CLKGEN_PLL_CPU_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0);
@@ -906,24 +905,39 @@ int arch_booted64(void)
 	return 0;
 }
 
-/**********************************************************************
-  * arch_get_cpu_bootname
-  *
-  *  Get the bootup type (64 or 32 bit) that FSBL (possibly via STUB64)
-  * reports. This helps if FSBL is set to no UART output.
-  *
-  * Input parameters:
-  *     none
-  *
-  *  Return value:
-  *     name of the bootup mode as a string
-  **********************************************************************/
-const char *arch_get_cpu_bootname(void)
+/* arch_get_cpuname -- reports CPU name in string
+ *
+ * Returns:
+ *  please see the table in the function body
+ */
+const char *arch_get_cpuname(void)
 {
-#ifdef STUB64_START
-	return (arch_booted64()) ? "B53 (64-bit)" : "B53 (32-bit)";
-#endif
-	return "B15";
+	uint32_t implementer;
+	uint32_t part_number;
+	uint32_t midr = arch_get_midr();
+
+	implementer = (midr & MIDR_IMPLEMENTER_MASK) >> MIDR_IMPLEMENTER_SHIFT;
+	part_number = (midr & MIDR_PARTNUM_MASK) >> MIDR_PARTNUM_SHIFT;
+
+	/*  return string     impl.   part #  special boot
+	 *  ==============    ======  ======  ============
+	 *  "B15"             0x42    0x00F
+	 *  "B53"             0x42    0x100
+	 *  "B53 (32-bit)"    0x42    0x100   AArch32
+	 *
+	 *  "ARM" for all other cases
+	 */
+	if (implementer == 0x42) {
+		/* Broadcom implemented ARM */
+		switch (part_number) {
+		case 0x00F:
+			return "B15";
+		case 0x100:
+			return arch_booted64() ? "B53" : "B53 (32-bit)";
+		}
+	}
+
+	return "ARM";
 }
 
 void arch_abort_enable(void)

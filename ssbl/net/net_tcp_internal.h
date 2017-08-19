@@ -15,7 +15,7 @@
 
 #define TCP_MAX_PORTS	8
 #define TCP_MAX_TCBS	16
-#define TCP_BUF_SIZE	65536
+#define TCP_BUF_SIZE	(32 * 1024)
 
 #define TCP_MAX_SEG_SIZE 1400
 

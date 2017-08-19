@@ -894,9 +894,6 @@ int console_readline(char *prompt, char *str, int maxlen)
 		 */
 
 		if (console_status() == 0) {
-#if CFG_COAP
-			coap_server_thread(NULL);
-#endif
 			POLL();
 			continue;
 		}

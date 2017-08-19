@@ -47,6 +47,7 @@ struct ether_info_s {
 	ether_port_t *eth_ports;
 	queue_t eth_freelist;
 	uint8_t eth_hwaddr[6];
+	uint8_t multicast_hwaddr[6];
 	int eth_devhandle;
 	ebuf_t *eth_bufpool;
 };
@@ -323,10 +324,30 @@ void eth_sethwaddr(ether_info_t *eth, uint8_t *hwaddr)
   **********************************************************************/
 void eth_setmulticast_hwaddr(ether_info_t *eth, uint8_t *hwaddr)
 {
-	memcpy(eth->eth_hwaddr, hwaddr, ENET_ADDR_LEN);
+	memcpy(eth->multicast_hwaddr, hwaddr, ENET_ADDR_LEN);
 	bolt_ioctl(eth->eth_devhandle, IOCTL_ETHER_SETMULTICAST_HWADDR,
-		  &(eth->eth_hwaddr[0]), sizeof(eth->eth_hwaddr), NULL, 0);
+		&(eth->multicast_hwaddr[0]), sizeof(eth->multicast_hwaddr),
+		NULL, 0);
 
+}
+/**********************************************************************
+  *  eth_unsetmulticast_hwaddr(eth,hwaddr)
+  *
+  *  Unset the multicast address.
+  *
+  *  Input parameters:
+  *	 eth - ethernet context
+  *	 hwaddr - new hardware address - 6 bytes
+  *
+  *  Return value:
+  *	 nothing
+  **********************************************************************/
+void eth_unsetmulticast_hwaddr(ether_info_t *eth, uint8_t *hwaddr)
+{
+	memcpy(eth->multicast_hwaddr, hwaddr, ENET_ADDR_LEN);
+	bolt_ioctl(eth->eth_devhandle, IOCTL_ETHER_UNSETMULTICAST_HWADDR,
+		&(eth->multicast_hwaddr[0]), sizeof(eth->multicast_hwaddr),
+		NULL, 0);
 }
 /**********************************************************************
   *  eth_setspeed(eth,speed)

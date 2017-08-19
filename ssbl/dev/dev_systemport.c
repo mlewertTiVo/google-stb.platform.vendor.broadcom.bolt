@@ -63,6 +63,7 @@ typedef struct sysport_softc {
 	phy_speed_t speed;
 
 	bool is_lite;
+	unsigned int multicast_filter_cnt;
 } sysport_softc;
 
 #define SYSPORT_IO_MACRO(name, offset)					\
@@ -640,7 +641,10 @@ static int sysport_ether_ioctl(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		unimac_write_hwaddr(softc, buffer->buf_ptr);
 		break;
 	case IOCTL_ETHER_SETMULTICAST_HWADDR:
-		bcm_sf2_multicast_enable();
+		bcm_sf2_multicast_enable(&softc->multicast_filter_cnt, true);
+		break;
+	case IOCTL_ETHER_UNSETMULTICAST_HWADDR:
+		bcm_sf2_multicast_enable(&softc->multicast_filter_cnt, false);
 		break;
 	case IOCTL_ETHER_GETSPEED:
 		rc = SPEED_1000;

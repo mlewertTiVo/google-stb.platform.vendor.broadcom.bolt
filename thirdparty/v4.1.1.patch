@@ -1,7 +1,6 @@
 diff -Naur libcoap-4.1.1/address.h libcoap-4.1.1/address.h
-index 403240e..f7f0bde 100644
---- libcoap-4.1.1/address.h
-+++ libcoap-4.1.1/address.h
+--- libcoap-4.1.1/address.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/address.h	2017-06-06 19:25:57.961299112 -0700
 @@ -14,7 +14,7 @@
  #ifndef _COAP_ADDRESS_H_
  #define _COAP_ADDRESS_H_
@@ -12,9 +11,8 @@ index 403240e..f7f0bde 100644
  #ifdef HAVE_ASSERT_H
  #include <assert.h>
 diff -Naur libcoap-4.1.1/async.h libcoap-4.1.1/async.h
-index a5168f8..346d1cb 100644
---- libcoap-4.1.1/async.h
-+++ libcoap-4.1.1/async.h
+--- libcoap-4.1.1/async.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/async.h	2017-06-06 19:25:57.961299112 -0700
 @@ -15,7 +15,7 @@
  #ifndef _COAP_ASYNC_H_
  #define _COAP_ASYNC_H_
@@ -25,9 +23,8 @@ index a5168f8..346d1cb 100644
  
  #ifndef WITHOUT_ASYNC
 diff -Naur libcoap-4.1.1/bits.h libcoap-4.1.1/bits.h
-index d8f8bd9..0121b97 100644
---- libcoap-4.1.1/bits.h
-+++ libcoap-4.1.1/bits.h
+--- libcoap-4.1.1/bits.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/bits.h	2017-06-06 19:25:57.961299112 -0700
 @@ -15,7 +15,6 @@
  #ifndef _BITS_H_
  #define _BITS_H_
@@ -37,9 +34,8 @@ index d8f8bd9..0121b97 100644
  
  /** 
 diff -Naur libcoap-4.1.1/block.c libcoap-4.1.1/block.c
-index 847fe9c..d223c4a 100644
---- libcoap-4.1.1/block.c
-+++ libcoap-4.1.1/block.c
+--- libcoap-4.1.1/block.c	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/block.c	2017-06-06 19:25:57.961299112 -0700
 @@ -6,7 +6,7 @@
   * README for terms of use. 
   */
@@ -50,11 +46,9 @@ index 847fe9c..d223c4a 100644
  #if defined(HAVE_ASSERT_H) && !defined(assert)
  # include <assert.h>
 diff -Naur libcoap-4.1.1/brcm/coap_api.c libcoap-4.1.1/brcm/coap_api.c
-new file mode 100644
-index 0000000..d8f5bac
---- /dev/null
-+++ libcoap-4.1.1/brcm/coap_api.c
-@@ -0,0 +1,221 @@
+--- libcoap-4.1.1/brcm/coap_api.c	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/coap_api.c	2017-06-06 19:29:00.000000000 -0700
+@@ -0,0 +1,240 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 + *
@@ -73,10 +67,11 @@ index 0000000..d8f5bac
 +#include "handler_misc.h"
 +#include "console.h"
 +#include "timer.h"
++#include "coap_api.h"
 +
-+#define COAP_TIME_OUT_MS 500
++#define COAP_TIME_OUT_MS 10
 +
-+coap_context_t g_coap_ctx;
++coap_context_t *g_coap_ctx;
 +static bool coap_server_initialize;
 +
 +
@@ -207,34 +202,40 @@ index 0000000..d8f5bac
 +	coap_register_handler(r, COAP_REQUEST_GET, hnd_get_help);
 +	coap_register_handler(r, COAP_REQUEST_PUT, hnd_get_help);
 +	coap_add_resource(ctx, r);
++
++	/* generic bolt commands */
++	r = coap_resource_init((unsigned char *)BOLT_CMDS,
++					strlen(BOLT_CMDS), 0);
++	coap_register_handler(r, COAP_REQUEST_PUT, hnd_put_boltscmd);
++	coap_add_resource(ctx, r);
 +}
 +
 +int coap_server_init(void)
 +{
 +	coap_context_t *ctx;
-+	char addr_str[NI_MAXHOST + 1];
 +	char port_str[NI_MAXSERV + 1];
 +	coap_log_t log_level = LOG_WARNING;
 +	/* BOLT doesn't like initializing strings when declared */
-+	strcpy(addr_str, "::");
 +	strcpy(port_str, "5683");
 +	if (coap_server_initialize)
 +		return -1;
 +	coap_set_log_level(log_level);
-+	ctx = get_context(addr_str, port_str);
++	ctx = get_context(NULL, port_str);
 +	if (!ctx)
 +		return -1;
 +
 +	init_resources(ctx);
-+	memcpy(&g_coap_ctx, ctx, sizeof(coap_context_t));
++	g_coap_ctx = ctx;
 +	coap_server_initialize = true;
++	/* add it as a background task */
++	bolt_bg_add(coap_server_thread, ctx);
 +
 +	return 0;
 +}
 +
 +void
 +coap_server_thread(void *arg) {
-+	coap_context_t *ctx =  &g_coap_ctx;
++	coap_context_t *ctx = g_coap_ctx;
 +	coap_tick_t now;
 +	coap_queue_t *nextpdu;
 +	uint64_t  t1, t2;
@@ -244,8 +245,17 @@ index 0000000..d8f5bac
 +	delta_us = 0;
 +	delta_ms = 0;
 +
++
++
++	if (!coap_server_initialize)
++		return;
++
++	bolt_bg_remove(coap_server_thread);
++
 +	while ((delta_ms < delta_ms_ref) || (ctx->coap_server_running)) {
 +			nextpdu = coap_peek_next(ctx);
++			if ((!nextpdu) && (delta_ms > delta_ms_ref))
++				break;
 +			coap_ticks(&now);
 +			while (nextpdu && nextpdu->t <=
 +					now - ctx->sendqueue_basetime) {
@@ -254,6 +264,8 @@ index 0000000..d8f5bac
 +		}
 +		coap_read(ctx);	/* read received data */
 +		/* and dispatch PDUs from receivequeue */
++		if (!(ctx->recvqueue))
++			break;
 +		coap_dispatch(ctx);
 +		if (console_status() == 1)
 +			break;
@@ -263,11 +275,12 @@ index 0000000..d8f5bac
 +		delta_us = delta/(arch_get_timer_freq_hz()/1000000);
 +		delta_ms = delta_us/1000;
 +	}
++	bolt_bg_add(coap_server_thread, ctx);
 +}
 +
 +int
 +coap_server_term(void) {
-+	coap_context_t *ctx = &g_coap_ctx;
++	coap_context_t *ctx = g_coap_ctx;
 +
 +	if (!coap_server_initialize)
 +		return -1;
@@ -277,10 +290,8 @@ index 0000000..d8f5bac
 +	return 0;
 +}
 diff -Naur libcoap-4.1.1/brcm/coap_api.h libcoap-4.1.1/brcm/coap_api.h
-new file mode 100644
-index 0000000..49c04db
---- /dev/null
-+++ libcoap-4.1.1/brcm/coap_api.h
+--- libcoap-4.1.1/brcm/coap_api.h	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/coap_api.h	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,12 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -295,10 +306,8 @@ index 0000000..49c04db
 +void coap_server_thread(void *arg);
 +int coap_server_term(void);
 diff -Naur libcoap-4.1.1/brcm/handler_common.c libcoap-4.1.1/brcm/handler_common.c
-new file mode 100644
-index 0000000..28bd8fa
---- /dev/null
-+++ libcoap-4.1.1/brcm/handler_common.c
+--- libcoap-4.1.1/brcm/handler_common.c	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/handler_common.c	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,102 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -403,10 +412,8 @@ index 0000000..28bd8fa
 +}
 +
 diff -Naur libcoap-4.1.1/brcm/handler_common.h libcoap-4.1.1/brcm/handler_common.h
-new file mode 100644
-index 0000000..bec6e2c
---- /dev/null
-+++ libcoap-4.1.1/brcm/handler_common.h
+--- libcoap-4.1.1/brcm/handler_common.h	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/handler_common.h	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,41 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -450,10 +457,8 @@ index 0000000..bec6e2c
 +
 +#endif
 diff -Naur libcoap-4.1.1/brcm/handler_env.c libcoap-4.1.1/brcm/handler_env.c
-new file mode 100644
-index 0000000..4f47f51
---- /dev/null
-+++ libcoap-4.1.1/brcm/handler_env.c
+--- libcoap-4.1.1/brcm/handler_env.c	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/handler_env.c	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,263 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -719,10 +724,8 @@ index 0000000..4f47f51
 +	}
 +}
 diff -Naur libcoap-4.1.1/brcm/handler_env.h libcoap-4.1.1/brcm/handler_env.h
-new file mode 100644
-index 0000000..893847a
---- /dev/null
-+++ libcoap-4.1.1/brcm/handler_env.h
+--- libcoap-4.1.1/brcm/handler_env.h	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/handler_env.h	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,46 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -771,10 +774,8 @@ index 0000000..893847a
 +			coap_pdu_t *response);
 +#endif
 diff -Naur libcoap-4.1.1/brcm/handler_memory.c libcoap-4.1.1/brcm/handler_memory.c
-new file mode 100644
-index 0000000..20e2798
---- /dev/null
-+++ libcoap-4.1.1/brcm/handler_memory.c
+--- libcoap-4.1.1/brcm/handler_memory.c	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/handler_memory.c	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,186 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -963,10 +964,8 @@ index 0000000..20e2798
 +	response->hdr->code = COAP_RESPONSE_CODE(205);
 +}
 diff -Naur libcoap-4.1.1/brcm/handler_memory.h libcoap-4.1.1/brcm/handler_memory.h
-new file mode 100644
-index 0000000..cbf017f
---- /dev/null
-+++ libcoap-4.1.1/brcm/handler_memory.h
+--- libcoap-4.1.1/brcm/handler_memory.h	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/handler_memory.h	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,52 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -1021,11 +1020,9 @@ index 0000000..cbf017f
 +
 +#endif
 diff -Naur libcoap-4.1.1/brcm/handler_misc.c libcoap-4.1.1/brcm/handler_misc.c
-new file mode 100644
-index 0000000..bc363a1
---- /dev/null
-+++ libcoap-4.1.1/brcm/handler_misc.c
-@@ -0,0 +1,253 @@
+--- libcoap-4.1.1/brcm/handler_misc.c	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/handler_misc.c	2017-06-06 19:25:57.965299112 -0700
+@@ -0,0 +1,444 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 + *
@@ -1039,6 +1036,18 @@ index 0000000..bc363a1
 +#include "handler_misc.h"
 +#include "timer.h"
 +
++
++coap_pdu_t *
++coap_new_request(coap_context_t *ctx, int len,
++			unsigned int type)
++{
++	coap_pdu_t *pdu;
++
++	pdu = coap_pdu_init(type, COAP_RESPONSE_CODE(205),
++			coap_new_message_id(ctx),
++			sizeof(coap_pdu_t)+len);
++	return pdu;
++}
 +
 +void
 +hnd_put_reboot(coap_context_t  *ctx, struct coap_resource_t *resource,
@@ -1250,41 +1259,218 @@ index 0000000..bc363a1
 +
 +void
 +hnd_get_help(coap_context_t  *ctx, struct coap_resource_t *resource,
-+		coap_address_t *peer, coap_pdu_t *request, str *token,
-+		coap_pdu_t *response)
++			coap_address_t *peer, coap_pdu_t *request, str *token,
++			coap_pdu_t *response)
 +{
-+	size_t size;
++	coap_block_t block;
++	static int max_data_size;
++	static char *response_text;
 +	unsigned char *data;
 +	char bolt_cmd[MAX_BOLT_CMD_LEN];
-+	char *response_text;
++	size_t size;
 +
-+	coap_get_data(request, &size, &data);
-+	if ((NULL != data) || (0 != size)) {
-+		data[size] = '\0';  /* null terminate the string */
-+		snprintf(bolt_cmd, MAX_BOLT_CMD_LEN, "help %s", data);
++	if (request) {
++		int res;
++
++	if (coap_get_block(request, COAP_OPTION_BLOCK2, &block)) {
++		if (0 == block.num) {
++			response_text = capture_xprint();
++			if (response_text == 0) {
++				response->hdr->code = COAP_RESPONSE_CODE(500);
++				return;
++			}
++			bolt_docommands("help");
++			uncapture_xprint();
++			max_data_size = strlen(response_text);
++		}
++		res = coap_write_block_opt(&block, COAP_OPTION_BLOCK2,
++				response, max_data_size);
++		switch (res) {
++		case -2:
++		/*
++		 * illegal block
++		 */
++			response->hdr->code = COAP_RESPONSE_CODE(400);
++			printf("illegal block\n");
++			goto error;
++		case -1:
++		/*
++		 * should really not happen
++		 */
++			goto error;
++		case -3:
++		/*
++		 * cannot handle request
++		 */
++			response->hdr->code = COAP_RESPONSE_CODE(500);
++			goto error;
++		default:
++			response->hdr->code = COAP_RESPONSE_CODE(205);
++			break;
++		/*
++		 * everything is good
++		 */
++		}
++		coap_add_block(response, max_data_size,
++			(const unsigned char *)response_text,
++			block.num, block.szx);
 +	} else {
-+		snprintf(bolt_cmd, MAX_BOLT_CMD_LEN, "help");
-+	}
-+	response_text = capture_xprint();
-+	if (response_text == 0) {
-+		response->hdr->code = COAP_RESPONSE_CODE(500);
-+		return;
-+	}
-+	bolt_docommands(bolt_cmd);
++		coap_get_data(request, &size, &data);
++		if ((NULL != data) || (0 != size)) {
++			data[size] = '\0';
++			snprintf(bolt_cmd, MAX_BOLT_CMD_LEN, "help %s", data);
++			response_text = capture_xprint();
++			if (response_text == 0) {
++				response->hdr->code = COAP_RESPONSE_CODE(500);
++				return;
++			} else
++				response->hdr->code = COAP_RESPONSE_CODE(205);
 +
-+	uncapture_xprint();
-+	coap_add_data(response, strlen(response_text),
-+			(unsigned char *)response_text);
-+	response->hdr->code = COAP_RESPONSE_CODE(205);
-+	printf("size %d\n", strlen(response_text));
++			bolt_docommands(bolt_cmd);
++			uncapture_xprint();
++			max_data_size = strlen(response_text);
++		}
++		if (!coap_add_data(response, max_data_size,
++			(const unsigned char *)response_text)) {
++			/*
++			 * set initial block size, will be lowered by
++			 * coap_write_block_opt() automatically
++			 */
++			block.szx = 6;
++			coap_write_block_opt(&block, COAP_OPTION_BLOCK2,
++				response, max_data_size);
++			coap_add_block(response, max_data_size,
++				(const unsigned char *)response_text,
++				block.num, block.szx);
++
++		}
++	}
++	}
++	return;
++error:
++	coap_add_data(response,
++	strlen(coap_response_phrase(response->hdr->code)),
++	(unsigned char *)coap_response_phrase(response->hdr->code));
 +}
 +
++void
++hnd_put_boltscmd(coap_context_t  *ctx, struct coap_resource_t *resource,
++			coap_address_t *peer, coap_pdu_t *request, str *token,
++			coap_pdu_t *response)
++	{
++		coap_block_t block;
++		static int max_data_size;
++		static char *response_text;
++		unsigned char *data;
++		char bolt_cmd[MAX_BOLT_CMD_LEN];
++		size_t size;
++		coap_pdu_t *response_new;
++
++		if (request) {
++			int res;
++
++		if (coap_get_block(request, COAP_OPTION_BLOCK2, &block)) {
++			if (0 == block.num) {
++				coap_get_data(request, &size, &data);
++				if ((NULL != data) || (0 != size)) {
++					data[size] = '\0';
++					snprintf(bolt_cmd, MAX_BOLT_CMD_LEN,
++						"%s", data);
++				}
++				response_text = capture_xprint();
++				if (response_text == 0) {
++					response->hdr->code =
++						COAP_RESPONSE_CODE(500);
++					return;
++				}
++				bolt_docommands(bolt_cmd);
++				uncapture_xprint();
++				max_data_size = strlen(response_text);
++			}
++			res = coap_write_block_opt(&block, COAP_OPTION_BLOCK2,
++					response, max_data_size);
++			switch (res) {
++			case -2:
++			/*
++			 * illegal block
++			 */
++				response->hdr->code = COAP_RESPONSE_CODE(400);
++				printf("illegal block\n");
++				goto error;
++			case -1:
++			/*
++			 * should really not happen
++			 */
++				goto error;
++			case -3:
++			/*
++			 * cannot handle request
++			 */
++				response->hdr->code = COAP_RESPONSE_CODE(500);
++				goto error;
++			default:
++				response->hdr->code = COAP_RESPONSE_CODE(205);
++				break;
++			/*
++			 * everything is good
++			 */
++			}
++			coap_add_block(response, max_data_size,
++				(const unsigned char *)response_text,
++				block.num, block.szx);
++		} else {
++			coap_get_data(request, &size, &data);
++			if ((NULL != data) || (0 != size)) {
++				data[size] = '\0';
++				snprintf(bolt_cmd, MAX_BOLT_CMD_LEN,
++					"%s", data);
++				response_text = capture_xprint();
++				if (response_text == 0) {
++					response->hdr->code =
++						COAP_RESPONSE_CODE(500);
++					return;
++				} else
++					response->hdr->code =
++						COAP_RESPONSE_CODE(205);
++				response->hdr->type = COAP_MESSAGE_CON;
++				coap_send_ack(ctx, peer, response);
++				bolt_docommands(bolt_cmd);
++				uncapture_xprint();
++				max_data_size = strlen(response_text);
++			}
++			response_new =
++				coap_new_request(ctx, 1024, COAP_MESSAGE_CON);
++			if (!coap_add_data(response_new, max_data_size,
++				(const unsigned char *)response_text)) {
++				/*
++				 * set initial block size, will be lowered by
++				 * coap_write_block_opt() automatically
++				 */
++				block.szx = 6;
++				block.num = 0;
++				coap_write_block_opt(&block, COAP_OPTION_BLOCK2,
++					response_new, max_data_size);
++				coap_add_block(response_new, max_data_size,
++					(const unsigned char *)response_text,
++					block.num, block.szx);
++				coap_send(ctx, peer, response_new);
++				coap_delete_pdu(response_new);
++			} else {
++				coap_send(ctx, peer, response_new);
++				coap_delete_pdu(response_new);
++			}
++		}
++		}
++		return;
++error:
++		coap_add_data(response,
++		strlen(coap_response_phrase(response->hdr->code)),
++		(unsigned char *)coap_response_phrase(response->hdr->code));
++}
 diff -Naur libcoap-4.1.1/brcm/handler_misc.h libcoap-4.1.1/brcm/handler_misc.h
-new file mode 100644
-index 0000000..2726e70
---- /dev/null
-+++ libcoap-4.1.1/brcm/handler_misc.h
-@@ -0,0 +1,63 @@
+--- libcoap-4.1.1/brcm/handler_misc.h	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/handler_misc.h	2017-06-06 19:25:57.965299112 -0700
+@@ -0,0 +1,67 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 + *
@@ -1306,6 +1492,7 @@ index 0000000..2726e70
 +#define CONFIG_INFO			"info"
 +#define CRC_INFO			"crc"
 +#define BOLT_CMD_HELP		"help"
++#define BOLT_CMDS		"boltcmds"
 +
 +/*
 + * miscellaneous resource handlers
@@ -1346,13 +1533,14 @@ index 0000000..2726e70
 +hnd_get_help(coap_context_t  *ctx, struct coap_resource_t *resource,
 +			coap_address_t *peer, coap_pdu_t *request, str *token,
 +			coap_pdu_t *response);
-+
++void
++hnd_put_boltscmd(coap_context_t  *ctx, struct coap_resource_t *resource,
++			coap_address_t *peer, coap_pdu_t *request, str *token,
++			coap_pdu_t *response);
 +#endif
 diff -Naur libcoap-4.1.1/brcm/osal.c libcoap-4.1.1/brcm/osal.c
-new file mode 100644
-index 0000000..00ebbe0
---- /dev/null
-+++ libcoap-4.1.1/brcm/osal.c
+--- libcoap-4.1.1/brcm/osal.c	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/osal.c	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,103 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -1377,7 +1565,7 @@ index 0000000..00ebbe0
 +#define PRINTF_BUF_SIZE        2048
 +#endif
 +
-+#define HOOKBUFFERSIZE 1024
++#define HOOKBUFFERSIZE 66560
 +
 +static unsigned long g_seed = 1;
 +static int (*xprinthooksave)(const char *str);
@@ -1458,10 +1646,8 @@ index 0000000..00ebbe0
 +	xprinthook = xprinthooksave;
 +}
 diff -Naur libcoap-4.1.1/brcm/osal.h libcoap-4.1.1/brcm/osal.h
-new file mode 100644
-index 0000000..c41f484
---- /dev/null
-+++ libcoap-4.1.1/brcm/osal.h
+--- libcoap-4.1.1/brcm/osal.h	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/brcm/osal.h	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,42 @@
 +/***************************************************************************
 + * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
@@ -1506,10 +1692,8 @@ index 0000000..c41f484
 +#endif /* __ POSIX_H__ */
 +
 diff -Naur libcoap-4.1.1/coap-config.h libcoap-4.1.1/coap-config.h
-new file mode 100644
-index 0000000..db66b05
---- /dev/null
-+++ libcoap-4.1.1/coap-config.h
+--- libcoap-4.1.1/coap-config.h	1969-12-31 16:00:00.000000000 -0800
++++ libcoap-4.1.1/coap-config.h	2017-06-06 19:25:57.965299112 -0700
 @@ -0,0 +1,138 @@
 +/* coap_config.h.  Generated from coap_config.h.in by configure.  */
 +/* config.h.in.  Generated from configure.in by autoheader.  */
@@ -1650,10 +1834,9 @@ index 0000000..db66b05
 +#include "brcm/osal.h"
 +#include "net_socket.h"
 diff -Naur libcoap-4.1.1/coap_time.h libcoap-4.1.1/coap_time.h
-index f039b87..5b92a29 100644
---- libcoap-4.1.1/coap_time.h
-+++ libcoap-4.1.1/coap_time.h
-@@ -22,7 +22,7 @@ extern "C" {
+--- libcoap-4.1.1/coap_time.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/coap_time.h	2017-06-06 19:25:57.965299112 -0700
+@@ -22,7 +22,7 @@
  #endif
  
  
@@ -1662,7 +1845,7 @@ index f039b87..5b92a29 100644
  
  /**
   * @defgroup clock Clock Handling
-@@ -31,63 +31,6 @@ extern "C" {
+@@ -31,63 +31,6 @@
   * @{
   */
  
@@ -1726,7 +1909,7 @@ index f039b87..5b92a29 100644
  #ifdef WITH_POSIX
  typedef unsigned int coap_tick_t; 
  
-@@ -113,9 +56,8 @@ coap_clock_init_impl(void) {
+@@ -113,9 +56,8 @@
  #  ifdef __GNUC__
      /* Issue a warning when using gcc. Other prepropressors do 
       *  not seem to have a similar feature. */ 
@@ -1737,7 +1920,7 @@ index f039b87..5b92a29 100644
  #endif
  }
  #define coap_clock_init coap_clock_init_impl
-@@ -130,7 +72,7 @@ coap_ticks_impl(coap_tick_t *t) {
+@@ -130,7 +72,7 @@
    *t = (tv.tv_sec - clock_offset) * COAP_TICKS_PER_SECOND 
      + (tv.tv_usec * COAP_TICKS_PER_SECOND / 1000000);
  #else
@@ -1747,9 +1930,8 @@ index f039b87..5b92a29 100644
  }
  #define coap_ticks coap_ticks_impl
 diff -Naur libcoap-4.1.1/debug.c libcoap-4.1.1/debug.c
-index bff3f11..964bf32 100644
---- libcoap-4.1.1/debug.c
-+++ libcoap-4.1.1/debug.c
+--- libcoap-4.1.1/debug.c	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/debug.c	2017-06-06 19:25:57.965299112 -0700
 @@ -6,16 +6,14 @@
   * README for terms of use. 
   */
@@ -1767,8 +1949,8 @@ index bff3f11..964bf32 100644
 -#include <ctype.h>
  
  #ifdef HAVE_ARPA_INET_H
- #include <arpinet.h>
-@@ -168,7 +166,7 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
+ #include <arpa/inet.h>
+@@ -168,7 +166,7 @@
      return 0;
    }
  
@@ -1777,7 +1959,7 @@ index bff3f11..964bf32 100644
  
    if (addr->addr.sa.sa_family == AF_INET6) {
      if (p < buf + len) {
-@@ -181,52 +179,12 @@ coap_print_addr(const struct coap_address_t *addr, unsigned char *buf, size_t le
+@@ -181,52 +179,12 @@
  
    return buf + len - p;
  #else /* HAVE_ARPA_INET_H */
@@ -1831,7 +2013,7 @@ index bff3f11..964bf32 100644
  void
  coap_show_pdu(const coap_pdu_t *pdu) {
    unsigned char buf[COAP_MAX_PDU_SIZE]; /* need some space for output creation */
-@@ -282,88 +240,25 @@ coap_show_pdu(const coap_pdu_t *pdu) {
+@@ -282,88 +240,25 @@
    fflush(COAP_DEBUG_FD);
  }
  
@@ -1926,9 +2108,8 @@ index bff3f11..964bf32 100644
  }
 -#endif /* WITH_CONTIKI */
 diff -Naur libcoap-4.1.1/debug.h libcoap-4.1.1/debug.h
-index dde660d..7ef6fdd 100644
---- libcoap-4.1.1/debug.h
-+++ libcoap-4.1.1/debug.h
+--- libcoap-4.1.1/debug.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/debug.h	2017-06-06 19:25:57.969299112 -0700
 @@ -9,7 +9,7 @@
  #ifndef _COAP_DEBUG_H_
  #define _COAP_DEBUG_H_
@@ -1939,9 +2120,8 @@ index dde660d..7ef6fdd 100644
  #ifndef COAP_DEBUG_FD
  #define COAP_DEBUG_FD stdout
 diff -Naur libcoap-4.1.1/encode.c libcoap-4.1.1/encode.c
-index b034b6b..b2274da 100644
---- libcoap-4.1.1/encode.c
-+++ libcoap-4.1.1/encode.c
+--- libcoap-4.1.1/encode.c	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/encode.c	2017-06-06 19:25:57.969299112 -0700
 @@ -5,12 +5,12 @@
   * This file is part of the CoAP library libcoap. Please see
   * README for terms of use. 
@@ -1957,9 +2137,8 @@ index b034b6b..b2274da 100644
  
  /* Carsten suggested this when fls() is not available: */
 diff -Naur libcoap-4.1.1/encode.h libcoap-4.1.1/encode.h
-index bdb7aa5..513d490 100644
---- libcoap-4.1.1/encode.h
-+++ libcoap-4.1.1/encode.h
+--- libcoap-4.1.1/encode.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/encode.h	2017-06-06 19:25:57.969299112 -0700
 @@ -9,11 +9,7 @@
  #ifndef _COAP_ENCODE_H_
  #define _COAP_ENCODE_H_
@@ -1974,9 +2153,8 @@ index bdb7aa5..513d490 100644
  #define Nn 8  /* duplicate definition of N if built on sky motes */
  #define E 4
 diff -Naur libcoap-4.1.1/mem.h libcoap-4.1.1/mem.h
-index a84405e..f84a5b4 100644
---- libcoap-4.1.1/mem.h
-+++ libcoap-4.1.1/mem.h
+--- libcoap-4.1.1/mem.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/mem.h	2017-06-06 19:25:57.969299112 -0700
 @@ -10,9 +10,10 @@
  #ifndef _COAP_MEM_H_
  #define _COAP_MEM_H_
@@ -1992,9 +2170,8 @@ index a84405e..f84a5b4 100644
  
  #endif /* _COAP_MEM_H_ */
 diff -Naur libcoap-4.1.1/net.c libcoap-4.1.1/net.c
-index e90d49a..b37ac40 100644
---- libcoap-4.1.1/net.c
-+++ libcoap-4.1.1/net.c
+--- libcoap-4.1.1/net.c	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/net.c	2017-06-06 19:25:57.969299112 -0700
 @@ -6,10 +6,12 @@
   * README for terms of use. 
   */
@@ -2018,7 +2195,7 @@ index e90d49a..b37ac40 100644
  #ifdef HAVE_SYS_SOCKET_H
  #include <sys/socket.h>
  #endif
-@@ -1174,7 +1176,7 @@ wellknown_response(coap_context_t *context, coap_pdu_t *request) {
+@@ -1174,7 +1176,7 @@
    coap_opt_t *query_filter;
    size_t offset = 0;
  
@@ -2028,9 +2205,8 @@ index e90d49a..b37ac40 100644
  		       : COAP_MESSAGE_NON,
  		       COAP_RESPONSE_CODE(205),
 diff -Naur libcoap-4.1.1/net.h libcoap-4.1.1/net.h
-index f9afd48..fe41842 100644
---- libcoap-4.1.1/net.h
-+++ libcoap-4.1.1/net.h
+--- libcoap-4.1.1/net.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/net.h	2017-06-06 19:25:57.969299112 -0700
 @@ -1,10 +1,10 @@
  /* net.h -- CoAP network interface
 - *
@@ -2071,7 +2247,7 @@ index f9afd48..fe41842 100644
  #include <string.h>
  #ifdef HAVE_NETINET_IN_H
  #include <netinet/in.h>
-@@ -49,17 +49,17 @@ extern "C" {
+@@ -49,17 +49,17 @@
  struct coap_queue_t;
  
  typedef struct coap_queue_t {
@@ -2097,7 +2273,7 @@ index f9afd48..fe41842 100644
  } coap_queue_t;
  
  /** Adds node to given queue, ordered by node->t. */
-@@ -81,7 +81,7 @@ struct coap_async_state_t;
+@@ -81,7 +81,7 @@
  #endif
  
  /** Message handler that is used as call-back in coap_context_t */
@@ -2106,7 +2282,7 @@ index f9afd48..fe41842 100644
  					const coap_address_t *remote,
  					coap_pdu_t *sent,
  					coap_pdu_t *received,
-@@ -89,83 +89,88 @@ typedef void (*coap_response_handler_t)(struct coap_context_t  *,
+@@ -89,83 +89,88 @@
  
  #define COAP_MID_CACHE_SIZE 3
  typedef struct {
@@ -2187,8 +2363,6 @@ index f9afd48..fe41842 100644
 -   * all resources and will be updated when notifications are created.
 -   */
 -  unsigned int observe;
--
--  coap_response_handler_t response_handler;
 +	/**
 +	* The last message id that was used is stored in this field.  The
 +	* initial value is set by coap_new_context() and is usually a
@@ -2202,7 +2376,8 @@ index f9afd48..fe41842 100644
 +	* all resources and will be updated when notifications are created.
 +	*/
 +	unsigned int observe;
-+
+ 
+-  coap_response_handler_t response_handler;
 +	coap_response_handler_t response_handler;
 +	bool coap_server_running;
  } coap_context_t;
@@ -2243,7 +2418,7 @@ index f9afd48..fe41842 100644
  }
  
  
-@@ -177,33 +182,34 @@ coap_register_option(coap_context_t *ctx, unsigned char type) {
+@@ -177,33 +182,34 @@
  unsigned int coap_adjust_basetime(coap_context_t *ctx, coap_tick_t now);
  
  /** Returns the next pdu to send without removing from sendqeue. */
@@ -2287,7 +2462,7 @@ index f9afd48..fe41842 100644
  
  
  /**
-@@ -216,11 +222,11 @@ void coap_free_context( coap_context_t *context );
+@@ -216,11 +222,11 @@
   * @param pdu     The CoAP PDU to send.
   * @return The message id of the sent message or @c COAP_INVALID_TID on error.
   */
@@ -2303,7 +2478,7 @@ index f9afd48..fe41842 100644
   * Creates a new ACK PDU with specified error @p code. The options
   * specified by the filter expression @p opts will be copied from the
   * original request contained in @p request.  Unless @c
-@@ -229,17 +235,17 @@ coap_tid_t coap_send_confirmed(coap_context_t *context,
+@@ -229,17 +235,17 @@
   * 0.  This function returns a pointer to the new response message, or
   * @c NULL on error. The storage allocated for the new message must be
   * relased with coap_free().
@@ -2326,7 +2501,7 @@ index f9afd48..fe41842 100644
  /**
   * Sends a non-confirmed CoAP message to given destination. The memory
   * that is allocated by pdu will not be released by coap_send().
-@@ -250,34 +256,34 @@ coap_pdu_t *coap_new_error_response(coap_pdu_t *request,
+@@ -250,34 +256,34 @@
   * @param pdu     The CoAP PDU to send.
   * @return The message id of the sent message or @c COAP_INVALID_TID on error.
   */
@@ -2374,7 +2549,7 @@ index f9afd48..fe41842 100644
   * Helper funktion to create and send a message with @p type (usually
   * ACK or RST).  This function returns @c COAP_INVALID_TID when the
   * message was not sent, a valid transaction id otherwise.
-@@ -289,105 +295,108 @@ coap_tid_t coap_send_error(coap_context_t *context,
+@@ -289,105 +295,108 @@
   * @return transaction id on success or @c COAP_INVALID_TID otherwise.
   */
  coap_tid_t
@@ -2515,18 +2690,18 @@ index f9afd48..fe41842 100644
 -  if (!coap_remove_from_queue(queue, id, &node)) 
 -    return 0;
 +	coap_queue_t *node;
-+
-+	if (!coap_remove_from_queue(queue, id, &node))
-+		return 0;
  
 -  coap_delete_node(node);
 -  return 1;
++	if (!coap_remove_from_queue(queue, id, &node))
++		return 0;
++
 +	coap_delete_node(node);
 +	return 1;
  }
  
  /**
-@@ -399,66 +408,66 @@ coap_remove_transaction(coap_queue_t **queue, coap_tid_t id) {
+@@ -399,66 +408,66 @@
  coap_queue_t *coap_find_transaction(coap_queue_t *queue, coap_tid_t id);
  
  /**
@@ -2646,9 +2821,8 @@ index f9afd48..fe41842 100644
  #ifdef __cplusplus
  }
 diff -Naur libcoap-4.1.1/option.c libcoap-4.1.1/option.c
-index a03fc9e..e98e1c0 100644
---- libcoap-4.1.1/option.c
-+++ libcoap-4.1.1/option.c
+--- libcoap-4.1.1/option.c	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/option.c	2017-06-06 19:25:57.969299112 -0700
 @@ -8,13 +8,12 @@
   */
  
@@ -2664,7 +2838,7 @@ index a03fc9e..e98e1c0 100644
  #include <string.h>
  
  #include "option.h"
-@@ -57,8 +56,6 @@ coap_opt_parse(const coap_opt_t *opt, size_t length, coap_option_t *result) {
+@@ -57,8 +56,6 @@
  
    switch(result->delta) {
    case 15:
@@ -2674,9 +2848,8 @@ index a03fc9e..e98e1c0 100644
    case 14:
      /* Handle two-byte value: First, the MSB + 269 is stored as delta value.
 diff -Naur libcoap-4.1.1/pdu.c libcoap-4.1.1/pdu.c
-index 04ef9c6..0dfa49b 100644
---- libcoap-4.1.1/pdu.c
-+++ libcoap-4.1.1/pdu.c
+--- libcoap-4.1.1/pdu.c	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/pdu.c	2017-06-06 19:25:57.969299112 -0700
 @@ -6,14 +6,12 @@
   * README for terms of use. 
   */
@@ -2692,11 +2865,10 @@ index 04ef9c6..0dfa49b 100644
 -#include <stdio.h>
  #include <string.h>
  #ifdef HAVE_ARPA_INET_H
- #include <arpinet.h>
+ #include <arpa/inet.h>
 diff -Naur libcoap-4.1.1/pdu.h libcoap-4.1.1/pdu.h
-index a891086..def4267 100644
---- libcoap-4.1.1/pdu.h
-+++ libcoap-4.1.1/pdu.h
+--- libcoap-4.1.1/pdu.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/pdu.h	2017-06-06 19:25:57.973299111 -0700
 @@ -51,6 +51,7 @@
  #define COAP_REQUEST_POST      2
  #define COAP_REQUEST_PUT       3
@@ -2706,9 +2878,8 @@ index a891086..def4267 100644
  /* CoAP option types (be sure to update check_critical when adding options */
  
 diff -Naur libcoap-4.1.1/prng.h libcoap-4.1.1/prng.h
-index ce4cb12..b7f3a63 100644
---- libcoap-4.1.1/prng.h
-+++ libcoap-4.1.1/prng.h
+--- libcoap-4.1.1/prng.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/prng.h	2017-06-06 19:25:57.973299111 -0700
 @@ -14,7 +14,7 @@
  #ifndef _COAP_PRNG_H_
  #define _COAP_PRNG_H_
@@ -2728,9 +2899,8 @@ index ce4cb12..b7f3a63 100644
  /**
   * Fills \p buf with \p len random bytes. This is the default
 diff -Naur libcoap-4.1.1/subscribe.c libcoap-4.1.1/subscribe.c
-index d683419..37098d5 100644
---- libcoap-4.1.1/subscribe.c
-+++ libcoap-4.1.1/subscribe.c
+--- libcoap-4.1.1/subscribe.c	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/subscribe.c	2017-06-06 19:25:57.973299111 -0700
 @@ -7,14 +7,12 @@
   * README for terms of use. 
   */
@@ -2745,12 +2915,11 @@ index d683419..37098d5 100644
 -#include <stdio.h>
 -#include <limits.h>
  #ifdef HAVE_ARPA_INET_H
- # include <arpinet.h>
+ # include <arpa/inet.h>
  #endif
 diff -Naur libcoap-4.1.1/uri.c libcoap-4.1.1/uri.c
-index 5acb959..b64a0ca 100644
---- libcoap-4.1.1/uri.c
-+++ libcoap-4.1.1/uri.c
+--- libcoap-4.1.1/uri.c	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/uri.c	2017-06-06 19:25:57.973299111 -0700
 @@ -6,15 +6,13 @@
   * README for terms of use. 
   */
@@ -2768,7 +2937,7 @@ index 5acb959..b64a0ca 100644
  
  #include "mem.h"
  #include "debug.h"
-@@ -394,7 +392,7 @@ coap_new_uri(const unsigned char *uri, unsigned int length) {
+@@ -394,7 +392,7 @@
    URI_DATA(result)[length] = '\0'; /* make it zero-terminated */
  
    if (coap_split_uri(URI_DATA(result), length, (coap_uri_t *)result) < 0) {
@@ -2778,10 +2947,9 @@ index 5acb959..b64a0ca 100644
    }
    return (coap_uri_t *)result;
 diff -Naur libcoap-4.1.1/uthash.h libcoap-4.1.1/uthash.h
-index 6f0e064..9073c2e 100644
---- libcoap-4.1.1/uthash.h
-+++ libcoap-4.1.1/uthash.h
-@@ -56,19 +56,13 @@ do {
+--- libcoap-4.1.1/uthash.h	2014-02-05 06:20:53.000000000 -0800
++++ libcoap-4.1.1/uthash.h	2017-06-06 19:25:57.973299111 -0700
+@@ -56,19 +56,13 @@
  #endif
  
  /* a number of the hash function use uint32_t which isn't defined on win32 */
@@ -2803,6 +2971,3 @@ index 6f0e064..9073c2e 100644
  
  #define uthash_noexpand_fyi(tbl)          /* can be defined to log noexpand  */
  #define uthash_expand_fyi(tbl)            /* can be defined to log expands   */
--- 
-1.9.1
-

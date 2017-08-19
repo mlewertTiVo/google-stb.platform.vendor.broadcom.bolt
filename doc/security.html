@@ -851,11 +851,7 @@ configuration file to build for instead of all of them. The board <em>name</em>
 is passed as a parameter to <em>SINGLE_BOARD</em> on the make commandline.</p></div>
 <div class="listingblock">
 <div class="title">Example</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt> make 7445d0 <span style="color: #009900">SINGLE_BOARD</span><span style="color: #990000">=</span>BCM97252C</tt></pre></div></div>
+<div class="content"></div></div>
 <div class="paragraph"><p>Using this option eases porting, and transition from generic to secure
 BOLT as you don&#8217;t have to remove all the other boards from a configuration
 file. It has the following effects on the build process:</p></div>
@@ -897,11 +893,7 @@ Only one board information data structure will be generated in gen/$(FAMILY)/boa
 <div class="paragraph"><p>Its also possible to build for non secure boot as well:</p></div>
 <div class="listingblock">
 <div class="title">Example</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt> make 7445d0 <span style="color: #009900">SINGLE_BOARD</span><span style="color: #990000">=</span>BCM97252C <span style="color: #009900">SECURE_BOOT</span><span style="color: #990000">=</span>n</tt></pre></div></div>
+<div class="content"></div></div>
 <div class="paragraph"><p>As we are forcing <em>fixed</em> MCBs, the MEMSYS section will be bigger than
 generic BOLT as it may have to incorporate up to an additional 3 MCBs.
 Often the DDR3 and DDR4 SHMOO code libraries (memsysinitlib.a)
@@ -909,17 +901,7 @@ will also differ in size and adjustments will have to be made to
 the <em>config/layout-zeus*.cfg</em> file used.</p></div>
 <div class="listingblock">
 <div class="title">Example MEMSYS section a bit too small for a board (DDR4 memsysinitlib.a)</div>
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt>make 7445d0 <span style="color: #009900">SINGLE_BOARD</span><span style="color: #990000">=</span>BCM97445LCC_DR4 <span style="color: #009900">SECURE_BOOT</span><span style="color: #990000">=</span>n
-<span style="color: #990000">...</span>
-<span style="color: #990000">...</span>
-  LD      objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>elf
-arm-linux-ld<span style="color: #990000">:</span> objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>elf section `<span style="color: #990000">.</span>memsys<span style="color: #FF0000">' will not fit in region `memsys'</span>
-arm-linux-ld<span style="color: #990000">:</span> region `memsys<span style="color: #FF0000">' overflowed by 1432 bytes</span>
-<span style="color: #FF0000">make[1]: *** [objs/7445d0/bolt.elf] Error 1</span></tt></pre></div></div>
+<div class="content"></div></div>
 <div class="listingblock">
 <div class="title">Example patch increasing MEMSYS size for DDR4</div>
 <div class="content">
@@ -964,11 +946,7 @@ then rebuild <em>gen/scripts/patcher.pl</em> to pick up the changes.</td>
 </div>
 <div class="paragraph"><p>To show the available sub-sections of BOLT for patching, use the <em>-c</em> flag.</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ <span style="color: #990000">.</span>/gen/scripts/patcher<span style="color: #990000">.</span>pl -c</tt></pre></div></div>
+<div class="content"></div></div>
 <div class="paragraph"><p>Example output from <em>./gen/scripts/patcher.pl -c</em></p></div>
 <div class="listingblock">
 <div class="content">
@@ -998,12 +976,7 @@ ssbl for zeus42</code></pre>
 </div></div>
 <div class="paragraph"><p>Example of patching a replacement BBL into a BOLT binary:</p></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt><span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ <span style="color: #990000">.</span>/gen/scripts/patcher<span style="color: #990000">.</span>pl -p bbl-new<span style="color: #990000">.</span>bin -i objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">0.98</span>-7445d0-ba-bfw-<span style="color: #993399">2.1</span><span style="color: #990000">.</span><span style="color: #993399">0</span><span style="color: #990000">.</span>bin -o new-bolt<span style="color: #990000">.</span>bin -t bbl -z zeus42
- <span style="color: #990000">==&gt;</span> patching bbl-new<span style="color: #990000">.</span>bin <span style="color: #990000">(</span><span style="color: #993399">92432</span><span style="color: #990000">)</span> into objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">0.98</span>-7445d0-ba-bfw-<span style="color: #993399">2.1</span><span style="color: #990000">.</span><span style="color: #993399">0</span><span style="color: #990000">.</span>bin <span style="color: #990000">(</span><span style="color: #993399">773576</span><span style="color: #990000">)</span> at offset <span style="color: #993399">0x96f0</span></tt></pre></div></div>
+<div class="content"></div></div>
 </div>
 </div>
 <div class="sect1">
@@ -1018,7 +991,8 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-06-28 11:24:19 PDT
+Last updated
+ 2017-08-17 23:27:50 PDT
 </div>
 </div>
 </body>

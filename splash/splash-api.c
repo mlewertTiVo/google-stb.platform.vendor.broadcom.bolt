@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -133,57 +133,64 @@ void splash_api_start(void)
 {
 	int i;
 	BMEM_Handle mem[MAX_DDR];
-	struct SplashMediaInfo *mediaInfo = NULL;
-	SplashData *pSplashData = GetSplashData();
+	struct SplashMediaInfo *mediaInfo;
+	SplashData *pSplashData;
+	int retval;
 
-	if (!env_getenv("NO_SPLASH") &&
-		!strcmp(env_getenv("SPLASH"), "ENABLE")) {
+	if (env_getenv("NO_SPLASH") || strcmp(env_getenv("SPLASH"), "ENABLE"))
+		return;
 
-		xprintf("SPLASH: starting\n");
+	xprintf("SPLASH: starting\n");
 
-		if (!pSplashData) {
-			err_msg("SPLASH: getting SplashData failed");
-			return;
-		}
-		dumpSplashData(pSplashData);
+	pSplashData = GetSplashData();
+	if (pSplashData == NULL) {
+		err_msg("SPLASH: getting SplashData failed");
+		return;
+	}
+	dumpSplashData(pSplashData);
 
-		if (splash_glue_init()) {
-			err_msg("SPLASH: glue failed");
-			return;
-		}
+	if (splash_glue_init()) {
+		KFREE(pSplashData);
+		err_msg("SPLASH: glue failed");
+		return;
+	}
 
-		if (splash_load_media(CFG_SPLASH_FILE)) {
-			err_msg("SPLASH: load failed");
-			return;
-		}
+	if (splash_load_media(CFG_SPLASH_FILE)) {
+		KFREE(pSplashData);
+		err_msg("SPLASH: load failed");
+		return;
+	}
 
-		/*
-		Without hacking our custom copy of splash_vdc_run.c too
-		much to make maintenance a pain, we need to get an
-		index into which memc the RUL is made for in
-		splash_vdc_rul_def.h => ihMemIdx.
-		*/
-		for (i = 0; i < MAX_DDR; i++)
-			mem[i] = (BMEM_Handle)i;
+	/* Without hacking our custom copy of splash_vdc_run.c too
+	 * much to make maintenance a pain, we need to get an
+	 * index into which memc the RUL is made for in
+	 * splash_vdc_rul_def.h => ihMemIdx.
+	 */
+	for (i = 0; i < MAX_DDR; i++)
+		mem[i] = (BMEM_Handle)i;
 
-		/* BREG_Handle is not used */
-		if (splash_script_run(NULL, mem, pSplashData)) {
-			err_msg("SPLASH: running script failed");
-			return;
-		}
+	/* BREG_Handle is not used */
+	if (splash_script_run(NULL, mem, pSplashData)) {
+		KFREE(pSplashData);
+		err_msg("SPLASH: running script failed");
+		return;
+	}
 
-		mediaInfo = splash_open_media(SplashMediaType_eBoot,
-					SplashMediaFormat_ePcm, mem);
-		if ((mediaInfo)  && (mediaInfo->buf)) {
-			xprintf("SPLASH: start audio\n");
-			if (splash_audio_script_run(mediaInfo->size,
-					(unsigned int)mediaInfo->buf,
-					SPLASH_AUDIO_REPEAT_COUNT, pSplashData)) {
-				err_msg("SPLASH: Unsupported display format.");
-				return;
-			}
-		} else
-			xprintf("SPLASH: audio not present\n");
+	mediaInfo = splash_open_media(SplashMediaType_eBoot,
+			SplashMediaFormat_ePcm, mem);
+	if (mediaInfo == NULL || mediaInfo->buf == NULL) {
+		KFREE(pSplashData);
+		xprintf("SPLASH: audio not present\n");
+		return;
+	}
+	xprintf("SPLASH: start audio\n");
+	retval = splash_audio_script_run(mediaInfo->size,
+			(unsigned int)mediaInfo->buf,
+			SPLASH_AUDIO_REPEAT_COUNT, pSplashData);
+	KFREE(pSplashData); /* release as soon as not needed anymore */
+	if (retval != 0) {
+		err_msg("SPLASH: failed starting audio %d", retval);
+		return;
 	}
 }
 
@@ -196,7 +203,13 @@ void splash_api_replace_bmp(uint8_t *bmp, struct splash_rgb *rgb)
 	SplashSurfaceInfo *surf_info;
 	int  x, y;
 	int i;
-	SplashData *pSplashData = GetSplashData();
+	SplashData *pSplashData;
+
+	pSplashData = GetSplashData();
+	if (pSplashData == NULL) {
+		err_msg("SPLASH: failed to get data");
+		return;
+	}
 
 	for (i = 0; i < pSplashData->iNumSurface; i++) {
 
@@ -224,6 +237,8 @@ void splash_api_replace_bmp(uint8_t *bmp, struct splash_rgb *rgb)
 
 		CACHE_FLUSH_RANGE(pimg, BSPLASH_SURFACE_BUF_SIZE(surf_info));
 	}
+
+	KFREE(pSplashData);
 }
 
 #endif /* CFG_SPLASH */

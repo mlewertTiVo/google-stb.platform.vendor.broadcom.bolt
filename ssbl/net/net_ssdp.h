@@ -113,6 +113,7 @@ typedef struct ssdp_context_s {
  *****************************************************************************/
 
 int ssdp_init(ssdp_context_t *ctx);
+int ssdp_term(ssdp_context_t *ctx);
 void ssdp_poll(void *arg);
 
 #endif

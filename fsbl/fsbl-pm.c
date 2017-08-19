@@ -12,7 +12,6 @@
 #include <stdbool.h>
 
 #include "fsbl.h"
-#include "fsbl-dtu.h"
 #include "fsbl-pm.h"
 #include "../common/xpt_dma.h"
 #include "boot_defines.h"
@@ -131,18 +130,18 @@ static int s3_compare_hash(uint32_t *orig, uint32_t *new)
 }
 
 static bool entry_in_mcpb(struct mcpb_dma_desc *head, unsigned int max_descs,
-			uintptr_t entry_addr)
+			dma_addr_t entry_addr)
 {
 	struct mcpb_dma_desc *curr = head;
-	uintptr_t dma_start_addr;
+	dma_addr_t dma_start_addr;
 	unsigned int count = 0;
 
 	if (!curr)
 		return false;
 
 	for (count = 0; count < max_descs; count++, curr++) {
-		dma_start_addr = curr->buf_lo;
-		dma_start_addr |= shift_left_32((uintptr_t)curr->buf_hi);
+		dma_start_addr = (dma_addr_t) curr->buf_lo;
+		dma_start_addr |= shift_left_32((dma_addr_t)curr->buf_hi);
 		if ((entry_addr >= dma_start_addr) &&
 			(entry_addr <= (dma_start_addr + curr->size)))
 			return true;
@@ -260,6 +259,11 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 
 	report_hex("PM: verify main memory, len ", len);
 
+	if (len <= 1024) {
+		puts("PM: hash range too small");
+		return -1;
+	}
+
 	if (memdma_run(desc1, desc2, dual_channel))
 		return -1;
 
@@ -280,7 +284,36 @@ static int verify_s3_memory(struct brcmstb_s3_params *params, uint32_t flags)
 	return 0;
 }
 
-void fsbl_finish_warm_boot(uint32_t restore_val, unsigned int nddr)
+void fsbl_init_warm_boot(uint32_t flags)
+{
+	struct brcmstb_s3_params *params;
+	uintptr_t addr;
+	const struct memdma_initparams e = {sys_die, udelay, memset, NULL};
+
+	/*
+	 * FIXME: once BFW stops making assumptions about AON_REG(0), we can
+	 * pull 'flags' directly from AON, e.g.:
+	 *
+	 *     flags = AON_REG(AON_REG_MAGIC_FLAGS) & ~BRCMSTB_S3_MAGIC_MASK;
+	 */
+	flags = flags & ~BRCMSTB_S3_MAGIC_MASK;
+
+	addr = AON_REG(AON_REG_CONTROL_LOW);
+	addr |= shift_left_32((uintptr_t)AON_REG(AON_REG_CONTROL_HIGH));
+
+	/* init trace register value */
+	BDEV_WR(BCHP_HIF_TOP_CTRL_SCRATCH, TRACE_VALID_MARKER);
+
+	memdma_init(&e);
+
+	params = (struct brcmstb_s3_params *)addr;
+	if (verify_s3_params(params, flags)) {
+		puts("S3 params verification failed");
+		handle_boot_err(ERR_S3_PARAM_HASH_FAILED);
+	}
+}
+
+void fsbl_finish_warm_boot(uint32_t restore_val)
 {
 	struct brcmstb_s3_params *params;
 	uintptr_t addr;
@@ -302,18 +335,9 @@ void fsbl_finish_warm_boot(uint32_t restore_val, unsigned int nddr)
 	addr = AON_REG(AON_REG_CONTROL_LOW);
 	addr |= shift_left_32((uintptr_t)AON_REG(AON_REG_CONTROL_HIGH));
 
-	/* init trace register value */
-	BDEV_WR(BCHP_HIF_TOP_CTRL_SCRATCH, TRACE_VALID_MARKER);
-
 	memdma_init(&e);
 
 	params = (struct brcmstb_s3_params *)addr;
-	if (verify_s3_params(params, flags)) {
-		puts("S3 params verification failed");
-		handle_boot_err(ERR_S3_PARAM_HASH_FAILED);
-	}
-
-	dtu_enable(nddr);
 
 #ifdef STUB64_START
        /*

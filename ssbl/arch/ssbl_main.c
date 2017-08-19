@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -243,6 +243,51 @@ static void set_ssbl_page(uint32_t *pt_1st, uint32_t _fdata)
 	arch_mark_executable(SSBL_RAM_ADDR, _fdata-SSBL_RAM_ADDR, true);
 }
 
+/* construct_dram_pages -- builds up page table for installed DRAM
+ *
+ * FSBL sets up page table entries for memory mapped registers, SRAM,
+ * EBI and small portion of DRAM (enough to copy SSBL into DRAM).
+ *
+ * Complete page table for DRAM so that it covers all of the installed
+ * DRAM on the board.
+ *
+ * Parameter:
+ *  pt1 [in] pointer to the 1st level page table
+ */
+static void construct_dram_pages(uint32_t *pt1)
+{
+	unsigned int i;
+	struct board_type *b = board_thisboard();
+
+	/* skip sanity check on pt1 as the caller should have done it */
+
+	if (b == NULL) {
+		puts("INVALID board info");
+		return;
+	}
+
+	/* construct DRAM portion of PT, must be before setting guard page */
+	for (i = 0; i < b->nddr; i++) {
+		unsigned long size;
+		const struct ddr_info *ddr = &(b->ddr[i]);
+
+		size = ddr_get_restricted_size(ddr);
+		if (size == 0)
+			continue;
+
+		set_pte_range(pt1, _MB(ddr->base_mb), _MB(ddr->base_mb) + size,
+			/* make sure marking XN (eXecute Never) */
+#if !CFG_UNCACHED
+			SECT_MEM_CACHED_WB | XN
+#else
+			SECT_MEM_NONCACHED | XN
+#endif
+		);
+	}
+
+	/* after constructing PTE's for DRAM */
+	set_guard_page(pt1);
+}
 
 #ifdef STUB64_START /* aarch64/smm(smc) & PSCI32 support */
 
@@ -356,6 +401,7 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 {
 	unsigned long sp;
 	uint32_t *pt_1st;
+	bool was_guard_page_correct;
 #if (CFG_CMD_LEVEL >= 5)
 	struct board_nvm_info *s = &(_fsbl_info->saved_board);
 #endif
@@ -375,10 +421,14 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	__noisy_flush_caches();
 
 	pt_1st = (uint32_t *)get_pagetable_location();
-	supplement_fsbl_pagetable(pt_1st);
-	/* The whole DDR area was marked XN by FSBL, or assured by
-	 * supplement_fsbl_pagetable().
+	/* check whether patch work is needed for older frozen FSBL
+	 * before constructing PT for DRAM because such indication
+	 * gets overridden once PT for DRAM is correctly constructed.
 	 */
+	was_guard_page_correct = supplement_fsbl_checkguardpage(pt_1st);
+	construct_dram_pages(pt_1st);
+	supplement_fsbl_pagetable(pt_1st, was_guard_page_correct);
+	/* The whole DDR area has been marked XN */
 #ifdef STUB64_START
 	__puts("CLR PSCI MEM @ ");
 	writehex(PSCI_BASE);

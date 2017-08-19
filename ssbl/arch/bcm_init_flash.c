@@ -109,7 +109,6 @@ void enable_emmc_flash(void)
 
 void board_init_flash(void)
 {
-	char *envmac;
 	char macstr[18];
 	norflash_probe_t fprobe;
 	int sfd;
@@ -158,10 +157,7 @@ void board_init_flash(void)
 	if (boot_mode == BOOT_FROM_NAND)
 		nand_boot_read_disturb();
 
-	/* Set macadr/nvram
-	*/
-	bolt_set_envdevice("flash0.nvram");
-	bolt_set_macdevice(MACADDR_FLASHDEVICE);
+	bolt_set_envdevice("flash0.nvram"); /* set nvram */
 
 	/* retreive mac address from flash
 	*/
@@ -178,19 +174,16 @@ void board_init_flash(void)
 	bolt_close(sfd);
 
 	if (macaddr_flash_verify(flashprog_offset) == 0) {
-		envmac = env_getenv("ETH0_HWADDR");
-		if (!envmac) {
-			macaddr_flash_get(BCM7038MAC, macstr, flashprog_offset);
-			(void)env_setenv("ETH0_HWADDR",
-				macstr, ENV_FLG_BUILTIN);
-		}
+		macaddr_flash_get(BCM7038MAC, macstr, flashprog_offset);
+		(void)env_setenv(ENVSTR_MACADDR, macstr, ENV_FLG_BUILTIN);
 	} else {
+		const char *cmd = "use setsn command";
 #if CFG_ENET
-		err_msg("MAC ADDRESS MUST BE PROGRAMMED; use macprog command");
+		err_msg("MAC ADDRESS MUST BE PROGRAMMED; %s", cmd);
 #else /* gentler message for MAC address not related to an actual
 		physical device	used by BOLT, but just passed e.g. via
 		Devicetree. */
-		warn_msg("MAC ADDRESS NOT PROGRAMMED; use macprog command");
+		warn_msg("MAC ADDRESS NOT PROGRAMMED; %s", cmd);
 #endif /* CFG_ENET */
 	}
 }

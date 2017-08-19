@@ -901,22 +901,12 @@ load -loader=raw 192.168.0.42:data.bin</code></pre>
 <div class="ulist"><ul>
 <li>
 <p>
-The <em>macprog</em> command updates the <em>ETH0_HWADDR</em> environment variable
-without rebooting the board. It allows BOLT to update DTB with a new
-MAC address and jump to Linux without the need for reboot.
+The <em>setsn</em> command updates the <em>ETH0_HWADDR</em> environment variable
+if executed against a board that the command has never been executed.
+The <em>-f</em> option to the <em>setsn</em> command also updates the environment
+variable. It can also be updated by the <em>macprog</em> command.
 </p>
 </li>
-</ul></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">A newly programmed MAC address by the <em>macprog</em> command
-will not be effective in BOLT until the board gets rebooted.</td>
-</tr></table>
-</div>
-<div class="ulist"><ul>
 <li>
 <p>
 As of version v0.69 we&#8217;ve switched to a dynamic flash partitioning
@@ -1015,7 +1005,7 @@ to have a working data space.</p></div>
 <div class="sect1">
 <h2 id="_appendix_copyright_info">3. Appendix: Copyright Info</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+<div class="paragraph"><p>Copyright &#169; 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.</p></div>
 </div>
@@ -1024,7 +1014,8 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-06-28 11:24:19 PDT
+Last updated
+ 2017-08-17 23:27:50 PDT
 </div>
 </div>
 </body>

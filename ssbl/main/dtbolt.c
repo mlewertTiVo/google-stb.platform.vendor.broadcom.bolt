@@ -67,10 +67,15 @@
 #define ENET_COMPAT_INT_PHY_STR "brcm,28nm-gphy"
 #endif
 
-/* ------------------------------------------------------------------------- */
-/*      Modify an existing DTB with bolt specifics, may get messy here.      */
-/* ------------------------------------------------------------------------- */
-
+#define MEMC_NUM_MAPS_MAX 2 /* max number of mappings from DRAM to CPU */
+	/* From a memory controller's point of view, the maximum
+	 * (or populated) amount of memory ranges from 0 (zero) to
+	 * the maximum (or populated) amount of memory. But, the range
+	 * has to be mapped to the system memory map, which breaks up
+	 * the range of MEMC into multiple chunks except v7-64.
+	 * The maximum number of chunks is 2 (two), one under the 4GB
+	 * boundary and one above the 4GB boundary.
+	 */
 
 #define BREG_PA(block)	(BPHYSADDR(BCHP_##block##_REG_START))
 #define BREG_LEN(block)	(BCHP_##block##_REG_END + 4 - BCHP_##block##_REG_START)
@@ -447,7 +452,8 @@ static int bolt_populate_flash(void *fdt)
  *
  * @regs buffer to which mapped results (off,len) are to be saved
  * @memc the index of MEMC whose DRAM is mapped to CPU address space
- * @size_mb the size of DRAM to be mapped
+ * @size_mb the size of DRAM to be mapped, more than the installed amount
+ *      of memory can be passed to figure out the system memory map
  *
  * @returns the number of mappings made
  *
@@ -665,27 +671,20 @@ static int bolt_populate_reserved_memory_subnode(void *fdt, int node,
 	struct memory_area *m)
 {
 	int rc, subnode;
-	char *subnode_name;
+	char subnode_name[30]; /* strlen("noname@%llx") + margin */
 	uint64_t regs[2]; /* #address-cells and #size-cells are 2 */
 
 	/* no sanity check on fdt, node, m and
 	 * m->options & BOLT_RESERVE_MEMORY_OPTION_DT_NEW
 	 */
 
-	if (m->tag == NULL)
-		/* 12 == strlen("reserved_at_"), 20 == %llx + margin */
-		subnode_name = (char *) KMALLOC(12 + 20, 0);
-	else
-		/* 20 == @%llx */
-		subnode_name = (char *) KMALLOC(strlen(m->tag) + 20, 0);
-
-	if (subnode_name == NULL)
-		return BOLT_ERR_NOMEM;
-
-	if (m->tag == NULL)
-		sprintf(subnode_name, "reserved_at_%llx", m->offset);
+	if (m->tag[0] == '\0')
+		sprintf(subnode_name, "noname@%llx", m->offset);
 	else
 		sprintf(subnode_name, "%s@%llx", m->tag, m->offset);
+
+	/* re-create after removing if already exists */
+	bolt_devtree_delnode_at(fdt, subnode_name, node);
 
 	rc = bolt_devtree_addnode_at(fdt, subnode_name, node, &subnode);
 	if (rc)
@@ -710,7 +709,7 @@ static int bolt_populate_reserved_memory_subnode(void *fdt, int node,
 			goto out;
 	}
 
-	if (m->tag != NULL) {
+	if (m->tag[0] != '\0') {
 		rc = bolt_dt_addprop_str(fdt, subnode,
 			"reserved-names", m->tag);
 		if (rc)
@@ -719,7 +718,7 @@ static int bolt_populate_reserved_memory_subnode(void *fdt, int node,
 
 out:
 	KFREE(subnode_name);
-	return BOLT_OK;
+	return rc;
 }
 
 /**
@@ -802,6 +801,67 @@ out:
 	return rc;
 }
 
+/**
+ * Adjusts prepopulated mappings between MEMC and CPU address spaces
+ *
+ * The scripting engine populates a DT property, 'brcm,map-to-cpu', under
+ * each memory controller DT node, '/rdb/memory_controllers/memc@n' based
+ * on the mmap BOLT configuration commands. But, v7-64 is expressed via
+ * mmap64. Also, whether v7-64 or v7-32 is determined at run-time by
+ * a strap setting. The pre-populated memory map needs be adjusted if
+ * v7-64 is selected.
+ *
+ * @fdt The FDT blob
+ * @memc the index of MEMC whose DRAM is mapped to CPU address space
+ *
+ * @returns BOLT_OK if no need for adjustment or successfully adjusted,
+ *      BOLT_ERR_NOMEM if mapping requires more than MEMC_NUM_MAPS_MAX
+ *      segments (chunks), otherwise the return value of
+ *      bolt_devtree_node_from_path() or bolt_devtree_at_node_addprop()
+ */
+static int bolt_adjust_memory_map(void *fdt, unsigned int memc)
+{
+	char path[128];
+	int node;
+	uint64_t simple_regs[2*MEMC_NUM_MAPS_MAX]; /* {cpu_off, size} */
+	uint64_t regs[3*MEMC_NUM_MAPS_MAX]; /* {dram_off, cpu_off, size} */
+	uint64_t dram_offset;
+	unsigned int nsegs;
+	unsigned int i;
+	int rc;
+
+	/* adjustment is required if and only if v7-64 */
+	if (!is_mmap_v7_64())
+		return BOLT_OK;
+
+	xsprintf(path, DT_RDB_DEVNODE_BASE_PATH "/memory_controllers/memc@%d",
+		memc);
+	node = bolt_devtree_node_from_path(fdt, path);
+	if (node < 0) {
+		err_msg("DT node for MEMC%d does NOT exist", memc);
+		return node;
+	}
+
+	nsegs = map_ddr_to_cpu(simple_regs, memc, UINT32_MAX);
+	if (nsegs > MEMC_NUM_MAPS_MAX) {
+		err_msg("too many %d mappings for MEMC%d", nsegs, memc);
+		return BOLT_ERR_NOMEM;
+	}
+
+	dram_offset = 0;
+	for (i = 0; i < nsegs; ++i) {
+		regs[i*3] = cpu_to_fdt64(dram_offset);
+		regs[i*3 + 1] = cpu_to_fdt64(simple_regs[i*2]);
+		regs[i*3 + 2] = cpu_to_fdt64(simple_regs[i*2 + 1]);
+		dram_offset += simple_regs[i*2 + 1];
+	}
+
+	rc = bolt_devtree_at_node_addprop(fdt, node, "brcm,map-to-cpu",
+		regs, sizeof(uint64_t) * 3 * nsegs);
+
+	return rc;
+}
+
 /*
  * Populate the memory controller nodes with information about the DDR
  * frequency. Needed by performance monitoring tools.
@@ -812,7 +872,7 @@ static int bolt_populate_memory_ctls(void *fdt)
 #ifdef BCHP_MEMC_DDR_0_REG_START
 	struct board_type *b;
 	struct ddr_info *ddr;
-	char tmpstr[512];
+	char tmpstr[128];
 	unsigned int i, base_addr;
 	int node;
 
@@ -821,6 +881,15 @@ static int bolt_populate_memory_ctls(void *fdt)
 		return BOLT_ERR_DEVNOTFOUND;
 
 	for (i = 0; i < b->nddr; i++) {
+		/* the mapping between DRAM and CPU should exist regardless
+		 * whether a corresponding MEMC is actually faciliated.
+		 */
+		rc = bolt_adjust_memory_map(fdt, i);
+		if (rc < 0) {
+			err_msg("failed adjusting mmap for MEMC%d %d", i, rc);
+			return rc;
+		}
+
 		ddr = board_find_ddr(b, i);
 		if (!ddr)
 			continue;
@@ -1230,10 +1299,9 @@ static void bolt_devtree_remove_phy_nodes(void *fdt, int mdio_node)
 	}
 }
 
-static void bolt_devtree_add_fixed_link(void *fdt, int phandle,
-		int instance,
-		char *phy_type,
-		const char *phy_speed)
+static void bolt_devtree_add_fixed_link(void *fdt, int phandle, int offset,
+					int instance, char *phy_type,
+					const char *phy_speed)
 {
 	int i = -1;
 	int fixed_link_property[5];
@@ -1248,8 +1316,16 @@ static void bolt_devtree_add_fixed_link(void *fdt, int phandle,
 	fixed_link_property[++i] = 0;
 	fixed_link_property[++i] = 0;
 
-	bolt_devtree_at_handle_addprop(fdt, phandle, "fixed-link",
-			fixed_link_property, 5 * sizeof(int));
+	if (phandle >= 0)
+		bolt_devtree_at_handle_addprop(fdt, phandle, "fixed-link",
+					       fixed_link_property,
+					       5 * sizeof(int));
+	else if (offset >= 0)
+		bolt_devtree_at_node_addprop(fdt, offset, "fixed-link",
+					     fixed_link_property,
+					     5 * sizeof(int));
+	else
+		err_msg("invalid phandle or offset specified\n");
 }
 
 static void bolt_devtree_add_phy(void *fdt, int phandle,
@@ -1343,6 +1419,84 @@ static void bolt_devtree_add_phy(void *fdt, int phandle,
 					   phy_phandle);
 out:
 	KFREE(compat);
+}
+
+static int bolt_populate_ext_moca(void *fdt, uint8_t *macaddr)
+{
+	unsigned int i, port_mask = 0;
+	const ext_moca_params *m;
+	char tmpstr[255];
+	char *phy_type;
+	int phandle;
+	int rc, port;
+	int eth_ports;
+
+	phandle = bolt_devtree_phandle_from_alias(fdt, "ext_moca");
+	if (phandle < 0)
+		return phandle;
+
+	rc = fdt_node_offset_by_phandle(fdt, phandle);
+	if (rc < 0)
+		return rc;
+
+	eth_ports = bolt_devtree_subnode(fdt, "ethernet-ports", rc);
+	if (eth_ports < 0)
+		return eth_ports;
+
+	/* These properties apply to the 'ethernet-ports' sub-nodes */
+	for (i = 0; i < NUM_EXT_MOCA; i++) {
+		m = board_ext_moca(i);
+		if (!m)
+			continue;
+
+		xsprintf(tmpstr, "rgmii%d", m->rgmii);
+		port = bolt_devtree_subnode(fdt, tmpstr, eth_ports);
+		if (port < 0)
+			continue;
+
+		if (enet_needs_fixed_link(m->phy_type, m->mdio_mode))
+			bolt_devtree_add_fixed_link(fdt, -1, port,
+						    m->rgmii,
+						    m->phy_type,
+						    m->phy_speed);
+
+		phy_type = phystr2std(m->phy_type);
+		bolt_dt_addprop_str(fdt, port, "phy-mode", phy_type);
+
+		/* A network instance is tied to MoCA so its DT config code
+		 * should have set up its MAC address before directly calling
+		 * us here for us to match or not (MAC address tracking post
+		 * increments) as the case may be.
+		 */
+		 if (atoi(m->phy_id) == 257 && atoi(m->mdio_mode) == 0) {
+			if (BSP_CFG_MOCA_MAC_EQ_ETH_MAC)
+				macaddr_decrement(macaddr, MACADDR_INCREMENT);
+
+			bolt_add_macaddr_prop(fdt, 0, port, macaddr);
+		}
+
+		port_mask |= 1 << i;
+
+		rc = bolt_devtree_phandle_from_alias(fdt, m->enet_node);
+		if (rc < 0)
+			continue;
+
+		bolt_devtree_at_node_delprop(fdt, port, "enet-id");
+		bolt_dt_addprop_u32(fdt, port, "enet-id", rc);
+	}
+
+	/* Re-calculate the offset */
+	rc = fdt_node_offset_by_phandle(fdt, phandle);
+	if (rc < 0)
+		return rc;
+
+	if (port_mask) {
+		bolt_devtree_at_node_delprop(fdt, rc, "status");
+		bolt_devtree_at_node_addprop(fdt, rc, "status",
+					     "okay", strlen("okay") + 1);
+	}
+
+	return 0;
 }
 
 static int bolt_populate_moca(void *fdt, uint8_t *macaddr)
@@ -1513,7 +1667,7 @@ static int bolt_populate_genet(void *fdt, int enet_instance,
 	data = bolt_enet_get_phy_id(phy_id, e->genet);
 
 	if (enet_needs_fixed_link(phy_type, mdio_mode)) {
-		bolt_devtree_add_fixed_link(fdt, phandle,
+		bolt_devtree_add_fixed_link(fdt, phandle, -1,
 			e->genet, phy_type, phy_speed);
 	} else if (phy_type != NULL && data != PHY_ID_NONE) {
 		/* This is the switch pseudo-PHY address which won't respond
@@ -1544,6 +1698,9 @@ static int bolt_populate_genet(void *fdt, int enet_instance,
 		if (bolt_populate_moca(fdt, macaddr))
 			return 1;
 	}
+
+	if (bolt_populate_ext_moca(fdt, macaddr))
+		return 1;
 
 	return 0;
 }
@@ -1613,7 +1770,7 @@ static int bolt_populate_eth_switch_port(void *fdt, uint8_t *macaddr,
 	data = bolt_enet_get_phy_id(phy_id, e->switch_port);
 	if (enet_needs_fixed_link(e->phy_type, e->mdio_mode))
 		bolt_devtree_add_fixed_link(fdt,
-				phandle, e->switch_port,
+				phandle, -1, e->switch_port,
 				e->phy_type, e->phy_speed);
 
 	else if (e->phy_type && data != PHY_ID_NONE) {
@@ -1649,8 +1806,12 @@ static int bolt_populate_eth_switch_port(void *fdt, uint8_t *macaddr,
 	bolt_devtree_at_handle_addprop(fdt, phandle,
 			"phy-mode", phy_type, strlen(phy_type) + 1);
 
-	if (first_time && !strcmp(phy_type, "moca")) {
-		if (bolt_populate_moca(fdt, macaddr))
+	if (first_time) {
+		if (!strcmp(phy_type, "moca"))
+			if (bolt_populate_moca(fdt, macaddr))
+				return 1;
+
+		if (bolt_populate_ext_moca(fdt, macaddr))
 			return 1;
 	}
 
@@ -2296,12 +2457,23 @@ void bolt_board_specific_mods(void *fdt)
 	}
 }
 
-static void bolt_populate_model_and_compatible(void *fdt)
+/**
+ * Populate properties that directly belong to / (root)
+ *
+ * Populated (or updated) properties are:
+ * - model: populated with board name
+ * - compatible: refined with the board name
+ * - serial-number: populated with the BOARD_SERIAL environment variable
+ *
+ * @fdt The FDT blob
+ */
+static void bolt_populate_root_properties(void *fdt)
 {
 	const struct fdt_property *prop;
 	const char *name;
 	char *compat;
 	int name_len, compat_len;
+	char *serial;
 
 	name = board_name();
 	if (!name)
@@ -2329,6 +2501,10 @@ static void bolt_populate_model_and_compatible(void *fdt)
 			compat, name_len + compat_len);
 
 	KFREE(compat);
+
+	serial = env_getenv(ENVSTR_BOARD_SERIAL);
+	if (serial)
+		(void)bolt_dt_addprop_str(fdt, 0, "serial-number", serial);
 }
 
 int sdio_handle_driver_strength(void *fdt, int node,
@@ -2932,7 +3108,7 @@ int bolt_devtree_boltset(void *fdt)
 		goto out;
 
 out:
-	bolt_populate_model_and_compatible(fdt);
+	bolt_populate_root_properties(fdt);
 
 	bolt_otp_unpopulate(fdt);
 

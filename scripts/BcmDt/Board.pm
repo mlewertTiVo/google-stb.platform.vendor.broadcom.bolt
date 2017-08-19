@@ -318,6 +318,46 @@ sub gen_moca_dts($) {
 	return $text;
 }
 
+sub gen_ext_moca_dts($) {
+	my ($ext_moca) = @_;
+	my $text = "";
+
+	return $text if !defined($ext_moca);
+
+	$text .= "&ext_moca {\n";
+	if (scalar(@$ext_moca)) {
+		$text .= "\tstatus = \"okay\";\n";
+	}
+
+	$text .= "\tethernet-ports {\n";
+	for my $m (@$ext_moca) {
+		if (defined($m->{rgmii})) {
+			$text .= "\t\trgmii" . $m->{rgmii};
+		}
+		$text .= " {\n";
+
+		if ($m->{phy_type} eq "NULL") {
+			$text .= "\t\t\tstatus = \"disabled\";\n";
+			$text .= "\t\t};\n\n";
+		}
+
+		$text .= sprintf("\t\t\tphy-mode = \"%s\";\n", enet_phy_mode($m));
+
+		if (enet_needs_fixed_link($m) eq 1) {
+			$text .= "\t\t\tfixed-link {\n";
+			$text .= sprintf("\t\t\t\tspeed = <%d>;\n",
+					 substr($m->{phy_speed}, 1, -1));
+			$text .= "\t\t\t\tfull-duplex;\n";
+			$text .= "\t\t\t};\n";
+		}
+		$text .= "\t\t};\n\n";
+
+	};
+	$text .= "\t};\n};\n";
+
+	return $text;
+};
+
 sub gen_gpio_key_dts($) {
 	my ($gpio) = @_;
 	my $text = "";

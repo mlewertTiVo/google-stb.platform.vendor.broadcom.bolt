@@ -809,19 +809,20 @@ Following is the BOLT output from "show devices" on a system booting from eMMC:<
 <div class="content">
 <pre><code>Device Name          Description
 -------------------  ---------------------------------------------------------
-              uart0  16550 DUART at 0xf0406b00 channel 0
+              uart0  16550 DUART at 0xf040b400 channel 0
                mem0  Memory
-             flash1  EMMC flash Boot1: 0x000000000-0x000200000 (2048KB)
-             flash2  EMMC flash Boot2: 0x000000000-0x000200000 (2048KB)
-             flash0  EMMC flash Data : 0x000000000-0x0EC000000 (3776MB)
+             flash0  EMMC flash Data : 0x000000000-0x370000000 (14080MB)
       flash0.macadr  EMMC flash Data : 0x000004400-0x000004800 (1024B)
        flash0.nvram  EMMC flash Data : 0x000004800-0x000014800 (64KB)
-      flash0.kernel  EMMC flash Data : 0x000014800-0x000814800 (8MB)
-      flash0.splash  EMMC flash Data : 0x000814800-0x000894800 (512KB)
-     flash0.devtree  EMMC flash Data : 0x000894800-0x0008A4800 (64KB)
-      flash0.rootfs  EMMC flash Data : 0x0008A4800-0x0EBFFBE00 (3768MB)
-               eth0  GENET Internal Ethernet at 0xf0b60800
-              sata0  SATA3 AHCI Device</code></pre>
+        flash0.wlan  EMMC flash Data : 0x000014800-0x000024800 (64KB)
+      flash0.kernel  EMMC flash Data : 0x000024800-0x000824800 (8MB)
+      flash0.splash  EMMC flash Data : 0x000824800-0x0008A4800 (512KB)
+     flash0.devtree  EMMC flash Data : 0x0008A4800-0x0008B4800 (64KB)
+      flash0.rootfs  EMMC flash Data : 0x0008B4800-0x36FFFBE00 (14072MB)
+             flash1  EMMC flash Boot1: 0x000000000-0x000400000 (4MB)
+             flash2  EMMC flash Boot2: 0x000000000-0x000400000 (4MB)
+             flash3  EMMC flash RPMB : 0x000000000-0x000020000 (128KB)
+               eth0  GENET Internal Ethernet at 0xf0b60000</code></pre>
 </div></div>
 </div>
 </div>
@@ -890,7 +891,7 @@ pass the "/dev/mmcblkxxx" or GUID based partition name for the kernels rootfs. E
 <div class="paragraph"><p>or</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>     boot flash0.kernel: "root=/dev/mmcblk0p6 rootwait rw debug"</code></pre>
+<pre><code>     boot flash0.kernel: "root=/dev/mmcblk0p7 rootwait rw debug"</code></pre>
 </div></div>
 <div class="paragraph"><p>[1]<a id="1"></a> The BOLT partition name is taken from the GPT partition name.</p></div>
 </div>
@@ -942,12 +943,12 @@ Set board boot shape to boot from eMMC and reboot.
 </li>
 <li>
 <p>
-run <em>macprog</em> to setup the Ethernet interface.
+run <em>setsn</em> or <em>macprog</em> to setup the Ethernet interface.
 </p>
 </li>
 <li>
 <p>
-reboot so the macprog changes take effect.
+reboot so the MAC address change takes effect.
 </p>
 </li>
 <li>
@@ -965,17 +966,7 @@ Boot an initrd kernel across the network. Example:
 Run <em>sgdisk</em> to create the software partitions:
 </p>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt>      sgdisk -o /dev/mmcblk<span style="color: #993399">0</span>
-      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">1</span><span style="color: #990000">:</span><span style="color: #993399">34</span><span style="color: #990000">:</span><span style="color: #993399">35</span> -c <span style="color: #993399">1</span><span style="color: #990000">:</span><span style="color: #FF0000">"macadr"</span> /dev/mmcblk<span style="color: #993399">0</span>
-      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">2</span><span style="color: #990000">:</span><span style="color: #993399">36</span><span style="color: #990000">:</span><span style="color: #993399">163</span> -c <span style="color: #993399">2</span><span style="color: #990000">:</span><span style="color: #FF0000">"nvram"</span> /dev/mmcblk<span style="color: #993399">0</span>
-      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">3</span><span style="color: #990000">:</span><span style="color: #993399">164</span><span style="color: #990000">:</span><span style="color: #993399">16547</span> -c <span style="color: #993399">3</span><span style="color: #990000">:</span><span style="color: #FF0000">"kernel"</span> /dev/mmcblk<span style="color: #993399">0</span>
-      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">4</span><span style="color: #990000">:</span><span style="color: #993399">16548</span><span style="color: #990000">:</span><span style="color: #993399">17571</span> -c <span style="color: #993399">4</span><span style="color: #990000">:</span><span style="color: #FF0000">"splash"</span> /dev/mmcblk<span style="color: #993399">0</span>
-      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">5</span><span style="color: #990000">:</span><span style="color: #993399">17572</span><span style="color: #990000">:</span><span style="color: #993399">17699</span> -c <span style="color: #993399">5</span><span style="color: #990000">:</span><span style="color: #FF0000">"devtree"</span> /dev/mmcblk<span style="color: #993399">0</span>
-      sgdisk -n <span style="color: #993399">6</span><span style="color: #990000">:</span><span style="color: #993399">17700</span><span style="color: #990000">:</span>`sgdisk -E /dev/mmcblk<span style="color: #993399">0</span>` -c <span style="color: #993399">6</span><span style="color: #990000">:</span><span style="color: #FF0000">"rootfs"</span> /dev/mmcblk<span style="color: #993399">0</span></tt></pre></div></div>
+<div class="content"></div></div>
 </li>
 <li>
 <p>
@@ -983,21 +974,7 @@ Copy a kernel and rootfs to eMMC. The following example will copy a
       kernel and rootfs to the correct eMMC flash partitions for a 7445d0 system:
 </p>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt>      mkfs<span style="color: #990000">.</span>ext4 /dev/mmcblk0p6
-      mount /dev/mmcblk0p6 /mnt/hd
-      cd /mnt/hd
-      tftp <span style="color: #990000">&lt;</span>TFTP IP ADDR<span style="color: #990000">&gt;</span> -g -r vmlinuz-7445d0
-      dd <span style="font-weight: bold"><span style="color: #0000FF">if</span></span><span style="color: #990000">=</span>vmlinuz-7445d0 <span style="color: #009900">of</span><span style="color: #990000">=</span>/dev/mmcblk0p3
-      rm vmlinuz-7445d0
-      tftp <span style="color: #990000">&lt;</span>TFTP IP ADDR<span style="color: #990000">&gt;</span> -g -r nfsroot-7445d0<span style="color: #990000">.</span>tar<span style="color: #990000">.</span>bz2
-      tar -xjf nfsroot-7445d0<span style="color: #990000">.</span>tar<span style="color: #990000">.</span>bz2
-      mv romfs<span style="color: #990000">/*</span> <span style="color: #990000">.</span>
-      rmdir romfs
-      rm nfsroot-7445d0<span style="color: #990000">.</span>tar<span style="color: #990000">.</span>bz2</tt></pre></div></div>
+<div class="content"></div></div>
 </li>
 <li>
 <p>
@@ -1006,7 +983,7 @@ Reboot the system.
 </li>
 <li>
 <p>
-Rerun <em>macprog</em> to setup the network.
+Rerun <em>setsn</em> (or <em>macprog</em>) to setup the network.
 </p>
 </li>
 <li>
@@ -1015,7 +992,7 @@ Boot the kernel. Example:
 </p>
 <div class="listingblock">
 <div class="content">
-<pre><code>      boot flash0.kernel: "root=/dev/mmcblk0p6 rootwait rw debug"</code></pre>
+<pre><code>      boot flash0.kernel: "root=/dev/mmcblk0p7 rootwait rw debug"</code></pre>
 </div></div>
 </li>
 </ol></div>
@@ -1078,7 +1055,7 @@ other eMMC devices.
 <div class="sect1">
 <h2 id="_appendix_copyright_info">5. Appendix: Copyright Info</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+<div class="paragraph"><p>Copyright &#169; 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.</p></div>
 </div>
@@ -1087,7 +1064,8 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-06-28 11:24:19 PDT
+Last updated
+ 2017-08-17 23:27:50 PDT
 </div>
 </div>
 </body>

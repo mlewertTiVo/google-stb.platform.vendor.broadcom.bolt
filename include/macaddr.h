@@ -12,6 +12,12 @@
 
 #include <stdint.h>
 
+#define MACADDR_SIZE 6 /* #octets, to be distinguished from MACADDR_STRIDE */
+/* IEEE 802 specifies 6 (six) octets (bytes) for the size of a MAC address.
+ * MACADDR_STRIDE is defined differently for the data structure of the MAC
+ * address flash partition used by BOLT. They should not be confused.
+ */
+
 /* structure of MAC address partition in flash
  *
  * uint32_t      board type, ((board type) << 8)
@@ -46,13 +52,11 @@ struct macaddr_header {
 #define MACADDR_FLASHDEVICE "flash0.macadr"
 #define MACADDR_INCREMENT 1 /* older chips used a 0x100 increment */
 
-/* MAC flash reading. Write is in the ui commands as 
- * customers may take that out but we might require
- * this feature on its own.
- */
 void macaddr_flash_get(int addrnum, char *macstr, int flashprog_off);
+int  macaddr_flash_set(uint8_t *macaddr, unsigned int bytes);
 int  macaddr_flash_verify(int flashprog_off);
 void macaddr_increment(uint8_t *macaddr, int increment);
 void macaddr_decrement(uint8_t *macaddr, int decrement);
+int  macaddr_generate(const char *serial, uint8_t *macaddr, unsigned int bytes);
 
 #endif /* __MACADDR_H__ */

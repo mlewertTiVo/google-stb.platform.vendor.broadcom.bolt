@@ -16,22 +16,22 @@ def split_bootloader_img_usage():
     sys.exit(0)
 
 input = len(sys.argv)
-if input < 1 or input > 4:
+if input < 2 or input > 5:
     split_bootloader_img_usage()
 else:
     bl_img_filename = sys.argv[1]
 
-if input < 2:
+if input < 3:
     bolt_bin_filename = "bolt.bin"
 else:
     bolt_bin_filename = sys.argv[2]
 
-if input < 3:
+if input < 4:
     bsu_bin_filename = "android_bsu.elf"
 else:
     bsu_bin_filename = sys.argv[3]
 
-if input < 4:
+if input < 5:
     bl31_bin_filename = "bl31.bin"
 else:
     bl31_bin_filename = sys.argv[4]

@@ -157,6 +157,158 @@ static int is_quiescent_mode(void)
 	return 0;
 }
 
+static struct eio_boot eio_commander;
+void clear_dmv_corrupt(const char *partition)
+{
+	int fd=-1;
+	char *fb_flashdev_mode_str;
+	char flash_devname[20];
+	struct eio_boot *eio = &eio_commander;
+	int ret;
+	int slot = -1;
+
+	os_sprintf(flash_devname, "_%s", BOOT_SLOT_0_SUFFIX);
+	if (os_strstr(partition, flash_devname) != NULL) {
+		slot = 0;
+	}
+	if (slot == -1) {
+		os_sprintf(flash_devname, "_%s", BOOT_SLOT_1_SUFFIX);
+		if (os_strstr(partition, flash_devname) != NULL) {
+			slot = 1;
+		}
+	}
+	if (slot == -1) {
+		return;
+	}
+
+	os_memset(eio, 0, sizeof(*eio));
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (!fb_flashdev_mode_str) {
+		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
+		return;
+	}
+
+	os_sprintf(flash_devname, "%s.%s", fb_flashdev_mode_str, BOOT_SLOT_COMMANDER);
+
+	fd = bolt_open((char *)flash_devname);
+	if (fd < 0) {
+		os_printf("Error opening %s. Can't read boot commander: %d\n",
+				flash_devname, fd);
+		return;
+	}
+
+	ret = bolt_readblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+	if (ret != sizeof(struct eio_boot)) {
+		os_printf("Error reading %s. Can't read commander block: %d\n",
+				flash_devname, ret);
+		return;
+	}
+
+	if (eio->magic != EIO_BOOT_MAGIC) {
+		if (fd >= 0) {
+			bolt_close(fd);
+		}
+		return;
+	}
+
+	if (eio->slot[slot].dmv_corrupt) {
+		eio->slot[slot].dmv_corrupt = 0;
+		ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+		if (ret != sizeof(struct eio_boot)) {
+			os_printf("Error writing %s. Can't update commander block: %d\n",
+				  flash_devname, ret);
+		}
+		os_printf("Slot:%d clearing CORRUPTED dm-verity.\n", slot);
+	}
+	if (fd >= 0) {
+		bolt_close(fd);
+	}
+	return;
+}
+
+static int setget_dmv_corrupt_slot(int setget, int slot)
+{
+	int fd=-1;
+	char *fb_flashdev_mode_str;
+	char flash_devname[20];
+	struct eio_boot *eio = &eio_commander;
+	int ret;
+
+	os_memset(eio, 0, sizeof(*eio));
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (!fb_flashdev_mode_str) {
+		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
+		return 0;
+	}
+
+	os_sprintf(flash_devname, "%s.%s", fb_flashdev_mode_str, BOOT_SLOT_COMMANDER);
+
+	fd = bolt_open((char *)flash_devname);
+	if (fd < 0) {
+		os_printf("Error opening %s. Can't read boot commander: %d\n",
+				flash_devname, fd);
+		return 0;
+	}
+
+	ret = bolt_readblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+	if (ret != sizeof(struct eio_boot)) {
+		os_printf("Error reading %s. Can't read commander block: %d\n",
+				flash_devname, ret);
+		return 0;
+	}
+
+	if (eio->magic != EIO_BOOT_MAGIC) {
+		if (fd >= 0) {
+			bolt_close(fd);
+		}
+		return 0;
+	}
+
+	if (setget == 0) {
+		os_printf("Slot:%d marked as dm-verity %s.\n",
+			slot, eio->slot[slot].dmv_corrupt?"CORRUPTED":"good");
+		if (fd >= 0) {
+			bolt_close(fd);
+		}
+		return eio->slot[slot].dmv_corrupt;
+	} else if (setget == 1) {
+		eio->slot[slot].dmv_corrupt = 1;
+		ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+		if (ret != sizeof(struct eio_boot)) {
+			os_printf("Error writing %s. Can't update commander block: %d\n",
+				  flash_devname, ret);
+		}
+		if (fd >= 0) {
+			bolt_close(fd);
+		}
+		os_printf("Slot:%d marking as dm-verity CORRUPTED.\n", slot);
+		return 0;
+	}
+
+	return 0;
+}
+
+static int is_dmverity_eio_mode(int slot)
+{
+	char *dmv_mode = env_getenv("A_DMVERITY_EIO");
+	int dmv_corrupt = -1;
+
+	dmv_corrupt = setget_dmv_corrupt_slot(0, slot);
+	if (dmv_corrupt) {
+		return 1;
+	}
+	if (dmv_mode == NULL) {
+		return 0;
+	}
+	if (os_atoi(dmv_mode)) {
+		setget_dmv_corrupt_slot(1, slot);
+		return 1;
+	}
+	return 0;
+}
+
 /* Default value for androidboot.hardware property */
 #define ANDROID_HW_NAME_DEFAULT		"bcm_platform"
 
@@ -312,8 +464,11 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 		os_sprintf(dt_add_cmd, "dt add prop /firmware/android slot_suffix s '_%s'",
 			slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 		bolt_docommands(dt_add_cmd);
-		os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
+
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'",
+			is_dmverity_eio_mode(slot) ? "eio" : "enforcing");
 		bolt_docommands(dt_add_cmd);
+		os_printf("dm-verity bootmode: '%s'.\n", is_dmverity_eio_mode(slot) ? "eio" : "enforcing");
 
 		if ((boot_path == BOOTPATH_AB_SYSTEM) && (la != NULL)) {
 			char *p = NULL;
@@ -501,6 +656,14 @@ static void boot_quiescent_set_env(int quiescent)
 	bolt_docommands(buffer);
 }
 
+static void boot_dmverity_eio_set_env(int dmveio)
+{
+	char buffer[40];
+
+	os_sprintf(buffer, "setenv A_DMVERITY_EIO %d", (dmveio > 0) ? 1 : 0);
+	bolt_docommands(buffer);
+}
+
 static struct eio_boot eio_commander;
 static enum bootpath select_boot_path(int *slot, int selected)
 {
@@ -550,9 +713,20 @@ static enum bootpath select_boot_path(int *slot, int selected)
 			if (eio->current < EIO_BOOT_NUM_ALT_PART) {
 				if (eio->slot[eio->current].boot_ok) {
 					*slot = eio->current;
+					eio->slot[eio->current].boot_ok = 0; /* reset, let application mark it. */
+					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+					if (ret != sizeof(struct eio_boot)) {
+						os_printf("Error writing %s. Can't reset commander block: %d\n",
+							  flash_devname, ret);
+					}
 				} else if (eio->slot[eio->current].boot_fail) {
-					*slot = (eio->current == 0) ? 1 : 0;
+					*slot = (eio->current == 0) ? 1 : 0; /* switch slot. */
 					eio->current = *slot;
+					if (eio->slot[eio->current].boot_fail) {
+						/* all slots are marked 'fail', give up... */
+						*slot = -1;
+						goto ret_ab_bl_recovery;
+					}
 					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
 					if (ret != sizeof(struct eio_boot)) {
 						os_printf("Error writing %s. Can't swap current on commander block: %d\n",
@@ -562,7 +736,8 @@ static enum bootpath select_boot_path(int *slot, int selected)
 					if (++eio->slot[eio->current].boot_try < EIO_BOOT_TRY_ATTEMPT) {
 						*slot = eio->current;
 					} else {
-						eio->slot[eio->current].boot_fail = 1;
+						*slot = eio->current; /* last chance. */
+						eio->slot[eio->current].boot_fail = 1; /* on boot success, application reset. */
 					}
 					ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
 					if (ret != sizeof(struct eio_boot)) {
@@ -575,7 +750,7 @@ static enum bootpath select_boot_path(int *slot, int selected)
 				goto ret_ab_bl_recovery;
 			}
 		} else {
-			/* empty commander, seed with default data. */
+			/* empty (or badly corrupted) commander, seed with default data. */
 			os_memset(eio, 0, sizeof(*eio));
 			eio->current = 0;
 			os_sprintf(eio->slot[0].suffix, "%s", BOOT_SLOT_0_SUFFIX);
@@ -960,8 +1135,9 @@ static int recovery_mode_boot_override(void)
 		return ret;
 }
 
-#define BOOT_REASON_MASK    0x000000FF
-#define BOOT_QUIESCENT_MASK 0x00000100
+#define BOOT_REASON_MASK       0x000000FF
+#define BOOT_QUIESCENT_MASK    0x00000100
+#define BOOT_DMVERITY_EIO_MASK 0x00000200
 int android_get_boot_partition(ui_cmdline_t *cmd,
 		char *boot_partition, int *is_legacy_boot)
 {
@@ -978,18 +1154,23 @@ int android_get_boot_partition(ui_cmdline_t *cmd,
 	/* Make sure partition is NULL to begin with */
 	*boot_partition = '\0';
 
-	/* determine if this will be a legacy boot or a a|b update
-	 * boot.
-	 */
-	boot_path = select_boot_path(&slot, 0);
-
 	/* Read and clear the boot reason register */
 	boot_reason = boot_reason_reg_get();
 	boot_reason_reg_set(0);
 
+   if ((boot_reason & BOOT_REASON_MASK) == 'b') {
+		boot_path = BOOTPATH_AB_BOOTLOADER_RECOVERY;
+	} else {
+		/* determine if this will be a legacy boot or a a|b update
+		*  boot.
+		*/
+		boot_path = select_boot_path(&slot, 0);
+	}
+
 	DLOG("boot_path = %s; boot_reason = %u\n", bootpath_str[boot_path], boot_reason);
 
 	boot_quiescent_set_env(boot_reason & BOOT_QUIESCENT_MASK);
+	boot_dmverity_eio_set_env(boot_reason & BOOT_DMVERITY_EIO_MASK);
 
 	/* Determine the boot mode based on boot reason register.
 	 * Note that first letter of the reboot command is saved in

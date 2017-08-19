@@ -207,7 +207,7 @@ for relocated items?
 
  Worked example
 ----------------
-We'll use a BCM7271A0 BOLT v1.21 source tree and modify it so the
+We'll use a 7268b0 BOLT v1.29 source tree and modify it so the
 TSBL will use the existing FSBL info area, MMU and load PSCI
 instead of SSBL.
 
@@ -224,7 +224,7 @@ to make.
 @@ -71,6 +71,7 @@ gset SSBL_PAGE_TABLE_2_SIZE  0x400
  gset SSBL_PAGE_TABLE_2       $SSBL_PAGE_TABLE+$SSBL_PAGE_TABLE_SIZE
  gset SSBL_PAGE_TABLE_2_SRAM  $SSBL_PAGE_TABLE_2+$SSBL_PAGE_TABLE_2_SIZE
- gset SSBL_RAM_ADDR           0x07008000
+ gset SSBL_RAM_ADDR           $DDR0_BASE+0x07008000
 +gset IS_TSBL                 0
  
  #  BOLT currently uses a 32 bit memory space
@@ -251,22 +251,16 @@ directly from SSBL to TSBL is *not recommended*.
 .ssbl/arch/arm-launch.S
 [source,diff]
 ----
-@@ -35,11 +35,11 @@ DECLARE_INITVAR(mem_textreloc)
- # r0 - start address for jump
- # r1 - architecture i.d.  (0)
+@@ -37,7 +37,7 @@ DECLARE_INITVAR(mem_textreloc)
  # r2 - ATAGS pointer (unused.) ATAGS can be at addr 0x100 as well. (0)
  #     Default for BOLT is DTB only, we don't support ATAGS.
  #
 -# r3 is unused
-+# r3 - is fsbl_info, to be loaded into r0 before boot.
++# r3 is fsbl_info, to be loaded into r0 before boot.
  
  ENTRY_PROC(bolt_launch)
  	/* use SRAM stack as this goes bye-bye on pop.
- 	 we could also save into other registers...
- 	 if careful!
-@@ -48,15 +48,18 @@ ENTRY_PROC(bolt_launch)
- 	push	{r0-r3}
- 	bl		clear_all_d_cache
+@@ -50,11 +50,14 @@ ENTRY_PROC(bolt_launch)
  	pop	{r4-r7}
  	bl		invalidate_all_i_cache
  	bl		disable_caches
@@ -283,8 +277,6 @@ directly from SSBL to TSBL is *not recommended*.
  END_PROC(bolt_launch)
  
  ENTRY_PROC(bolt_launch_bsu)
- 	push	{lr}
- 	push	{r0-r3}
 ----
 
 NOTE: Normally ARM register 'r3' is unused in BOLT and not currently important
@@ -305,9 +297,7 @@ it starts on a MMU page boundary.
 .ssbl/main/boot.c
 [source,diff]
 ----
-@ -202,14 +202,35 @@ int bolt_go(bolt_loadargs_t *la)
- 	 */
- #ifdef STUB64_START
+@@ -204,12 +204,31 @@ int bolt_go(bolt_loadargs_t *la)
  	if (!(la->la_flags & LOADFLG_DIRECT_CALL))
  		return psci_boot(la->la_flags, la->la_entrypt, p.dt_address);
  #endif
@@ -316,14 +306,12 @@ it starts on a MMU page boundary.
 +		unsigned int size =
 +			ALIGN_UP_TO(la->la_entrypt + la->la_maxsize - base,
 +				_MB(1));
-+		/*
-+		 * Inform user as a double check on where
++		/* Inform user as a double check on where
 +		 * its expecting the executable code to be.
 +		 */
 +		xprintf("Mark executable: %x - %x\n", base, base + size);
 +
-+		/*
-+		 * This could be for TSBL or Linux. You should align a
++		/* This could be for TSBL or Linux. You should align a
 +		 * TSBL to a SECTION (1MiB) address unless you make a
 +		 * new 2nd level table with 4KiB entries to mark only
 +		 * TSBL code as executable (as SSBL does for itself),
@@ -332,7 +320,9 @@ it starts on a MMU page boundary.
 +		arch_mark_executable(base, size, true);
 +	}
 +
- 	bolt_set_aon_bootmode(0); /* Used for S3 to say how we first booted. */
+ 	/* Used for S3 to say how we first booted. */
+ 	bolt_set_aon_bootmode(0);
+ 
  	xprintf("32 bit direct boot...\n");
  	bolt_start(la->la_entrypt, 0xffffffff,
 -		(unsigned int)p.dt_address, 0);
@@ -340,8 +330,6 @@ it starts on a MMU page boundary.
  
  	/* In the remote event a non-BSU app saved
  	 * BOLT state for a return.
- 	 */
- 	return BOLT_OK;
 ----
 
 
@@ -360,9 +348,7 @@ done, see: 'set_ssbl_page()' in 'ssbl/arch/ssbl_main.c'.
 .ssbl/arch/ssbl_main.c
 [source,diff]
 ----
-@@ -241,11 +241,11 @@ static void set_ssbl_page(uint32_t *pt_1st, uint32_t _fdata)
- 	/* remove XN from code area */
- 	arch_mark_executable(SSBL_RAM_ADDR, _fdata-SSBL_RAM_ADDR, true);
+@@ -244,7 +244,7 @@ static void set_ssbl_page(uint32_t *pt_1st, uint32_t _fdata)
  }
  
  
@@ -371,16 +357,11 @@ done, see: 'set_ssbl_page()' in 'ssbl/arch/ssbl_main.c'.
  
  /* Use the pre-processor to stringify the name
  */
- #define _SMM_VAR(odir, modname) _binary_ ## odir ## _smm_64_bin_ ## modname
- #define SMM_VAR(odir, modname) _SMM_VAR(odir, modname)
-@@ -305,18 +305,37 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
- 		sec_enable_debug_ports();
- 
+@@ -372,6 +372,16 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
  	puts("PINMUX");
  	board_pinmux();
  
-+	/*
-+	 * For TSBL just turn on the MMU as the page tables have
++	/* For TSBL just turn on the MMU as the page tables have
 +	 * already been setup for us by the 2nd stage SSBL.
 +	 */
 +	if (IS_TSBL) {
@@ -393,7 +374,7 @@ done, see: 'set_ssbl_page()' in 'ssbl/arch/ssbl_main.c'.
  	__noisy_flush_caches();
  
  	pt_1st = (uint32_t *)get_pagetable_location();
- 	supplement_fsbl_pagetable(pt_1st);
+@@ -379,7 +389,15 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
  	/* The whole DDR area was marked XN by FSBL, or assured by
  	 * supplement_fsbl_pagetable().
  	 */
@@ -410,13 +391,9 @@ done, see: 'set_ssbl_page()' in 'ssbl/arch/ssbl_main.c'.
  	__puts("CLR PSCI MEM @ ");
  	writehex(PSCI_BASE);
  	memset((void *)PSCI_BASE, 0, PSCI_SIZE);
- 	puts(" OK");
- 
-@@ -333,17 +352,10 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
- 	arch_mark_uncached(PSCI_BASE,  SECTION_SIZE);
- 	puts(" OK");
- 
- 	dsb(); /* make sure its there before we call it */
+@@ -409,13 +427,6 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
+ 		reprogram_psci_base(_fsbl_info->psci_base, PSCI_BASE,
+ 			arch_booted64(), false);
  #endif
 -	arch_mark_executable(SRAM_ADDR, SRAM_LEN, false);
 -	set_ssbl_page(pt_1st, _fdata);
@@ -428,8 +405,6 @@ done, see: 'set_ssbl_page()' in 'ssbl/arch/ssbl_main.c'.
  	__noisy_flush_caches();
  
  	mem_bottomofmem = (unsigned long)_fsbl_info;
- 	__puts("_fbss  "); writehex(_fbss); puts("");
- 	__puts("_ebss  "); writehex(_ebss); puts("");
 ----
 
  PSCI
@@ -442,39 +417,39 @@ PSCI from the SSBL.
 ----
 @@ -23,6 +23,9 @@ void bolt_psci_init(void)
  #ifdef STUB64_START
-        unsigned long b0, r0, r1;
+ 	unsigned long b0, r0, r1;
  
-+       if (!IS_TSBL)
-+               return;
++	if (!IS_TSBL)
++		return;
 +
-        /* TBD: get nr_* from the RDB e.g. HIF_CONTINUATION or
-         * HIF_CPUBIUCTRL_CPU_RESET_CONFIG_REG. We can then use it
-         * for the EL3 stack calcs in 'calc_per_cpu_stack'
+ 	/* TBD: get nr_* from the RDB e.g. HIF_CONTINUATION or
+ 	 * HIF_CPUBIUCTRL_CPU_RESET_CONFIG_REG. We can then use it
+ 	 * for the EL3 stack calcs in 'calc_per_cpu_stack'
 @@ -54,6 +57,9 @@ void bolt_psci_init(void)
  int psci_boot(unsigned int la_flags, long la_entrypt, void *dt_address)
  {
  #ifdef STUB64_START
-+       if (!IS_TSBL)
-+               return BOLT_ERR;
++	if (!IS_TSBL)
++		return BOLT_ERR;
 +
-        if (la_flags & LOADFLG_APP64) {
-                bolt_set_aon_bootmode(S3_FLAG_PSCI_BOOT | S3_FLAG_BOOTED64);
-                xprintf("64 bit PSCI boot...\n");
+ 	if (la_flags & LOADFLG_APP64) {
+ 		bolt_set_aon_bootmode(S3_FLAG_PSCI_BOOT | S3_FLAG_BOOTED64);
+ 		xprintf("64 bit PSCI ");
 ----
 
 .ssbl/ui/ui_misccmds.c
 [source,diff]
 ----
-@@ -178,6 +178,9 @@ static int ui_cmd_psci(ui_cmdline_t *cmd, int argc, char *argv[])
-        const char *x;
-        unsigned long r0_back, r0, r1 = 0, r2 = 0, r3 = 0;
+@@ -224,6 +224,9 @@ static int ui_cmd_psci(ui_cmdline_t *cmd, int argc, char *argv[])
+ 	const char *x;
+ 	unsigned long r0_back, r0, r1 = 0, r2 = 0, r3 = 0;
  
-+       if (!IS_TSBL)
-+               return BOLT_ERR;
++	if (!IS_TSBL)
++		return BOLT_ERR;
 +
-        /* Only r0 is required, the rest
-         * depends on the feature requested.
-         */
+ 	/* Only r0 is required, the rest
+ 	 * depends on the feature requested.
+ 	 */
 ----
 
 
@@ -495,22 +470,23 @@ of what SSBL uses.
 ----
 BOLT> info
 ========================================================================
-     CPU speed: 1503MHz
-DDR0 Frequency: 1600MHz, 8Gx16 phy:32   80000000 @ 00000000
-DDR0 Actual frequency: 1590MHz, ratio 0.993
+     CPU speed: 1656MHz
+DDR0 Frequency: 1867MHz, 8Gx16 phy:32	80000000 @ 00000000
+DDR0 Actual frequency: 1856MHz, ratio 0.994
   Total memory: 2048MB
-   Boot Device: SPI
+   Boot Device: NAND
 SDIO:
- controller 0, TYPE: NODEVICE
- controller 1, TYPE: EMMC
+ controller 0, TYPE: SD
+ controller 1, TYPE: NODEVICE
 
-BSP version: '4.1.5'
+BSP version: '4.2.3'
+SHMOO version: 2.2.2.9 [0x02020209]
 Total memory used by BOLT: 0x06FFC000 - 0x09200000 (35667968)
-FSBL info area:            0x06FFC000 - 0x06FFC044 (68)
+FSBL info area:            0x06FFC000 - 0x06FFC04C (76)
 Page table base:           0x07000000
-Text (code) segment:       0x07008100 - 0x07034000 (179968)
-Initialized Data:          0x07034000 - 0x07053588 (128392)
-BSS Area:                  0x07053588 - 0x07054D80 (6136)
+Text (code) segment:       0x070080F0 - 0x0703D000 (216848)
+Initialized Data:          0x0703D000 - 0x0705D998 (133528)
+BSS Area:                  0x0705D998 - 0x0705F8E8 (8016)
 Local Heap:                0x07100000 - 0x09100000 (33554432)
 Stack Area:                0x09100000 - 0x09200000 (1048576)
 
@@ -521,6 +497,9 @@ FS:      FAT   1; FAT32 1
 NET:     STACK 1; ENET  1; TCP   1
 USB:     STACK 1; ETH   1; DISK  1; SERIAL   1; HID 1
 FLASH:   NAND
+
+AVS: STB: V=0.979V, T=+37.972C, PV=0.872V, MV=0.980V, FW=30343978 [0.4.9.x]
+AVS: CPU: V=0.966V, T=+37.972C, PV=0.851V, MV=0.962V
 ========================================================================
 *** command status = 0
 ----
@@ -531,20 +510,20 @@ TSBL base address and enable the TSBL build.
 .config/layout-zeus42-stub.cfg
 [source,diff]
 ----
-@@ -70,7 +70,8 @@ gset SSBL_PAGE_TABLE_SIZE    0x4000
+@@ -70,8 +70,8 @@ gset SSBL_PAGE_TABLE_SIZE    0x4000
  gset SSBL_PAGE_TABLE_2_SIZE  0x400
  gset SSBL_PAGE_TABLE_2       $SSBL_PAGE_TABLE+$SSBL_PAGE_TABLE_SIZE
  gset SSBL_PAGE_TABLE_2_SRAM  $SSBL_PAGE_TABLE_2+$SSBL_PAGE_TABLE_2_SIZE
--gset SSBL_RAM_ADDR           0x07008000
-+gset SSBL_RAM_ADDR           0x09300000
+-gset SSBL_RAM_ADDR           $DDR0_BASE+0x07008000
 -gset IS_TSBL                 0
++gset SSBL_RAM_ADDR           $DDR0_BASE+0x09300000
 +gset IS_TSBL                 1
  
  #  BOLT currently uses a 32 bit memory space
  # and the 'device' (ebi & rdb) regions span
 ----
 
-After re-making BOLT the TSBL is the file 'objs/7271a0/ssbl.bin'
+After re-making BOLT the TSBL is the file 'objs/7268b0/ssbl.bin'
 
  Booting TSBL
 ~~~~~~~~~~~~~
@@ -555,15 +534,9 @@ which is handy during development.
  Example TSBL boot
 ^^^^^^^^^^^^^^^^^^
 ----
-BOLT> boot -nopsci -raw -addr=0x09300000 -max=0x70000 192.168.0.42:ssbl.bin
-100 Mbps Full-Duplex
-Device eth0:  hwaddr 00-10-18-AD-C3-03, ipaddr 192.168.0.32, mask 255.255.255.0
-        gateway not set, nameserver not set, domain localdomain
-        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
-Loader:raw Filesys:tftp Dev:(null) File:192.168.0.42:ssbl.bin Options:(null)
-..............
-Closing network 'eth0'
-Starting program at 0x9300000 (DTB @ 0x771e000)
+BOLT> boot -nopsci -raw -addr=0x09300000 -max=0x70000 10.112.153.69:ssbl.bin
+...
+Starting program at 0x9300000 (DTB @ 0x762b000)
 
 Mark executable: 9300000 - 9400000
 32 bit direct boot...
@@ -573,28 +546,26 @@ PINMUX
 TSBL @ 09300000
 MMU ON
 CLR PSCI MEM @ 06400000 OK
-INSTALL psci32@06400000 OK
+INSTALL smm64@06400000 OK
 CACHE FLUSH OK
-_fbss  0934b528
-_ebss  0934cd00
-_end   0934cd20
+_fbss  0935a478
+_ebss  0935c3a8
+_end   0935c3c8
 HEAP @ 09400000
 STACK @ 0b500000
 ARCH: CONFIG OK
-CLR BSS 0934b528 to 0934cd00 OK
+CLR BSS 0935a478 to 0935c3a8 OK
 CLR SRAM  OK
 CACHE FLUSH OK
 CPU CLKSET OK
 GO!
 PSCI: Init...
-PSCI: config @ 06401b00 cpus:4 cpu idx:0
+PSCI: config @ 0000000006402f40 cpus:4 cpu idx:0
 cpu 0 state:5
 cpu 1 state:0
 cpu 2 state:0
 cpu 3 state:0
 PSCI: v0.2
-...
-...
 ...
 AUTOBOOT [waitusb -t=0 -d='USB Disk' && batch usbdisk0:sysinit.txt]
 USB device matching <USB Disk> not found!
@@ -608,22 +579,23 @@ and 'Page table base' have not changed from SSBL.
 ----
 BOLT> info
 ========================================================================
-     CPU speed: 1503MHz
-DDR0 Frequency: 1600MHz, 8Gx16 phy:32   80000000 @ 00000000
-DDR0 Actual frequency: 1590MHz, ratio 0.993
+     CPU speed: 1656MHz
+DDR0 Frequency: 1867MHz, 8Gx16 phy:32	80000000 @ 00000000
+DDR0 Actual frequency: 1856MHz, ratio 0.994
   Total memory: 2048MB
-   Boot Device: SPI
+   Boot Device: NAND
 SDIO:
- controller 0, TYPE: NODEVICE
- controller 1, TYPE: EMMC
+ controller 0, TYPE: SD
+ controller 1, TYPE: NODEVICE
 
-BSP version: '4.1.5'
+BSP version: '4.2.3'
+SHMOO version: 2.2.2.9 [0x02020209]
 Total memory used by BOLT: 0x06FFC000 - 0x0B500000 (72368128)
-FSBL info area:            0x06FFC000 - 0x06FFC044 (68)
+FSBL info area:            0x06FFC000 - 0x06FFC04C (76)
 Page table base:           0x07000000
-Text (code) segment:       0x09300100 - 0x0932C000 (179968)
-Initialized Data:          0x0932C000 - 0x0934B528 (128296)
-BSS Area:                  0x0934B528 - 0x0934CD20 (6136)
+Text (code) segment:       0x093000F0 - 0x09335000 (216848)
+Initialized Data:          0x09335000 - 0x0935A478 (152696)
+BSS Area:                  0x0935A478 - 0x0935C3C8 (8016)
 Local Heap:                0x09400000 - 0x0B400000 (33554432)
 Stack Area:                0x0B400000 - 0x0B500000 (1048576)
 
@@ -634,9 +606,11 @@ FS:      FAT   1; FAT32 1
 NET:     STACK 1; ENET  1; TCP   1
 USB:     STACK 1; ETH   1; DISK  1; SERIAL   1; HID 1
 FLASH:   NAND
+
+AVS: STB: V=0.979V, T=+39.433C, PV=0.872V, MV=0.980V, FW=30343978 [0.4.9.x]
+AVS: CPU: V=0.966V, T=+39.433C, PV=0.851V, MV=0.962V
 ========================================================================
 *** command status = 0
-BOLT>
 ----
 
  TSBL booting Linux
@@ -646,20 +620,13 @@ TSBL can boot Linux, just like the original BOLT SSBL.
 
 .Example
 ----
-BOLT> boot 192.168.0.42:vmlinuz-initrd-7271a0-32
-100 Mbps Full-Duplex
-Device eth0:  hwaddr 00-10-18-AD-C3-03, ipaddr 192.168.0.32, mask 255.255.255.0
-        gateway not set, nameserver not set, domain localdomain
-        DHCP server 192.168.0.42, DHCP server MAC 00-50-B6-4E-0B-71
-Loader:zimg Filesys:tftp Dev:(null) File:192.168.0.42:vmlinuz-initrd-7271a0-32 Options:(null)
-Reading 8082328 bytes from zImage...........
+BOLT> boot 192.168.1.2:vmlinuz-initrd-arm
+...
 Closing network 'eth0'
-Starting program at 0x8000 (DTB @ 0x9a1e000)
+Starting program at 0x8000 (DTB @ 0x992b000)
 
 32 bit PSCI boot...
-PSCI: DTB @ 09a1e000, Linux entry @ 00008000
-...
-...
+PSCI: DTB @ 000000000992b000, Linux entry @ 0000000000008000
 ...
 ----
 
@@ -744,7 +711,7 @@ Choose carefully, _very_ carefully!
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2016, Broadcom Ltd.
+Copyright (C) 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.
 

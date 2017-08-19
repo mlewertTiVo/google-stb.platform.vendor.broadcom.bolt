@@ -36,6 +36,7 @@ const enet_params  *board_enet(int instance);
 unsigned int        board_num_active_memc(void);
 unsigned int        board_num_enet(void);
 const moca_params  *board_moca(void);
+const ext_moca_params *board_ext_moca(int instance);
 void                board_pinmux(void);
 struct board_type  *board_thisboard(void);
 uint32_t            board_totaldram( void ); /* in Mb */
