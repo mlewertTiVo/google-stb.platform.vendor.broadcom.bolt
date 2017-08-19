@@ -8,28 +8,17 @@
  ***************************************************************************/
 
 #include <bolt.h>
-#include <byteorder.h>
 #include <env_subr.h>
 #include <error.h>
-#include <devfuncs.h>
 #include <lib_ctype.h>
 #include <lib_malloc.h>
 #include <lib_printf.h>
 #include <lib_string.h>
-#include <lib_types.h>
 #include <macaddr.h>
-#include <sha2.h>
 #include <ui_command.h>
 #include <ui_init.h>
 
 #include <stdbool.h>
-
-/* MAC Address Block Large (MA_L) assigned to Broadcom Limited per:
- * http://standards-oui.ieee.org/oui/oui.txt
- */
-static const unsigned char MA_L[3] = { 0x00, 0x10, 0x18 };
-
-static char *macaddr_devname;
 
 static bool is_macstr_valid(char *str)
 {
@@ -78,145 +67,91 @@ static bool is_macstr_valid(char *str)
 	return true;
 }
 
-static int write_macbuf(unsigned char *macbuf, const int bufsize)
-{
-	int i;
-	int hdl;
-	int retval;
-	uint8_t checksum = 0;
-	char macstr[18];
-	unsigned char *p;
-
-	/* calculate checksum. */
-	p = macbuf;
-	checksum = 0;
-	for (i = 0; i < (bufsize - 2); i++, p++)
-		checksum += *p;
-	*p++ = checksum;
-	*p = checksum; /* repeat */
-
-	hdl = bolt_open(macaddr_devname);
-	if (hdl < 0)
-		return BOLT_ERR_DEVNOTFOUND;
-
-	xprintf("Programming flash...");
-
-	retval = bolt_writeblk(hdl, (bolt_offset_t) 0x0,
-			(unsigned char *)macbuf, bufsize);
-	bolt_close(hdl);
-
-	xprintf("done\n");
-
-	if (retval == bufsize) {
-		macaddr_flash_get(BCM7038MAC, macstr, 0);
-		env_setenv(MACADDR_ENVSTR, macstr, ENV_FLG_BUILTIN);
-		retval = 0;
-	} else {
-		xprintf("Failure while writing to flash.\n");
-		xprintf("(%d != %d)\n", retval, bufsize);
-		retval = -1;
-	}
-
-	return retval;
-}
-
-static int ui_cmd_macprog_nibble(ui_cmdline_t *cmd, int argc, char **argv)
-{
-	int i;
-	unsigned char *p, buf[MACADDR_FLASHBUFSIZE];
-	struct macaddr_header *header;
-	char *str;
-
-	/* no sanity check as it was done by the caller in this file */
-	str = cmd_getarg(cmd, 0);
-
-	memset(buf, 0xff, sizeof(buf));
-	header = (struct macaddr_header *) buf;
-	memset(header, 0, sizeof(*header));
-	header->size = cpu_to_be16(MACADDR_SIZEUNTILCHKSUM);
-
-	p = buf + sizeof(struct macaddr_header);
-	for (i = 0; i < MACADDR_NUMADDRS; i++) {
-		char *q = str;
-
-		*p++ = xtoi(q);
-		q += 3; /* two hex digits, and then one non-hex */
-		*p++ = xtoi(q);
-		q += 3; /* two hex digits, and then one non-hex */
-		*p++ = xtoi(q);
-		q += 3; /* two hex digits, and then one non-hex */
-		*p++ = xtoi(q);
-		q += 3; /* two hex digits, and then one non-hex */
-		*p++ = xtoi(q);
-		q += 3; /* two hex digits, and then one non-hex */
-		*p++ = xtoi(q);
-		p += 2; /* skip two LSB's */
-	}
-
-	return write_macbuf(buf, MACADDR_FLASHBUFSIZE);
-}
-
 static int ui_cmd_macprog(ui_cmdline_t *cmd, int argc, char **argv)
 {
-	int i;
-	unsigned char *p, buf[MACADDR_FLASHBUFSIZE];
-	struct macaddr_header *header;
-	uint32_t boardtype = 0;
-	uint16_t serialnum;
-	uint16_t revnum = 0;
+	int retval;
+	uint8_t macaddr[MACADDR_SIZE];
+	char macstr[20]; /* strlen("xx-xx-xx-xx-xx-xx") + margin */
 	char *str;
-	sha256_ctx ctx;
-	unsigned char digest[SHA256_DIGEST_SIZE];
-
-	memset(buf, 0xff, sizeof(buf));
-	header = (struct macaddr_header *) buf;
 
 	str = cmd_getarg(cmd, 0);
-	if (!str) {
-		xprintf("Type \"help macprog\" to learn about its arguments.\n");
-		xprintf("Typical usage: macprog <board-type> <serial-num> <board-rev>\n");
-		return -1;
-	}
+	if (str == NULL)
+		return ui_showusage(cmd);
 
 	/* acceptable formats: xx-xx-xx-xx-xx-xx or xx:xx:xx:xx:xx:xx */
-	if (is_macstr_valid(str))
-		return ui_cmd_macprog_nibble(cmd, argc, argv);
+	if (is_macstr_valid(str)) {
+		uint8_t *p = macaddr;
 
-	sha256_init(&ctx);
-	sha256_update(&ctx, (unsigned char *)str, strlen(str));
-	boardtype = xtoi(str);
-	header->board_type = cpu_to_be32(boardtype << 8);
-	header->zero = 0;
-	header->size = cpu_to_be16(MACADDR_SIZEUNTILCHKSUM);
+		*p++ = xtoi(str);
+		str += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(str);
+		str += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(str);
+		str += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(str);
+		str += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(str);
+		str += 3; /* two hex digits, and then one non-hex */
+		*p++ = xtoi(str);
+	} else {
+		/* DEPRECATED: macprog <board-type> <serial> <rev> */
+		char *p, *serial;
 
-	str = cmd_getarg(cmd, 1);
-	if (!str) {
-		xprintf("No serial number specified; type \"help macprog\".\n");
-		return -1;
+		warn_msg("DEPRECATED format of macprog command");
+
+		str = cmd_getarg(cmd, 1);
+		if (str == NULL) {
+			xprintf("No serial number specified\n");
+			return BOLT_ERR_INV_COMMAND;
+		}
+
+		/* normalize serial number via convering to upper case */
+		serial = strdup(str);
+		if (serial == NULL)
+			return BOLT_ERR_NOMEM;
+
+		p = serial;
+		while (*p != '\0') {
+			*p = lib_toupper(*p);
+			++p;
+		}
+
+		retval = macaddr_generate(serial, macaddr, sizeof(macaddr));
+		KFREE(serial);
+		if (retval != BOLT_OK)
+			return ui_showerror(retval,
+				"Could not generate MAC address");
+
+		xprintf(
+/* intentionally breaking indentation */
+"The command parameters would have generated:\n"
+"    %02X:%02X:%02X:%02X:%02X:%02X\n"
+"Please use 'setsn' command when initializing a brand new board.\n"
+"If you want to try a specific MAC address, please feed the MAC\n"
+"address to macprog directly.\n",
+			macaddr[0], macaddr[1], macaddr[2], macaddr[3],
+			macaddr[4], macaddr[5]);
+
+		return BOLT_ERR_INV_COMMAND; /* refuse flash programming */
 	}
-	sha256_update(&ctx, (unsigned char *)str, strlen(str));
-	sha256_final(&ctx, digest);
 
-	serialnum = atoi(str);
-	header->board_serial = cpu_to_be16(serialnum);
+	retval = macaddr_flash_set(macaddr, sizeof(macaddr));
+	if (retval != BOLT_OK)
+		return ui_showerror(retval, "Could not store MAC address");
 
-	str = cmd_getarg(cmd, 2);
-	if (!str) {
-		xprintf("No revision number specified; type \"help macprog\".\n");
-		return -1;
+	str = env_getenv(ENVSTR_MACADDR);
+	if (str != NULL) {
+		retval = env_delenv(ENVSTR_MACADDR);
+		if (retval != BOLT_OK) {
+			warn_msg("reboot is required to get the effect "
+				"of the new MAC address");
+		}
 	}
 
-	revnum = atoi(str);
-	header->board_revision = cpu_to_be16(revnum);
+	macaddr_flash_get(BCM7038MAC, macstr, 0);
+	env_setenv(MACADDR_ENVSTR, macstr, ENV_FLG_BUILTIN);
 
-	p = buf + sizeof(struct macaddr_header);
-	for (i = 0; i < MACADDR_NUMADDRS; i++) {
-		memcpy(p, digest, MACADDR_STRIDE);
-		memcpy(p, MA_L, sizeof(MA_L));
-		p += MACADDR_STRIDE;
-	}
-
-	return write_macbuf(buf, MACADDR_FLASHBUFSIZE);
+	return BOLT_OK;
 }
 
 int ui_init_maccmds(void)
@@ -225,31 +160,9 @@ int ui_init_maccmds(void)
 		   ui_cmd_macprog,
 		   NULL,
 		   "Program the MAC address.",
-		   "macprog XX-XX-XX-XX-XX-XX\n"
-		   "macprog <board-type> <serial-num> <board-rev>\n\n"
-		   "This command has two modes: the first mode sets the specific value of\n"
-		   "the MAC to the address you specify.  The second mode sets the MAC based\n"
-		   "to a pseudo random setting based on the board-type, serial number, and\n"
-		   "board-rev.  Here are two example usages:\n\n"
-		   "    macprog 00-60-6E-70-0D-A2\n"
-		   "    macprog 97110 1549734 3\n",
+		   "macprog XX-XX-XX-XX-XX-XX\n\n"
+		   "Please use the 'setsn' command unless a specific\n"
+		   "MAC address value is required.\n",
 		   "");
-	return 0;
-}
-
-int bolt_set_macdevice(char *name)
-{
-	int hdl;
-
-	macaddr_devname = strdup(name);
-	hdl = bolt_open(macaddr_devname);
-	if (hdl < 0) {
-		KFREE(macaddr_devname);
-		macaddr_devname = NULL;
-		return BOLT_ERR_DEVNOTFOUND;
-	}
-
-	bolt_close(hdl);
-
 	return 0;
 }

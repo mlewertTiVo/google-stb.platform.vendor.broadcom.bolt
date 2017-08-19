@@ -4,8 +4,8 @@
 Build configuration script
 ==========================
 Broadcom Ltd <support@broadcom.com>
-v1.37, October 18th 2016:
-Updated for 1.22 release.
+v1.37, June 9th 2017:
+Updated for 1.30 release.
 
 Introduction
 ------------
@@ -232,7 +232,7 @@ Usage: [board VALUE : DERIVED_OBJ [BOGUS] ]
 
 Note: Board configuration
 
-See also: avs chip pmux enet moca ddr comment (commands)
+See also: avs chip pmux enet moca ext_moca ddr comment (commands)
 
 Example:
 ----
@@ -326,9 +326,11 @@ Commands that enact a configuration at runtime.
     mapselect
     memsys
     moca
+    ext_moca
     pmux
     rtsdefault
     pcie
+    sata
     sdio
     usb
     gpio_key
@@ -854,6 +856,9 @@ dt autogen -node clocks -cpu-div-table 0x00 1
 ----
 dt autogen -node sdio -undo 1
 ----
+----
+dt autogen -node ext_moca -parent qspi -cs 0 -interrupt_parent upg_gio -interrupt 14 4
+----
 
 NOTE: If you use this command (dt autogen), it must be in the "[family]" 
  section.  In addition, you must use the 'dts' command first.  The dts
@@ -928,6 +933,8 @@ memcs
 Usage: dt autogen -node memcs -compatible <COMPAT> -compat_with <WITH>
 
 Note: Create all memory (DDR) controller device nodes available
+
+
 
 See also: dt autogen
 
@@ -1231,6 +1238,22 @@ Example:
   dt autogen -node watchdog -type upg webhif
 ----
 
+ext_moca
+^^^^^^^^
+Usage: dt autogen -node ext_moca -parent <PARENT> -cs <CS_NUM>
+	-interupt_parent <INTERRUPT_PARENT> -interrupt <INTERRUPT_SPECIFIER>
+	-frequency <FREQ> -spi-clock-polarity <0|1> -spi-clock-phase <0|1>
+
+External MoCA chips such as Broadcom's BCM6802/3 are typically interfaced
+through SPI and require indicating which SPI controller the chip is attached to
+(PARENT, typically UPG_MSPI, aka qspi in Device Tree) and the chip select
+number (CS_NUM). It is also necessary to indicate the interrupt controller
+(INTERRUPT_PARENT) and interrupt specifier (INTERRUPT_SPECIFIER) that is used.
+
+The maximum supported frequency can be defined using FREQ and the SPI clock
+polarity and phase polarity can be defined as well.
+
+
  Points to regard with respect to USB
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Instead of using the register database (RDB) to source
@@ -1520,6 +1543,33 @@ string representing a band as follows:
 
 This is only used as a Device Tree configuration entry for Linux.
 
+ ext_moca
+~~~~~~~~~
+Usage: ext_moca -enet_node <DT_NODE -moca_band <BAND>
+	-rgmii <RGMII 0|1> -phy_type <PHY_TYPE> -phy_id <PHY_ID>
+	-mdio_mode <MDIO_MODE>
+
+Note: Set External MoCA parameters (e.g: Broadcom BCM6802/3) for its
+two RGMII interfaces.
+
+See also: [moca] [enet]
+
+Example:
+----
+ ext_moca -enet_node eth1 -rgmii 0 -phy_type MOCA -mdio_mode 0 -phy_speed 1000
+ -phy_id 257
+----
+
+This sets up the external MoCA configuration for a board.
+
+* '-enet_node' is an alias to the Ethernet Device Tree node
+which provides the data-path for the MoCA hardware block.
+
+* '-moca_band' applies to MoCA devices
+in Device Tree, its ignored otherwise. It is a
+string representing a band as described in [moca]
+
+* For all other properties see [enet]
 
 Command: pinmux
 
@@ -1742,7 +1792,7 @@ type is supported.
 
 **  'mac' sets the "local-mac-address" property _after_ all physical ENET
 (GENET) devices have been allocated a MAC address. The MAC base address
-is generally set by the BOLT 'macprog' command and for each device it is
+is generally set by the BOLT 'setsn' command and for each device it is
 incremented to provide a value unique to the platform it is running on.
 
 NOTE: It is recommended to specify the full node and path when using
@@ -1855,18 +1905,20 @@ by adding the property "no-1-8-v".
 Usage: vreg -name <string> -gpio <gpio> -pin <int> -active hi|lo \
 		[-udelay <int>]  [-uvolts <int>] [-on_at_boot <int>]
 
-This per-board command was created to support the pcie turning
+This per-board command was created to support the pcie/sata turning
 off/on power supplies to its devices during boot, suspend, and
 resume.  If you use this command, you will reference the name
 of the voltage regulator with -vreg when using the per-board
-pcie command.
+pcie or sata command.
 
 * -name <string> -- name of the regulator
 * -gpio <gpio> -- type of gpio, either 'upg_gio' or 'upg_gio_aon'
 * -pin <int> -- pin number of gpio
 * -active <hi|lo> -- which level enables the gpio
 * -udelay <int> -- (opt) delay in usec between gpio being enabled and
-   the enable call returning.
+   the enable call returning. Do NOT use this option if you are using
+   3.14 Linux images, as the PCI host driver is not compatible
+   and you will get serious runtime errors.
 * -uvolts <int> -- (opt) voltage amount, doesn't affect anything.
 * -on_at_boot <int> -- (opt) indicates whether the regulator should come
    on at boot.  Off by default.
@@ -1929,6 +1981,33 @@ a per board basis.
 WARNING: Enabling ssc for a PCIe controller that is configured
 instead as a SATA device is not recommended as it may cause a
 Linux boot failure.
+
+
+ sata
+~~~~~
+Usage: sata -controller <N> [-pwr <V>]
+
+Note: Sets the default SATA hardware operating mode on a per board basis.
+
+See also: dt autogen -node sata
+
+Examples:
+
+----
+/* turn off/on/on a power supply on suspend/resume/boot */
+ sata -controller 0 -type nominal -pwr hdd
+----
+
+* <N> is the pcie controller number, typically 0 or 1.
+* <V> is the name of a voltage regulator, previously declared with
+      the 'vreg' command.  If it is desired to toggle more than
+      one regulator, <V> can be a comma-separated list of
+      voltage regulator names.
+
+Note that the command 'dt autogen -node sata' generates the
+SATA device information based on the chip family, and the 'sata'
+command described here modifies or deletes individual SATA devices on
+a per board basis.
 
  usb
 ~~~~
@@ -2048,7 +2127,7 @@ bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1 -pdelay 5
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2016, Broadcom Ltd.
+Copyright (C) 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.
 

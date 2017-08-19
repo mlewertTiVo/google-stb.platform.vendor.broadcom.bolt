@@ -50,6 +50,59 @@
 #define DTU_SET_OWNED_ENTRY_CMD(value) \
 	((value) | BCHP_MEMC_DTU_MAP_STATE_0_MAP_STATEi_COMMAND_CMD_SETOWN)
 
+#define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
+
+/* dtu_page_index.
+ * computes the dtu(bus page) index for a given address
+ *
+ * NOTE: The caller MUST ensure that 'addr' is higher than 'base_addr_mb'.
+ */
+static unsigned int dtu_page_index(uintptr_t addr, unsigned int base_addr_mb)
+{
+	uintptr_t offset_mb;
+
+	offset_mb = addr / _MB(1) - base_addr_mb;
+	return offset_mb / DTU_PAGE_SIZE_MB;
+}
+
+/* dtu_memory_range_check
+ * Verify whether memory area[addr, (addr+size-1)] resides in given
+ * ddr[ddr_base_mb, (ddr_base_mb + ddr_size_mb-1)]. return true on succesful
+ * range check, else false.
+ */
+static bool dtu_memory_range_check(uint32_t ddr_base_mb,
+		uint32_t ddr_size_mb, uintptr_t addr, unsigned int size)
+{
+	if (ddr_base_mb > (addr / _MB(1)))
+		return false;
+
+	if ((ddr_base_mb + (ddr_size_mb - 1)) < ((addr + (size - 1)) / _MB(1)))
+		return false;
+
+	return true;
+}
+
+/*
+ * dtu_memory_page_index
+ * Finds the DTU bus page indices of a given memory range and returns true
+ * if the range belongs to the given DDR. If not, false is returned.
+ */
+static bool dtu_memory_page_index(struct ddr_info *ddr, uintptr_t addr,
+				unsigned int size, int *index_0, int *index_1)
+{
+	/* check whether address range [addr, (addr + size-1)]
+	 * belongs to this ddr(memory controller)
+	 */
+	if (dtu_memory_range_check(ddr->base_mb, ddr->size_mb, addr, size)) {
+		/* Bus page index for addr - Start address */
+		*index_0 = dtu_page_index(addr, ddr->base_mb);
+		/* Bus page index for addr - End address */
+		*index_1 = dtu_page_index(addr + (size - 1), ddr->base_mb);
+		return true;
+	}
+	return false;
+}
+
 /*
  * dtu_reload_done.
  * Gets the DTU Reload status
@@ -93,6 +146,28 @@ static void dtu_process_remap_entry(unsigned int reg_addr, uint32_t value)
 		if (DTU_OWNED_ENTRY(value))
 			DEV_WR(reg_addr, DTU_SET_OWNED_ENTRY_CMD(value));
 	}
+}
+
+/*
+ * dtu_verify_entry
+ * Verify whether this is a valid entry, check against
+ * map value(this value was stored in S3 memory area during warmboot
+ */
+static bool dtu_verify_entry(unsigned int reg_addr, uint32_t value)
+{
+	bool verified = true;
+	uint32_t reg_value;
+
+	reg_value = DEV_RD(reg_addr);
+	/* Check for Valid entry. When the valid bit is not set,
+	 * dtu is not going to use that entry at all. There is no
+	 * need to crosscheck any other fileds
+	*/
+	if (DTU_VALID_ENTRY(value) || DTU_VALID_ENTRY(reg_value)) {
+		if (reg_value != value)
+			verified  = false;
+	}
+	return verified;
 }
 
 /*
@@ -273,13 +348,21 @@ bool dtu_translate(unsigned int memc_index, bool enable)
  * map_data will be used only in case of warm boot(which is remap flag)
  */
 static void dtu_map_config(unsigned int memc_index,
-				unsigned int num_dtu_pages,
-				uint32_t *map_data,
+				struct ddr_info *ddr,
 				bool remap)
 {
-	unsigned int num_dev_pages;
-	unsigned int index;
+	int num_dev_pages;
+	int index, num_dtu_pages;
 	unsigned int ireg;
+	/* Bus page index that maps S3 parameters */
+	int index_0 = -1, index_1 = -1;
+	struct brcmstb_bootloader_dtu_table *remap_data = NULL;
+	uintptr_t addr;
+	uint32_t *map_data = NULL;
+	bool valid_dtu_bus_index = false;
+
+	/* Build will fail if S3 params size is greater than one DTU bus page */
+	BUILD_BUG_ON(sizeof(struct brcmstb_s3_params) > _MB(DTU_PAGE_SIZE_MB));
 
 	num_dev_pages = BDEV_RD_F(MEMC_DTU_CONFIG_0_SIZE_DEVICE_PAGES,
 		SIZE_DEVICE_PAGES);
@@ -293,24 +376,108 @@ static void dtu_map_config(unsigned int memc_index,
 			BCHP_MEMC_DTU_MAP_STATE_1_MAP_STATEi_ARRAY_BASE);
 #endif
 
-	if (remap)
+	num_dtu_pages = ddr->size_mb/DTU_PAGE_SIZE_MB;
+
+	if (remap) {
+		/* S3 parameters address was saved  by Linux before going to
+		 * deep sleep in AON registers
+		 * (BCHP_AON_CTRL_SYSTEM_DATA_RAMi_ARRAY_BASE) at an offset of
+		 * AON_REG_CONTROL_LOW and AON_REG_CONTROL_HIGH
+		 */
+		addr = AON_REG(AON_REG_CONTROL_LOW);
+		addr |= shift_left_32((uintptr_t)AON_REG(AON_REG_CONTROL_HIGH));
+		remap_data = ((struct brcmstb_s3_params *)addr)->dtu;
+		map_data = remap_data[memc_index].dtu_state_map;
+		valid_dtu_bus_index = dtu_memory_page_index(ddr, addr,
+				sizeof(struct brcmstb_s3_params),
+				&index_0, &index_1);
 		num_dtu_pages = num_dev_pages;
+	}
 
 	if (num_dev_pages >= num_dtu_pages) {
-		for (index = 0; index < num_dtu_pages; index++) {
-			/* value of state map register
-			 * Bit field 31: Valid = 1
-			 * (Read only - after mapped )
-			 * Bit Fiedld 30:16 Device page
-			 * Bit 2:0 Command (Map command to map)
+
+		/* In warmboot, we need to make sure that memory area
+		 * that saves dtu info must be identity map.
+		*/
+		if (valid_dtu_bus_index) {
+			DEV_WR(ireg + (index_0 << 2),
+				DTU_MAP_STATE_VALUE(index_0));
+			/* Only when end address falls on next bus page idx.
+			 * It is possible that end address bus page index is
+			 * not same as start address bus page index when S3
+			 * parameters address is around the upper bounday of
+			 * a bus page
 			 */
-			if (remap)
-				dtu_process_remap_entry(ireg + (index << 2),
-					map_data[index]);
-			else
-				DEV_WR(ireg + (index << 2),
-					DTU_MAP_STATE_VALUE(index));
+			if (index_1 != index_0)
+				DEV_WR(ireg + (index_1 << 2),
+					DTU_MAP_STATE_VALUE(index_1));
 		}
+
+		for (index = 0; index < num_dtu_pages; index++) {
+			if ((index != index_0) && (index != index_1)) {
+				/* value of state map register
+				 * Bit field 31: Valid = 1
+				 * (Read only - after mapped )
+				 * Bit Fiedld 30:16 Device page
+				 * Bit 2:0 Command (Map command to map)
+				 */
+				if (remap)
+					dtu_process_remap_entry(
+						ireg + (index << 2),
+						map_data[index]);
+				else
+					DEV_WR(ireg + (index << 2),
+						DTU_MAP_STATE_VALUE(index));
+			}
+		}
+	}
+}
+
+/*
+ * dtu Config verification of state map registeres after S3 memory verify.
+ */
+static void dtu_verify_map(unsigned int memc_index)
+{
+	int index;
+	unsigned int ireg;
+	int num_dtu_pages;
+	struct brcmstb_bootloader_dtu_table *remap_data;
+	uintptr_t addr;
+	uint32_t *map_data;
+
+	num_dtu_pages = BDEV_RD_F(MEMC_DTU_CONFIG_0_SIZE_DEVICE_PAGES,
+		SIZE_DEVICE_PAGES);
+
+	if (memc_index == 0)
+		ireg = BPHYSADDR(
+			BCHP_MEMC_DTU_MAP_STATE_0_MAP_STATEi_ARRAY_BASE);
+#ifdef BCHP_MEMC_DTU_CONFIG_1_REG_START
+	else
+		ireg = BPHYSADDR(
+			BCHP_MEMC_DTU_MAP_STATE_1_MAP_STATEi_ARRAY_BASE);
+#endif
+	/* S3 parameters address was saved  by Linux before going to deep sleep
+	 * in AON registers(BCHP_AON_CTRL_SYSTEM_DATA_RAMi_ARRAY_BASE) at an
+	 * offset of AON_REG_CONTROL_LOW and AON_REG_CONTROL_HIGH
+	 */
+	addr = AON_REG(AON_REG_CONTROL_LOW);
+	addr |= shift_left_32((uintptr_t) AON_REG(AON_REG_CONTROL_HIGH));
+	remap_data = ((struct brcmstb_s3_params *)addr)->dtu;
+	map_data = remap_data[memc_index].dtu_state_map;
+
+	/* To verify that translate table not modified during
+	 * S3 memory area validation.
+	 */
+	for (index = 0; index < num_dtu_pages; index++) {
+		/* value of state map register
+		 * Bit field 31: Valid = 1
+		 * (Read only - after mapped )
+		 * Bit Fiedld 30:16 Device page
+		 * Bit 2:0 Command (Map command to map)
+		 */
+		if (!dtu_verify_entry(
+			ireg + (index << 2), map_data[index]))
+			handle_boot_err(ERR_S3_DTU_REMAP_FAILED);
 	}
 }
 
@@ -324,60 +491,47 @@ void dtu_load(struct board_type *b, bool warm_boot)
 {
 	unsigned int index;
 	bool enable;
-	unsigned int num_dtu_pages;
-	struct brcmstb_bootloader_dtu_table *remap_data;
-	uintptr_t addr;
 
 	if (!dtu_is_available() || dtu_is_disabled())
 		return;
-
-	addr = AON_REG(AON_REG_CONTROL_LOW);
-	addr |= shift_left_32((uintptr_t) AON_REG(AON_REG_CONTROL_HIGH));
-	remap_data = ((struct brcmstb_s3_params *)addr)->dtu;
 
 	dtu_config_s3();
 
 	enable = dtu_config_status();
 
 	for (index = 0; index < b->nddr; index++) {
-		num_dtu_pages = b->ddr[index].size_mb/DTU_PAGE_SIZE_MB;
 		if (enable)
-			dtu_map_config(index, num_dtu_pages,
-				remap_data[index].dtu_state_map, warm_boot);
+			dtu_map_config(index, &b->ddr[index], warm_boot);
 
 		dtu_reload(index, false);
 
-		/* only when DTU is enabled and is warm_boot,
-		 * do not enable DTU translation
-		 */
-		if (!enable)
-			dtu_translate(index, false);
-		else if (!warm_boot)
-			dtu_translate(index, true);
+		dtu_translate(index, enable);
 	}
 }
 
 /*
- * dtu_enable
- * Enable transaltion of DTU.
+ * dtu_verify
+ * verify the translation table from S3 memory area
  * This method is called from PM when a warm boot occured
  */
-void dtu_enable(unsigned int num_memc)
+void dtu_verify(unsigned int num_memc)
 {
 	unsigned int index;
 	bool enabled;
 
 	/* Do not check whether DTU is disabled because DTU reload
 	 * has already been disabled. This function is called after
-	 * disabling DTU reload when S3 warm boot.
+	 * disabling dtu reload in S3 warm boot.
 	 */
 	if (!dtu_is_available())
 		return;
 
 	enabled = dtu_config_status();
 
-	for (index = 0; index < num_memc; index++)
-		dtu_translate(index, enabled);
+	if (enabled) {
+		for (index = 0; index < num_memc; index++)
+			dtu_verify_map(index);
+	}
 }
 
 #endif /*BCHP_MEMC_DTU_CONFIG_0_REG_START*/

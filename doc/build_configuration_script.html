@@ -771,8 +771,8 @@ asciidoc.install(3);
 <span id="author">Broadcom Ltd</span><br />
 <span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
 <span id="revnumber">version 1.37,</span>
-<span id="revdate">October 18th 2016</span>
-<br /><span id="revremark">Updated for 1.22 release.</span>
+<span id="revdate">June 9th 2017</span>
+<br /><span id="revremark">Updated for 1.30 release.</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -961,7 +961,7 @@ previously defined chip configuration if <em>: chip.DERIVED_CHIP</em> exists.</p
 <h3 id="_board">4.6.  [board]</h3>
 <div class="paragraph"><p>Usage: [board VALUE : DERIVED_OBJ [BOGUS] ]</p></div>
 <div class="paragraph"><p>Note: Board configuration</p></div>
-<div class="paragraph"><p>See also: avs chip pmux enet moca ddr comment (commands)</p></div>
+<div class="paragraph"><p>See also: avs chip pmux enet moca ext_moca ddr comment (commands)</p></div>
 <div class="paragraph"><p>Example:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1049,9 +1049,11 @@ No other text apart from comments must appear after it.</p></div>
     mapselect
     memsys
     moca
+    ext_moca
     pmux
     rtsdefault
     pcie
+    sata
     sdio
     usb
     gpio_key
@@ -1608,6 +1610,10 @@ fragments which can override the family's DTS file.
 <div class="content">
 <pre><code>dt autogen -node sdio -undo 1</code></pre>
 </div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>dt autogen -node ext_moca -parent qspi -cs 0 -interrupt_parent upg_gio -interrupt 14 4</code></pre>
+</div></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1986,7 +1992,20 @@ hyper           2</p></div>
 </div></div>
 </div>
 <div class="sect3">
-<h4 id="_points_to_regard_with_respect_to_usb">5.14.14.  Points to regard with respect to USB</h4>
+<h4 id="_ext_moca">5.14.14. ext_moca</h4>
+<div class="paragraph"><p>Usage: dt autogen -node ext_moca -parent &lt;PARENT&gt; -cs &lt;CS_NUM&gt;
+        -interupt_parent &lt;INTERRUPT_PARENT&gt; -interrupt &lt;INTERRUPT_SPECIFIER&gt;
+        -frequency &lt;FREQ&gt; -spi-clock-polarity &lt;0|1&gt; -spi-clock-phase &lt;0|1&gt;</p></div>
+<div class="paragraph"><p>External MoCA chips such as Broadcom&#8217;s BCM6802/3 are typically interfaced
+through SPI and require indicating which SPI controller the chip is attached to
+(PARENT, typically UPG_MSPI, aka qspi in Device Tree) and the chip select
+number (CS_NUM). It is also necessary to indicate the interrupt controller
+(INTERRUPT_PARENT) and interrupt specifier (INTERRUPT_SPECIFIER) that is used.</p></div>
+<div class="paragraph"><p>The maximum supported frequency can be defined using FREQ and the SPI clock
+polarity and phase polarity can be defined as well.</p></div>
+</div>
+<div class="sect3">
+<h4 id="_points_to_regard_with_respect_to_usb">5.14.15.  Points to regard with respect to USB</h4>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2370,12 +2389,48 @@ string representing a band as follows:
         h      ( 975 ~ 1025 MHz)</code></pre>
 </div></div>
 <div class="paragraph"><p>This is only used as a Device Tree configuration entry for Linux.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_ext_moca_2">5.21.  ext_moca</h3>
+<div class="paragraph"><p>Usage: ext_moca -enet_node &lt;DT_NODE -moca_band &lt;BAND&gt;
+        -rgmii &lt;RGMII 0|1&gt; -phy_type &lt;PHY_TYPE&gt; -phy_id &lt;PHY_ID&gt;
+        -mdio_mode &lt;MDIO_MODE&gt;</p></div>
+<div class="paragraph"><p>Note: Set External MoCA parameters (e.g: Broadcom BCM6802/3) for its
+two RGMII interfaces.</p></div>
+<div class="paragraph"><p>See also: [moca] [enet]</p></div>
+<div class="paragraph"><p>Example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> ext_moca -enet_node eth1 -rgmii 0 -phy_type MOCA -mdio_mode 0 -phy_speed 1000
+ -phy_id 257</code></pre>
+</div></div>
+<div class="paragraph"><p>This sets up the external MoCA configuration for a board.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+<em>-enet_node</em> is an alias to the Ethernet Device Tree node
+which provides the data-path for the MoCA hardware block.
+</p>
+</li>
+<li>
+<p>
+<em>-moca_band</em> applies to MoCA devices
+in Device Tree, its ignored otherwise. It is a
+string representing a band as described in [moca]
+</p>
+</li>
+<li>
+<p>
+For all other properties see [enet]
+</p>
+</li>
+</ul></div>
 <div class="paragraph"><p>Command: pinmux</p></div>
 <div class="paragraph"><p>Note: DEPRECATED from configuration file version 1.6, use pmux instead.</p></div>
 <div class="paragraph"><p>See also: pmux</p></div>
 </div>
 <div class="sect2">
-<h3 id="_pmux">5.21.  pmux</h3>
+<h3 id="_pmux">5.22.  pmux</h3>
 <div class="paragraph"><p>Usage: pmux -pin &lt;pin&gt; -sel &lt;field&gt; [-pull &lt;none|up|down&gt;] [-n &lt;int&gt;]</p></div>
 <div class="paragraph"><p>See also: [family] [chip] [board]</p></div>
 <div class="paragraph"><p>Note: sets pinmuxing and pad control.  Also: supplants the pinmux command.</p></div>
@@ -2444,7 +2499,7 @@ If specified under [chip] (to be inherited by boards)
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ddr">5.22.  ddr</h3>
+<h3 id="_ddr">5.23.  ddr</h3>
 <div class="paragraph"><p>Usage: ddr -n &lt;WHICH&gt; -size_mb &lt;SIZE&gt; [-base_mb &lt;BASE&gt;] -clk &lt;SHMOO SPEED&gt; -size_bits &lt;SHMOO SIZE&gt; -width &lt;SHMOO WIDTH&gt; -phy &lt;PHY WIDTH&gt; -fixed - -custom &lt;TAG&gt;</p></div>
 <div class="paragraph"><p>Note: Set ddr parameters</p></div>
 <div class="paragraph"><p>See also: [board] [chip] [mmap]</p></div>
@@ -2599,7 +2654,7 @@ command (ddr) anywhere in your config.</td>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_bid">5.23.  bid</h3>
+<h3 id="_bid">5.24.  bid</h3>
 <div class="paragraph"><p>Usage: bid &lt;hex value&gt;</p></div>
 <div class="paragraph"><p>Note: Set the board ID</p></div>
 <div class="paragraph"><p>See also: i2cbus</p></div>
@@ -2614,7 +2669,7 @@ first stage bootloader (FSBL) menu. If no boards match
 an ID then the menu is presented.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_dt">5.24.  dt</h3>
+<h3 id="_dt">5.25.  dt</h3>
 <div class="paragraph"><p>Usage:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2663,7 +2718,7 @@ type is supported.
 <p>
 <em>mac</em> sets the "local-mac-address" property <em>after</em> all physical ENET
 (GENET) devices have been allocated a MAC address. The MAC base address
-is generally set by the BOLT <em>macprog</em> command and for each device it is
+is generally set by the BOLT <em>setsn</em> command and for each device it is
 incremented to provide a value unique to the platform it is running on.
 </p>
 </li>
@@ -2691,7 +2746,7 @@ dt cull -root /rdb -node sata@f045a000 -prop status</code></pre>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_rtsdefault">5.25.  rtsdefault</h3>
+<h3 id="_rtsdefault">5.26.  rtsdefault</h3>
 <div class="paragraph"><p>Usage: rtsdefault -id &lt;BOX MODE&gt;</p></div>
 <div class="paragraph"><p>Note: Sets the default rts <em>box mode</em> for a chip or board</p></div>
 <div class="paragraph"><p>See also: rtsbase rtsconfig</p></div>
@@ -2711,7 +2766,7 @@ is not set.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_avs">5.26.  avs</h3>
+<h3 id="_avs">5.27.  avs</h3>
 <div class="paragraph"><p>Usage: avs [enable | disable] -domains &lt;VOLTAGE DOMAINS&gt; -mode &lt;avs|dfs|dvfs&gt; -pmap &lt;MAP&gt; -pstate &lt;STATE&gt;</p></div>
 <div class="paragraph"><p>Note: Sets the default AVS state and number of voltage domains. Also sets
 the DVFS mode, pmap and pstate.</p></div>
@@ -2749,7 +2804,7 @@ in [family], [chip] and [board].</p></div>
 and <em>-pstate</em> are integers.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_sdio">5.27.  sdio</h3>
+<h3 id="_sdio">5.28.  sdio</h3>
 <div class="paragraph"><p>Usage: sdio -controller &lt;N&gt; -type &lt;T&gt; [-uhs] [-host_driver_strength &lt;S&gt;] [-host_hs_driver_strength &lt;S&gt;] [-card_driver_strength &lt;S&gt;]</p></div>
 <div class="paragraph"><p>Note: Sets the default SIO hardware operating mode</p></div>
 <div class="paragraph"><p>See also: dt autogen -node sdio</p></div>
@@ -2810,14 +2865,14 @@ by adding the property "no-1-8-v".
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_vreg">5.28.  vreg</h3>
+<h3 id="_vreg">5.29.  vreg</h3>
 <div class="paragraph"><p>Usage: vreg -name &lt;string&gt; -gpio &lt;gpio&gt; -pin &lt;int&gt; -active hi|lo \
                 [-udelay &lt;int&gt;]  [-uvolts &lt;int&gt;] [-on_at_boot &lt;int&gt;]</p></div>
-<div class="paragraph"><p>This per-board command was created to support the pcie turning
+<div class="paragraph"><p>This per-board command was created to support the pcie/sata turning
 off/on power supplies to its devices during boot, suspend, and
 resume.  If you use this command, you will reference the name
 of the voltage regulator with -vreg when using the per-board
-pcie command.</p></div>
+pcie or sata command.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -2842,7 +2897,9 @@ pcie command.</p></div>
 <li>
 <p>
 -udelay &lt;int&gt;&#8201;&#8212;&#8201;(opt) delay in usec between gpio being enabled and
-   the enable call returning.
+   the enable call returning. Do NOT use this option if you are using
+   3.14 Linux images, as the PCI host driver is not compatible
+   and you will get serious runtime errors.
 </p>
 </li>
 <li>
@@ -2861,7 +2918,7 @@ pcie command.</p></div>
 <div class="paragraph"><p>vreg -name wifi -gpio upg_gio -pin 14 -active lo</p></div>
 </div>
 <div class="sect2">
-<h3 id="_pcie">5.29.  pcie</h3>
+<h3 id="_pcie">5.30.  pcie</h3>
 <div class="paragraph"><p>Usage: pcie -controller &lt;N&gt; -type &lt;T&gt; [-ssc 1] [-gen &lt;G&gt;] [-pwr &lt;V&gt;]</p></div>
 <div class="paragraph"><p>Note: Sets the default PCIe hardware operating mode on a per board basis.</p></div>
 <div class="paragraph"><p>See also: dt autogen -node pcie</p></div>
@@ -2943,7 +3000,38 @@ Linux boot failure.</td>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_usb">5.30.  usb</h3>
+<h3 id="_sata_2">5.31.  sata</h3>
+<div class="paragraph"><p>Usage: sata -controller &lt;N&gt; [-pwr &lt;V&gt;]</p></div>
+<div class="paragraph"><p>Note: Sets the default SATA hardware operating mode on a per board basis.</p></div>
+<div class="paragraph"><p>See also: dt autogen -node sata</p></div>
+<div class="paragraph"><p>Examples:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>/* turn off/on/on a power supply on suspend/resume/boot */
+ sata -controller 0 -type nominal -pwr hdd</code></pre>
+</div></div>
+<div class="ulist"><ul>
+<li>
+<p>
+&lt;N&gt; is the pcie controller number, typically 0 or 1.
+</p>
+</li>
+<li>
+<p>
+&lt;V&gt; is the name of a voltage regulator, previously declared with
+      the <em>vreg</em> command.  If it is desired to toggle more than
+      one regulator, &lt;V&gt; can be a comma-separated list of
+      voltage regulator names.
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Note that the command <em>dt autogen -node sata</em> generates the
+SATA device information based on the chip family, and the <em>sata</em>
+command described here modifies or deletes individual SATA devices on
+a per board basis.</p></div>
+</div>
+<div class="sect2">
+<h3 id="_usb">5.32.  usb</h3>
 <div class="paragraph"><p>Usage: usb -controller &lt;N&gt; -type &lt;T&gt; [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual|typec_pd]</p></div>
 <div class="paragraph"><p>Note: Sets the default USB hardware operating mode on a per board basis.</p></div>
 <div class="paragraph"><p>See also: dt autogen -node usb</p></div>
@@ -2982,7 +3070,7 @@ command described here modifies or deletes individual USB devices on
 a per board basis.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_gpio_key">5.31.  gpio_key</h3>
+<h3 id="_gpio_key">5.33.  gpio_key</h3>
 <div class="paragraph"><p>Usage: gpio_key -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -code &lt;KEY_CODE&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the gpio button. You can create multiple gpio buttons.</p></div>
 <div class="paragraph"><p>If Nexus is build with NEXUS_HAS_GPIO=1, the Nexus will take ownership of all GPIO pins.
@@ -3028,7 +3116,7 @@ the gpio button.</p></div>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_gpio_led">5.32.  gpio_led</h3>
+<h3 id="_gpio_led">5.34.  gpio_led</h3>
 <div class="paragraph"><p>Usage: gpio_led -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -pol &lt;POLARITY&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the gpio led driver. You can create multiple gpio leds.</p></div>
 <div class="paragraph"><p>See also: dt autogen gpio</p></div>
@@ -3062,7 +3150,7 @@ the gpio button.</p></div>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_bt_rfkill_gpio">5.33.  bt_rfkill_gpio</h3>
+<h3 id="_bt_rfkill_gpio">5.35.  bt_rfkill_gpio</h3>
 <div class="paragraph"><p>Usage: bt_rfkill_gpio -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -pol &lt;POLARITY&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the Bluetooth rfkill gpio. You can have up to 2 GPIOs, one for vreg and another for reset.</p></div>
 <div class="paragraph"><p>Check the hardware schematics to ensure the correct &lt;NAME_OF_GPIO_CONTROLLER&gt; and &lt;GPIO_PIN&gt;
@@ -3107,7 +3195,7 @@ bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1 -pdelay 5
 <div class="sect1">
 <h2 id="_appendix_copyright_info">6. Appendix: Copyright Info</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
+<div class="paragraph"><p>Copyright &#169; 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.</p></div>
 </div>
@@ -3117,7 +3205,8 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Version 1.37<br />
-Last updated 2017-06-28 11:24:19 PDT
+Last updated
+ 2017-08-17 23:27:50 PDT
 </div>
 </div>
 </body>

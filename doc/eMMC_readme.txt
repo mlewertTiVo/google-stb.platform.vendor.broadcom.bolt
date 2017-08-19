@@ -37,19 +37,20 @@ Following is the BOLT output from "show devices" on a system booting from eMMC:
 ----
 Device Name          Description
 -------------------  ---------------------------------------------------------
-              uart0  16550 DUART at 0xf0406b00 channel 0
+              uart0  16550 DUART at 0xf040b400 channel 0
                mem0  Memory
-             flash1  EMMC flash Boot1: 0x000000000-0x000200000 (2048KB)
-             flash2  EMMC flash Boot2: 0x000000000-0x000200000 (2048KB)
-             flash0  EMMC flash Data : 0x000000000-0x0EC000000 (3776MB)
+             flash0  EMMC flash Data : 0x000000000-0x370000000 (14080MB)
       flash0.macadr  EMMC flash Data : 0x000004400-0x000004800 (1024B)
        flash0.nvram  EMMC flash Data : 0x000004800-0x000014800 (64KB)
-      flash0.kernel  EMMC flash Data : 0x000014800-0x000814800 (8MB)
-      flash0.splash  EMMC flash Data : 0x000814800-0x000894800 (512KB)
-     flash0.devtree  EMMC flash Data : 0x000894800-0x0008A4800 (64KB)
-      flash0.rootfs  EMMC flash Data : 0x0008A4800-0x0EBFFBE00 (3768MB)
-               eth0  GENET Internal Ethernet at 0xf0b60800
-              sata0  SATA3 AHCI Device
+        flash0.wlan  EMMC flash Data : 0x000014800-0x000024800 (64KB)
+      flash0.kernel  EMMC flash Data : 0x000024800-0x000824800 (8MB)
+      flash0.splash  EMMC flash Data : 0x000824800-0x0008A4800 (512KB)
+     flash0.devtree  EMMC flash Data : 0x0008A4800-0x0008B4800 (64KB)
+      flash0.rootfs  EMMC flash Data : 0x0008B4800-0x36FFFBE00 (14072MB)
+             flash1  EMMC flash Boot1: 0x000000000-0x000400000 (4MB)
+             flash2  EMMC flash Boot2: 0x000000000-0x000400000 (4MB)
+             flash3  EMMC flash RPMB : 0x000000000-0x000020000 (128KB)
+               eth0  GENET Internal Ethernet at 0xf0b60000
 ----
 
 
@@ -93,7 +94,7 @@ pass the "/dev/mmcblkxxx" or GUID based partition name for the kernels rootfs. E
 or
 
 ---- 
-     boot flash0.kernel: "root=/dev/mmcblk0p6 rootwait rw debug"
+     boot flash0.kernel: "root=/dev/mmcblk0p7 rootwait rw debug"
 ---- 
 
 [1][[1]] The BOLT partition name is taken from the GPT partition name.
@@ -125,9 +126,9 @@ blank eMMC device (assumes starting with SPI as the boot device):
 
    6. Set board boot shape to boot from eMMC and reboot.
 
-   7. run 'macprog' to setup the Ethernet interface.
+   7. run 'setsn' or 'macprog' to setup the Ethernet interface.
 
-   8. reboot so the macprog changes take effect.
+   8. reboot so the MAC address change takes effect.
 
    9. Boot an initrd kernel across the network. Example:
 +
@@ -143,10 +144,11 @@ blank eMMC device (assumes starting with SPI as the boot device):
       sgdisk -o /dev/mmcblk0
       sgdisk -a 1 -n 1:34:35 -c 1:"macadr" /dev/mmcblk0
       sgdisk -a 1 -n 2:36:163 -c 2:"nvram" /dev/mmcblk0
-      sgdisk -a 1 -n 3:164:16547 -c 3:"kernel" /dev/mmcblk0
-      sgdisk -a 1 -n 4:16548:17571 -c 4:"splash" /dev/mmcblk0
-      sgdisk -a 1 -n 5:17572:17699 -c 5:"devtree" /dev/mmcblk0
-      sgdisk -n 6:17700:`sgdisk -E /dev/mmcblk0` -c 6:"rootfs" /dev/mmcblk0
+      sgdisk -a 1 -n 3:164:291 -c 3:"wlan" /dev/mmcblk0
+      sgdisk -a 1 -n 4:292:16675 -c 4:"kernel" /dev/mmcblk0
+      sgdisk -a 1 -n 5:16676:17699 -c 5:"splash" /dev/mmcblk0
+      sgdisk -a 1 -n 6:17700:17827 -c 6:"devtree" /dev/mmcblk0
+      sgdisk -n 7:17828:`sgdisk -E /dev/mmcblk0` -c 7:"rootfs" /dev/mmcblk0
 ----
 
   11. Copy a kernel and rootfs to eMMC. The following example will copy a
@@ -154,11 +156,11 @@ blank eMMC device (assumes starting with SPI as the boot device):
 +
 [source,shell]
 ----
-      mkfs.ext4 /dev/mmcblk0p6
-      mount /dev/mmcblk0p6 /mnt/hd
+      mkfs.ext4 /dev/mmcblk0p7
+      mount /dev/mmcblk0p7 /mnt/hd
       cd /mnt/hd
       tftp <TFTP IP ADDR> -g -r vmlinuz-7445d0
-      dd if=vmlinuz-7445d0 of=/dev/mmcblk0p3
+      dd if=vmlinuz-7445d0 of=/dev/mmcblk0p4
       rm vmlinuz-7445d0
       tftp <TFTP IP ADDR> -g -r nfsroot-7445d0.tar.bz2
       tar -xjf nfsroot-7445d0.tar.bz2
@@ -169,12 +171,12 @@ blank eMMC device (assumes starting with SPI as the boot device):
 
   12. Reboot the system.
 
-  13. Rerun 'macprog' to setup the network.
+  13. Rerun 'setsn' (or 'macprog') to setup the network.
 
   14. Boot the kernel. Example:
 +
 ----
-      boot flash0.kernel: "root=/dev/mmcblk0p6 rootwait rw debug"
+      boot flash0.kernel: "root=/dev/mmcblk0p7 rootwait rw debug"
 ----
 --
 
@@ -214,7 +216,7 @@ other eMMC devices.
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2016, Broadcom Ltd.
+Copyright (C) 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.
 

@@ -2187,6 +2187,7 @@ int emmc_initialize(struct emmc_registers *regs,
 	chip->boot_device = boot_flag;
 	chip->regs = *regs;
 	chip->host_config = *host_config;
+	chip->last_partition = -1;
 
 	/* For single device, means 2, 0x00020000 For argument register */
 	chip->rca = EMMC_RCA;
@@ -2244,10 +2245,16 @@ int emmc_select_partition(struct emmc_chip *chip, int id)
 	uint32_t partition_config = 0x00;
 	int res;
 
+	/* If this partition is already selected, just return */
+	if (id == chip->last_partition)
+		return 0;
+
+	/* In case of failure */
+	chip->last_partition = -1;
+
 	res = emmc_cmd8_send_ext_csd(chip);
 	if (res)
 		return res;
-
 	DBG_MSG_DRV(" chip->ExtCSD.PARTITION_SETTING_COMPLETED = %d\n",
 		    chip->extcsd.PARTITION_SETTING_COMPLETED);
 	DBG_MSG_DRV(" chip->ExtCSD.PARTITION_CONFIG = 0x%02X (%d)\n",
@@ -2278,6 +2285,7 @@ int emmc_select_partition(struct emmc_chip *chip, int id)
 		chip->extcsd.PARTITION_CONFIG,
 		chip->extcsd.PARTITION_CONFIG);
 #endif
+	chip->last_partition = id;
 	return 0;
 }
 

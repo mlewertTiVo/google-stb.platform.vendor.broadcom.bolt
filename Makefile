@@ -283,7 +283,7 @@ emu: famcheck $(TOP_TARGETS)
 		--no-print-directory
 
 # Like 'emu' this is for pre-bringup and you have to specify the
-# chip family as well, e.g. make fullemu FAMILY=7271a0
+# chip family as well, e.g. make fullemu FAMILY=7271b0
 fullemu: famcheck $(TOP_TARGETS)
 	$(Q)$(MAKE) $(FAMILY) -f Makefile.Bolt emu_bolt CFG_FULL_EMULATION=1 \
 		CFG_BOARDDEFAULT=1 CFG_DUMMY_SECURITY=y \

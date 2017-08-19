@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -281,6 +281,11 @@ static int dhcp_build_discover(uint8_t *hwaddr, uint32_t id, ebuf_t **ebufptr)
 	ebuf_append_u8(buf, 1);
 	ebuf_append_u8(buf, DHCP_FUNCTION_DISCOVER);
 
+	ebuf_append_u8(buf, DHCP_TAG_CLIENTID);	/* client ID */
+	ebuf_append_u8(buf, 1+ ENET_ADDR_LEN);  /* hw type + hwaddr len */
+	ebuf_append_u8(buf, 1);                 /* hw type = 1 for Ethernet */
+	ebuf_append_bytes(buf, hwaddr, ENET_ADDR_LEN);
+
 	ebuf_append_u8(buf, DHCP_TAG_PARAMLIST);
 	ebuf_append_u8(buf, 8);	/* count of tags that follow */
 	ebuf_append_u8(buf, DHCP_TAG_NETMASK);
@@ -378,8 +383,8 @@ static int dhcp_build_request(uint8_t *hwaddr,
 	ebuf_append_bytes(buf, serveraddr, IP_ADDR_LEN);
 
 	ebuf_append_u8(buf, DHCP_TAG_CLIENTID);	/* client ID */
-	ebuf_append_u8(buf, 7);
-	ebuf_append_u8(buf, 1);
+	ebuf_append_u8(buf, 1+ ENET_ADDR_LEN);  /* hw type + hwaddr len */
+	ebuf_append_u8(buf, 1);                 /* hw type = 1 for Ethernet */
 	ebuf_append_bytes(buf, hwaddr, ENET_ADDR_LEN);
 
 	ebuf_append_u8(buf, DHCP_TAG_PARAMLIST);

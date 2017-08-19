@@ -26,10 +26,6 @@ struct tz_mem_layout {
 	uint64_t	os_offset;
 	uint64_t	os_size;
 
-	/* offset from mem_addr */
-	uint64_t	spd_offset;
-	uint64_t	spd_size;
-
 	uint64_t	tzioc_offset;
 	uint64_t	tzioc_size;
 
@@ -52,6 +48,9 @@ struct tz_info {
 	uint32_t	which;
 	uint64_t	mem_addr;
 	uint64_t	mem_size;
+
+	uint64_t	bl31_addr;
+	uint64_t	bl31_size;
 
 	struct tz_mem_layout	*mem_layout;
 	struct tz_reg_group	*reg_groups;

@@ -258,7 +258,7 @@ enum {
 #define	FSBLINFO_VERSION(x)		(((x) & FSBLINFO_VERSION_MASK)\
 						>> FSBLINFO_VERSION_SHIFT)
 
-#define FSBLINFO_CURRENT_VERSION	2
+#define FSBLINFO_CURRENT_VERSION	3
 
 /* This is the primary interface between FSBL & SSBL
 */
@@ -282,6 +282,8 @@ struct fsbl_info {
 	uint32_t psci_base;
 #endif
 	uint32_t shmoo_ver; /* VERSION 2 */
+	uint16_t srr_size_mb; /* VERSION 3 */
+	uint16_t srr_offset_mb; /* VERSION 3 */
 };
 
 #endif /* __FSBL_COMMON_H__ */

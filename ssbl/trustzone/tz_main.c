@@ -32,6 +32,48 @@ struct tz_info *tz_info(void)
 	return &s_tz_info;
 }
 
+#if CFG_TRUSTZONE_MON
+static int tz_bl31_init(void)
+{
+	struct tz_info *t;
+	struct memory_area list;
+	queue_t *qe;
+	int count;
+	int rc;
+
+	t = tz_info();
+	if (!t)
+		return BOLT_ERR;
+
+	count = bolt_reserve_memory_getlist(&list);
+	if (count <= 0)
+		return BOLT_ERR_NOMEM;
+
+	rc = BOLT_ERR_NOMEM;
+	qe = q_getfirst((queue_t *)&list);
+	for ( ; qe != (queue_t *)&list; qe = qe->q_next) {
+		struct memory_area *m = (struct memory_area *)qe;
+
+		if (m->tag == NULL || strcmp(m->tag, "BL31"))
+			continue;
+
+		/* match */
+		rc = BOLT_OK;
+		t->bl31_addr = m->offset;
+		t->bl31_size = m->size;
+		break;
+	}
+
+	while (!q_isempty((queue_t *)&list)) {
+		queue_t *q = q_getfirst((queue_t *)&list);
+
+		q_dequeue(q);
+		KFREE(q);
+	}
+
+	return rc;
+}
+#endif
 
 static int tz_memory_init(void)
 {
@@ -66,12 +108,12 @@ static int tz_memory_init(void)
 	/* - 32MB if total is over 1GB, 16MB otherwise
 	 * - highest available under 4GB boundary
 	 * - no memory controller preferrence
-	 * - DT not to be created by dtbolt
-	 * - DT to be created under /reserved-memory by tz_dt
+	 * - DT to be created under /reserved-memory
 	 */
 	reserve_mb = (total_mb > 1024) ? 32 : 16;
 	reserve_mb *= 1024 * 1024;
-	retval = bolt_reserve_memory(reserve_mb, _KB(4), 0, "TZOS");
+	retval = bolt_reserve_memory(reserve_mb, _KB(4),
+		BOLT_RESERVE_MEMORY_OPTION_DT_NEW, "TZOS");
 	if (retval < 0) {
 		reserve_mb /= 1024 * 1024;
 		err_msg("failed to reserve %d MB for TrustZone %lld\n",
@@ -83,7 +125,7 @@ static int tz_memory_init(void)
 	if (count <= 0)
 		return BOLT_ERR_NOMEM;
 
-	rc = BOLT_OK;
+	rc = BOLT_ERR_NOMEM;
 	qe = q_getfirst((queue_t *)&list);
 	for ( ; qe != (queue_t *)&list; qe = qe->q_next) {
 		struct memory_area *m = (struct memory_area *)qe;
@@ -92,6 +134,7 @@ static int tz_memory_init(void)
 			continue;
 
 		/* match */
+		rc = BOLT_OK;
 		t->mem_size = m->size;
 		/* already done t->mem_addr */
 		switch (m->options & BOLT_RESERVE_MEMORY_OPTION_MEMC_MASK) {
@@ -230,8 +273,17 @@ int tz_init(void)
 	 */
 	t->tzioc_irq = 0xf;
 
+#if CFG_TRUSTZONE_MON
 	/*
-	 * Scan for memory to use
+	 * Scan for BL31 memory
+	 */
+	rc = tz_bl31_init();
+	if (rc)
+		return rc;
+#endif
+
+	/*
+	 * Reserve memory
 	 */
 	rc = tz_memory_init();
 	if (rc)

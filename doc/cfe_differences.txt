@@ -102,12 +102,10 @@ load -loader=elf 192.168.0.42:bolt.elf
 load -loader=raw 192.168.0.42:data.bin
 ----
 
-* The 'macprog' command updates the 'ETH0_HWADDR' environment variable
-without rebooting the board. It allows BOLT to update DTB with a new
-MAC address and jump to Linux without the need for reboot.
-
-NOTE: A newly programmed MAC address by the 'macprog' command
-will not be effective in BOLT until the board gets rebooted.
+* The 'setsn' command updates the 'ETH0_HWADDR' environment variable
+if executed against a board that the command has never been executed.
+The '-f' option to the 'setsn' command also updates the environment
+variable. It can also be updated by the 'macprog' command.
 
 * As of version v0.69 we've switched to a dynamic flash partitioning
 scheme where after certain minimal size requirements are met,
@@ -187,7 +185,7 @@ to have a working data space.
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2016, Broadcom Ltd.
+Copyright (C) 2017, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.
 

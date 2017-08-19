@@ -777,65 +777,118 @@ asciidoc.install(4);
 </div>
 <div id="content">
 <div class="sect1">
-<h2 id="_bolt_engineering_release_v1_30_21st_june_2017">1.  Bolt Engineering Release v1.30, 21st June 2017</h2>
+<h2 id="_bolt_sqa_release_v1_32_4th_august_2017">1.  Bolt SQA Release v1.32, 4th August 2017</h2>
 <div class="sectionbody">
 <div class="literalblock">
 <div class="content">
 <pre><code>        o Supported chip families: 7250b0 7260a0 7268b0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
         o Toolchain: stbgcc-4.8-1.1
-
-        o AVS version: v0.3.2
-                o 7250b0 7364b0 7445d0 7439b0 7366c0 7445e0
-        o AVS version: v0.3.3
-                o 74371a0 7364c0
-        o AVS version: v0.4.9
-                o 7271b0 7268b0 7260a0 7278a0
-
+        o AVS versions:
+                o v0.3.2
+                        o 7250b0
+                        o 7364b0
+                        o 7366c0
+                        o 7439b0
+                        o 7445d0
+                        o 7445e0
+                o v0.3.3
+                        o 74371a0
+                        o 7364c0
+                o v0.5.0
+                        o 7271b0
+                        o 7268b0
+                        o 7260a0
+                        o 7278a0
         o AVS Pending PVT testing:
-
         o SHMOO versions:
                 o DDR3
-                        o 7250b0:  2.1.2.0
-                        o 7260a0:  3.1.1.0
-                        o 7364b0:  2.1.2.0
-                        o 7364c0:  2.1.2.0
-                        o 7366c0:  2.1.1.0
-                        o 7439b0:  2.1.1.0
-                        o 7445d0:  2.1.1.0
-                        o 7445e0:  2.1.1.0
+                        o 7250b0:  3.4.1.0
+                        o 7260a0:  3.4.0.0
+                        o 7364b0:  3.4.1.0
+                        o 7364c0:  3.4.1.0
+                        o 7366c0:  3.4.1.0
+                        o 7439b0:  3.4.1.0
+                        o 7445d0:  3.4.1.0
+                        o 7445e0:  3.4.1.0
                         o 74371a0: 1.0.0.6
                 o DDR4
-                        o 7250b0:  2.1.1.0
-                        o 7260a0:  3.1.1.0
-                        o 7364b0:  2.1.1.0
-                        o 7364c0:  2.1.1.0
-                        o 7366c0:  2.1.1.0
-                        o 7439b0:  2.1.1.0
-                        o 7445d0:  2.1.1.0
-                        o 7445e0:  2.1.1.0
+                        o 7250b0:  3.4.1.0
+                        o 7260a0:  3.4.0.22
+                        o 7364b0:  3.4.1.0
+                        o 7364c0:  3.4.1.0
+                        o 7366c0:  3.4.1.0
+                        o 7439b0:  3.4.1.0
+                        o 7445d0:  3.4.1.0
+                        o 7445e0:  3.4.1.0
                 o LPDDR4
-                        o 7268b0:  2.2.2.9
-                        o 7271b0:  2.2.2.9
+                        o 7268b0:  2.3.1.0
+                        o 7271b0:  2.3.1.0
                         o 7278a0:  5.1.0.4</code></pre>
 </div></div>
 <div class="sect2">
 <h3 id="_known_issues">1.1.  Known Issues</h3>
-<div class="ulist"><ul>
-<li>
-<p>
-When Sage and DTU are enabled, S3 resume disables DTU mapping <a href="http://jira.broadcom.com/browse/SWBOLT-2280">SWBOLT-2280</a>
-</p>
-</li>
-<li>
-<p>
-AVS cannot be disabled on B15 non-DVFS chips, such as 7445, 7439, 74371, 7366, 7364 and 7250 families
-</p>
-</li>
-</ul></div>
+<div class="paragraph"><p>None</p></div>
 </div>
 <div class="sect2">
 <h3 id="_compatibility">1.2.  Compatibility</h3>
 <div class="ulist"><ul>
+<li>
+<p>
+Fixed issue with the BFW that could reset the chip when SAGE requests a region to be authenticated.
+</p>
+</li>
+<li>
+<p>
+SWBOLT-2084 adds the ability to add a startup delay to turning on a voltage regulator during boot.  However, this will cause problems when used with with Linux 3.14, because the Broadcom PCI host driver uses syscore ops (atomic context) to call suspend/resume, and these turn off/on the vreg, which invokes msleep().  If you are using 3.14 or earlier, DO NOT use this feature.
+</p>
+</li>
+<li>
+<p>
+By default, 32 MB of memory is reserved to be used by SAGE. Its location is on the highest location of first memory controller as long as the reserved memory is under the 4GB boundary. The following is the affected chips:
+</p>
+<div class="ulist"><ul>
+<li>
+<p>
+7250b0
+</p>
+</li>
+<li>
+<p>
+7260a0
+</p>
+</li>
+<li>
+<p>
+7268b0
+</p>
+</li>
+<li>
+<p>
+7271b0
+</p>
+</li>
+<li>
+<p>
+7364b0 and 7364c0
+</p>
+</li>
+<li>
+<p>
+7366c0
+</p>
+</li>
+<li>
+<p>
+7439b0
+</p>
+</li>
+<li>
+<p>
+7445d0 and 7445e0
+</p>
+</li>
+</ul></div>
+</li>
 <li>
 <p>
 7271a0 and 7268a0 are deprecated starting with BOLT v1.29.
@@ -1068,20 +1121,35 @@ to the version your BOLT release wants (in bolt/config/toolchain):
 </li>
 </ul></div>
 <div class="listingblock">
-<div class="content"><!-- Generator: GNU source-highlight 3.1.6
-by Lorenzo Bettini
-http://www.lorenzobettini.it
-http://www.gnu.org/software/src-highlite -->
-<pre><tt>arm-linux-ld<span style="color: #990000">:</span> error<span style="color: #990000">:</span> no memory region specified <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> loadable section `<span style="color: #990000">.</span>bss<span style="color: #FF0000">'</span></tt></pre></div></div>
+<div class="content"></div></div>
 <hr />
 </div>
 <div class="sect2">
-<h3 id="_upgrade_to_v1_30_criteria">1.4.  Upgrade to v1.30 criteria</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2374">SWBOLT-2374</a> Disabled DTU in 7268b0, 7271b0, 7260a0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<h3 id="_upgrade_to_v1_32_criteria">1.4.  Upgrade to v1.32 criteria</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2407">SWBOLT-2407</a> 7260a0 Shmoo has been updated to 3.4.0.22 for DDR4 and 3.4.0.0 for DDR3. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2251">SWBOLT-2251</a> Add support in the scripting language to represent external MoCA chips and make them configurable enough based on the board design.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2403">SWBOLT-2403</a> Added DT function in Bolt for SATA regulator.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2084">SWBOLT-2084</a> Added property for start delay to vreg. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2396">SWBOLT-2396</a> Added wlan partition to bolt for storage to WIFI PA trimming data.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2384">SWBOLT-2384</a> BFW for 7278a0 has been updated to v1.1.0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2401">SWBOLT-2401</a> Disabled DTU in 7278a0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2206">SWBOLT-2206</a> Enabling splash in BOLT v1.32 for 7278A0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2381">SWBOLT-2381</a> FSBL constructs page table entries corresponding to the range betweenthe base address of MEMC#0 and the end of to-be-copied SSBL, and then SSBL re-constructs for the total DRAM installed.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2376">SWBOLT-2376</a> Fixed XHCI driver external USB hubs USB 2.0 enumeration.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2397">SWBOLT-2397</a> Fixed do operator with newer Perl versions.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2369">SWBOLT-2369</a> Provided "clocks" property for the wake-timer.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2404">SWBOLT-2404</a> Re-enabled DTU in 7271 and 7268. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2386">SWBOLT-2386</a> Shmoo for 7268b0 and 7271b0 has been updated to v2.3.1.0. At the moment, Samsung DRAM parts are not supported with v2.3.1.0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2379">SWBOLT-2379</a> The DRAM portion of the system memory map is passed via Device Tree.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2398">SWBOLT-2398</a> The configuration for the built-in Ethernet port of BCM97278IPA has been fixed.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2380">SWBOLT-2380</a> The default BFW has been updated to 4.2.5 for 7250b0, 7260a0. 7268b0, 7271b0, 7364b0, 7364c0, 7366c0, 7439b0, 7445d0 and 7445e0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2410">SWBOLT-2410</a> Updated 7260 PMap clock freq setting to support UHD upscaling. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2385">SWBOLT-2385</a> Updated DTU initialization sequence for BFWs.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2390">SWBOLT-2390</a> Updated PCIe DT node with proper information for Linux PCIe improvements.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_broadcom_fae_access">1.5.  Broadcom FAE access</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.30%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.32%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
 </div>
 </div>
 </div>
@@ -1116,7 +1184,8 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-06-28 11:24:19 PDT
+Last updated
+ 2017-08-17 23:27:50 PDT
 </div>
 </div>
 </body>

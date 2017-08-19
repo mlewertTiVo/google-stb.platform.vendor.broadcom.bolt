@@ -499,9 +499,11 @@ static int issue_cmd(struct mmc_cmd *cmd, struct mmc_data *data)
 	if (data_xfer) {
 		if (data != NULL && data->dma_used)
 			BDEV_WR(BCHP_SDIO_1_HOST_SDMA, data->dma_address);
-		BDEV_WR(BCHP_SDIO_1_HOST_BLOCK,
-			SDHC_MAKE_BLK_REG(data->block_count,
-					  EMMC_BLOCK_SIZE, HOST_BUF_SIZE));
+
+		if (data != NULL)
+			BDEV_WR(BCHP_SDIO_1_HOST_BLOCK,
+				SDHC_MAKE_BLK_REG(data->block_count,
+						  EMMC_BLOCK_SIZE, HOST_BUF_SIZE));
 	}
 	cmd_mode = get_cmd_mode(cmd->index);
 
@@ -527,8 +529,9 @@ static int issue_cmd(struct mmc_cmd *cmd, struct mmc_data *data)
 
 	/* If the command has a data transfer, wait for transfer complete */
 	if (data_xfer) {
-		if (wait_xfer_complete(data))
-			goto err;
+		if (data != NULL)
+			if (wait_xfer_complete(data))
+				goto err;
 	}
 	/*
 	 * If command is using BUSY signalling, also wait for DATA INHIBIT

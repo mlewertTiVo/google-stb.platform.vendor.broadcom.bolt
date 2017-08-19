@@ -66,6 +66,7 @@ int eth_getmtu(ether_info_t *, int port);
 void eth_gethwaddr(ether_info_t *, uint8_t * hwaddr);
 void eth_sethwaddr(ether_info_t *, uint8_t * hwaddr);
 void eth_setmulticast_hwaddr(ether_info_t *eth, uint8_t *hwaddr);
+void eth_unsetmulticast_hwaddr(ether_info_t *eth, uint8_t *hwaddr);
 bool eth_getlinkstatus(ether_info_t *, int *linkstatus);
 int eth_getspeed(ether_info_t *, int *speed);
 int eth_setspeed(ether_info_t *, int speed);

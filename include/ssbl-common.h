@@ -37,6 +37,15 @@ typedef struct {
 } moca_params;
 
 typedef struct {
+	char *enet_node;
+	int rgmii;
+	char *phy_type;
+	char *mdio_mode;
+	char *phy_speed;
+	char *phy_id;
+} ext_moca_params;
+
+typedef struct {
 	const char *name;  /* Name given to gpio button */
 	const char *gpio;  /* Name of the connected GPIO controller i.e. upg_gio or upg_gio_aon */
 	unsigned int pin;  /* Pin Value of the connected gpio */
@@ -130,6 +139,7 @@ typedef struct ssbl_board_params
 	uint32_t     rtsdefault;
 	enet_params  enet[NUM_ENET+1];
 	moca_params  moca[NUM_MOCA+1];
+	ext_moca_params external_moca[NUM_EXT_MOCA+1];
 	sdio_params  sdio[NUM_SDIO+1];
 	struct reg_update sdio_pinsel;
 	gpio_key_params gpio_key[MAX_GPIO_KEY+1];
@@ -184,7 +194,7 @@ struct memory_area {
 	uint64_t offset; /* in bytes */
 	unsigned int size; /* in bytes, max of 4GB (one byte short) */
 	uint32_t options; /* preferred MEMC, 4GB boundary, offset and so on */
-	char *tag;
+	char tag[8]; /* max 7 chars after excluding terminating null */
 };
 
 /* FSBL provided array of boards. */

@@ -254,6 +254,7 @@ struct emmc_chip {
 	int boot_device;		/* TRUE if this is the boot device */
 	int probing;			/* TRUE if we are probing the device */
 	int last_cmd;
+	int last_partition;
 	struct rpmb_key rpmb_key;
 };
 

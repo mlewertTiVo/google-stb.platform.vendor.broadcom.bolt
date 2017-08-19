@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -68,6 +66,10 @@ void set_guard_page(uint32_t *tbl)
 		(SSBL_PAGE_TABLE_2_SIZE + (uint32_t)pt_baseaddr);
 	uint32_t pa;
 	uint32_t n;
+
+	/* if entire section is invalid, no need for refinement */
+	if (*tbl == 0)
+		return;
 
 	/* Change the 1st-level section mapping to a page-table descriptor */
 	n = (uintptr_t)pt_baseaddr | PT_TYPE;

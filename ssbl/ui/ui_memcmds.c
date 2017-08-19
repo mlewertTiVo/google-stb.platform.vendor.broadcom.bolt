@@ -81,7 +81,7 @@ static int ui_cmd_reserve_memory(ui_cmdline_t *cmd, int argc, char *argv[])
 	uint64_t alignment = 1024*1024; /* 1MB, by default */
 	unsigned int options = 0;
 	const char *x;
-	char *tag = NULL;
+	const char *tag;
 	int64_t retval;
 
 	if (cmd_sw_isset(cmd, "-4gb"))
@@ -112,9 +112,11 @@ static int ui_cmd_reserve_memory(ui_cmdline_t *cmd, int argc, char *argv[])
 		}
 	}
 
-	if (cmd_sw_value(cmd, "-memc", &x))
+	if (cmd_sw_value(cmd, "-memc", &x)) {
 		memc_selection = atoi(x) & BOLT_RESERVE_MEMORY_OPTION_MEMC_MASK;
-	options |= memc_selection;
+		options &= ~BOLT_RESERVE_MEMORY_OPTION_MEMC_MASK;
+		options |= memc_selection;
+	}
 
 	if (cmd_sw_isset(cmd, "-nomap"))
 		options |= BOLT_RESERVE_MEMORY_OPTION_DT_NOMAP;
@@ -122,8 +124,8 @@ static int ui_cmd_reserve_memory(ui_cmdline_t *cmd, int argc, char *argv[])
 	if (cmd_sw_isset(cmd, "-reuse"))
 		options |= BOLT_RESERVE_MEMORY_OPTION_DT_REUSABLE;
 
-	if (cmd_sw_value(cmd, "-tag", &x))
-		tag = strdup(x);
+	if (!cmd_sw_value(cmd, "-tag", &tag))
+		tag = NULL;
 
 	x = cmd_getarg(cmd, 0);
 	if (x == NULL) {

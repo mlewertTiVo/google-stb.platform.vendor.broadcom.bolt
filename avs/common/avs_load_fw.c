@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -283,7 +283,7 @@ static void avs_get_default_params(struct at_initialization *params)
 	params->polling_delay = DEFAULT_POLLING_DELAY;
 
 #ifdef DVFS_SUPPORT
-#if defined(CONFIG_BCM7260A0) || defined(CONFIG_BCM7268A0) || defined(CONFIG_BCM7271A0)
+#if defined(CONFIG_BCM7260A0)
 #define DEFAULT_DVFS_VOLTAGE 900
 #define DEFAULT_SCALING_FACTOR 150 /* 1.5 times */
 #else

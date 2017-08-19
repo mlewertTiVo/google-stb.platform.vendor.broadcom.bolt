@@ -178,7 +178,7 @@ my %extra_defines = ();
 my $image = undef;
 
 # Upgradable Firmware Set (UFS)
-my @sections_of_interest = ("AVS", "MEMSYS", "BFW");
+my @sections_of_interest = ("FIRST_AVS", "FIRST_MEMSYS", "FIRST_BFW");
 my %ufs_list = ();
 my $ufs_base_offset = 0xffffffff;
 my $ufs_max_offset = 0;
@@ -426,21 +426,21 @@ sub patch_presence($$)
 
 sub calc_ufs()
 {
-	$bfw_text_offs = cfg_value("BFW_TEXT_OFFS");
+	$bfw_text_offs = cfg_value("FIRST_BFW_TEXT_OFFS");
 
 	# hard wired ordering of BFW, AVS & MEMSYS binary blobs
 	$ufs_bfw_base = 0x00000;
 
-	$ufs_avs_base = cfg_value("AVS_TEXT_OFFS") -
+	$ufs_avs_base = cfg_value("FIRST_AVS_TEXT_OFFS") -
 		$bfw_text_offs;
 
 	$ufs_metadata =  cfg_value("UFS_PARAMS");
 
-	$ufs_memsys_base = cfg_value("MEMSYS_TEXT_OFFS") -
+	$ufs_memsys_base = cfg_value("FIRST_MEMSYS_TEXT_OFFS") -
 		$bfw_text_offs;
 
-	$ufs_max_size = (cfg_value("MEMSYS_TEXT_OFFS") +
-		cfg_value("MEMSYS_SIZE")) - $bfw_text_offs
+	$ufs_max_size = (cfg_value("FIRST_MEMSYS_TEXT_OFFS") +
+		cfg_value("FIRST_MEMSYS_SIZE")) - $bfw_text_offs
 			if ($ufs_max_size == 0);
 
 	if ($arg_debug) {
@@ -624,7 +624,7 @@ sub patch_ufs_metadata($$$$$$)
 		patch_u32($img,
 			$ufs_metabase + 0x20, $ufs_memsys_base);
 
-		my $cfg_memsys_size = cfg_value("MEMSYS_SIZE");
+		my $cfg_memsys_size = cfg_value("FIRST_MEMSYS_SIZE");
 		patch_u32($img,
 			$ufs_metabase + 0x24, scalar $cfg_memsys_size);
 	} else {
@@ -653,14 +653,14 @@ sub assemble_sections_of_interest($$$)
 
 	for my $section (keys %ufs_list) {
 		# Perl 5.8 compat
-		if ($section eq "AVS") {
+		if ($section eq "FIRST_AVS") {
 			$avs = get_avs_file(0);
 			$has_avs = 1
 				if (defined $avs);
-		} elsif ($section eq "BFW") {
+		} elsif ($section eq "FIRST_BFW") {
 			check_file_is_good($bfw);
 			$has_bfw = 1;
-		} elsif ($section eq "MEMSYS") {
+		} elsif ($section eq "FIRST_MEMSYS") {
 			if (! cfg_is("CFG_NOSHMOO")) {
 				# A BOLT build should always generate
 				# a memsys file.
@@ -754,14 +754,6 @@ sub do_secpatch($$$$)
 	$has_memsys = 1
 		if (! cfg_is("CFG_NOSHMOO"));
 
-
-	# Offset into bolt.bin image for metadata is UFS_PARAMS
-	# with respect to BFW base.
-	my $offset = cfg_value("BFW_TEXT_OFFS");
-
-	patch_ufs_metadata(\$image, $offset,
-			$has_avs, $has_bfw, $has_memsys, $avs);
-
 	write_binfile($fname, $image)
 		if (! cfg_is("CFG_ZEUS5_0"));
 }
@@ -775,7 +767,6 @@ my $patched_bolts = 0;
 get_extra_defines();
 get_config_defines();
 scan_for_sections_of_interest();
-calc_ufs();
 
 
 for (my $i = 0; $i < @list_pfxs; $i++) {

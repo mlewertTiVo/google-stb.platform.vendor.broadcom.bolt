@@ -40,6 +40,7 @@
 
 #if defined(DVFS_SUPPORT)
 #include "pmap.h"
+#include "avs_dvfs.h"
 #endif
 
 /*  *********************************************************************
@@ -52,6 +53,7 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[]);
 #if defined(DVFS_SUPPORT)
 static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[]);
+static unsigned int dvfs_show_board_config(struct board_type *b, struct fsbl_info *inf);
 #endif
 #endif
 static int ui_cmd_rts(ui_cmdline_t *cmd, int argc, char *argv[]);
@@ -112,7 +114,7 @@ int ui_init_flashcmds(void)
 			"-forget;forget saved board selection"
 );
 #if defined(DVFS_SUPPORT)
-	cmd_addcmd("pmap", ui_cmd_pmap, NULL, "list all, or select a PMap",
+	cmd_addcmd("pmap", ui_cmd_pmap, NULL, "Select or clear a PMap",
 			"pmap [-set=N] where N is the number shown when listing PMap",
 			"-set=*;program and save to flash PMap|"
 			"-clear;unprogram and unset flash saved PMap (will then use board defaults)"
@@ -710,34 +712,11 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[])
 	}
 	xprintf(" AVS %s, load/run status: %x\n", s, inf->avs_err);
 
-#if defined(DVFS_SUPPORT)
-	{
-		const struct dvfs_params *dvfs = board_dvfs();
-		char *ds;
-
-		b = board_thisboard();
-		xprintf(" AVS domains: %d\n", AVS_DOMAINS(b->avs));
-
-		switch (dvfs->mode) {
-		case avs_mode_e:
-			ds = "avs";
-			break;
-		case dfs_mode_e:
-			ds = "dfs";
-			break;
-		case dvfs_mode_e:
-			ds = "dvfs";
-			break;
-		default:
-			ds = "?";
-			break;
-		}
-
-		xprintf(" DVFS mode: %s (%d), ", ds, dvfs->mode);
-		xprintf(" pmap: %d, ", dvfs->pmap);
-		xprintf(" pstate: %d\n", dvfs->pstate);
-	}
+#if defined(DVFS_SUPPORT) && !defined(SECURE_BOOT)
+	if(dvfs_show_board_config(b, inf))
+		return BOLT_ERR;
 #endif
+
 	if (CFG_MONITOR_OVERTEMP)
 		xprintf(" Overtemp park check %sabled\n",
 			(inf->saved_board.hardflags &
@@ -822,10 +801,48 @@ static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[])
 }
 
 #if defined(DVFS_SUPPORT)
+static unsigned int dvfs_show_board_config(struct board_type *b, struct fsbl_info *inf)
+{
+	char *ds;
+	unsigned int pmap_id;
+	const struct dvfs_params *dvfs = board_dvfs();
+
+	if (!dvfs)
+		return BOLT_ERR_INV_PARAM;
+
+	b = board_thisboard();
+	xprintf(" AVS domains: %d\n", AVS_DOMAINS(b->avs));
+
+	switch (dvfs->mode) {
+	case avs_mode_e:
+		ds = "avs";
+		break;
+	case dfs_mode_e:
+		ds = "dfs";
+		break;
+	case dvfs_mode_e:
+		ds = "dvfs";
+		break;
+	default:
+		ds = "?";
+		break;
+	}
+
+	pmap_id = FSBL_HARDFLAG_PMAP_ID(inf->saved_board.hardflags);
+	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD) {
+		/* respect the board default PMap configuration */
+		pmap_id = dvfs->pmap;
+	}
+	xprintf(" DVFS mode: %s (%d), ", ds, dvfs->mode);
+	xprintf(" pmap: %d, ", pmap_id);
+	xprintf(" pstate: %d\n", dvfs->pstate);
+	return BOLT_OK;
+}
+
 static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 {
 	bool set_pmap = false, clear_pmap = false;
-	int i, pmap_id_old, pmap_id_new;
+	int pmap_id_old, pmap_id_new;
 	const char *s;
 	struct fsbl_info *inf = board_info();
 	uint32_t hf_new, hf_old;
@@ -849,32 +866,19 @@ static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 		return BOLT_ERR;
 	}
 
+	if (!set_pmap && !clear_pmap) {
+		xprintf("Either set or clear PMap option needs to be sppecified.\n");
+		return BOLT_ERR_INV_PARAM;
+	}
+
 	pmap_id_old = board_pmap();
 	if (pmap_id_old >= PMAP_MAX)
 		xprintf("Stored PMap ID %d is invalid.\n", pmap_id_old);
 
-	if (!set_pmap && !clear_pmap) {
-		for (i=0; i<(int)ARRAY_SIZE(pmapTable); ++i) {
-			char index[4]; /* enough for [0..999] */
-
-			num_domains_pmap = pmapTable[i].num_domains;
-			if (num_domains_pmap != 0 &&
-				num_domains_board != num_domains_pmap) {
-				index[0] = '*';
-				index[1] = 0;
-			} else {
-				sprintf(index, "%d", i);
-			}
-
-			xprintf("%s)\t%s (%d)%s\n", index, pmapTable[i].desc,
-				num_domains_pmap, (pmap_id_old == i) ? " *" : "");
-		}
-		return BOLT_OK;
-	} else if (set_pmap) {
+	if (set_pmap) {
 		pmap_id_new = atoi(s);
 		if (pmap_id_new < 0 || pmap_id_new >= PMAP_MAX) {
-			err_msg("PMap must be [0..%d]. %d is invalid.",
-				PMAP_MAX-1, pmap_id_new);
+			err_msg("PMap %d is invalid.", pmap_id_new);
 			return BOLT_ERR;
 		}
 		num_domains_pmap = pmapTable[pmap_id_new].num_domains;

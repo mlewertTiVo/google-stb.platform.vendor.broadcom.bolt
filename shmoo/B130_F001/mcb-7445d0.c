@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2014, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -20,10 +18,10 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x0132a6ef,	/* 0 */
 	0x00000000,	/* 1 */
 	0x00000000,	/* 2 */
-	0x927d3ece,	/* 3 */
-	0x00030301,	/* 4 */
-	0x00001302,	/* 5 */
-	0x003036b3,	/* 6 */
+	0x9cd973f2,	/* 3 */
+	0x00060301,	/* 4 */
+	0x00002302,	/* 5 */
+	0x006042a5,	/* 6 */
 	0x0000b130,	/* 7 */
 	0x0000f001,	/* 8 */
 	0x00001100,	/* 9 */
@@ -151,7 +149,7 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x0010c000,	/* 131 */
 	0x00000000,	/* 132 */
 	0x00000000,	/* 133 */
-	0x00000000,	/* 134 */
+	0x0a291932,	/* 134 */
 	0x00000000,	/* 135 */
 	0x00000000,	/* 136 */
 	0x00000000,	/* 137 */
@@ -174,14 +172,14 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 /* 7445D0_1067MHz_32b_dev4Gx16_DDR3-2133N_le.mcb
 */
 static const uint32_t mcb_1067mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0xffffffff,  0x262d248b,	/* -1 */
+	0xffffffff,  0x3ae58ed3,	/* -1 */
 }; /* 0 difference */
 
 /* 7445D0_1067MHz_32b_dev4Gx8_DDR3-2133N_le.mcb
 */
 static const uint32_t mcb_1067mhz_32b_dev4Gx8[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0x906c32de,	/* 3 */
-	0x00000006,  0x002036b4,	/* 6 */
+	0x00000003,  0x9ac86801,	/* 3 */
+	0x00000006,  0x005042a5,	/* 6 */
 	0x0000000f,  0x00000000,	/* 15 */
 	0x0000001c,  0x00001540,	/* 28 */
 	0x0000001d,  0x24060e0e,	/* 29 */
@@ -189,14 +187,14 @@ static const uint32_t mcb_1067mhz_32b_dev4Gx8[] __attribute__ ((section(".mcbdat
 	0x0000004b,  0x00201b08,	/* 75 */
 	0x0000004c,  0x0616160b,	/* 76 */
 	0x00000053,  0x00002841,	/* 83 */
-	0xffffffff,  0x220b0cab,	/* -1 */
+	0xffffffff,  0x36c376f1,	/* -1 */
 }; /* 9 differences */
 
 /* 7445D0_800MHz_32b_dev4Gx16_DDR3-1600K_le.mcb
 */
 static const uint32_t mcb_800mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0x8298043e,	/* 3 */
-	0x00000006,  0x001036b3,	/* 6 */
+	0x00000003,  0x8cd43962,	/* 3 */
+	0x00000006,  0x002042a5,	/* 6 */
 	0x0000000c,  0x00000320,	/* 12 */
 	0x0000001d,  0x1c060b0b,	/* 29 */
 	0x0000001e,  0x060c080b,	/* 30 */
@@ -217,14 +215,14 @@ static const uint32_t mcb_800mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbdat
 	0x0000004f,  0x02014200,	/* 79 */
 	0x00000050,  0x00151113,	/* 80 */
 	0x0000005a,  0x8f800040,	/* 90 */
-	0xffffffff,  0x0662af6b,	/* -1 */
+	0xffffffff,  0x1adb19b3,	/* -1 */
 }; /* 22 differences */
 
 /* 7445D0_800MHz_32b_dev4Gx8_DDR3-1600K_le.mcb
 */
 static const uint32_t mcb_800mhz_32b_dev4Gx8[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0x8096fb4e,	/* 3 */
-	0x00000006,  0x001036b4,	/* 6 */
+	0x00000003,  0x8ac33071,	/* 3 */
+	0x00000006,  0x001042a5,	/* 6 */
 	0x0000000c,  0x00000320,	/* 12 */
 	0x0000000f,  0x00000000,	/* 15 */
 	0x0000001c,  0x00001540,	/* 28 */
@@ -248,14 +246,14 @@ static const uint32_t mcb_800mhz_32b_dev4Gx8[] __attribute__ ((section(".mcbdata
 	0x00000050,  0x00151113,	/* 80 */
 	0x00000053,  0x00002841,	/* 83 */
 	0x0000005a,  0x8f800040,	/* 90 */
-	0xffffffff,  0x02609d8b,	/* -1 */
+	0xffffffff,  0x16b907d1,	/* -1 */
 }; /* 25 differences */
 
 /* 7445D0_933MHz_32b_dev4Gx16_DDR3-1866M_le.mcb
 */
 static const uint32_t mcb_933mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0x8a1365e6,	/* 3 */
-	0x00000006,  0x002036b3,	/* 6 */
+	0x00000003,  0x945f9b0a,	/* 3 */
+	0x00000006,  0x004042a5,	/* 6 */
 	0x0000000c,  0x000003a5,	/* 12 */
 	0x0000001d,  0x20060d0d,	/* 29 */
 	0x0000001e,  0x070e090d,	/* 30 */
@@ -276,7 +274,7 @@ static const uint32_t mcb_933mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbdat
 	0x0000004f,  0x02418200,	/* 79 */
 	0x00000050,  0x00191516,	/* 80 */
 	0x0000005a,  0x8f80004b,	/* 90 */
-	0xffffffff,  0x155972bb,	/* -1 */
+	0xffffffff,  0x29f1dd03,	/* -1 */
 }; /* 22 differences */
 
 const struct memsys_info __maybe_unused shmoo_data[] __attribute__ ((section(".mcbtable"))) = {
@@ -296,13 +294,13 @@ const struct memsys_info __maybe_unused shmoo_data[] __attribute__ ((section(".m
 /* ddr4_1200MHz_32b_dev4Gx16_DDR4-2400U_le.mcb
 */
 static const uint32_t ddr4_1200mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0xbbba9230,	/* 3 */
-	0x00000006,  0x001036b5,	/* 6 */
+	0x00000003,  0xbbbe3f84,	/* 3 */
+	0x00000006,  0x00104297,	/* 6 */
 	0x0000000c,  0x000004b0,	/* 12 */
 	0x0000000d,  0x00000001,	/* 13 */
 	0x0000001a,  0x00000004,	/* 26 */
 	0x0000001b,  0x00010b20,	/* 27 */
-	0x0000001c,  0x00000001,	/* 28 */
+	0x0000001c,  0x00000131,	/* 28 */
 	0x0000001d,  0x27071212,	/* 29 */
 	0x0000001e,  0x09121012,	/* 30 */
 	0x0000001f,  0x01143138,	/* 31 */
@@ -312,7 +310,7 @@ static const uint32_t ddr4_1200mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbd
 	0x00000027,  0x00000220,	/* 39 */
 	0x00000028,  0x00000800,	/* 40 */
 	0x00000029,  0x00000440,	/* 41 */
-	0x0000002a,  0x0000080f,	/* 42 */
+	0x0000002a,  0x00000810,	/* 42 */
 	0x00000035,  0x000001d8,	/* 53 */
 	0x00000037,  0x10080000,	/* 55 */
 	0x00000038,  0x0010102c,	/* 56 */
@@ -321,6 +319,8 @@ static const uint32_t ddr4_1200mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbd
 	0x0000003b,  0x000388c0,	/* 59 */
 	0x0000003c,  0x2f7fffff,	/* 60 */
 	0x0000003d,  0x003f3fff,	/* 61 */
+	0x0000003e,  0x00000044,	/* 62 */
+	0x00000045,  0x00009000,	/* 69 */
 	0x00000047,  0x00000940,	/* 71 */
 	0x00000048,  0x00000109,	/* 72 */
 	0x00000049,  0x00000028,	/* 73 */
@@ -339,11 +339,12 @@ static const uint32_t ddr4_1200mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbd
 	0x0000005f,  0x00000440,	/* 95 */
 	0x00000060,  0x0000080f,	/* 96 */
 	0x00000076,  0x0000006e,	/* 118 */
+	0x00000086,  0x00000001,	/* 134 */
 	0x0000008c,  0x0000003c,	/* 140 */
 	0x0000008e,  0x0000003c,	/* 142 */
 	0x0000008f,  0xffffffff,	/* 143 */
-	0xffffffff,  0x78a7cb4f,	/* -1 */
-}; /* 46 differences */
+	0xffffffff,  0x78af25f7,	/* -1 */
+}; /* 49 differences */
 
 static const char tag_ddr4_1200mhz_32b_dev4Gx16[] __attribute__ ((section(".mcbdata"))) = "ddr4";
 const struct memsys_info __maybe_unused customshmoo_data[] __attribute__ ((section(".mcbsubtable"))) = {
