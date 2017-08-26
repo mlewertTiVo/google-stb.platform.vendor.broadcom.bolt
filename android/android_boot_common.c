@@ -386,6 +386,10 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
 		" androidboot.quiescent=%d", is_quiescent_mode());
 
+	/* bolt E1 - we are always 'orange' state. */
+	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
+		" androidboot.verifiedbootstate=orange");
+
 	os_sprintf(dt_add_cmd, "dt add node / firmware");
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add node /firmware android");

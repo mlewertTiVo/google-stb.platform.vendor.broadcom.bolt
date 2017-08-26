@@ -67,6 +67,8 @@ struct fastboot_ptentry
  */
 #define FB_HS_OVERHEAD 8
 
+#define MAX_PTN 64
+
 /* Fastboot context information */
 struct fastboot_info
 {
@@ -157,5 +159,7 @@ extern struct fastboot_ptentry *fastboot_flash_find_ptn(const char *name);
 extern struct fastboot_ptentry *fastboot_flash_get_ptn(unsigned n);
 extern unsigned int fastboot_flash_get_ptn_count(void);
 extern void fastboot_flash_dump_ptn(void);
+extern int fastboot_populate_canned_gpt(const uint8_t *data, const uint32_t size,
+	struct fastboot_ptentry *entry, unsigned int *total);
 
 #endif /* _FASTBOOT_H */
