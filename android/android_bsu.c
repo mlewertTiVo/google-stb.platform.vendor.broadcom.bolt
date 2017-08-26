@@ -127,4 +127,7 @@ void android_bsu_entry(unsigned long unused, unsigned long param1,
 	os_sprintf(buffer, "%s", DROID_PRODUCT);
 	env_setenv("PRODUCTNAME", buffer, ENV_FLG_BUILTIN);
 #endif /* DROID_PRODUCT */
+
+	os_printf("Validating GPT (may update)...\n");
+	fastboot_process_canned_gpt();
 }
