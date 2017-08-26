@@ -29,11 +29,16 @@ OBJS := init.o arm-eabi.o gpt_table_in_flash.o android_bsu.o \
 ifeq ($(CFG_TRUSTZONE_MON),1)
 OBJS += android_trusty_boot.o
 endif
+OBJS += gpt.bin.gen.o
 OBJS := $(addprefix $(ODIR)/, $(OBJS))
+
+# for the generated partition table inclusion.
+vpath %.c $(ODIR)
 
 BSU = $(ODIR)/android_bsu.elf
 
 INCFLAGS = \
+	-I. \
 	-I$(GEN)/android/boltinc/include \
 	-I$(GEN)/android/boltinc/include/arm \
 	-I$(GEN)/android/boltinc/include/$(FAMILY)

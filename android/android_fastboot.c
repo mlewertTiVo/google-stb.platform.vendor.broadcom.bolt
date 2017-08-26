@@ -67,9 +67,6 @@
  * MTU size (1500 bytes) and also a power of 2 for efficient cache data fetch*/
 #define TCP_RECV_BUFFER_SIZE	(32*1024)
 
-/* Assume Android platform does not need more than 64 partitions */
-#define MAX_PTN 64
-
 /* Device state to determine if it unlocked (flashable) or locked (unflashable) */
 #define UNLOCKED	(0)
 #define LOCKED		(1)
@@ -2743,4 +2740,76 @@ exit:
 	fastboot_uninit();
 
 	return BOLT_OK;
+}
+
+/* variables present in the auto-generated gpt module. */
+extern const uint32_t gpt_4_blimg_size;
+extern const uint8_t gpt_4_blimg_data[];
+
+void fastboot_process_canned_gpt(void)
+{
+	int res = BOLT_OK;
+	char *fb_flashdev_mode_str;
+	struct fastboot_ptentry mem_ptable[MAX_PTN];
+	unsigned int mem_pcount;
+	int needs_flashing = 0;
+	unsigned int i;
+	struct fastboot_ptentry gpt_ptn;
+	uint8_t *transfer_buffer = NULL;
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (fb_flashdev_mode_str == NULL) {
+		os_printf("gpt-update: abort - no FB_DEVICE_TYPE\n");
+		return;
+	}
+
+	os_sprintf(fb_info.flash_devname, fb_flashdev_mode_str);
+	res = fastboot_discover_gpt_tables(fb_info.flash_devname);
+	if (res) {
+		os_printf("gpt-update: failed - no valid gpt in %s\n", fb_info.flash_devname);
+		return;
+	}
+
+	if (!gpt_4_blimg_size) {
+		os_printf("gpt-update: abort - no canned gpt\n");
+		return;
+	}
+
+	os_memset(mem_ptable, 0, sizeof(mem_ptable));
+	mem_pcount = 0;
+	fastboot_populate_canned_gpt(gpt_4_blimg_data, gpt_4_blimg_size, mem_ptable, &mem_pcount);
+	if (!mem_pcount) {
+		os_printf("gpt-update: failed - not a valid canned gpt\n");
+		return;
+	}
+
+	if (mem_pcount != pcount) {
+		os_printf("gpt-update: device count %d != memory count %d\n", pcount, mem_pcount);
+	}
+	for (i = 0 ; i < mem_pcount ; i++) {
+		needs_flashing = os_memcmp(mem_ptable + i, ptable + i, sizeof(struct fastboot_ptentry));
+		if (needs_flashing != 0) {
+			if (0 == os_strcmp(ptable[i].name, "bsu")) {
+				os_printf("gpt-update: refusing to update gpt changing bootloader partition\n");
+				os_printf("gpt-update: for this action, a manual process is required.\n");
+				needs_flashing = 0;
+				break;
+			}
+			os_printf("gpt-update: partition %d differs\n", i);
+			needs_flashing = 1;
+			break;
+		}
+	}
+
+	if (needs_flashing) {
+		os_sprintf(&gpt_ptn.name[0], "gpt");
+		gpt_ptn.length = SIZEOF_GPT * BYTES_PER_LBA;
+		gpt_ptn.start = 0;
+		gpt_ptn.flags = 0;
+		download_bytes = gpt_4_blimg_size;
+		transfer_buffer = (uint8_t *)gpt_4_blimg_data;
+		res = fastboot_flash_write_raw_image(fb_flashdev_mode_str, transfer_buffer, &gpt_ptn);
+		os_printf("gpt-update: requiring gpt update, applied: %d\n", res);
+		/* now the standard bsu process would reload the new gpt automatically. */
+	}
 }
