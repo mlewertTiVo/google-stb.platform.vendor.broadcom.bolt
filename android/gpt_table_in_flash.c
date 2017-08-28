@@ -229,30 +229,6 @@ static int gpt_get_table(const char *devname, efi_ptable *ptbl, u32 *numEntriesp
 		return 0;
 	}
 
-/* FIXME - we don't deal with alternate GPT. Kept original code from u-boot */
-#if 0
-	/* Check alternate GPT table */
-	/* Read more than is necessary for simplicity but there may be less than 120 entries */
-	isPrimary = 0;
-	ret =
-	    mmc_dev->block_read(CONFIG_SYS_MMC_ENV_DEV,
-				mmc_dev->lba - SIZEOF_GPT, blk_cnt,
-				(void *)ptbl);
-	debug("%s: %d blks read: %s\n", __func__, blk_cnt,
-	      ret == blk_cnt ? "OK" : "ERROR");
-	if (ret != blk_cnt) {
-		error("%s: failed to read alternate GPT ret=%d\n", __func__,
-		      ret);
-		return -1;
-	}
-	if (gpt_is_valid_table(ptbl, isPrimary, blk_cnt, numEntriesp, entry)) {
-		debug("%s: Alternate GPT valid\n", __func__);
-		return 0;
-	} else {
-		error("%s: cannot find valid GPT\n", __func__);
-	}
-#endif
-
 	/* Need to return this specific error code so the caller function can
 	 * decide whether to treat it as a real failure*/
 	return FB_ERR_NO_VALID_GPT;
@@ -269,13 +245,15 @@ err_exit:
 /* 
  * Dynamically register partitions discovered in GPT table 
  */
-static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry)
+static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry,
+	struct fastboot_ptentry *fb_entry, unsigned int *fb_total)
 {
 	u32 i,j;
 	u64 starting_lba;	/* starting sector */
 	u64 ending_lba;		/* ending sector */
 	struct fastboot_ptentry ptn;	/* partition structure to fill in and register */
-   int len;
+	int len;
+	u32 namelen;
 
 	/* 
 	 * For all entries, fill in the name/start/length/flags fields.
@@ -299,9 +277,14 @@ static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry)
 
 		/* Set the name */
 		/* Convert unicode name to simple char * name */
-		for (j=0; j<(sizeof(ptn.name)-1); j++) 
+		namelen = EFI_GPT_NAMELEN_BYTES / sizeof (efi_char16_t);
+		if (sizeof(ptn.name)-1 < namelen)
 		{
-			if (entry->partition_name[j]) 
+			namelen = sizeof(ptn.name)-1;
+		}
+		for (j=0; j<namelen; j++)
+		{
+			if (entry->partition_name[j])
 			{
 				ptn.name[j] = entry->partition_name[j];
 			}
@@ -339,7 +322,14 @@ static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry)
 		os_printf("Adding: %32s, offset 0x%8.8x, size 0x%16.16llx, flags 0x%16.16llx, uuid %48s\n",
 				ptn.name, ptn.start, ptn.length, ptn.flags, ptn.uuid);
 
-		fastboot_flash_add_ptn(&ptn);
+		if (fb_entry == NULL) {
+			fastboot_flash_add_ptn(&ptn);
+		} else {
+			if(*fb_total < MAX_PTN) {
+				os_memcpy(fb_entry + *fb_total, &ptn, sizeof(ptn));
+				*fb_total += 1;
+			}
+		}
 	}
 }
 
@@ -371,7 +361,29 @@ int fastboot_discover_gpt_tables(char *flash_devname)
 		os_printf("%s: failed to get valid gpt table from device\n", __func__);
 		return ret;
 	}
-	register_partitions(numEntries, entry);
+	register_partitions(numEntries, entry, NULL, NULL);
+	return 0;
+}
+
+int fastboot_populate_canned_gpt(const uint8_t *data, const uint32_t size,
+	struct fastboot_ptentry *fb_entry, unsigned int *fb_total)
+{
+	int ret;
+	u32 numEntries;
+	int blk_cnt = SIZEOF_GPT;
+	efi_gpt_entry_t *entry;
+	efi_ptable *ptbl = (efi_ptable *)data;
+
+	*fb_total = 0;
+	if (!size) {
+		return 0;
+	}
+
+	ret = gpt_is_valid_table(ptbl, 1, blk_cnt, &numEntries, &entry);
+	if (!ret) {
+		return 0;
+	}
+	register_partitions(numEntries, entry, fb_entry, fb_total);
 	return 0;
 }
 

@@ -1,17 +1,18 @@
 $VAR1 = {
-          'rdb_sha1' => 'f2sLZjoAkYIhogP66iVbGN5oHVw',
+          'rdb_sha1' => 'crZ2We9HzkH0MWRDIjnI1vrG5Bw',
           'fail' => 0,
-          'date' => 'Tue May 26 16:05:10 PDT 2015',
-          'rdb_version' => 'rdb-v2-14-gc3dd139',
-          'rdb_dir' => '/home/stblinux/clkgen/7439b0/current',
-          'clkgen_version' => 'clkgen-v4-57-ga51e06a',
+          'date' => 'Wed Jul 26 10:01:17 PDT 2017',
+          'rdb_version' => 'rdb-v2-58-g2ac3d57',
+          'rdb_dir' => '/projects/stbgit/stblinux/git/clkgen/7439b0/current',
+          'clkgen_version' => 'clkgen-v4-348-g0a3b524-dirty',
+          'pm_ver' => '???',
           'chip' => '7439b0',
           'aliases' => {
                          'sw_gphy' => 'lc_pdh_ch0'
                        },
           'unhandled_linux_funcs' => 'CPU, HIF, MEMSYS0, MEMSYS1, MPI',
           'invocation' => 'clkgen.pl --sw_nodes -v -g -r -P -c 7439b0',
-          'num_clks' => 144,
+          'num_clks' => 147,
           'clks' => '	brcmstb-clks {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -53,7 +54,7 @@ $VAR1 = {
 		fixed1 : fixed1 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <54000000>;
+			clock-frequency = <0x337f980>;
 		};
 
 		hvd_pwrdn_req : hvd_pwrdn_req@f04e0654 {
@@ -79,7 +80,7 @@ $VAR1 = {
 			clock-names = "hvd_pwrdn_req"; 
 		};
 
-		hvd_ndiv_int : hvd_ndiv_int {
+		hvd_ndiv_int : hvd_ndiv_int@f04e0050 {
 			compatible = "multiplier-clock", "fixed-factor-clock";
 			#clock-cells = <0>;
 			reg = <0xf04e0050 0x4>;
@@ -323,7 +324,7 @@ $VAR1 = {
 		fixed4 : fixed4 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <54000000>;
+			clock-frequency = <0x337f980>;
 		};
 
 		net_pwrdn_req : net_pwrdn_req@f04e0658 {
@@ -347,7 +348,7 @@ $VAR1 = {
 			clock-names = "net_pwrdn_req"; 
 		};
 
-		net_ndiv_int : net_ndiv_int {
+		net_ndiv_int : net_ndiv_int@f04e010c {
 			compatible = "multiplier-clock", "fixed-factor-clock";
 			#clock-cells = <0>;
 			reg = <0xf04e010c 0x4>;
@@ -723,6 +724,36 @@ $VAR1 = {
 			bit-shift = <8>;
 		};
 
+		genet0_select : sw_genetmux0 : genet0_select@f04e0568 {
+			compatible = "brcm,mux-clock", "mux-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e0568 0x4>;
+			bit-shift = <0>;
+			bit-mask = <0x1>;
+			clocks = <&genet0_sys_fast>, <&genet0_sys_slow>; 
+			clock-names = "genet0_sys_fast", "genet0_sys_slow"; 
+		};
+
+		genet1_select : sw_genetmux1 : genet1_select@f04e056c {
+			compatible = "brcm,mux-clock", "mux-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e056c 0x4>;
+			bit-shift = <0>;
+			bit-mask = <0x1>;
+			clocks = <&genet1_sys_fast>, <&genet1_sys_slow>; 
+			clock-names = "genet1_sys_fast", "genet1_sys_slow"; 
+		};
+
+		genet2_select : sw_genetmux2 : genet2_select@f04e0570 {
+			compatible = "brcm,mux-clock", "mux-clock";
+			#clock-cells = <0>;
+			reg = <0xf04e0570 0x4>;
+			bit-shift = <0>;
+			bit-mask = <0x1>;
+			clocks = <&genet2_sys_fast>, <&genet2_sys_slow>; 
+			clock-names = "genet2_sys_fast", "genet2_sys_slow"; 
+		};
+
 		usb0_54_mdio : usb0_54_mdio@f04e057c {
 			compatible = "brcm,brcmstb-gate-clk";
 			#clock-cells = <0>;
@@ -769,7 +800,7 @@ $VAR1 = {
 		fixed3 : fixed3 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <54000000>;
+			clock-frequency = <0x337f980>;
 		};
 
 		moca_pwrdn_req : moca_pwrdn_req@f04e065c {
@@ -785,7 +816,7 @@ $VAR1 = {
 		fixed2 : fixed2 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <54000000>;
+			clock-frequency = <0x337f980>;
 		};
 
 		lc_pwrdn_req : lc_pwrdn_req@f04e0668 {
@@ -801,7 +832,7 @@ $VAR1 = {
 		fixed0 : fixed0 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <54000000>;
+			clock-frequency = <0x337f980>;
 		};
 
 		cpu_pdiv : cpu_pdiv@f04e0008 {
@@ -815,7 +846,7 @@ $VAR1 = {
 			clock-names = "fixed0"; 
 		};
 
-		cpu_ndiv_int : cpu_ndiv_int {
+		cpu_ndiv_int : cpu_ndiv_int@f04e0008 {
 			compatible = "multiplier-clock";
 			#clock-cells = <0>;
 			reg = <0xf04e0008 0x4>;
@@ -850,7 +881,7 @@ $VAR1 = {
 			clock-names = "lc_pwrdn_req"; 
 		};
 
-		lc_ndiv_int : lc_ndiv_int {
+		lc_ndiv_int : lc_ndiv_int@f04e0094 {
 			compatible = "multiplier-clock", "fixed-factor-clock";
 			#clock-cells = <0>;
 			reg = <0xf04e0094 0x4>;
@@ -967,7 +998,7 @@ $VAR1 = {
 			clock-names = "moca_pwrdn_req"; 
 		};
 
-		moca_ndiv_int : moca_ndiv_int {
+		moca_ndiv_int : moca_ndiv_int@f04e00d4 {
 			compatible = "multiplier-clock", "fixed-factor-clock";
 			#clock-cells = <0>;
 			reg = <0xf04e00d4 0x4>;
@@ -1076,7 +1107,7 @@ $VAR1 = {
 		fixed7 : fixed7 {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
-			clock-frequency = <54000000>;
+			clock-frequency = <0x337f980>;
 		};
 
 		sys0_pdiv : sys0_pdiv@f04e01bc {
@@ -1090,7 +1121,7 @@ $VAR1 = {
 			clock-names = "fixed7"; 
 		};
 
-		sys0_ndiv_int : sys0_ndiv_int {
+		sys0_ndiv_int : sys0_ndiv_int@f04e01bc {
 			compatible = "multiplier-clock", "fixed-factor-clock";
 			#clock-cells = <0>;
 			reg = <0xf04e01bc 0x4>;
@@ -1330,6 +1361,9 @@ $VAR1 = {
                        'GENETWOL0' => [
                                         'sw_genetwol0'
                                       ],
+                       'GENETMUX1' => [
+                                        'sw_genetmux1'
+                                      ],
                        'USB30' => [
                                     'sw_usb30'
                                   ],
@@ -1345,6 +1379,9 @@ $VAR1 = {
                        'SPI' => [
                                   'sw_spi'
                                 ],
+                       'GENETMUX2' => [
+                                        'sw_genetmux2'
+                                      ],
                        'HIF' => [
                                   'sw_hif'
                                 ],
@@ -1375,6 +1412,9 @@ $VAR1 = {
                        'GENET0' => [
                                      'sw_genet0'
                                    ],
+                       'GENETMUX0' => [
+                                        'sw_genetmux0'
+                                      ],
                        'MOCAWOL' => [
                                       'sw_mocawol'
                                     ],
@@ -1419,6 +1459,8 @@ $VAR1 = {
 #                                    /GENET0_L2INTR_CLOCK_ENABLE_GENET0
 # [---] R genet0_scb => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_ENABLE_GENET0
 #                                    /GENET0_SCB_CLOCK_ENABLE_GENET0
+# [---]   genet0_select aka sw_genetmux0 => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_SELECT_GENET0
+#                                    /GENET0_CLOCK_SELECT_GENET0
 # [---]   genet0_sys_fast => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_DISABLE
 #                                    /DISABLE_GENET0_SYSTEM_FAST_CLOCK
 # [---] R genet0_sys_pm => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_DISABLE
@@ -1445,6 +1487,8 @@ $VAR1 = {
 #                                    /GENET1_L2INTR_CLOCK_ENABLE_GENET1
 # [---] R genet1_scb => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_ENABLE_GENET1
 #                                    /GENET1_SCB_CLOCK_ENABLE_GENET1
+# [---]   genet1_select aka sw_genetmux1 => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_SELECT_GENET1
+#                                    /GENET1_CLOCK_SELECT_GENET1
 # [---]   genet1_sys_fast => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_DISABLE
 #                                    /DISABLE_GENET1_SYSTEM_FAST_CLOCK
 # [---] R genet1_sys_pm => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_DISABLE
@@ -1471,6 +1515,8 @@ $VAR1 = {
 #                                    /GENET2_L2INTR_CLOCK_ENABLE_GENET2
 # [---] R genet2_scb => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_ENABLE_GENET2
 #                                    /GENET2_SCB_CLOCK_ENABLE_GENET2
+# [---]   genet2_select aka sw_genetmux2 => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_SELECT_GENET2
+#                                    /GENET2_CLOCK_SELECT_GENET2
 # [---]   genet2_sys_fast => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_DISABLE
 #                                    /DISABLE_GENET2_SYSTEM_FAST_CLOCK
 # [---] R genet2_sys_pm => CLKGEN_TRIPLE_GENET_TOP_RGMII_INST_CLOCK_DISABLE
