@@ -1,5 +1,5 @@
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -12,6 +12,10 @@
 ifeq ($(MEMC_REV),)
  MEMC_REV:=dummy
  FSBL_S += shmoo/dummy/lib/memsysinitlib.c
+endif
+
+ifeq ($(MEMC_REV),B220_H00)
+ SHMOO_API := V5
 endif
 
 ifeq ($(MEMC_REV),B300_H00)
