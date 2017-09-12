@@ -17,6 +17,10 @@
 
 #define BOOT_MAGIC        "ANDROID!"
 
+#define BOOT_REASON_MASK       0x000000FF
+#define BOOT_QUIESCENT_MASK    0x00000100
+#define BOOT_DMVERITY_EIO_MASK 0x00000200
+
 /* from arch/arm/include/asm/types.h */
 typedef unsigned short umode_t;
 

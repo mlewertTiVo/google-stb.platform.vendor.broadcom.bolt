@@ -98,6 +98,7 @@ void android_bsu_entry(unsigned long unused, unsigned long param1,
 	unsigned int i;
 	int ret;
 	char buffer[80];
+	uint32_t boot_reason = boot_reason_reg_get();
 
 	bsuapi = (struct bsu_api *)param3;
 	if (bsuapi == NULL)
@@ -106,6 +107,9 @@ void android_bsu_entry(unsigned long unused, unsigned long param1,
 	if ((bsuapi->xfd_signature != BSU_SIGNATURE) ||
 	    (bsuapi->xfd_api_version < BSU_API_VERSION))
 		return;
+
+	os_printf("Validating GPT (may update; reboot)...\n");
+	fastboot_process_canned_gpt(boot_reason);
 
 	os_printf("Adding Android commands to BOLT\n");
 	for (i = 0; i < (sizeof(android_cmd) / sizeof(*android_cmd)); i++) {
@@ -127,7 +131,4 @@ void android_bsu_entry(unsigned long unused, unsigned long param1,
 	os_sprintf(buffer, "%s", DROID_PRODUCT);
 	env_setenv("PRODUCTNAME", buffer, ENV_FLG_BUILTIN);
 #endif /* DROID_PRODUCT */
-
-	os_printf("Validating GPT (may update)...\n");
-	fastboot_process_canned_gpt();
 }

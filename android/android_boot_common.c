@@ -482,7 +482,7 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 			if (p != NULL) {
 				*p = '\0';
 			}
-			fastboot_discover_gpt_tables(la->la_device);
+			fastboot_discover_gpt_tables(la->la_device, 1);
 			if (p != NULL) {
 				*p = '.';
 			}
@@ -859,7 +859,7 @@ static int bolt_imgload(bolt_loadargs_t *la)
 		/* always re-populate GPT from device to ram to take care of
 		 * the case where android-fastboot command is not called before
 		 * calling android-boot */
-		res = fastboot_discover_gpt_tables(la->la_device);
+		res = fastboot_discover_gpt_tables(la->la_device, 1);
 		if (res < 0) {
 			os_printf("Can't load raw file from %s without GPT\n",
 								la->la_device);
@@ -1139,9 +1139,6 @@ static int recovery_mode_boot_override(void)
 		return ret;
 }
 
-#define BOOT_REASON_MASK       0x000000FF
-#define BOOT_QUIESCENT_MASK    0x00000100
-#define BOOT_DMVERITY_EIO_MASK 0x00000200
 int android_get_boot_partition(ui_cmdline_t *cmd,
 		char *boot_partition, int *is_legacy_boot)
 {
@@ -1162,7 +1159,7 @@ int android_get_boot_partition(ui_cmdline_t *cmd,
 	boot_reason = boot_reason_reg_get();
 	boot_reason_reg_set(0);
 
-   if ((boot_reason & BOOT_REASON_MASK) == 'b') {
+	if ((boot_reason & BOOT_REASON_MASK) == 'b') {
 		boot_path = BOOTPATH_AB_BOOTLOADER_RECOVERY;
 	} else {
 		/* determine if this will be a legacy boot or a a|b update
