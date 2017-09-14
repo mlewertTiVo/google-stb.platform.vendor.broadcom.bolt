@@ -86,6 +86,7 @@ static int fastboot_tx_write_str(const char *buffer);
 static unsigned int dl_image_rx_bytes_expected(void);
 static void fastboot_discover_bolt_ptn(const char *devname, char *bolt_devname);
 static int oem_get_device_lock_state(void);
+extern void clear_dmv_corrupt(const char *partition);
 
 /*
  * Variables
@@ -671,6 +672,30 @@ exit:
 	return BOLT_OK;
 }
 
+static int has_boot_commander()
+{
+	int fd=-1;
+	char *fb_flashdev_mode_str;
+	char flash_devname[20];
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	if (!fb_flashdev_mode_str) {
+		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
+		goto ret_legacy;
+	}
+	os_sprintf(flash_devname, "%s.%s", fb_flashdev_mode_str, BOOT_SLOT_COMMANDER);
+	fd = bolt_open((char *)flash_devname);
+	if (fd < 0) {
+		os_printf("Error opening %s. Can't read boot commander: %d\n", flash_devname, fd);
+		goto ret_legacy;
+	}
+	bolt_close(fd);
+	return 1;
+
+ret_legacy:
+	return 0;
+}
+
 static int fastboot_flash_dev_write(const char *flash_devname,
 					const char *boltimg_devname,
 					const char *partition,
@@ -763,6 +788,9 @@ exit_send_resp:
 	} else {
 		os_printf("Done\n");	
 		os_sprintf(response, "OKAY");
+		if (has_boot_commander()) {
+			clear_dmv_corrupt(partition);
+		}
 	}
 
 	return BOLT_OK;
@@ -841,6 +869,11 @@ static int fastboot_erase_ptn(const char *devname, const char *partition)
 exit:
 	if (fd > 0)
 		bolt_close(fd);
+	if (res == BOLT_OK) {
+		if (has_boot_commander()) {
+			clear_dmv_corrupt(partition);
+		}
+	}
 	return res;
 }
 
@@ -1376,30 +1409,6 @@ static void getvar_partition_size(char *cmd_var, char *response)
 		 * bytes in hex, i.e. "0x00000007255fbc00" */
 		os_sprintf(response, "%#018llx", ptn->length);
 	}
-}
-
-static int has_boot_commander()
-{
-	int fd=-1;
-	char *fb_flashdev_mode_str;
-	char flash_devname[20];
-
-	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
-	if (!fb_flashdev_mode_str) {
-		os_printf("FB_DEVICE_TYPE env var is not defined. Can't read boot commander.\n");
-		goto ret_legacy;
-	}
-	os_sprintf(flash_devname, "%s.%s", fb_flashdev_mode_str, BOOT_SLOT_COMMANDER);
-	fd = bolt_open((char *)flash_devname);
-	if (fd < 0) {
-		os_printf("Error opening %s. Can't read boot commander: %d\n", flash_devname, fd);
-		goto ret_legacy;
-	}
-	bolt_close(fd);
-	return 1;
-
-ret_legacy:
-	return 0;
 }
 
 static int get_boot_commander(struct eio_boot *eio)
