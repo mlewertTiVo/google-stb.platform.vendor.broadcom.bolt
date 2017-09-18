@@ -151,7 +151,7 @@ struct bootloader_img_hdr
 /* The Android-style flash handling */
 
 /* tools to populate and query the partition table */
-extern int fastboot_discover_gpt_tables(char *flash_devname);
+extern int fastboot_discover_gpt_tables(char *flash_devname, int chatty);
 extern int fastboot_validate_gpt_image(unsigned char *gpt_buf_ptr);
 extern void fastboot_flash_clean_all_ptn(void);
 extern void fastboot_flash_add_ptn(struct fastboot_ptentry *ptn);
