@@ -473,7 +473,7 @@ static int fastboot_flash_write_gpt(const char *devname,
 
 	/* Reload the new GPT from flash to ram */
 	os_printf("Reloading partitions from the updated GPT...\n");
-	res = fastboot_discover_gpt_tables(fb_info.flash_devname);
+	res = fastboot_discover_gpt_tables(fb_info.flash_devname, 1);
 
 	/* Since we have just flashed the device with a new GPT image, it is
 	 * expected that a valid GPT can be found on the flash device.
@@ -1141,7 +1141,7 @@ static int fastboot_init(int fb_transport_mode, char *fb_flashdev_name)
 
 	DLOG("Checking GPT table from '%s'...\n", fb_info.flash_devname);
 
-	res = fastboot_discover_gpt_tables(fb_info.flash_devname);
+	res = fastboot_discover_gpt_tables(fb_info.flash_devname, 1);
 
 	/* First check if something is wrong in accessing the flash device */
 	if (FB_ERR_FAIL_TO_ACCESS_FLASH_DEV == res) {
@@ -2746,7 +2746,7 @@ exit:
 extern const uint32_t gpt_4_blimg_size;
 extern const uint8_t gpt_4_blimg_data[];
 
-void fastboot_process_canned_gpt(void)
+void fastboot_process_canned_gpt(uint32_t boot_reason)
 {
 	int res = BOLT_OK;
 	char *fb_flashdev_mode_str;
@@ -2757,21 +2757,21 @@ void fastboot_process_canned_gpt(void)
 	struct fastboot_ptentry gpt_ptn;
 	uint8_t *transfer_buffer = NULL;
 
+	if (!gpt_4_blimg_size) {
+		os_printf("canned-gpt: ignored - no canned gpt\n");
+		return;
+	}
+
 	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
 	if (fb_flashdev_mode_str == NULL) {
-		os_printf("gpt-update: abort - no FB_DEVICE_TYPE\n");
+		os_printf("canned-gpt: abort - no FB_DEVICE_TYPE\n");
 		return;
 	}
 
 	os_sprintf(fb_info.flash_devname, fb_flashdev_mode_str);
-	res = fastboot_discover_gpt_tables(fb_info.flash_devname);
+	res = fastboot_discover_gpt_tables(fb_info.flash_devname, 0);
 	if (res) {
-		os_printf("gpt-update: failed - no valid gpt in %s\n", fb_info.flash_devname);
-		return;
-	}
-
-	if (!gpt_4_blimg_size) {
-		os_printf("gpt-update: abort - no canned gpt\n");
+		os_printf("canned-gpt: failed - invalid gpt in %s\n", fb_info.flash_devname);
 		return;
 	}
 
@@ -2779,12 +2779,12 @@ void fastboot_process_canned_gpt(void)
 	mem_pcount = 0;
 	fastboot_populate_canned_gpt(gpt_4_blimg_data, gpt_4_blimg_size, mem_ptable, &mem_pcount);
 	if (!mem_pcount) {
-		os_printf("gpt-update: failed - not a valid canned gpt\n");
+		os_printf("canned-gpt: failed - not a valid gpt\n");
 		return;
 	}
 
 	if (mem_pcount != pcount) {
-		os_printf("gpt-update: device count %d != memory count %d\n", pcount, mem_pcount);
+		os_printf("canned-gpt: device count %d != memory count %d\n", pcount, mem_pcount);
 	}
 	for (i = 0 ; i < mem_pcount ; i++) {
 		needs_flashing = os_memcmp(mem_ptable + i, ptable + i, sizeof(struct fastboot_ptentry));
@@ -2795,7 +2795,7 @@ void fastboot_process_canned_gpt(void)
 				needs_flashing = 0;
 				break;
 			}
-			os_printf("gpt-update: partition %d differs\n", i);
+			os_printf("canned-gpt: partition %d (%s:%s) differs\n", i, mem_ptable[i].name, ptable[i].name);
 			needs_flashing = 1;
 			break;
 		}
@@ -2809,7 +2809,17 @@ void fastboot_process_canned_gpt(void)
 		download_bytes = gpt_4_blimg_size;
 		transfer_buffer = (uint8_t *)gpt_4_blimg_data;
 		res = fastboot_flash_write_raw_image(fb_flashdev_mode_str, transfer_buffer, &gpt_ptn);
-		os_printf("gpt-update: requiring gpt update, applied: %d\n", res);
-		/* now the standard bsu process would reload the new gpt automatically. */
+		os_printf("canned-gpt: requiring gpt update, applied: %d\n", res);
+		/* now force an immediate restart in bootloader mode to apply the partition change and allow flashing. */
+		if (res == BOLT_OK) {
+			if ((boot_reason & BOOT_REASON_MASK) == 'b') {
+				os_printf("canned-gpt: rebooting into bootloader...\n");
+				boot_reason_reg_set('b');
+				msleep (250);
+				bolt_docommands("reboot");
+			} else {
+				os_printf("canned-gpt: a reboot is needed for full use of the new gpt.\n");
+			}
+		}
 	}
 }
