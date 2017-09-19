@@ -246,7 +246,7 @@ err_exit:
  * Dynamically register partitions discovered in GPT table 
  */
 static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry,
-	struct fastboot_ptentry *fb_entry, unsigned int *fb_total)
+	struct fastboot_ptentry *fb_entry, unsigned int *fb_total, int chatty)
 {
 	u32 i,j;
 	u64 starting_lba;	/* starting sector */
@@ -319,8 +319,10 @@ static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry,
 			entry->unique_partition_guid.b[14], entry->unique_partition_guid.b[15]);
 		ptn.uuid[sizeof(ptn.uuid)-1] = '\0';
 
-		os_printf("Adding: %32s, offset 0x%8.8x, size 0x%16.16llx, flags 0x%16.16llx, uuid %48s\n",
-				ptn.name, ptn.start, ptn.length, ptn.flags, ptn.uuid);
+		if (chatty) {
+			os_printf("Adding: %32s, offset 0x%8.8x, size 0x%16.16llx, flags 0x%16.16llx, uuid %48s\n",
+					ptn.name, ptn.start, ptn.length, ptn.flags, ptn.uuid);
+		}
 
 		if (fb_entry == NULL) {
 			fastboot_flash_add_ptn(&ptn);
@@ -343,7 +345,7 @@ static void register_partitions(u32 numEntries, efi_gpt_entry_t *entry,
  * avoid human intervention as part of the system build process.
  * Returns 0 on success, -1 on failure.
  */
-int fastboot_discover_gpt_tables(char *flash_devname)
+int fastboot_discover_gpt_tables(char *flash_devname, int chatty)
 {
 	u32 numEntries;			/* Number of partition entries */
 	efi_gpt_entry_t *entry;		/* partition entry */
@@ -361,7 +363,7 @@ int fastboot_discover_gpt_tables(char *flash_devname)
 		os_printf("%s: failed to get valid gpt table from device\n", __func__);
 		return ret;
 	}
-	register_partitions(numEntries, entry, NULL, NULL);
+	register_partitions(numEntries, entry, NULL, NULL, chatty);
 	return 0;
 }
 
@@ -383,7 +385,7 @@ int fastboot_populate_canned_gpt(const uint8_t *data, const uint32_t size,
 	if (!ret) {
 		return 0;
 	}
-	register_partitions(numEntries, entry, fb_entry, fb_total);
+	register_partitions(numEntries, entry, fb_entry, fb_total, 0);
 	return 0;
 }
 
