@@ -109,7 +109,7 @@ int splash_script_run(BREG_Handle hReg, BMEM_Handle *phMem,
 		splash_set_surf_params(pSurInfo->ePxlFmt, pSurInfo->ulPitch, pSurInfo->ulWidth, pSurInfo->ulHeight) ;
 
 		/* splash_fillbuffer(splashBuf.apvSurfaceBufAddr[ii] , 0xF8, 0xE0, 0) ; */
-		splash_fillbuffer(pvBuf, 0x00, 0x00, 0x80);
+		splash_fillbuffer(pvBuf, 0x00, 0x00, 0x00);
 
 		if(bmpBuf)
 		{

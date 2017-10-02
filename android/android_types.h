@@ -21,6 +21,11 @@
 #define BOOT_QUIESCENT_MASK    0x00000100
 #define BOOT_DMVERITY_EIO_MASK 0x00000200
 
+/* splash feedback, matches the splash file content format. */
+#define BOOT_SPLASH_DEFAULT    1
+#define BOOT_SPLASH_FASTBOOT   2
+#define BOOT_SPLASH_FAILED     3
+
 /* from arch/arm/include/asm/types.h */
 typedef unsigned short umode_t;
 
