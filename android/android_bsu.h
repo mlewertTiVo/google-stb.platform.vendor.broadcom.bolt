@@ -71,6 +71,9 @@
 #define arch_getticks64	bsuapi->xfn_getticks64
 #define arch_get_timer_freq_hz  bsuapi->xfn_arch_get_timer_freq_hz
 #define aon_reset_string	bsuapi->xfn_aon_reset_string
+#if CFG_SPLASH
+#define splash_feedback	bsuapi->xfn_splash_feedback
+#endif
 
 #define DEBUG
 #if defined(DEBUG)

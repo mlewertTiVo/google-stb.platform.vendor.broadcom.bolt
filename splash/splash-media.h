@@ -72,6 +72,9 @@ data into DDR. */
 enum SplashMediaType {
 	SplashMediaType_eBoot,
 	SplashMediaType_eOverTemp,
+        /* android specials. */
+	SplashMediaType_eFastboot,
+	SplashMediaType_eBootFail,
 	SplashMediaType_eMax,
 } SplashMediaType;
 

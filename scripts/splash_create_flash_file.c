@@ -62,6 +62,8 @@ static void usage(void)
 		"  -b <file>  BMP image to be displayed during bootup.\n"
 		"  -p <file>  PCM audio to be played during bootup\n"
 		"  -t <file>  BMP image to be displayed during overtemp.\n"
+		"  -f <file>  BMP image to be displayed when in fastboot mode.\n"
+		"  -r <file>  BMP image to be displayed when boot failed.\n"
 		"  -o <file>  Output filename\n");
 	exit(0);
 }
@@ -407,8 +409,10 @@ int main(int argc, char *argv[])
 {
 	const uint8_t bsig[] = {'b', 'm', 'p', '0'};
 	const uint8_t tsig[] = {'b', 'm', 'p', '1'};
+	const uint8_t fsig[] = {'b', 'm', 'p', '2'};
+	const uint8_t rsig[] = {'b', 'm', 'p', '3'};
 	const uint8_t psig[] = {'p', 'c', 'm', '0'};
-	char *ofile = NULL, *bfile = NULL, *pfile = NULL, *tfile = NULL;
+	char *ofile = NULL, *bfile = NULL, *pfile = NULL, *tfile = NULL, *ffile = NULL, *rfile = NULL;
 	struct outbuf b;
 	int c, infiles = 0, zipit = 0;
 
@@ -423,9 +427,9 @@ int main(int argc, char *argv[])
 	opterr = 0;
 
 #ifndef NO_ZLIB
-	while ((c = getopt(argc, argv, "zhb:p:t:o:")) != -1)
+	while ((c = getopt(argc, argv, "zhb:p:t:o:f:r:")) != -1)
 #else
-	while ((c = getopt(argc, argv, "hb:p:t:o:")) != -1)
+	while ((c = getopt(argc, argv, "hb:p:t:o:f:r:")) != -1)
 #endif
 		switch (c) {
 		case 'b':
@@ -451,6 +455,14 @@ int main(int argc, char *argv[])
 		case 'h':
 			usage();
 			break;
+		case 'f':
+			ffile = optarg;
+			infiles++;
+			break;
+		case 'r':
+			rfile = optarg;
+			infiles++;
+			break;
 		case '?':
 		default:
 			badopt(c);
@@ -470,6 +482,8 @@ int main(int argc, char *argv[])
 	read_media(&b, bfile, bsig);
 	read_media(&b, pfile, psig);
 	read_media(&b, tfile, tsig);
+	read_media(&b, ffile, fsig);
+	read_media(&b, rfile, rsig);
 
 	write_all(&b, ofile, zipit);
 
