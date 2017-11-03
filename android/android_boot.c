@@ -20,6 +20,7 @@
 #include <lib_physio.h>
 #include <bchp_aon_ctrl.h>
 #include "android_bsu.h"
+#include "android_types.h"
 
 /*  *********************************************************************
     *  android_boot(cmd, argc, argv[])
@@ -47,12 +48,18 @@ int android_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 
 	if (argc > 1) {
 		os_printf("Too many arguments, or an unquoted optional [arg]\n");
+#if CFG_SPLASH
+		splash_feedback(BOOT_SPLASH_FAILED);
+#endif
 		return BOLT_ERR_INV_PARAM;
 	}
 
 	ret = android_boot_addloader();
 	if (ret != BOLT_OK) {
 		os_printf("Failed to add Android img loader to BOLT\n");
+#if CFG_SPLASH
+		splash_feedback(BOOT_SPLASH_FAILED);
+#endif
 		return ret;
 	}
 
@@ -77,8 +84,12 @@ int android_boot(ui_cmdline_t *cmd, int argc, char *argv[])
 	/* Get the boot image based on legacy or a|b system or command
 	 * line switches */
 	ret = android_get_boot_partition(cmd, boot_partition, &is_legacy_boot);
-	if ((ret == BOLT_OK) && !*boot_partition)
+	if ((ret == BOLT_OK) && !*boot_partition) {
+#if CFG_SPLASH
+		splash_feedback(BOOT_SPLASH_FAILED);
+#endif
 		return ret;
+	}
 	if (ret)
 		goto failed;
 
@@ -118,5 +129,8 @@ failed:
 	/* If we reach here then we have failed to boot */
 	os_printf("Boot FAILED\n");
 
+#if CFG_SPLASH
+	splash_feedback(BOOT_SPLASH_FAILED);
+#endif
 	return BOLT_ERR;
 }

@@ -22,6 +22,9 @@
 #include "env_subr.h"
 #include "timer.h"
 #include "board_params.h"
+#if CFG_SPLASH
+#include "splash-api.h"
+#endif
 
 #define BSU_MEMINFOS (NUM_MEMC + 2)
 
@@ -514,6 +517,9 @@ static struct bsu_api bsu_xapi = {
 #if CFG_TRUSTZONE_MON
 	.xfn_tz_smm_set_params = tz_smm_set_params,
 	.xfn_bolt_load_program = bolt_load_program,
+#endif
+#if CFG_SPLASH
+	.xfn_splash_feedback = splash_feedback,
 #endif
 };
 

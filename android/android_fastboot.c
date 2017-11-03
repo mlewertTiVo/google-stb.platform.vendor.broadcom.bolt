@@ -1172,6 +1172,13 @@ static int fastboot_init(int fb_transport_mode, char *fb_flashdev_name)
 
 	os_printf("Ready to accept fastboot cmd\n");
 exit:
+#if CFG_SPLASH
+	if (res == BOLT_OK) {
+		splash_feedback(BOOT_SPLASH_FASTBOOT);
+	} else {
+		splash_feedback(BOOT_SPLASH_FAILED);
+	}
+#endif
 	return res;
 }
 

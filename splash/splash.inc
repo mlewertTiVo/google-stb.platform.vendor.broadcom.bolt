@@ -1,5 +1,5 @@
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -54,8 +54,8 @@ ifeq ($(CFG_SPLASH),1)
       SPLASH_SHOULD_RUN_SPLASHGEN := y
     endif
   else
-    # $(SPLASH_C_RUL) exists, but should not co-exist with $(SPLASH_H_RUL).
-    ifneq (,$(wildcard $(SPLASH_H_RUL)))
+    # $(SPLASH_C_RUL) exists, but should not co-exist with $(SPLASH_H_REG).
+    ifneq (,$(wildcard $(SPLASH_H_REG)))
       SPLASH_AMBIGUOUS_SPLASHGEN := y
     endif
     EXTRA_DEFINES += -DSPLASH_VERSION_2

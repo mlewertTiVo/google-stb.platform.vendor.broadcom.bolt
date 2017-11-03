@@ -311,6 +311,10 @@ struct bsu_api {
 	void (*xfn_tz_smm_set_params)(bolt_loadargs_t *la);
 	int (*xfn_bolt_load_program)(const char *name, bolt_loadargs_t * la);
 #endif
+
+#if CFG_SPLASH
+	void (*xfn_splash_feedback)(int index);
+#endif
 };
 
 #endif /* __BSU_API_H__ */

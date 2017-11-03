@@ -30,4 +30,5 @@ int  splash_audio_script_run(unsigned int size, unsigned int address,
 void *splash_api_get_imgbuff(int idx);
 void splash_api_replace_bmp(uint8_t *bmp, struct splash_rgb *rgb);
 
+void splash_feedback(int idx);
 #endif /* __SPLASH_API_H__ */

@@ -198,6 +198,12 @@ struct SplashMediaInfo *splash_open_media(
 	case SplashMediaType_eOverTemp:
 		buf[3] = '1';
 		break;
+	case SplashMediaType_eFastboot:
+		buf[3] = '2';
+		break;
+	case SplashMediaType_eBootFail:
+		buf[3] = '3';
+		break;
 	case SplashMediaType_eMax:
 	default:
 		rc = BOLT_ERR_IOERR;
