@@ -241,5 +241,17 @@ void splash_api_replace_bmp(uint8_t *bmp, struct splash_rgb *rgb)
 	KFREE(pSplashData);
 }
 
+void splash_feedback(int idx) {
+	struct SplashMediaInfo *smi;
+	struct splash_rgb rgb = {0, 0, 0};
+
+	smi = splash_open_media(idx, SplashMediaFormat_eBmp, NULL);
+	if (smi == NULL || smi->buf == NULL) {
+		err_msg("splash-feedback: failed to open media %d", idx);
+		return;
+	}
+	splash_api_replace_bmp(smi->buf, &rgb);
+}
+
 #endif /* CFG_SPLASH */
 
