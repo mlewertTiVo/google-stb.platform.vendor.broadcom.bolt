@@ -433,7 +433,7 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	// devices do not have a vendor partition.
 	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
 	if (boot_path == BOOTPATH_LEGACY) {
-		os_sprintf(dt_add_cmd, "%s.vendor_verity", fb_flashdev_mode_str);
+		os_sprintf(dt_add_cmd, "%s.vendor", fb_flashdev_mode_str);
 	} else {
 		os_sprintf(dt_add_cmd, "%s.vendor_%s", fb_flashdev_mode_str, BOOT_SLOT_0_SUFFIX);
 	}
@@ -462,10 +462,15 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s 'wait,verify,slotselect'");
 			bolt_docommands(dt_add_cmd);
 		} else {
-		// legacy system mode, we can early-mount both vendor and system.
+			// legacy system mode, we can early-mount both vendor and system.
 			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor type s 'ext4'");
 			bolt_docommands(dt_add_cmd);
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s 'wait,verify'");
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s %s",
+#if defined(DROID_VERITY_n)
+				"'wait'");
+#else
+				"'wait,verify'");
+#endif
 			bolt_docommands(dt_add_cmd);
 
 			os_sprintf(dt_add_cmd, "dt add node /firmware/android/fstab system");
@@ -479,7 +484,12 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 			bolt_docommands(dt_add_cmd);
 			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system type s 'ext4'");
 			bolt_docommands(dt_add_cmd);
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system fsmgr_flags s 'wait,verify'");
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system fsmgr_flags s %s",
+#if defined(DROID_VERITY_n)
+				"'wait'");
+#else
+				"'wait,verify'");
+#endif
 			bolt_docommands(dt_add_cmd);
 		}
 	}
@@ -521,6 +531,12 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 				fastboot_flash_dump_ptn();
 			}
 		}
+	} else {
+#if !defined(DROID_VERITY_n)
+		// TODO: add detection for corrupted verity block in non-AB mode.
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
+		bolt_docommands(dt_add_cmd);
+#endif
 	}
 
 	return bootargs_buflen;
