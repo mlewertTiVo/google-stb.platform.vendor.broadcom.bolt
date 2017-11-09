@@ -50,7 +50,9 @@ CSTRICT	:= -Wall -Wmissing-field-initializers -Wundef -Wextra -Wno-unused-parame
 # Android build tree.  See BoardConfig.mk from Android tree.
 COMMON_FLAGS:= $(INCFLAGS) $(ARCHFLAGS) $(EXTRA_DEFINES) -D_BOLT_
 CFLAGS := $(COMMON_FLAGS) $(ARCH_CFLAGS) -nostdlib -ffreestanding -Os \
-	  $(CSTRICT) -g -ffunction-sections -fdata-sections -DBSU -DDROID_BSU -DDROID_PRODUCT='"${TARGET_BOARD_PLATFORM}"'
+	  $(CSTRICT) -g -ffunction-sections -fdata-sections -DBSU
+CFLAGS += -DDROID_BSU -DDROID_PRODUCT='"${TARGET_BOARD_PLATFORM}"'
+CFLAGS += -DDROID_VERITY_${LOCAL_DEVICE_USE_VERITY}
 AFLAGS := $(COMMON_FLAGS) -D__ASSEMBLER__ -D_ASMLANGUAGE
 LDFLAGS := $(ARCH_LDFLAGS)
 LIBGCC := $(GEN)/android/boltinc/thirdparty/libgcc/libgcc.a
