@@ -241,6 +241,54 @@ static void sf2_sgphy_init(int phy_id)
 #endif
 }
 
+#ifdef BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL
+static void sf2_led_ctrl_init(unsigned int port)
+{
+	unsigned long addr[3];
+	uint32_t reg = 0;
+
+	switch (port) {
+	case 0:
+		addr[0] = BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL;
+		addr[1] = BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING;
+		addr[2] = BCHP_SWITCH_REG_LED_0_CNTRL;
+		break;
+	case 1:
+		addr[0] = BCHP_SWITCH_REG_LED_1_LINK_AND_SPEED_ENCODING_SEL;
+		addr[1] = BCHP_SWITCH_REG_LED_1_LINK_AND_SPEED_ENCODING;
+		addr[2] = BCHP_SWITCH_REG_LED_1_CNTRL;
+		break;
+	case 2:
+		addr[0] = BCHP_SWITCH_REG_LED_2_LINK_AND_SPEED_ENCODING_SEL;
+		addr[1] = BCHP_SWITCH_REG_LED_2_LINK_AND_SPEED_ENCODING;
+		addr[2] = BCHP_SWITCH_REG_LED_2_CNTRL;
+		break;
+	default:
+		return;
+	}
+
+	/* gpio_000 -> link, gpio_001 -> activity */
+	reg |= 1 << BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL_sel_no_link_encode_SHIFT;
+	reg |= 1 << BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL_sel_10m_encode_SHIFT;
+	reg |= 1 << BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL_sel_100m_encode_SHIFT;
+	reg |= 1 << BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_SEL_sel_1000m_encode_SHIFT;
+	BDEV_WR(addr[0], reg);
+
+	/* LED on -> link present, LED off -> no link */
+	reg = 0;
+	reg |= 1 << BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_m10_encode_SHIFT;
+	reg |= 1 << BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_m100_encode_SHIFT;
+	reg |= 3 << BCHP_SWITCH_REG_LED_0_LINK_AND_SPEED_ENCODING_no_link_encode_SHIFT;
+	BDEV_WR(addr[1], reg);
+
+	/* GPHY activity */
+	reg = 0;
+	reg |= 1 << BCHP_SWITCH_REG_LED_0_CNTRL_rx_act_en_SHIFT;
+	reg |= 1 << BCHP_SWITCH_REG_LED_0_CNTRL_tx_act_en_SHIFT;
+
+	BDEV_WR(addr[2], reg);
+}
+#else
 static void sf2_led_ctrl_init(unsigned int port)
 {
 	unsigned long addr;
@@ -289,6 +337,7 @@ static void sf2_led_ctrl_init(unsigned int port)
 	BDEV_WR(BCHP_SWITCH_REG_LED_SERIAL_CNTRL, reg);
 #endif
 }
+#endif
 
 static unsigned int sf2_rgmii_init(sf2_softc *softc)
 {

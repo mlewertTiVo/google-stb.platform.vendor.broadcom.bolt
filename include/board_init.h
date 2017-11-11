@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -69,7 +69,7 @@ int usb_exit(void);
 
 void board_init_avs(void);
 void board_init_rts(void);
-void board_init_rts_show(int show_only_selected);
+int board_init_rts_current_boxmode(void);
 int board_init_rts_update(int rts_id);
 
 void board_init_sata(void);

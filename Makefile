@@ -234,6 +234,7 @@ $(DATE_FILE): famcheck
 	$(Q)echo "const char builddate[] = \"$(BUILDDATE)\";" >> $@
 	$(Q)echo "const char builduser[] = \"$(BUILDUSER)@$(BUILDHOST)\";" >> $@
 	$(Q)echo "const char buildtag[] = \"$(BUILDTAG)\";" >> $@
+	$(Q)echo "const char toolchainver[] = \"$(TOOLCHAINVER)\";" >> $@
 
 help:
 	@echo

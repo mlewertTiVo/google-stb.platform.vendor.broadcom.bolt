@@ -137,6 +137,7 @@ my @configs = (
 my @bsc_freqs = (375000, 390000, 187500, 200000, 
 		 93750, 97500, 46875, 50000);
 
+my @pmaps;
 # ----------------------------------------
 # cmdline options
 my $arg_family = undef;
@@ -1637,9 +1638,27 @@ sub cmd_avs($) {
 	}
 
 	if (defined($o->{pmap})){
-		# TODO: replace 30 with 'PMAP_MAX' of include/${family}/pmap.h
-		if ($o->{pmap} < 0 || $o->{pmap} > 30) {
-			cfg_error("option for pmap must be [0..30]");
+		open my $fh, '<', "include/$arg_family/pmap.h" or
+			die "Can't read file: $!";
+		my $flag=0;
+		if(!scalar @pmaps){
+			while (<$fh>) {
+				if(/enum pmaps \{/) {
+					$flag=1;
+				}
+				if ($flag) {
+					if(/PMap_e(\d)/) {
+						push (@pmaps, $1);
+					}
+					if (/\};/) {
+						$flag=0;
+					}
+				}
+			}
+		}
+		close($fh);
+		if (!grep {$_ eq $o->{pmap}} @pmaps) {
+			cfg_error("Invalid option for pmap");
 		}
 	}
 	else {

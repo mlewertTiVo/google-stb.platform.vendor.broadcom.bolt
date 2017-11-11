@@ -38,6 +38,7 @@
 #include <ssbl-sec.h>
 #include <supplement-fsbl.h>
 #include <overtemp.h>
+#include <net_api.h>
 
 #include <bchp_sun_top_ctrl.h>
 
@@ -52,7 +53,7 @@
 /* "Stringification" of a macro! */
 #define M_STR1(x)	(#x)
 #define M_STR(x)	M_STR1(x)
-#define NODENAME_STR "NODENAME"
+#define DEFAULT_COAP_HALT_WAIT_TIME (BOLT_HZ / 10)   /* 100 ms */
 
 static const char * const logo[] = {
 	"    ,/   ",
@@ -169,8 +170,12 @@ static void bolt_setup_default_env(void)
 
 	/* If NODENAME does not exist, set a default name. */
 	if (!env_getenv(NODENAME_STR)) {
-		char *envmac = env_getenv("ETH0_HWADDR");
-		xsprintf(buffer, "%s-%s", board_name(), envmac);
+		char *env_serial = env_getenv(ENVSTR_BOARD_SERIAL);
+
+		if (env_serial)
+			xsprintf(buffer, "%s-%s", board_name(), env_serial);
+		else
+			xsprintf(buffer, "%s", board_name());
 		env_setenv(NODENAME_STR, buffer,
 			ENV_FLG_BUILTIN | ENV_FLG_NORMAL);
 	}
@@ -256,6 +261,8 @@ static void say_hello(int blink)
 		else if (i == 2)
 			xprintf("(%s %s)\n", builddate, builduser);
 		else if (i == 3)
+			xprintf("%s\n", toolchainver);
+		else if (i == 4)
 			xprintf("Copyright (C) %d Broadcom\n",
 					buildyear);
 		else
@@ -484,33 +491,6 @@ static void bolt_auto_sysinit(int force_init)
 static void bolt_autostart(void)
 {
 	char *env;
-#if CFG_COAP
-	bolt_device_t *netdev;
-	char bolt_cmd[80];
-
-	if (!bolt_docommands("testenv -eq COAP_SSDP_ENABLE 1")) {
-		netdev = bolt_finddev(DEF_NETDEV);
-		if (netdev != NULL) {
-			xsprintf(bolt_cmd, "ifconfig %s -auto",
-				netdev->dev_fullname);
-			if (!bolt_docommands(bolt_cmd)) {
-				bolt_docommands("ssdp start");
-				bolt_docommands("coap listen");
-				/* check the env variable
-				 * "COAP_HALT_CMD"
-				 * before proceeding to execute STARTUP
-				 * "COAP_HALT_CMD" is set to 1
-				 * on receiving the halt command
-				 * from coap client
-				 */
-				xsprintf(bolt_cmd,
-					"testenv -eq COAP_HALT_CMD 1");
-				if (!bolt_docommands(bolt_cmd))
-					return;
-			}
-		}
-	}
-#endif
 	env = env_getenv("STARTUP");
 	if (env) {
 		xprintf("Executing STARTUP...\r");
@@ -605,6 +585,105 @@ static void bolt_dt_off_check(void)
 		xprintf("Note: Automatic DT modification is currently off.\n");
 }
 
+static void bolt_do_auto_start(void)
+{
+	bolt_auto_sysinit(bolt_startflags & FORCE_SYSINIT);
+	bolt_autostart();
+#if defined(S_UNITTEST_AUTOFLASH)
+	bolt_aegis_flash_update_done();
+#endif
+}
+
+static void bolt_coap_halt_cmd_check(void *arg)
+{
+	bolt_timer_t *timer = (bolt_timer_t *)arg;
+	bool timer_expired = TIMER_EXPIRED(*timer);
+	bool coap_halt_recvd = false;
+
+	coap_halt_recvd = (bolt_docommands("testenv -eq COAP_HALT_CMD 1") == 0);
+
+	if (coap_halt_recvd || timer_expired) {
+		bolt_bg_remove(bolt_coap_halt_cmd_check);
+		KFREE(timer);
+	}
+
+	if (!coap_halt_recvd && timer_expired)
+		bolt_do_auto_start();
+}
+
+/*  *********************************************************************
+    *  bolt_init_coap()
+    *
+    *  This routine is called to initialize coap interface.
+    *  It will wait for upto 5 secs for network interface to initialize.
+    *  It will wait for further 100ms(customizable through env variable)
+    *       to allow coap client to send halt command if it wants to
+    *
+    *  Input parameters:
+    *       nothing
+    *
+    *  Return value:
+    *      0 (zero) if listening for CoAP client request to skip auto-execution
+    *        (STARTUP environment variable or SYSINIT),
+    *      1 (one) otherwise
+    ********************************************************************* */
+static int bolt_init_coap(void)
+{
+#if CFG_COAP
+	bolt_device_t *netdev = NULL;
+	int err;
+	bolt_timer_t *coap_halt_timer;
+	char *sleep_time_str;
+	int sleep_time;
+
+	/* wait time to allow coap client to send halt command.
+	 * default wait time 100ms.
+	 * can be customized through STARTUP_WAIT_TIME env.
+	 * units for STARTUP_WAIT_TIME should be millisecs.
+	 */
+
+	if (bolt_docommands("testenv -eq COAP_SSDP_ENABLE 1") != 0)
+		return 1; /* COAP disabled */
+
+	netdev = bolt_finddev(DEF_NETDEV);
+	if (netdev == NULL) {
+		netdev = bolt_waitdev(1000, "USB-Ethernet");
+		if (netdev == NULL || netdev->dev_fullname == NULL)
+			return 1;
+	}
+
+	err = net_init(netdev->dev_fullname);
+	if (err < 0)
+		return 1;
+
+	err = do_dhcp_request(netdev->dev_fullname);
+	if (err != 0)
+		return 1;
+
+	err = do_ssdp_start();
+	if (err != 0)
+		return 1;
+
+	err = do_coap_listen();
+	if (err != 0)
+		return 1;
+
+	sleep_time_str = env_getenv(STARTUP_WAIT_TIME_STR);
+	if (sleep_time_str == NULL)
+		sleep_time = DEFAULT_COAP_HALT_WAIT_TIME;
+	else
+		sleep_time = lib_atoi(sleep_time_str) * BOLT_HZ / 1000;
+
+	coap_halt_timer = (bolt_timer_t *) KMALLOC(sizeof(bolt_timer_t), 0);
+	TIMER_SET(*coap_halt_timer, sleep_time);
+
+	bolt_bg_add(bolt_coap_halt_cmd_check, coap_halt_timer);
+
+	return 0;
+#endif
+	return 1;
+}
+
 /*  *********************************************************************
     *  bolt_main(a,b)
     *
@@ -678,6 +757,7 @@ void bolt_main(int a, int b)
 	bolt_aegis_loop();
 #endif
 	sflags = bolt_autostart_check();
+	bolt_startflags = sflags;
 
 	board_device_init();
 #if (CFG_CMD_LEVEL >= 5)
@@ -729,12 +809,10 @@ void bolt_main(int a, int b)
 		custom_init();
 
 	bolt_dt_off_check();
+
 	if (!(sflags & NO_STARTUP)) {
-		bolt_auto_sysinit(sflags & FORCE_SYSINIT);
-		bolt_autostart();
-#if defined(S_UNITTEST_AUTOFLASH)
-		bolt_aegis_flash_update_done();
-#endif
+		if (bolt_init_coap() == 1)
+			bolt_do_auto_start();
 	}
 
 	/* Replace the BOLT commandline, or do other things

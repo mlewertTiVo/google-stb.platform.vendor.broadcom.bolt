@@ -130,14 +130,14 @@ void select_rescue_loader(void)
 	Rescue Loader will be run */
 }
 
-void fsbl_set_srr(struct board_type *b, struct fsbl_info *info)
+bool fsbl_set_srr(struct board_type *b, struct fsbl_info *info)
 {
 	static const uint32_t MAX_SRR_SIZE_MB = 255;
 	uint32_t size_mb;
 	uint32_t offset_mb;
 
 	if (b == NULL || info == NULL)
-		return;
+		return false;
 
 	/* retrieve the required size of SRR */
 	size_mb = *((uint32_t *)(SRAM_ADDR + PARAM_SRR_SIZE_MB));
@@ -172,12 +172,16 @@ void fsbl_set_srr(struct board_type *b, struct fsbl_info *info)
 			__puts("@");
 			writeint(offset_mb);
 			puts(" failed");
+			info->srr_size_mb = 0;
+			info->srr_offset_mb = 0;
+			return false;
 		}
 	}
 
 	/* pass the information to SSBL so that it is passed up to Linux */
 	info->srr_size_mb = (uint16_t) size_mb;
 	info->srr_offset_mb = (uint16_t) offset_mb;
+	return true;
 }
 
 void fsbl_main(void)
@@ -194,13 +198,13 @@ void fsbl_main(void)
 	int en_avs_thresh;
 #ifndef SECURE_BOOT
 	int bypass_avs;
-	struct boards_nvm_list *nvm_boards;
 #endif
 	uint32_t mhl_power;
 #endif
 	int i;
 	bool warm_boot;
 	__maybe_unused bool resume_ddr_phys;
+	bool is_srr_allocated = false;
 
 	late_cpu_init();
 	late_release_resets();
@@ -299,13 +303,10 @@ void fsbl_main(void)
 	do_shmoo_menu = board_select(&info, SHMOO_SRAM_ADDR);
 
 #ifndef SECURE_BOOT
-	nvm_boards = (struct boards_nvm_list *) SHMOO_SRAM_ADDR;
 	pmap_id = FSBL_HARDFLAG_PMAP_ID(info.saved_board.hardflags);
 	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD)
 		/* board default PMap ID as it is overridden */
 		pmap_id = AVS_PMAP_ID(info.board_types[info.board_idx].avs);
-	if (pmap_id >= nvm_boards->n_pmaps)
-		pmap_id = 0; /* fall back to PMap ID #0 */
 #else /* SECURE BOOT */
 #if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	pmap_id =  DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1) &
@@ -367,6 +368,8 @@ void fsbl_main(void)
 
 	sec_memsys_region_disable();
 
+	is_srr_allocated = fsbl_set_srr(b, &info);
+
 	sec_scramble_sdram(warm_boot);
 
 #if CFG_ZEUS5_0
@@ -397,7 +400,9 @@ void fsbl_main(void)
 	dtu_load(b, warm_boot);
 #endif
 
-	fsbl_set_srr(b, &info); /* after loading BFW */
+	/* if previous set_srr fail, do it again after loading BFW */
+	if (!is_srr_allocated)
+		fsbl_set_srr(b, &info);
 
 	for (i = 0; i < (int)b->nddr; i++) {
 		const struct ddr_info *ddr;

@@ -4,7 +4,7 @@
 <head>
 <meta http-equiv="Content-Type" content="application/xhtml+xml; charset=UTF-8" />
 <meta name="generator" content="AsciiDoc 8.6.9" />
-<title>Using an FAE supplied <em>.mcb</em> file for your DDR</title>
+<title>SSDP and CoAP in BOLT</title>
 <style type="text/css">
 /* Shared CSS for AsciiDoc xhtml11 and html5 backends */
 
@@ -767,244 +767,113 @@ asciidoc.install(4);
 </head>
 <body class="book" style="max-width:100%">
 <div id="header">
-<h1>Using an FAE supplied <em>.mcb</em> file for your DDR</h1>
-<span id="author">Broadcom Ltd</span><br />
-<span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
+<h1>SSDP and CoAP in BOLT</h1>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
 </div>
 </div>
 <div id="content">
-<div id="preamble">
+<div class="sect1">
+<h2 id="_introduction">1.  Introduction</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>This text applies to the standard BOLT release using
-the <em>flexible</em> configuration where multiple MCB data
-(to support lots of DDRs) is stored in the SHMOO
-subsection of BOLT.</p></div>
-<div class="paragraph"><p>For the <em>fixed</em> configuration where only a small subset
-(equal to the number of DDR controllers on the chip) is
-stored in the MEMSYS subsection of BOLT please see the
-<em>ddr</em> command entry in doc/build_configuration_script.txt.</p></div>
+<div class="paragraph"><p>Simple Service Discovery Protocol (SSDP) and Constrained Application Protocol
+(CoAP) allow controlling BOLT through Ethernet LAN without requiring serial
+port.</p></div>
+<div class="paragraph"><p>SSDP allows STB to be discovered by control points in LAN.
+CoAP lets BOLT commands get invoked through LAN.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_example_sequence">1.  Example sequence</h2>
+<h2 id="_build">2.  Build</h2>
 <div class="sectionbody">
-<div class="ulist"><ul>
-<li>
-<p>
-Find out which shmoo you are currently using. Look
-in your config file for the line <em>gset MEMC_REV</em>
-The associated text is a subdirectory of shmoo,
-e.g. For 7364c0, it is <em>B150_F002</em>. So, <em>shmoo/B150_F002/mcb/</em>
-will show you associated mcb files. The memc IP block may
-be used in many different chips, so its shared this way.
-</p>
-</li>
-<li>
-<p>
-Drop your mcb file in with all the others. Please note that
-the file name format is of the form:
-</p>
-</li>
-</ul></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>  {family}_{SPEED}MHz_{PHY}b_dev{SIZE}{G|M}x{WIDTH}_{STD_NAME}_le.mcb</code></pre>
-</div></div>
-<div class="paragraph"><p>e.g.</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>  7364C0_1067MHz_16b_dev4Gx16_DDR3-2133N_le.mcb
-  7364C0_800MHz_16b_dev4Gx8_DDR3-1600K_le.mcb</code></pre>
-</div></div>
-<div class="paragraph"><p>The build system needs MCB files to be named like the above to be
-able to pick them up and parse the numbers in them. Rename your mcb
-file to this format, if required. <em>common</em> at the {family} position
-is a special name for MCB&#8217;s that can be shared by multiple families.</p></div>
-<div class="ulist"><ul>
-<li>
-<p>
-The shmoo build process takes the contents of these files and
-creates mcb-{family}.c which condenses all the available ones down
-into a single C file for BOLT to build in, e.g. for 7364c0 that is
-the file <em>shmoo/B150_F002/mcb-7364c0.c</em>. Please note that the
-existence of a family specific mcb-{family}.c prevents mcb-common.c
-from being included in the family BOLT build.
-</p>
-</li>
-<li>
-<p>
-Make a new (or update an existing) mcb-{family}.c
-</p>
-</li>
-<li>
-<p>
-Rebuild BOLT to pick up the changes.
-</p>
-</li>
-</ul></div>
-<div class="paragraph"><p>e.g.</p></div>
-<div class="listingblock">
-<div class="content"></div></div>
+<div class="paragraph"><p>Both SSDP and CoAP get compiled by default.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_another_example_using_7445d0">2. Another example (using 7445d0)</h2>
+<h2 id="_runtime">3.  Runtime</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>From config/family-7445d0.cfg:</p></div>
+<div class="paragraph"><p>Although SSDP and CoAP are built by default they are not enabled at runtime.
+To turn both on, set the following environment variable and restart STB.</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>...
-...
- gset MEMC_REV B130_F001
-...
-...</code></pre>
+<pre><code>setenv -p COAP_SSDP_ENABLE 1</code></pre>
 </div></div>
-<div class="paragraph"><p>This tells you you the specific shmoo is in the shmoo/B130_F001 directory.
-B130 = memc revision, F001 = phy revision.</p></div>
-<div class="paragraph"><p>Re-create the mcb-7445d0.c file so BOLT knows about it, then rebuild BOLT:</p></div>
-<div class="listingblock">
-<div class="content"></div></div>
+<div class="paragraph"><p>Now SSDP control points can discover STB, and CoAP clients can invoke BOLT
+commands using the CoAP server running on BOLT.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
 <div class="title">Note</div>
 </td>
-<td class="content">As seen in the previous examples you may need to do a <em>make clean</em>
-or a <em>make distclean</em> before <em>make ddr_update</em> to see a change in the
-specific mcb-$(FAMILY).c file.</td>
+<td class="content">SSDP and CoAP services are available only in BOLT prompt. Once BOLT
+launches kernel, these services are not available.</td>
 </tr></table>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_dual_memsys_alternate_memsys">3. Dual MEMSYS (alternate MEMSYS)</h2>
+<h2 id="_bolt_admin_desktop_app">4.  Bolt-admin desktop app</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>To support DDR4 at runtime as well as DDR3 on Broadcom reference boards
-we have split the section reserved in BOLT for the MEMSYS code (and
-optional MCB data) into two sub-sections. MEMC_REV is the lower,
-MEMC_ALT is the upper sub-section.</p></div>
-<div class="paragraph"><p>We can now select a completely different SHMOO (memsysinitlib.a)
-code library, its path is set in MEMC_ALT instead of MEMC_REV in
-the chip family configuration file.</p></div>
-<div class="paragraph"><p>For the default build it does not mean it selects MCB files in
-the shmoo/${MEMC_ALT}/mcb directory. Currently they are still a
-common resource and still located in the shmoo/${MEMC_REV}/mcb
-directory or a sub-directory of that.</p></div>
-<div class="paragraph"><p>As there may be MCBs with identical selection parameters
-(clock, phy width, ddr data bus width) for both the DDR3 and DDR4 we
-have to differentiate them to avoid parameter clashes, and the
-possibility of ending up using the wrong MCB. The way we do this
-is to use the script <em>ddr</em> command flag <em>-custom</em> for DDR4.</p></div>
-<div class="paragraph"><p>e.g.</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>[board MY_DDR4_BOARD chip.7445d0]
- ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
- ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
- ddr -n 2 -size_mb 1024 -base_mb 2048 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4</code></pre>
-</div></div>
-<div class="paragraph"><p>Please refer to the <em>ddr</em> command <span class="footnote"><br />[<a href="build_configuration_script.html#_ddr">build_configuration_script.html#_ddr</a>]<br /></span>
-on how to specify (and the limitations) of using the <em>-custom</em> parameter. After adding a
-custom MCB do <em>make ddr_update</em> before re-making BOLT.</p></div>
-<div class="paragraph"><p>The selection of which MEMSYS is on a per board basis and controlled at build time via the <em>memsys</em>
-script configuration command <span class="footnote"><br />[<a href="build_configuration_script.html#_memsys">build_configuration_script.html#_memsys</a>]<br /></span>. It is
-strongly recommended that you review the documentation for that command.</p></div>
-<div class="sect2">
-<h3 id="_for_secure_builds_secure_boot_y">3.1.   For secure builds (SECURE_BOOT=y)</h3>
-<div class="ulist"><ul>
-<li>
-<p>
-The MCBs are placed in the MEMSYS section of BOLT (instead of the SHMOO section)
-via the <em>-fixed</em> flag to the <em>ddr</em> script command.
-</p>
-</li>
-<li>
-<p>
-The generated memsys.bin file is only the <em>lower</em> portion,
-i.e. it includes MEMC_REV, but not the MEMC_ALT SHMOO code library.
-</p>
-</li>
-<li>
-<p>
-A board configuration that requires MEMC_ALT must be re-arranged to use
-MEMC_REV (i.e. replace the memsysinitlib.a) and any custom MCBs for DDR4
-renamed to comply with the standard naming convention for MCBs.
-</p>
-</li>
-<li>
-<p>
-References to MEMC_ALT in the chip family configuration file must be removed,
-i.e. remove the <em>gset MEMC_ALT &#8230;</em> line.
-</p>
-</li>
-</ul></div>
+<div class="paragraph"><p>Bolt-admin is a desktop application that can run on Windows/Linux/Mac.
+It can discover and control Broadcom STBs, that have SSDP and CoAP enabled and
+active in BOLT.</p></div>
+<div class="paragraph"><p><a href="https://app.box.com/s/30344pe1876m554icv5jj3z9c4cr3vn5">Bolt-admin binary</a></p></div>
 </div>
-<div class="sect2">
-<h3 id="_an_example_of_moving_memc_alt_into_memc_rev">3.2.  An example of moving MEMC_ALT into MEMC_REV</h3>
-<div class="listingblock">
-<div class="content"></div></div>
-<div class="paragraph"><p>Edit the chip family config file to use <em>-fixed</em> instead of <em>-custom</em>:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>--- a/config/family-7445d0.cfg
-+++ b/config/family-7445d0.cfg
-- gset MEMC_ALT B130_F001_DDR4
-- memsys alt
-- ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
-- ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -custom ddr4
-
-+ ddr -n 0 -size_mb 1024 -base_mb    0 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -fixed -
-+ ddr -n 1 -size_mb 1024 -base_mb 1024 -clk 1067MHz -size_bits 4G -width 16 -phy 32 -fixed -</code></pre>
-</div></div>
+</div>
+<div class="sect1">
+<h2 id="_implementation">5.  Implementation</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>SSDP implementation can be found at ssbl/net/net_ssdp.c. SSDP message formats
+are as defined in UPnP device architecture v1.1.</p></div>
+<div class="paragraph"><p>SSDP discovery is only intended to work with desktop app Bolt-admin. Other UPnP
+control points may not be able to discover STB, as the complete UPnP discovery
+guidelines are not implemented.</p></div>
+<div class="paragraph"><p>BOLT&#8217;s CoAP server is implemented using libCoap v4.1.1 plus additional changes
+to interface with BOLT&#8217;s networking stack.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_startup_behavior">6.  Startup behavior</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>BOLT executes STARTUP environment variable or sysinit.txt at startup.
+If startup command happens to launch kernel, then CoAP clients
+and SSDP control points will never get a chance to talk to BOLT.</p></div>
+<div class="paragraph"><p>To overcome this, BOLT allows a 100ms window (can be configured using
+STARTUP_WAIT_TIME environment variable) for CoAP clients to send a CoAP halt
+command. If BOLT receives the halt command during that window, startup command
+will not be executed, and will remain in BOLT prompt.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_network_interface">7.  Network interface</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The default network interface name to be used is "eth0". On boards that do not
+have built-in Ethernet port, a USB-Ethernet dongle should be used. Because a
+USB-Ethernet dongle should be enumerated before being registered, there might
+be an extra delay up to 1 second if "eth0" does not exist.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
 <div class="title">Note</div>
 </td>
-<td class="content">We also edit out all but one [board] section of interest and make sure
-we only have two <em>ddr</em> commands in that file.</td>
+<td class="content">If eth0 is available but is internally disabled then network
+initialization will fail. This scenario needs to be handled in future.</td>
 </tr></table>
-</div>
-<div class="paragraph"><p>If memsysinitlib.a plus the MCBs increases image size, make room:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code>--- a/config/layout-zeus42.cfg
-+++ b/config/layout-zeus42.cfg
-@@ -29,7 +29,7 @@
-  # AVS firmware data
-  section -name AVS    -off 0x00051000 -size 0x00004000
-  # MEMSYS (32KiB + 32KiB alternate)
-- section -name MEMSYS -off 0x00055000 -size 0x00006600
-+ section -name MEMSYS -off 0x00055000 -size     0x00006f80
-  section -name MEMSYS_ALT -off 0x0005D000 -size 0x00006df0
-  # MCB data + board infos &lt;= 0x6000
-  section -name SHMOO  -off 0x00065000 -size 0x00001000</code></pre>
-</div></div>
-<div class="paragraph"><p>Now rebuild:</p></div>
-<div class="listingblock">
-<div class="content"></div></div>
-<div class="admonitionblock">
-<table><tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">An alternate to replacing shmoo/${MEMC_REV} files is to populate
-shmoo/${MEMC_ALT} with DDR4 MCBs, include file(s) and set
-MEMC_REV in your chip family config file to point to it.</td>
-</tr></table>
-</div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_appendix_copyright_info">4. Appendix: Copyright Info</h2>
+<h2 id="_resources">8.  Resources</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Copyright &#169; 2016, Broadcom Ltd.
-All Rights Reserved.
-Confidential Property of Broadcom Ltd.</p></div>
+<div class="paragraph"><p><a href="http://upnp.org/specs/arch/UPnP-arch-DeviceArchitecture-v1.1.pdf">UPnP Spec</a></p></div>
+<div class="paragraph"><p><a href="https://libcoap.net">libCoAP</a></p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_appendix_copyright_info">9. Appendix: Copyright Info</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Copyright &#169; 2017, Broadcom.</p></div>
 </div>
 </div>
 </div>

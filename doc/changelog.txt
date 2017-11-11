@@ -6,6 +6,58 @@
 Release changelog
 =================
 
+ v1.33
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2435[SWBOLT-2435] Added 'linux,pci-domain' property for PCIe node.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2424[SWBOLT-2424] Added document for SSDP and CoAP.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2443[SWBOLT-2443] BFW is now successfully loaded from eMMC against software reset, for example the 'reboot' BOLT command. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2423[SWBOLT-2423] Corrected PCIe vreg polarity on BCM97278HB. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2427[SWBOLT-2427] Correctly programmed 7278 switch LED controller.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2426[SWBOLT-2426] Embedded toolchain info in BOLT logo.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2415[SWBOLT-2415] Fixed PHY type in BDC node for XHCI only systems.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2417[SWBOLT-2417] Fixed build errors with stbgcc-6.3.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2395[SWBOLT-2395] Fixed problem with CoAP client not being able to consistently halt board from executing startup command.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2422[SWBOLT-2422] Fixed writing to NAND_CMD_ADDRESS in 7278a0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2432[SWBOLT-2432] If the overtemp is a reset cause, it gets enabled by SSBL after cooling down the chip via performing temperature parking.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2447[SWBOLT-2447] Increased margins on 7439 by 20mV.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2394[SWBOLT-2394] Provided more identifiable names in SSDP presence messages.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2438[SWBOLT-2438] Shmoo for 7268b0 and 7271b0 has been updated to v5.4.1.0. MCB's have to be regenerated. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2437[SWBOLT-2437] Shmoo has been updated to v3.6.0.0 for 7260a0 DDR4. MCB's have also been regenerated for DDR4. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2433[SWBOLT-2433] Support for 72518a0 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2414[SWBOLT-2414] Support for BCM97271VC4L has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2440[SWBOLT-2440] The convention of splash generated files has been corrected.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2413[SWBOLT-2413] Updated AVS firmware to v0.5.1: use only internal AVS PMAP clock values.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2425[SWBOLT-2425] Updated AVS firmware to v0.5.2: support PMAP holes, default margins values only, central oscillators 1 and 3 to set thresholds, modify max_voltage for 72604A0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2446[SWBOLT-2446] Updated AVS firmware to v0.5.3: add PMAP data for 72518, improved voltage measurement averaging.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2273[SWBOLT-2273] Updated clock tree for 7260a0 and 7439b0.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.33%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.32
 ------
 

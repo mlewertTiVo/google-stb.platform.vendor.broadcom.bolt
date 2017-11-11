@@ -23,6 +23,11 @@ ifeq ($(filter clean distclean, $(MAKECMDGOALS)),)
 include $(GEN)/android/boltinc/build/tools.mk
 endif
 
+LDS := android_bsu.lds
+ifeq ($(BCHP_CHIP),7278)
+LDS := android_bsu_1.lds
+endif
+
 ODIR := objs/$(FAMILY)
 OBJS := init.o arm-eabi.o gpt_table_in_flash.o android_bsu.o \
 	android_boot.o android_fastboot.o android_boot_common.o
@@ -68,7 +73,7 @@ all: famcheck $(FAMILY)
 $(FAMILY): famcheck $(BSU)
 
 $(BSU): $(OBJS)
-	$(LD) $(LDFLAGS) -T android_bsu.lds -o $@ $(OBJS) $(LIBGCC)
+	$(LD) $(LDFLAGS) -T $(LDS) -o $@ $(OBJS) $(LIBGCC)
 
 clean:
 	@if [ "$(FAMILY)" != "unknown" ]; then \

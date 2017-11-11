@@ -19,6 +19,9 @@
 #include "net_ssdp.h"
 #include "bchp_sun_top_ctrl.h"
 #include "timer.h"
+#include "env_subr.h"
+#include "board.h"
+#include "bolt.h"
 
 
 
@@ -29,10 +32,38 @@
 #define uint32_top(x) ((uint16_t) (x >> 16))
 #define uint32_bottom(x) ((uint16_t) x & 0xFFFF)
 
-inline ssdp_st_t *ssdp_get_first_st(ssdp_context_t *ctx);
+static ssdp_st_t *ssdp_get_first_st(ssdp_context_t *ctx);
 
 /**********************************************************************
-  *  sddp_create_alive_msg()
+  * ssdp_create_custom_msg()
+  *
+  * Input parameters:
+  *	buf: pointer to char array.
+  *	buf_len: buf length.
+  *
+  * Output parameters:
+  *	buf: custom ssdp headers are created here.
+  *
+**********************************************************************/
+static void ssdp_create_custom_msg(char *buf, int buf_len)
+{
+	char *board_serial = env_getenv(ENVSTR_BOARD_SERIAL);
+	char *node_name = env_getenv(NODENAME_STR);
+
+	snprintf(buf, buf_len,
+		/*board name */
+		"BOARDNAME.BROADCOM.NET: %s\r\n"
+		/*board serial number */
+		"SERIALNUMBER.BROADCOM.NET: %s\r\n"
+		/* node name */
+		"NODENAME.BROADCOM.NET: %s\r\n",
+		board_name(),
+		board_serial ? board_serial : "",
+		node_name ? node_name : "");
+}
+
+/**********************************************************************
+  *  ssdp_create_alive_msg()
   *
   *  create NOTIFY ssdp:alive message
   *  Input parameters:
@@ -45,15 +76,18 @@ inline ssdp_st_t *ssdp_get_first_st(ssdp_context_t *ctx);
   *  Return value:
   *  If successful,return msg length.
 **********************************************************************/
-inline int sddp_create_alive_msg(ssdp_context_t *ctx, char *msg,
+static int ssdp_create_alive_msg(ssdp_context_t *ctx, char *msg,
 				int msg_len, ssdp_st_t *search_target,
 					const char *usn)
 {
 	char ip_addr[20];
 	uint8_t *addr;
+	char custom_msg[MAX_SSDP_CUSTOM_MSG_LEN];
 
 	addr = net_getparam(NET_IPADDR);
 	sprintf_ip(ip_addr, addr);
+
+	ssdp_create_custom_msg(custom_msg, MAX_SSDP_CUSTOM_MSG_LEN);
 
 	return snprintf(msg, msg_len,
 		"NOTIFY * HTTP/1.1\r\n"
@@ -66,13 +100,15 @@ inline int sddp_create_alive_msg(ssdp_context_t *ctx, char *msg,
 		"NTS: ssdp:alive\r\n"
 		"SERVER: %s/%s %s/%s\r\n"
 		"USN: %s\r\n" /* composite identifier for the advertisement */
+		"%s" /* custom msg */
 		"\r\n", search_target->max_age, ip_addr,
 		search_target->st_name, ctx->device.os,
 		ctx->device.os_version, ctx->device.prod,
-		ctx->device.prod_version, usn);
+		ctx->device.prod_version, usn,
+		custom_msg);
 }
 /**********************************************************************
-  *  sddp_create_byebye_msg()
+  *  ssdp_create_byebye_msg()
   *
   *  create NOTIFY ssdp:byebye message
   *  Input parameters:
@@ -85,7 +121,7 @@ inline int sddp_create_alive_msg(ssdp_context_t *ctx, char *msg,
   *  Return value:
   *  If successful,return msg length.
 **********************************************************************/
-inline int sddp_create_byebye_msg(ssdp_context_t *ctx,
+static int ssdp_create_byebye_msg(ssdp_context_t *ctx,
 		char *msg, int msg_len, ssdp_st_t *search_target,
 			const char *usn)
 {
@@ -108,7 +144,7 @@ inline int sddp_create_byebye_msg(ssdp_context_t *ctx,
   *  If successful,return line length.
   *  The value BOLT_ERR indicates an error.
 **********************************************************************/
-int ssdp_get_line_length(const char *msg, int msg_len)
+static int ssdp_get_line_length(const char *msg, int msg_len)
 {
 	int cur_char;
 
@@ -136,7 +172,7 @@ int ssdp_get_line_length(const char *msg, int msg_len)
   *  If successful,return header length.
   *  0 indicates no header found in the message
 **********************************************************************/
-int ssdp_get_header_value(char *value, int value_len,
+static int ssdp_get_header_value(char *value, int value_len,
 				const char *header, const char *msg,
 					int msg_len)
 {
@@ -189,7 +225,7 @@ int ssdp_get_header_value(char *value, int value_len,
   *  Return value:
   *  If successful,return BOLT_OK.
 **********************************************************************/
-int ssdp_create_usn(char *usn, int usn_len, const char *uuid,
+static int ssdp_create_usn(char *usn, int usn_len, const char *uuid,
 							const char *st_name)
 {
 	int uuid_len;
@@ -220,7 +256,7 @@ int ssdp_create_usn(char *usn, int usn_len, const char *uuid,
   *  If successful,return BOLT_OK.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_send_msg(ssdp_context_t *ctx, const char *msg, int msg_len)
+static int ssdp_send_msg(ssdp_context_t *ctx, const char *msg, int msg_len)
 {
 	if (sendto(ctx->sockfd, msg, msg_len, 0,
 		(struct sockaddr *) &ctx->mcast_addr,
@@ -243,7 +279,7 @@ int ssdp_send_msg(ssdp_context_t *ctx, const char *msg, int msg_len)
   *  If successful,return message length.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_send_notify(ssdp_context_t *ctx, ssdp_st_t *search_target,
+static int ssdp_send_notify(ssdp_context_t *ctx, ssdp_st_t *search_target,
 								uint32_t flags)
 {
 	int notify_len = 0;
@@ -255,7 +291,7 @@ int ssdp_send_notify(ssdp_context_t *ctx, ssdp_st_t *search_target,
 
 	switch (flags) {
 	case SSDP_NOTIFY_ALIVE:
-		notify_len = sddp_create_alive_msg(ctx, notify_msg,
+		notify_len = ssdp_create_alive_msg(ctx, notify_msg,
 						MAX_SSDP_MSG_LEN, search_target,
 						usn);
 		/* if we actually sent the notification
@@ -264,7 +300,7 @@ int ssdp_send_notify(ssdp_context_t *ctx, ssdp_st_t *search_target,
 			TIMER_SET(ctx->st_timer, ctx->max_age * BOLT_HZ);
 		break;
 	case SSDP_NOTIFY_BYEBYE:
-		notify_len = sddp_create_byebye_msg(ctx, notify_msg,
+		notify_len = ssdp_create_byebye_msg(ctx, notify_msg,
 					MAX_SSDP_MSG_LEN, search_target, usn);
 		break;
 	default:
@@ -287,7 +323,7 @@ int ssdp_send_notify(ssdp_context_t *ctx, ssdp_st_t *search_target,
   *  If successful,return BOLT_OK.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_register_st(ssdp_context_t *ctx, const char *target, uint32_t max_age)
+static int ssdp_register_st(ssdp_context_t *ctx, const char *target, uint32_t max_age)
 {
 	ssdp_st_t *search_target = (ssdp_st_t *) malloc(sizeof(ssdp_st_t));
 
@@ -327,7 +363,7 @@ int ssdp_register_st(ssdp_context_t *ctx, const char *target, uint32_t max_age)
   *  Input parameters:
   *	ctx:ssdp instance
 **********************************************************************/
-void ssdp_renew_st(ssdp_context_t *ctx)
+static void ssdp_renew_st(ssdp_context_t *ctx)
 {
 	if (TIMER_EXPIRED(ctx->st_timer)) {
 		/* Send a notification to keep services active. Per
@@ -340,11 +376,11 @@ void ssdp_renew_st(ssdp_context_t *ctx)
 		ssdp_send_notify(ctx, search_target, SSDP_NOTIFY_ALIVE);
 	}
 }
-inline ssdp_st_t *ssdp_get_first_st(ssdp_context_t *ctx)
+static ssdp_st_t *ssdp_get_first_st(ssdp_context_t *ctx)
 {
 	return ctx->st_list;
 }
-inline ssdp_st_t *ssdp_get_next_st(ssdp_st_t *st)
+static ssdp_st_t *ssdp_get_next_st(ssdp_st_t *st)
 {
 	return st->st_next;
 }
@@ -358,7 +394,7 @@ inline ssdp_st_t *ssdp_get_next_st(ssdp_st_t *st)
   *  If successful,return pointer to search target array.
   *  NULL for failure
 **********************************************************************/
-ssdp_st_t *ssdp_find_st(ssdp_context_t *ctx, const char *target)
+static ssdp_st_t *ssdp_find_st(ssdp_context_t *ctx, const char *target)
 {
 	ssdp_st_t *cur_target = ctx->st_list;
 
@@ -381,7 +417,7 @@ ssdp_st_t *ssdp_find_st(ssdp_context_t *ctx, const char *target)
   *  If successful,return SSDP request type.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_message_type(char *msg, int msg_len)
+static int ssdp_message_type(char *msg, int msg_len)
 {
 	if (msg_len > 0) {
 		if (0 == strncmp(msg, STARTLINE_MSEARCH,
@@ -409,11 +445,12 @@ int ssdp_message_type(char *msg, int msg_len)
   *  If successful,return BOLT_OK.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_msearch_reply(ssdp_context_t *ctx, ssdp_st_t *search_target,
+static int ssdp_msearch_reply(ssdp_context_t *ctx, ssdp_st_t *search_target,
 				int mx, struct sockaddr_in *dst_addr)
 {
 	char reply_msg[MAX_SSDP_MSG_LEN];
 	int  reply_len;
+	char custom_msg[MAX_SSDP_CUSTOM_MSG_LEN];
 	char usn[MAX_USN_LEN];
 	char ip_addr[20];
 	uint8_t *addr;
@@ -424,6 +461,8 @@ int ssdp_msearch_reply(ssdp_context_t *ctx, ssdp_st_t *search_target,
 
 	ssdp_create_usn(usn, MAX_USN_LEN, ctx->device.uuid,
 					search_target->st_name);
+
+	ssdp_create_custom_msg(custom_msg, MAX_SSDP_CUSTOM_MSG_LEN);
 
 	reply_len = snprintf(reply_msg, MAX_SSDP_MSG_LEN,
 		"HTTP/1.1 200 OK\r\n"
@@ -440,9 +479,12 @@ int ssdp_msearch_reply(ssdp_context_t *ctx, ssdp_st_t *search_target,
 		"ST: %s\r\n"
 		/*composite identifier for the advertisement */
 		"USN: %s\r\n"
+		/*custom msg*/
+		"%s"
 		"\r\n", search_target->max_age, ip_addr, ctx->device.os,
 		ctx->device.os_version, ctx->device.prod,
-		ctx->device.prod_version, search_target->st_name, usn);
+		ctx->device.prod_version, search_target->st_name, usn,
+		custom_msg);
 
 	if (0 < reply_len) {
 		/* find some random time to reply */
@@ -468,7 +510,7 @@ int ssdp_msearch_reply(ssdp_context_t *ctx, ssdp_st_t *search_target,
   *  If successful,return BOLT_OK.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_msearch_handler(ssdp_context_t *ctx,
+static int ssdp_msearch_handler(ssdp_context_t *ctx,
 					struct sockaddr_in *dst_addr, char *msg,
 						int msg_len)
 {
@@ -516,10 +558,10 @@ int ssdp_msearch_handler(ssdp_context_t *ctx,
   *  return BOLT_OK for M Search msg.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_message_handler(ssdp_context_t *ctx,
+static int ssdp_message_handler(ssdp_context_t *ctx,
 						struct sockaddr_in *dst_addr,
 						char *msg, int msg_len)
-	{
+{
 	int msg_type;
 
 	msg_type = ssdp_message_type(msg, ssdp_get_line_length(msg, msg_len));
@@ -542,7 +584,7 @@ int ssdp_message_handler(ssdp_context_t *ctx,
   *  If successful,return BOLT_OK.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_recv(ssdp_context_t *ctx)
+static int ssdp_recv(ssdp_context_t *ctx)
 {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_len;
@@ -637,7 +679,7 @@ int ssdp_net_init(ssdp_context_t *ctx)
   *  If successful,return BOLT_OK.
   *  BOLT_ERR for failure
 **********************************************************************/
-int ssdp_device_init(ssdp_context_t *ctx)
+static int ssdp_device_init(ssdp_context_t *ctx)
 {
 	/* get the chip family */
 	uint32_t fam = REG(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
@@ -669,7 +711,7 @@ int ssdp_device_init(ssdp_context_t *ctx)
   *  If successful,return BOLT_OK.
   *  BOLT_ERR for failure
 **********************************************************************/
-int register_search_targets(ssdp_context_t *ctx)
+static int register_search_targets(ssdp_context_t *ctx)
 {
 	char search_target[MAX_ST_NAME_LEN];
 

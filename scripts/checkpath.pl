@@ -4,14 +4,12 @@ use warnings;
 use File::Find;
 
 # ***************************************************************************
-# *     Copyright (c) 2012-2013, Broadcom Corporation
-# *     All Rights Reserved
-# *     Confidential Property of Broadcom Corporation
-# *
-# *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
-# *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
-# *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
-# * 
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+#
+# THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+# AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+# EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+#
 # ***************************************************************************
 
 use Getopt::Long;
@@ -30,9 +28,7 @@ $| = 1;
 
 my $makeheader = "
 # #########################################################################
-#	 Copyright (c) 2012-2013, Broadcom Corporation
-#	 All Rights Reserved
-#	 Confidential Property of Broadcom Corporation
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 #  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 #  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -49,6 +45,7 @@ my $ALT_TOOL_PATH = '';
 
 my @searchpath = (
 "/opt/toolchains", 
+"/project_it/stbtc",
 "/projects/stbtc",
 "/projects/stbopt_p/toolchains_303",
 );
