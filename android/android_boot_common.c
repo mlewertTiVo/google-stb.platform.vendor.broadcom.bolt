@@ -145,6 +145,27 @@ err_exit:
 	return NULL;
 }
 
+char *get_btmacaddr(void)
+{
+	char *env_board_bt;
+	int env_strlen;
+
+	env_board_bt = env_getenv("BOARD_BTMAC");
+
+	if (env_board_bt) {
+		env_strlen = os_strlen(env_board_bt);
+		if (env_strlen > ANDROID_PROP_VALUE_MAX_STR_LEN) {
+			os_printf("BOARD_BTMAC strlen (%d) > allowed len (%d)\n",
+				env_strlen, ANDROID_PROP_VALUE_MAX_STR_LEN);
+			goto err_exit;
+		}
+		return env_board_bt;
+	}
+
+err_exit:
+	return NULL;
+}
+
 static int is_quiescent_mode(void)
 {
 	char *q_mode = env_getenv("A_QUIESCENT");
@@ -389,6 +410,9 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	/* bolt E1 - we are always 'orange' state. */
 	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
 		" androidboot.verifiedbootstate=orange");
+
+	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
+		" androidboot.btmacaddr=%s", get_btmacaddr());
 
 	os_sprintf(dt_add_cmd, "dt add node / firmware");
 	bolt_docommands(dt_add_cmd);

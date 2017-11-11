@@ -104,12 +104,25 @@ static void bolt_setup_saved_env(void)
 		uint32_t rnd[5];
 
 		if (!sec_get_random_num(rnd, 3)) {
-			xsprintf(buffer, "%08x%08x", rnd[0], 
+			xsprintf(buffer, "%08x%08x", rnd[0],
 				~lib_crc32((void *)rnd, sizeof(rnd)));
 			env_setenv("BOARD_SERIAL", buffer, ENV_FLG_NORMAL);
 			save++;
 		} else
 			warn_msg("cannot set BOARD_SERIAL");
+
+	}
+
+	if (!env_getenv("BOARD_BTMAC")) {
+		uint32_t rnd;
+
+		if (!sec_get_random_num(&rnd, 1)) {
+			xsprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x",
+				0x22, 0x22, rnd&0xFF, (rnd>>8)&0xFF, (rnd>>16)&0xFF, (rnd>>24)&0xFF);
+			env_setenv("BOARD_BTMAC", buffer, ENV_FLG_NORMAL);
+			save++;
+		} else
+			warn_msg("cannot set BOARD_BTMAC");
 
 	}
 
