@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,19 +7,19 @@
  *
  ***************************************************************************/
 
-#include "bsu-api.h"
-#include "board.h"
-#include "timer.h"
-#include "arch_ops.h"
-#include "cache_ops.h"
-#include "net_api.h"
-#include "error.h"
-#include "../fsbl/fsbl-shmoo.h"
-#include "bolt.h"
-#include "avs_bsu.h"
-#include "env_subr.h"
-#include "timer.h"
-#include "board_params.h"
+#include <arch_ops.h>
+#include <avs_bsu.h>
+#include <board.h>
+#include <board_init.h>
+#include <board_params.h>
+#include <bolt.h>
+#include <bsu-api.h>
+#include <cache_ops.h>
+#include <env_subr.h>
+#include <error.h>
+#include <fsbl-shmoo.h>
+#include <net_api.h>
+#include <timer.h>
 #if CFG_SPLASH
 #include "splash-api.h"
 #endif
@@ -442,7 +440,7 @@ static struct bsu_api bsu_xapi = {
 	.xfn_strncpy = lib_strncpy,
 
 	/* features */
-	.xfn_boxmode = board_init_current_rts_boxmode,
+	.xfn_boxmode = board_init_rts_current_boxmode,
 
 	/* v5 */
 	.xfn_strcat = lib_strcat,

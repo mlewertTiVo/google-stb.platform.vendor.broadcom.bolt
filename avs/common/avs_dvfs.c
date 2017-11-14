@@ -161,22 +161,10 @@ void dvfs_init_board_pmap(int pmap_id)
 		return;
 	}
 
-	if (pmap_id >= PMAP_MAX) {
-		xprintf("DVFS: PMap%d is not supported\n",pmap_id);
-		return;
-	}
-
 	if ((dvfs->mode == dfs_mode_e) || (dvfs->mode == dvfs_mode_e)) {
-		struct pmap_parameters pmap = {
-			.ndiv_int	= pmapTable[pmap_id].ndiv_int,
-			.pdiv		= pmapTable[pmap_id].pdiv,
-			.mdiv_p0	= pmapTable[pmap_id].mdiv_p0,
-			.mdiv_p1	= pmapTable[pmap_id].mdiv_p1,
-			.mdiv_p2	= pmapTable[pmap_id].mdiv_p2,
-			.mdiv_p3	= pmapTable[pmap_id].mdiv_p3,
-			.mdiv_p4	= pmapTable[pmap_id].mdiv_p4
-		};
+		struct pmap_parameters pmap;
 
+		memset(&pmap, 0, sizeof(pmap_parameters));
 		avs_set_pmap(dvfs->mode, &pmap, dvfs->pstate);
 	}
 }

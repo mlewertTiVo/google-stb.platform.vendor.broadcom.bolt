@@ -82,7 +82,9 @@ typedef struct ssdp_st_s {
  * SSDP message
  *****************************************************************************/
 
-#define MAX_SSDP_MSG_LEN		1024
+#define MAX_SSDP_DEFAULT_MSG_LEN    512
+#define MAX_SSDP_CUSTOM_MSG_LEN     256
+#define MAX_SSDP_MSG_LEN (MAX_SSDP_DEFAULT_MSG_LEN + MAX_SSDP_CUSTOM_MSG_LEN)
 
 typedef struct ssdp_msg_s ssdp_msg_t;
 typedef struct ssdp_msg_s {

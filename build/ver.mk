@@ -17,7 +17,9 @@ BUILDTAG := $(shell cat $(ROOT)/version 2>/dev/null || \
 		    git describe --dirty 2> /dev/null || \
 		    git rev-parse --short HEAD 2> /dev/null || \
 		    echo "v9.99-noversion" 2>/dev/null)
-
+BUILDCMD := $(shell perl ./scripts/checkpath.pl)
+BUILDCMD := $(word 1, $(BUILDCMD)) --version | head -1
+TOOLCHAINVER := $(shell $(BUILDCMD))
 TMP := $(shell perl -e 'print "$(BUILDTAG)" =~ /\bv(\d+)\.(\d\d)\b/ \
 	? "$$1 $$2" : "9 99";')
 BOLT_VER_MAJOR := $(word 1, $(TMP))

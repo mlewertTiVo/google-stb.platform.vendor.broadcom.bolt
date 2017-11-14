@@ -2564,7 +2564,7 @@ static int bolt_set_emmc_devname(void *fdt, int sdhci_node)
 
 	reg = DT_PROP_DATA_TO_U32(prop->data, 0);
 
-	xsprintf(emmc_devname, "%08x.%s", reg, name);
+	xsprintf(emmc_devname, "%x.%s", reg, name);
 	env_setenv("EMMC_DEVNAME", emmc_devname, 0);
 
 	return BOLT_OK;
@@ -2802,6 +2802,7 @@ static int bolt_populate_pmap(void *fdt)
 	char node[80];
 	unsigned int data, i;
 	unsigned int pmap_number = board_pmap();
+	unsigned int pmap_index = board_pmap_index(pmap_number);
 	int brcmstb_clk_node = 0, offset = 0, pmap_node;
 
 	brcmstb_clk_node = bolt_devtree_node_from_path(fdt,
@@ -2852,7 +2853,7 @@ static int bolt_populate_pmap(void *fdt)
 			goto out;
 
 		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
-			pmapMuxValues[pmap_number][i]);
+			pmapMuxValues[pmap_index][i]);
 		if (rc)
 			goto out;
 	}
@@ -2898,7 +2899,7 @@ static int bolt_populate_pmap(void *fdt)
 			goto out;
 
 		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
-			pmapDividerValues[pmap_number][i]);
+			pmapDividerValues[pmap_index][i]);
 		if (rc)
 			goto out;
 	}
@@ -2945,7 +2946,7 @@ static int bolt_populate_pmap(void *fdt)
 			goto out;
 
 		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
-			pmapMultiplierValues[pmap_number][i]);
+			pmapMultiplierValues[pmap_index][i]);
 		if (rc)
 			goto out;
 	}
@@ -2960,8 +2961,7 @@ int bolt_devtree_boltset(void *fdt)
 {
 	int rc = 0;
 	struct board_type *b = board_thisboard();
-	char *r = board_init_current_rts();
-	int bm = board_init_current_rts_boxmode();
+	int boxmode = board_init_rts_current_boxmode();
 	char *s, bs[16]; /* 10 + sign + \0 + guard */
 	int bolt;
 
@@ -3062,10 +3062,15 @@ int bolt_devtree_boltset(void *fdt)
 	if (rc)
 		goto out;
 
-	rc = bolt_dt_addprop_str(fdt, bolt, "rts", (r) ? r : "");
+	/* The property of 'rts' has been deprecated. So has its string
+	 * format. It was something like "CCYYMMDDHHMMSS_shortdesc_box%d".
+	 * But, Nexus looked only at "_box%d" even when 'rts' was used.
+	 */
+	xsprintf(bs, "deprecated_format_box%d", boxmode);
+	rc = bolt_dt_addprop_str(fdt, bolt, "rts", bs);
 	if (rc)
 		goto out;
-	xsprintf(bs, "%d", bm);
+	xsprintf(bs, "%d", boxmode);
 	rc = bolt_dt_addprop_str(fdt, bolt, "box", bs);
 	if (rc)
 		goto out;

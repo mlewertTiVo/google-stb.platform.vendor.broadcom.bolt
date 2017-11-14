@@ -12,6 +12,7 @@
 #include "board_params.h"
 #include <bchp_sun_top_ctrl.h>
 #include <ddr.h>
+#include <error.h>
 #ifdef DVFS_SUPPORT
 #include <pmap.h>
 #endif
@@ -259,6 +260,32 @@ const struct dvfs_params *board_dvfs(void)
 }
 
 #ifdef DVFS_SUPPORT
+unsigned int board_pmap_index(unsigned int pmap)
+{
+	unsigned int i = 0, pmaps_count = 0;
+
+	pmaps_count = sizeof(pmapTable) / sizeof(pmapTable[0]);
+	for (i = 0; i < pmaps_count; i++) {
+		if (pmap == pmapTable[i].pmapId)
+			break;
+	}
+
+	return i;
+}
+
+int is_pmap_valid(unsigned int pmap)
+{
+	int index = board_pmap_index(pmap);
+
+	if ((pmapTable[index].pmapId == PMap_eMax) ||
+		(pmapTable[index].pmapId != pmap)) {
+		err_msg("PMap %d is invalid.", pmap);
+		return BOLT_ERR;
+	}
+
+	return BOLT_OK;
+}
+
 unsigned int board_pmap(void)
 {
 	struct fsbl_info *inf = board_info();

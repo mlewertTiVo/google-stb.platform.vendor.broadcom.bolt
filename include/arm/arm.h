@@ -266,7 +266,7 @@ enum {
 #define SMALL_PG_SIZE		(4096)
 #define SMALL_PG_TYPE		BIT(1)
 #define SMALL_PG_PA_SHIFT	12
-#define SMALL_PG_PA_MASK	((~0) << SMALL_PG_PA_SHIFT)
+#define SMALL_PG_PA_MASK	(~((1 << SMALL_PG_PA_SHIFT) - 1))
 #define SMALL_PG_BUFFERABLE	BIT(2)
 #define SMALL_PG_CACHABLE	BIT(3)
 #define SMALL_PG_SHARABLE	BIT(10)
@@ -278,7 +278,7 @@ enum {
  * from the 1st level page table to a 2nd level page table that maps 1MB of VA
  */
 #define PT_BASEADDR_SHIFT	10
-#define PT_BASEADDR_MASK	((~0) << PT_BASEADDR_SHIFT)
+#define PT_BASEADDR_MASK	(~((1 << PT_BASEADDR_SHIFT) - 1))
 #define PT_TYPE		BIT(0)
 
 /*

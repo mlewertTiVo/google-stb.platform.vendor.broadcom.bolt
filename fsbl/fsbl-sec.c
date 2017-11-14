@@ -382,6 +382,20 @@ void sec_bfw_load(bool warm_boot)
 	sec_handle_boot_status(BOOT_BFW_STATUS_SHIFT, !ret);
 #endif
 
+	/*
+	 * if booting from eMMC data partition was good,
+	 * clear AON_EMMC_DATA_PART_BOOT_BFW flag
+	 * so that we continue to boot from eMMC data partition
+	 * when reboot command is used.
+	 */
+#if (BFW_USE_EMMC_DATA_PART == 1)
+	if (bypass_emmc_data_part == 0) {
+		aon_reg = BDEV_RD(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
+		aon_reg &= ~AON_EMMC_DATA_PART_BOOT_BFW;
+		BDEV_WR(BCHP_AON_CTRL_UNCLEARED_SCRATCH, aon_reg);
+	}
+#endif
+
 	__puts("BFW v");
 	sec_print_bsp_version();
 }

@@ -461,6 +461,8 @@ static int port_phy_init(sata_dev_t *dev, int port, int power_up)
 	pxssts_scr0_sstatus_t  sstatus;
 	int timeout = (3 * 1000) / 20; /* 3 seconds */
 
+	sstatus.all = 0;
+
 	dbg_printf("Initializing PHY for port %d\n", port);
 
 	if (power_up) {

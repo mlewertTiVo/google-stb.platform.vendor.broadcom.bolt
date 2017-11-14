@@ -28,7 +28,6 @@
 #endif
 
 #if defined(CONFIG_BCM7260A0)
-static const uint32_t MPM_TIMEOUT = 3*27000000; /* 3 seconds */
 static const uint32_t MPM_PATCH_DATA[] = { 0x0, 0xEA8, 0x0 };
 static const uint32_t MPM_PATCH_OFFSET = 0x5D60;
 

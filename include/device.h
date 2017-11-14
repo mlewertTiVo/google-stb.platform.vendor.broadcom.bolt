@@ -81,6 +81,7 @@ bolt_device_t *bolt_finddev(char *name);
 void bolt_attach_init(void);
 #define bolt_add_device(devdescr,a,b,ptr) (devdescr)->drv_probe(devdescr,a,b,ptr)
 void bolt_device_reset(void);
+bolt_device_t *bolt_waitdev(int waittime, char *devdesc);
 
 extern queue_t bolt_devices;
 
