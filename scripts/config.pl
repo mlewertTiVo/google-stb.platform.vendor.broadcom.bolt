@@ -3823,6 +3823,7 @@ sub process_dev_tree($)
 		BcmUtils::get_num_dtu_map($rh->{rh_defines}) : 0;
 	my $num_dtu_config = $dt_autogen{dtu} ?
 		BcmUtils::get_num_dtu_config($rh->{rh_defines}) : 0;
+	my $clks_file = "./config/clks-" . $family->{familyname} . ".plx";
 
 	map { $dt_autogen{$_} ||= {} } keys %dt_autogen;
 
@@ -3906,7 +3907,7 @@ sub process_dev_tree($)
 	BcmDt::Devices::add_avs_cpu($rdb, $rh)
 		if ($num_avs_cpu && !empty($dt_autogen{avs_cpu}));
 	BcmDt::Devices::add_waketimer($rdb, $rh, $dt_autogen{waketimer},
-		"aon_pm_l2")
+		"aon_pm_l2", -f $clks_file)
 		if ($num_waketimer && !empty($dt_autogen{waketimer}));
 	BcmDt::Devices::add_avs_tmon($rdb, $rh, $dt_autogen{avs_tmon},
 		"avs_host_l2")
@@ -3938,7 +3939,6 @@ sub process_dev_tree($)
 	BcmDt::Devices::add_sf2($rdb, $rh, $dt_autogen{sf2_switch})
 		if ($num_sf2_switch && !empty($dt_autogen{sf2_switch}));
 
-	my $clks_file = "./config/clks-" . $family->{familyname} . ".plx";
 	if (-f $clks_file) {
 		BcmDt::Devices::merge_clocks_file($rh->{rh_defines},
 			$dt, $clks_file)
@@ -3992,7 +3992,7 @@ sub process_dev_tree($)
 		$dt_autogen{upg_spi_aon_irq}, "upg_spi_aon_irq")
 		if !empty($dt_autogen{upg_spi_aon_irq}) && $num_upg_spi_aon_irq;
 
-	BcmDt::Devices::add_watchdog($rdb, $rh, $dt_autogen{watchdog}, $clks_file)
+	BcmDt::Devices::add_watchdog($rdb, $rh, $dt_autogen{watchdog}, -f $clks_file)
 		if (!empty($dt_autogen{watchdog}));
 
 	BcmDt::Devices::add_bsp($rdb, $rh, $dt_autogen{bsp})

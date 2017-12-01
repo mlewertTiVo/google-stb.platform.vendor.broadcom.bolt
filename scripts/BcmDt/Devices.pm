@@ -1829,9 +1829,9 @@ sub add_gisb_arb($$$$)
 	$dt->add_node(DevTree::node->new($t));
 }
 
-sub add_waketimer($$$$)
+sub add_waketimer($$$$$)
 {
-	my ($dt, $rh, $info, $l2_intr) = @_;
+	my ($dt, $rh, $info, $l2_intr, $clks_file_exists) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my %defaults = (compatible => 'brcm,brcmstb-waketimer');
 	override_default(\%defaults, $info);
@@ -1844,6 +1844,11 @@ sub add_waketimer($$$$)
 		"parent_intc" => $l2_intr . "_intc",
 		"irq" => $intr,
 	);
+	if ($clks_file_exists) {
+		$defaults{"clocks"} = [ 'phandle', 'upg_fixed'];
+	} else {
+		$defaults{"clock-frequency"} = [ 'dec', 27000000 ];
+	}
 	$t .= output_default(\%defaults);
 	$t .= sprintf("reg = <0x%x 0x%x>;\n", $reg, $size);
 	$t .= output_interrupt_prop($rh, \%intr_prop);
@@ -3346,7 +3351,7 @@ sub add_gpio($$$)
 
 sub add_watchdog($$$$)
 {
-	my ($dt, $rh, $info, $clks_file) = @_;
+	my ($dt, $rh, $info, $clks_file_exists) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 
 	foreach $b (@{$info->{"-type"}}) {
@@ -3379,7 +3384,7 @@ sub add_watchdog($$$$)
 		$t = sprintf("%s: %s {\n", $label, $unit);
 		insert_label($label, $unit);
 
-		if (-e $clks_file) {
+		if ($clks_file_exists) {
 			$default{"clocks"} = [ 'phandle', 'upg_fixed'];
 		} else {
 			$default{"clock-frequency"} = [ 'dec', 27000000 ];
