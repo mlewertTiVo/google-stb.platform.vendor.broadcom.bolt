@@ -402,6 +402,18 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	char dt_add_cmd[BOOT_ARGS_SIZE+64];
 	int fd=-1;
 	char *fb_flashdev_mode_str;
+	struct fastboot_ptentry *ptn;
+
+	/* Partition table needed in these two cases */
+	if ((boot_path == BOOTPATH_LEGACY || boot_path == BOOTPATH_AB_SYSTEM) && la) {
+		char *p = NULL;
+		p = os_strstr(la->la_device, ".");
+		if (p)
+			*p = '\0';
+		fastboot_discover_gpt_tables(la->la_device, 1);
+		if (p)
+			*p = '.';
+	}
 
 	bootargs_buflen = os_sprintf(bootargs_buf, "%s", cmdline);
 	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
@@ -413,6 +425,15 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 
 	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
 		" androidboot.btmacaddr=%s", get_btmacaddr());
+
+	if (boot_path == BOOTPATH_LEGACY) {
+		ptn = fastboot_flash_find_ptn("system");
+		if (ptn)
+			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
+				" android_blkdev=PARTUUID=%s", ptn->uuid);
+		else
+			os_printf("PARTUUID for system failed. Skipping android_blkdev\n");
+	}
 
 	os_sprintf(dt_add_cmd, "dt add node / firmware");
 	bolt_docommands(dt_add_cmd);
@@ -508,18 +529,8 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 		bolt_docommands(dt_add_cmd);
 		os_printf("dm-verity bootmode: '%s'.\n", is_dmverity_eio_mode(slot) ? "eio" : "enforcing");
 
-		if ((boot_path == BOOTPATH_AB_SYSTEM) && (la != NULL)) {
-			char *p = NULL;
+		if (boot_path == BOOTPATH_AB_SYSTEM && la) {
 			char partname[64];
-			struct fastboot_ptentry *ptn;
-			p = os_strstr(la->la_device, ".");
-			if (p != NULL) {
-				*p = '\0';
-			}
-			fastboot_discover_gpt_tables(la->la_device, 1);
-			if (p != NULL) {
-				*p = '.';
-			}
 			os_sprintf(partname, "%s_%s",
 				BOOT_SLOT_SYSTEM_PREFIX, slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 			ptn = fastboot_flash_find_ptn(partname);
