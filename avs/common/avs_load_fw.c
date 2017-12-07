@@ -205,6 +205,26 @@ static void avs_ask_limits(struct at_initialization *params)
 #endif
 }
 
+/* this is debug code and will be optimized out when debug not enabled */
+static void avs_ask_trap_vddc(struct at_initialization *params)
+{
+	int disable_otp_vtrap_data = 0;
+	int disable_check_vddcmon_warning = 0;
+
+	if (ask_y_or_n("Use modified VTRAP_DATA/VDDCMON_WARNING", false))
+		return;
+
+	disable_otp_vtrap_data = avs_get_int_number(
+		"Disable USE_OTP_VTRAP_DATA (1=yes)", 0);
+	disable_check_vddcmon_warning = avs_get_int_number(
+		"Disable USE_CHECK_VDDCMON_WARNING (1=yes)", 0);
+	if (disable_otp_vtrap_data != 0)
+		params->unused |= UNUSED_DISABLE_USE_OTP_VTRAP_DATA;
+
+	if (disable_check_vddcmon_warning != 0)
+		params->unused |= UNUSED_DISABLE_USE_CHECK_VDDCMON_WARNING;
+}
+
 #if (BCHP_CHIP==7445) || defined(CONFIG_BCM7439B0)
 /* specials: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=50mV VmarginH=100mV */
 #define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
@@ -350,6 +370,7 @@ static void avs_get_default_params(struct at_initialization *params)
 	if (ENABLE_TEST_PROMPTS) {
 		avs_ask_margins(params);
 		avs_ask_limits(params);
+		avs_ask_trap_vddc(params);
 	}
 }
 
@@ -575,7 +596,7 @@ static int avs_wait_for_firmware(int en)
 			complete = AVS_SUCCESS;
 			break;
 		}
-		if (data == INIT_FAILED) {
+		if ((data == INIT_FAILED) || (data == AVS_BAD_PMAP)) {
 			complete = AVS_FAILURE;
 			break;
 		}

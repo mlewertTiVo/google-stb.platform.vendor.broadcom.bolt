@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -121,11 +121,10 @@ int ui_init_flashcmds(void)
 );
 #endif
 #endif
-	cmd_addcmd("rts", ui_cmd_rts, NULL, "list all, or select an rts",
-			"rts [-set=N] where N is the number shown when listing rts sets",
-			"-set=*;program and save to flash an rts set|"
-			"-clear;unprogram and unset flash saved rts set (will then use board defaults)"
-);
+	cmd_addcmd("rts", ui_cmd_rts, NULL, "select an RTS or clear selection",
+			"rts [-set=N]",
+			"-set=*;selects a specified RTS set|"
+			"-clear;clears selectoin and returns to board default");
 
 	cmd_addcmd("gisb", ui_cmd_gisb, NULL, "show or set GISB bus timeout",
 			"gisb [-set=*]",
@@ -842,7 +841,7 @@ static unsigned int dvfs_show_board_config(struct board_type *b, struct fsbl_inf
 static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 {
 	bool set_pmap = false, clear_pmap = false;
-	int pmap_id_old, pmap_id_new;
+	int pmap_id_old, pmap_id_new, index;
 	const char *s;
 	struct fsbl_info *inf = board_info();
 	uint32_t hf_new, hf_old;
@@ -872,20 +871,21 @@ static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 	}
 
 	pmap_id_old = board_pmap();
-	if (pmap_id_old >= PMAP_MAX)
+	if (is_pmap_valid(pmap_id_old))
 		xprintf("Stored PMap ID %d is invalid.\n", pmap_id_old);
 
 	if (set_pmap) {
 		pmap_id_new = atoi(s);
-		if (pmap_id_new < 0 || pmap_id_new >= PMAP_MAX) {
-			err_msg("PMap %d is invalid.", pmap_id_new);
-			return BOLT_ERR;
-		}
-		num_domains_pmap = pmapTable[pmap_id_new].num_domains;
-		if (num_domains_pmap != 0 &&
-			num_domains_board != num_domains_pmap) {
-			err_msg("PMap ID %d cannot be for this board.",
-				pmap_id_new);
+		if (!is_pmap_valid(pmap_id_new)) {
+			index = board_pmap_index(pmap_id_new);
+			num_domains_pmap = pmapTable[index].num_domains;
+			if (num_domains_pmap != 0 &&
+					num_domains_board != num_domains_pmap) {
+				err_msg("PMap ID %d cannot be for this board.",
+						pmap_id_new);
+				return BOLT_ERR;
+			}
+		} else {
 			return BOLT_ERR;
 		}
 	} else if (clear_pmap) {
@@ -910,49 +910,53 @@ static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 
 static int ui_cmd_rts(ui_cmdline_t *cmd, int argc, char *argv[])
 {
-	int _set = 0, _clear = 0, i, id = -1;
+	int rc;
+	bool do_set = false, do_clear;
+	int id = -1;
 	const char *s;
 
 	if (cmd_sw_value(cmd, "-set", &s))
-		_set = 1;
+		do_set = true;
 
-	if (cmd_sw_isset(cmd, "-clear"))
-		_clear = 1;
+	do_clear = cmd_sw_isset(cmd, "-clear");
 
-	if (_set && _clear) {
-		xprintf("cannot set and clear rts at the same time!\n");
-		return BOLT_ERR;
-
-	} else if (!_set && !_clear) {
-		board_init_rts_show(0 /* all */);
-		return BOLT_OK;
-
-	} else if (_set) {
-		id = atoi(s);
-		if ((id < 1) || (id >= FSBL_HARDFLAG_RTS_MASK)) {
-			err_msg("Box mode must be [1..%d] and not %d",
-				FSBL_HARDFLAG_RTS_MASK - 1, id);
-			return BOLT_ERR;
+	if (do_set) {
+		if (do_clear) {
+			xprintf("cannot set and clear RTS at the same time!\n");
+			return BOLT_ERR_INV_COMMAND;
+		} else {
+			id = atoi(s);
+			if (id < 1) {
+				err_msg("cannot set %d, must be greater than "
+					"0 (zero)", id);
+				return BOLT_ERR_INV_PARAM;
+			}
+/* This is not a recommended way of selecting a BOX mode. Instead,
+ * please try the B_REFSW_BOXMODE environment variable in Linux.
+ * For example:
+ *     export B_REFSW_BOXMODE=%d
+ */
+			warn_msg("This is not a recommended way of selecting "
+				"a BOX mode. Instead,\n"
+				"please try the B_REFSW_BOXMODE environment "
+				"variable in Linux.\n"
+				"For example:");
+			warn_msg("    export B_REFSW_BOXMODE=%d", id);
 		}
+	} else {
+		if (do_clear) {
+			id = -1; /* -1 means "clear the current one" */
+		} else {
+			/* not set and not clear, display current box mode */
+			xprintf("BOX MODE: %d\n",
+				board_init_rts_current_boxmode());
+			return BOLT_OK;
+		}
+	}
 
-	} else if (_clear) {
-		id = -1;
-
-	} else { /* nobody expects the unexpected! */
-		return BOLT_ERR;
-	};
-
-	i = board_init_rts_update(id);
-	if (i < 0)
-		return i;
-
-	board_init_rts();
-
-	board_init_rts_show(0 /* all */);
-
-#if !defined(SECURE_BOOT)
-	board_check(i); /* force? */
-#endif
+	rc = board_init_rts_update(id);
+	if (rc < 0)
+		return rc;
 
 	return BOLT_OK;
 }

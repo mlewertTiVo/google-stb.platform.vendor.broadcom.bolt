@@ -27,8 +27,6 @@ extern void *_smm_zero_end[];
 extern void *__config_info[];
 extern void *__per_cpu_info[];
 
-static struct psci_cfg * const config = (struct psci_cfg *)__config_info;
-
 image_info_t bl31_image_info;
 entry_point_info_t bl32_ep_info;
 image_info_t bl32_image_info;

@@ -145,6 +145,27 @@ err_exit:
 	return NULL;
 }
 
+char *get_btmacaddr(void)
+{
+	char *env_board_bt;
+	int env_strlen;
+
+	env_board_bt = env_getenv("BOARD_BTMAC");
+
+	if (env_board_bt) {
+		env_strlen = os_strlen(env_board_bt);
+		if (env_strlen > ANDROID_PROP_VALUE_MAX_STR_LEN) {
+			os_printf("BOARD_BTMAC strlen (%d) > allowed len (%d)\n",
+				env_strlen, ANDROID_PROP_VALUE_MAX_STR_LEN);
+			goto err_exit;
+		}
+		return env_board_bt;
+	}
+
+err_exit:
+	return NULL;
+}
+
 static int is_quiescent_mode(void)
 {
 	char *q_mode = env_getenv("A_QUIESCENT");
@@ -390,6 +411,9 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
 		" androidboot.verifiedbootstate=orange");
 
+	bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
+		" androidboot.btmacaddr=%s", get_btmacaddr());
+
 	os_sprintf(dt_add_cmd, "dt add node / firmware");
 	bolt_docommands(dt_add_cmd);
 	os_sprintf(dt_add_cmd, "dt add node /firmware android");
@@ -409,7 +433,7 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	// devices do not have a vendor partition.
 	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
 	if (boot_path == BOOTPATH_LEGACY) {
-		os_sprintf(dt_add_cmd, "%s.vendor_verity", fb_flashdev_mode_str);
+		os_sprintf(dt_add_cmd, "%s.vendor", fb_flashdev_mode_str);
 	} else {
 		os_sprintf(dt_add_cmd, "%s.vendor_%s", fb_flashdev_mode_str, BOOT_SLOT_0_SUFFIX);
 	}
@@ -438,10 +462,15 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s 'wait,verify,slotselect'");
 			bolt_docommands(dt_add_cmd);
 		} else {
-		// legacy system mode, we can early-mount both vendor and system.
+			// legacy system mode, we can early-mount both vendor and system.
 			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor type s 'ext4'");
 			bolt_docommands(dt_add_cmd);
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s 'wait,verify'");
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/vendor fsmgr_flags s %s",
+#if defined(DROID_VERITY_n)
+				"'wait'");
+#else
+				"'wait,verify'");
+#endif
 			bolt_docommands(dt_add_cmd);
 
 			os_sprintf(dt_add_cmd, "dt add node /firmware/android/fstab system");
@@ -455,7 +484,12 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 			bolt_docommands(dt_add_cmd);
 			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system type s 'ext4'");
 			bolt_docommands(dt_add_cmd);
-			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system fsmgr_flags s 'wait,verify'");
+			os_sprintf(dt_add_cmd, "dt add prop /firmware/android/fstab/system fsmgr_flags s %s",
+#if defined(DROID_VERITY_n)
+				"'wait'");
+#else
+				"'wait,verify'");
+#endif
 			bolt_docommands(dt_add_cmd);
 		}
 	}
@@ -497,6 +531,12 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 				fastboot_flash_dump_ptn();
 			}
 		}
+	} else {
+#if !defined(DROID_VERITY_n)
+		// TODO: add detection for corrupted verity block in non-AB mode.
+		os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
+		bolt_docommands(dt_add_cmd);
+#endif
 	}
 
 	return bootargs_buflen;

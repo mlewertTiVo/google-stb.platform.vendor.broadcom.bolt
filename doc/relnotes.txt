@@ -8,8 +8,8 @@ Release notes
 Broadcom Ltd <support@broadcom.com>
 
 
- Bolt SQA Release v1.32, 4th August 2017
-----------------------------------------
+ Bolt SQA Release v1.33, 22nd September 2017
+--------------------------------------------
 
 ....
 	o Supported chip families: 7250b0 7260a0 7268b0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
@@ -19,42 +19,51 @@ Broadcom Ltd <support@broadcom.com>
 			o 7250b0
 			o 7364b0
 			o 7366c0
-			o 7439b0
 			o 7445d0
 			o 7445e0
 		o v0.3.3
 			o 74371a0
 			o 7364c0
-		o v0.5.0
+		o v0.3.4
+			o 7439b0
+		o v0.5.3
 			o 7271b0
 			o 7268b0
 			o 7260a0
 			o 7278a0
 	o AVS Pending PVT testing:
 	o SHMOO versions:
-		o DDR3
-			o 7250b0:  3.4.1.0
-			o 7260a0:  3.4.0.0
-			o 7364b0:  3.4.1.0
-			o 7364c0:  3.4.1.0
-			o 7366c0:  3.4.1.0
-			o 7439b0:  3.4.1.0
-			o 7445d0:  3.4.1.0
-			o 7445e0:  3.4.1.0
-			o 74371a0: 1.0.0.6
-		o DDR4
-			o 7250b0:  3.4.1.0
-			o 7260a0:  3.4.0.22
-			o 7364b0:  3.4.1.0
-			o 7364c0:  3.4.1.0
-			o 7366c0:  3.4.1.0
-			o 7439b0:  3.4.1.0
-			o 7445d0:  3.4.1.0
-			o 7445e0:  3.4.1.0
-		o LPDDR4
-			o 7268b0:  2.3.1.0
-			o 7271b0:  2.3.1.0
-			o 7278a0:  5.1.0.4
+		o DDR3 upto 2133 unless otherwise noted
+			o 7250b0:  3.4.1.0 (M1)
+			o 7260a0:  3.4.0.0 (M2)
+			o 7364b0:  3.4.1.0 (M1)
+			o 7364c0:  3.4.1.0 (M1)
+			o 7366c0:  3.4.1.0 (M1)
+			o 7439b0:  3.4.1.0 (M1)
+			o 7445d0:  3.4.1.0 (M1)
+			o 7445e0:  3.4.1.0 (M1)
+			o 74371a0: 1.0.0.6 (M1)
+		o DDR4 upto 2400 unless otherwise noted
+			o 7250b0:  3.4.1.0 (M1)
+			o 7260a0:  3.6.0.0 (M1**)
+			o 7364b0:  3.4.1.0 (M1)
+			o 7364c0:  3.4.1.0 (M1)
+			o 7366c0:  3.4.1.0 (M1)
+			o 7439b0:  3.4.1.0 (M1)
+			o 7445d0:  3.4.1.0 (M1)
+			o 7445e0:  3.4.1.0 (M1)
+		o LPDDR4 upto 3733 unless otherwise noted
+			o 7268b0:  5.4.2.0 (M1*)
+			o 7271b0:  5.4.2.0 (M1*)
+			o 7278a0:  5.1.0.4 (M4*)
+
+* Denotes:
+		o Samsung, SK-Hynix, and Micron LPDDR4-3200 supported on 4 or more PCB layers
+		o Only SK-Hynix and Micron LPDDR4-3733 supported on 6 or more PCB layers
+
+** Denotes:
+ 		o DDR4-2667 is supported with external VTT regulator
+
 ....
 
  Known Issues
@@ -215,52 +224,54 @@ arm-linux-ld: error: no memory region specified for loadable section `.bss'
 
 ''''
 
- Upgrade to v1.32 criteria
+ Upgrade to v1.33 criteria
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-link:http://jira.broadcom.com/browse/SWBOLT-2407[SWBOLT-2407] 7260a0 Shmoo has been updated to 3.4.0.22 for DDR4 and 3.4.0.0 for DDR3. ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2435[SWBOLT-2435] Added 'linux,pci-domain' property for PCIe node.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2251[SWBOLT-2251] Add support in the scripting language to represent external MoCA chips and make them configurable enough based on the board design.
+link:http://jira.broadcom.com/browse/SWBOLT-2424[SWBOLT-2424] Added document for SSDP and CoAP.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2403[SWBOLT-2403] Added DT function in Bolt for SATA regulator.
+link:http://jira.broadcom.com/browse/SWBOLT-2443[SWBOLT-2443] BFW is now successfully loaded from eMMC against software reset, for example the 'reboot' BOLT command. ^[yellow silver-background]#major#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-2084[SWBOLT-2084] Added property for start delay to vreg. ^[red silver-background]#blocker#^
+link:http://jira.broadcom.com/browse/SWBOLT-2423[SWBOLT-2423] Corrected PCIe vreg polarity on BCM97278HB. ^[red silver-background]#blocker#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-2396[SWBOLT-2396] Added wlan partition to bolt for storage to WIFI PA trimming data.
+link:http://jira.broadcom.com/browse/SWBOLT-2427[SWBOLT-2427] Correctly programmed 7278 switch LED controller.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2384[SWBOLT-2384] BFW for 7278a0 has been updated to v1.1.0. ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2426[SWBOLT-2426] Embedded toolchain info in BOLT logo.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2401[SWBOLT-2401] Disabled DTU in 7278a0. ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2415[SWBOLT-2415] Fixed PHY type in BDC node for XHCI only systems.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2206[SWBOLT-2206] Enabling splash in BOLT v1.32 for 7278A0.
+link:http://jira.broadcom.com/browse/SWBOLT-2417[SWBOLT-2417] Fixed build errors with stbgcc-6.3.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2381[SWBOLT-2381] FSBL constructs page table entries corresponding to the range betweenthe base address of MEMC#0 and the end of to-be-copied SSBL, and then SSBL re-constructs for the total DRAM installed.
+link:http://jira.broadcom.com/browse/SWBOLT-2395[SWBOLT-2395] Fixed problem with CoAP client not being able to consistently halt board from executing startup command.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2376[SWBOLT-2376] Fixed XHCI driver external USB hubs USB 2.0 enumeration.
+link:http://jira.broadcom.com/browse/SWBOLT-2422[SWBOLT-2422] Fixed writing to NAND_CMD_ADDRESS in 7278a0.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2397[SWBOLT-2397] Fixed do operator with newer Perl versions.
+link:http://jira.broadcom.com/browse/SWBOLT-2447[SWBOLT-2447] Increased margins on 7439 by 20mV.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2369[SWBOLT-2369] Provided "clocks" property for the wake-timer.
+link:http://jira.broadcom.com/browse/SWBOLT-2394[SWBOLT-2394] Provided more identifiable names in SSDP presence messages.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2404[SWBOLT-2404] Re-enabled DTU in 7271 and 7268. ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2438[SWBOLT-2438] Shmoo for 7268b0 and 7271b0 has been updated to v5.4.1.0. MCB's have to be regenerated. ^[yellow silver-background]#major#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-2386[SWBOLT-2386] Shmoo for 7268b0 and 7271b0 has been updated to v2.3.1.0. At the moment, Samsung DRAM parts are not supported with v2.3.1.0. ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2437[SWBOLT-2437] Shmoo has been updated to v3.6.0.0 for 7260a0 DDR4. MCB's have also been regenerated for DDR4. ^[yellow silver-background]#major#^
 
-link:http://jira.broadcom.com/browse/SWBOLT-2379[SWBOLT-2379] The DRAM portion of the system memory map is passed via Device Tree.
+link:http://jira.broadcom.com/browse/SWBOLT-2433[SWBOLT-2433] Support for 72518a0 has been added.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2398[SWBOLT-2398] The configuration for the built-in Ethernet port of BCM97278IPA has been fixed.
+link:http://jira.broadcom.com/browse/SWBOLT-2414[SWBOLT-2414] Support for BCM97271VC4L has been added.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2380[SWBOLT-2380] The default BFW has been updated to 4.2.5 for 7250b0, 7260a0. 7268b0, 7271b0, 7364b0, 7364c0, 7366c0, 7439b0, 7445d0 and 7445e0.
+link:http://jira.broadcom.com/browse/SWBOLT-2440[SWBOLT-2440] The convention of splash generated files has been corrected.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2410[SWBOLT-2410] Updated 7260 PMap clock freq setting to support UHD upscaling. ^[yellow silver-background]#major#^
+link:http://jira.broadcom.com/browse/SWBOLT-2413[SWBOLT-2413] Updated AVS firmware to v0.5.1: use only internal AVS PMAP clock values.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2385[SWBOLT-2385] Updated DTU initialization sequence for BFWs.
+link:http://jira.broadcom.com/browse/SWBOLT-2425[SWBOLT-2425] Updated AVS firmware to v0.5.2: support PMAP holes, default margins values only, central oscillators 1 and 3 to set thresholds, modify max_voltage for 72604A0.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2390[SWBOLT-2390] Updated PCIe DT node with proper information for Linux PCIe improvements.
+link:http://jira.broadcom.com/browse/SWBOLT-2446[SWBOLT-2446] Updated AVS firmware to v0.5.3: add PMAP data for 72518, improved voltage measurement averaging.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2273[SWBOLT-2273] Updated clock tree for 7260a0 and 7439b0.
 
  Broadcom FAE access
 ~~~~~~~~~~~~~~~~~~~~
-http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.32%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.33%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
 
 
  Documentation

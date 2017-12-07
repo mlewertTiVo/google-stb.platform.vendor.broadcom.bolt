@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -89,7 +89,7 @@ static inline void *flash_offs_to_va(uint32_t offs)
 static void do_nand_cmd(uint32_t cmd, uint32_t addr)
 {
 #if NAND_CONTROLLER_REVISION >= 0x703
-	BDEV_WR64(BCHP_NAND_CMD_ADDRESS, 0);
+	BDEV_WR64(BCHP_NAND_CMD_ADDRESS, addr);
 #else
 	BDEV_WR(BCHP_NAND_CMD_EXT_ADDRESS, 0);
 	BDEV_WR(BCHP_NAND_CMD_ADDRESS, addr);

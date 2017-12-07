@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -43,13 +43,13 @@ uint32_t            board_totaldram( void ); /* in Mb */
 struct ddr_info    *board_find_ddr(struct board_type *b, uint32_t idx);
 dt_ops_s           *board_dt_ops(void);
 const struct dvfs_params *board_dvfs(void);
-char               *board_init_current_rts(void);
-int                 board_init_current_rts_boxmode(void);
 const sdio_params  *board_sdio(int sdio);
 const gpio_key_params *board_gpio_keys(void);
 const gpio_led_params *board_gpio_leds(void);
 const bt_rfkill_params *board_bt_rfkill_gpios(void);
 #ifdef DVFS_SUPPORT
+unsigned int board_pmap_index(unsigned int pmap);
+int is_pmap_valid(unsigned int pmap);
 unsigned int        board_pmap(void);
 #endif
 

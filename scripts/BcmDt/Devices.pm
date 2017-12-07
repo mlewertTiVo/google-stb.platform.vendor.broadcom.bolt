@@ -951,6 +951,7 @@ sub add_usb_v2($$$$$)
 
 		my $usb_info = { top => sprintf('%x', $usb_start), xhci => [], ohci => [],
 				 ehci => [], bdc => [] };
+		my $has_ehci=0;
 		foreach my $type ('ehci', 'ohci', 'xhci', 'bdc') {
 			for ($j=0; 1; $j++) {
 				$t = '';
@@ -958,6 +959,9 @@ sub add_usb_v2($$$$$)
 				my ($start, $size) 
 					= get_reg_range($rh, "${pre}_${mid}");
 				last if (!defined $start);
+				if ($type eq 'ehci') {
+				    $has_ehci = 1;
+				}
 				my $intr_name;
 				if ($type eq 'bdc') {
 					$intr_name = sprintf("USB%d_USBD", $i);
@@ -988,7 +992,13 @@ sub add_usb_v2($$$$$)
 				$t .= sprintf("%s = \"%s\";\n", 'compatible', $compatible);
 				$t .= sprintf("%s = <0x%x 0x%x>;\n", 'reg', $start, $size);
 				$t .= output_interrupt_prop($rh, \%intr_prop);
-				$t .= sprintf("phys = <&usbphy_%d 0x%d>;\n", $i, $type eq 'xhci' ? 1 : 0);
+
+				my $phy_arg = 0;
+				if (($type eq 'xhci') || (($type eq "bdc") &&
+					!$has_ehci)) {
+				    $phy_arg = 1;
+				}
+				$t .= sprintf("phys = <&usbphy_%d 0x%d>;\n", $i, $phy_arg);
 				$t .= "phy-names = \"usbphy\";";
 				$t .= "};\n";
 				if ($dt) {
@@ -1542,6 +1552,7 @@ sub add_pcie($$$$$)
 		$t .= "msi-controller;\n";
 		$t .= "msi-parent = <\&$pcie_label>;\n";
 		$t .= output_default(\%default);
+		$t .= "linux,pci-domain = <$i>;\n";
 		$t .= "interrupt-map = <";
 		for (my $j=0; $j<4; $j++) {
 			# Some day we will switch to using the proper legacy

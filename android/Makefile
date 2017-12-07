@@ -23,6 +23,11 @@ ifeq ($(filter clean distclean, $(MAKECMDGOALS)),)
 include $(GEN)/android/boltinc/build/tools.mk
 endif
 
+LDS := android_bsu.lds
+ifeq ($(BCHP_CHIP),7278)
+LDS := android_bsu_1.lds
+endif
+
 ODIR := objs/$(FAMILY)
 OBJS := init.o arm-eabi.o gpt_table_in_flash.o android_bsu.o \
 	android_boot.o android_fastboot.o android_boot_common.o
@@ -50,7 +55,9 @@ CSTRICT	:= -Wall -Wmissing-field-initializers -Wundef -Wextra -Wno-unused-parame
 # Android build tree.  See BoardConfig.mk from Android tree.
 COMMON_FLAGS:= $(INCFLAGS) $(ARCHFLAGS) $(EXTRA_DEFINES) -D_BOLT_
 CFLAGS := $(COMMON_FLAGS) $(ARCH_CFLAGS) -nostdlib -ffreestanding -Os \
-	  $(CSTRICT) -g -ffunction-sections -fdata-sections -DBSU -DDROID_BSU -DDROID_PRODUCT='"${TARGET_BOARD_PLATFORM}"'
+	  $(CSTRICT) -g -ffunction-sections -fdata-sections -DBSU
+CFLAGS += -DDROID_BSU -DDROID_PRODUCT='"${TARGET_BOARD_PLATFORM}"'
+CFLAGS += -DDROID_VERITY_${LOCAL_DEVICE_USE_VERITY}
 AFLAGS := $(COMMON_FLAGS) -D__ASSEMBLER__ -D_ASMLANGUAGE
 LDFLAGS := $(ARCH_LDFLAGS)
 LIBGCC := $(GEN)/android/boltinc/thirdparty/libgcc/libgcc.a
@@ -66,7 +73,7 @@ all: famcheck $(FAMILY)
 $(FAMILY): famcheck $(BSU)
 
 $(BSU): $(OBJS)
-	$(LD) $(LDFLAGS) -T android_bsu.lds -o $@ $(OBJS) $(LIBGCC)
+	$(LD) $(LDFLAGS) -T $(LDS) -o $@ $(OBJS) $(LIBGCC)
 
 clean:
 	@if [ "$(FAMILY)" != "unknown" ]; then \
