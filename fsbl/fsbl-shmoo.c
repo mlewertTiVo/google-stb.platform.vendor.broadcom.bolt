@@ -435,7 +435,9 @@ void shmoo_set(const struct ddr_info *ddr, bool warm_boot)
 	if (warm_boot)
 		options |= SHMOO_OPTION_WARMBOOT;
 
+#if !defined(CFG_FULL_EMULATION)
 	do_shmoo(gmemsys, ddr, scratch, options);
+#endif
 }
 
 

@@ -10,6 +10,7 @@
 #include <avs_bsu.h> /* for avs_info_print() */
 #include <bolt.h>
 #include <board.h>
+#include <board_init.h>
 #include <bsp_config.h>
 #include <chipid.h>
 #include <common.h>
@@ -41,6 +42,10 @@
 #include <net_api.h>
 
 #include <bchp_sun_top_ctrl.h>
+
+#if BCHP_JTAG_OTP_REG_START
+#include <bchp_jtag_otp.h>
+#endif
 
 #define WANT_OTP_DECODE 1 /* SWBOLT-263 */
 #include <otp_status.h> /* from gen/ */
@@ -75,6 +80,7 @@ void bolt_aegis_cr_unblock(void);
 void bolt_aegis_flash_update_done(void);
 void bolt_aegis_loop(void);
 #endif
+void bfw_main(void);
 
 
 /*  *********************************************************************
@@ -228,6 +234,8 @@ static void print_otp(void)
 		if (g_otp_status[i].reg != r) {
 			r = g_otp_status[i].reg;
 			v = BDEV_RD(r);
+			if (v == 0)
+				continue;
 			xprintf("\notp @ 0x%08x = 0x%08x: ",
 				BPHYSADDR(r), v);
 		}
@@ -241,6 +249,10 @@ static void print_otp(void)
 	xprintf("otp=%08x/%08x\n",
 		REG(BCHP_SUN_TOP_CTRL_OTP_OPTION_STATUS_0),
 		REG(BCHP_SUN_TOP_CTRL_OTP_OPTION_STATUS_1));
+#endif
+#ifdef BCHP_JTAG_OTP_GENERAL_STATUS_8
+	xprintf("bond option: 0x%02x\n",
+		REG(BCHP_JTAG_OTP_GENERAL_STATUS_8) & 0xFF);
 #endif
 }
 
@@ -270,18 +282,24 @@ static void say_hello(int blink)
 	}
 	xprintf(ANSI_RESET "\n");
 
-	xprintf("Board: %s\n", board_name());
+	xprintf("Board: %s", board_name());
 
-	prod = REG(BCHP_SUN_TOP_CTRL_PRODUCT_ID);
-	fam = REG(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
-	xprintf("SYS_CTRL: product=%04x, family=%04x%02x, strap=%08x",
-		chipid_without_rev(prod),
-		chipid_without_rev(fam),
-		(fam & CHIPID_REV_MASK) + 0xa0,
-		REG(BCHP_SUN_TOP_CTRL_STRAP_VALUE_0));
+	prod = BDEV_RD(BCHP_SUN_TOP_CTRL_PRODUCT_ID);
+	fam = BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
+	xprintf(" (%04x of %04x%02x family)\n",
+		chipid_without_rev(prod), chipid_without_rev(fam),
+		(fam & CHIPID_REV_MASK) + 0xa0);
 #ifdef BCHP_SUN_TOP_CTRL_STRAP_VALUE_1
-	xprintf(",%08x", REG(BCHP_SUN_TOP_CTRL_STRAP_VALUE_1));
+	xprintf("strap=%08x,%08x:",
+		BDEV_RD(BCHP_SUN_TOP_CTRL_STRAP_VALUE_0),
+		BDEV_RD(BCHP_SUN_TOP_CTRL_STRAP_VALUE_1));
+#else
+	xprintf("strap=%08x:", BDEV_RD(BCHP_SUN_TOP_CTRL_STRAP_VALUE_0));
 #endif
+	if (board_does_strap_disable_pcie())
+		__puts(" PCIe is disabled");
+	if (board_does_strap_disable_sata())
+		__puts(" SATA is disabled");
 
 	print_otp();
 
@@ -290,7 +308,7 @@ static void say_hello(int blink)
 #ifndef SECURE_BOOT
 	xprintf("RESET CAUSE: ");
 #endif
-	aon_reset_history();
+	board_init_reset_history();
 
 	if (b) {
 		const uint32_t prid_board = b->prid & ~CHIPID_REV_MASK;
@@ -309,16 +327,18 @@ static void print_clock_info(void)
 {
 	uint32_t sysif_mhz;
 
-	xprintf("CPU: %dx %s [%08x] %d MHz\n",
+	xprintf("CPU %dx %s [%08x] %d MHz",
 		arch_get_num_processors(),
 		arch_get_cpuname(),
 		arch_get_midr(),
 		get_cpu_freq_mhz());
 
-	xprintf("SCB: %d MHz\n", (uint32_t)arch_get_scb_freq_hz()/1000000);
+	xprintf(", SCB %d MHz", (uint32_t)arch_get_scb_freq_hz()/1000000);
 	sysif_mhz = (uint32_t)arch_get_sysif_freq_hz() / 1000000;
-	if (sysif_mhz != 0)
-		xprintf("SYSIF: %d MHz\n", sysif_mhz);
+	if (sysif_mhz == 0)
+		xprintf("\n");
+	else
+		xprintf(", SYSIF %d MHz\n", sysif_mhz);
 	board_print_ddrspeed();
 }
 
@@ -594,6 +614,7 @@ static void bolt_do_auto_start(void)
 #endif
 }
 
+#if CFG_COAP
 static void bolt_coap_halt_cmd_check(void *arg)
 {
 	bolt_timer_t *timer = (bolt_timer_t *)arg;
@@ -610,6 +631,7 @@ static void bolt_coap_halt_cmd_check(void *arg)
 	if (!coap_halt_recvd && timer_expired)
 		bolt_do_auto_start();
 }
+#endif
 
 /*  *********************************************************************
     *  bolt_init_coap()
@@ -745,6 +767,15 @@ void bolt_main(int a, int b)
 	bolt_aegis_cr_unblock();
 #endif
 
+#ifdef SSBM_RAM_ADDR
+	/* With SSBM, SSBL, SSBM and PSCI are in the same 1MB page.
+	 * When SSBL page is set up, all 4KB pages are set up as XN
+	 * except SBSL text. Se up page used by SSBM and PSCI.
+	 * SSBM_SIZE includes SSBM and PSCI.
+	 */
+	arch_mark_executable(SSBM_RAM_ADDR, SSBM_SIZE, true);
+	arch_mark_uncached(SSBM_RAM_ADDR, SSBM_SIZE);
+#endif
 	bolt_psci_init();
 
 	/* Printout BOLT identification info */
@@ -802,6 +833,10 @@ void bolt_main(int a, int b)
 	bolt_setup_saved_env();
 
 	board_check(0);
+
+#if (CFG_ZEUS5_1)
+	bfw_main();
+#endif
 
 	/* Custom setup that is done just
 	before we could autorun. */
@@ -1028,7 +1063,12 @@ static void reserve_memory_areas(void)
 #endif
 
 #ifdef STUB64_START
+#ifdef SSBM_RAM_ADDR
+	/* With SSBM, SSBM_SIZE is SSBM+PSCI. */
+	retval = bolt_reserve_memory(SSBM_SIZE, SSBM_RAM_ADDR,
+#else
 	retval = bolt_reserve_memory(PSCI_SIZE, PSCI_BASE,
+#endif
 		BOLT_RESERVE_MEMORY_OPTION_ABS |
 		BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY,
 		"PSCI");

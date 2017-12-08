@@ -83,7 +83,7 @@
 #endif
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#define BOOT_ARGS_SIZE 512
+#define BOOT_ARGS_SIZE 1024
 
 extern struct bsu_api *bsuapi;
 

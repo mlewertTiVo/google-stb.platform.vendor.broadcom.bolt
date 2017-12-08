@@ -29,8 +29,6 @@ link:http://jira.broadcom.com/browse/SWBOLT-2395[SWBOLT-2395] Fixed problem with
 
 link:http://jira.broadcom.com/browse/SWBOLT-2422[SWBOLT-2422] Fixed writing to NAND_CMD_ADDRESS in 7278a0.
 
-link:http://jira.broadcom.com/browse/SWBOLT-2432[SWBOLT-2432] If the overtemp is a reset cause, it gets enabled by SSBL after cooling down the chip via performing temperature parking.
-
 link:http://jira.broadcom.com/browse/SWBOLT-2447[SWBOLT-2447] Increased margins on 7439 by 20mV.
 
 link:http://jira.broadcom.com/browse/SWBOLT-2394[SWBOLT-2394] Provided more identifiable names in SSDP presence messages.

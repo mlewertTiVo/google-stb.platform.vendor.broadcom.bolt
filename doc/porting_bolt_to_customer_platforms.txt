@@ -927,16 +927,8 @@ match your setup.
 
  Configuring the build
 ~~~~~~~~~~~~~~~~~~~~~~
-The splash is normally disabled by default in BOLT. To enable
-it, edit the following lines in config/stdbuild.cfg:
-
-----
- config SPLASH       off
- config SPLASH_PAL   default
- config SPLASH_FILE  "\"flash0.splash\""
-----
-
-Enable splash:
+The splash is normally disabled by default in BOLT. To enable it, add
+the following lines in config/family-$(FAMILY).cfg
 
 ----
   config SPLASH            ON

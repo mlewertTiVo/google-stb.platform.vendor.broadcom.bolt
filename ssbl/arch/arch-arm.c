@@ -220,7 +220,7 @@ uint64_t arch_get_scb_freq_hz(void)
 	mdiv = BDEV_RD_F(CLKGEN_PLL_SCB_PLL_CHANNEL_CTRL_CH_0, MDIV_CH0);
 #else
 	/* SCB shares SYS0 PLL with others */
-#if defined(CONFIG_BCM7439B0) || defined(CONFIG_BCM7278A0)
+#if defined(CONFIG_BCM7439B0) || defined(CONFIG_BCM7278)
 	/* channel#1 */
 	regval = BDEV_RD(BCHP_CLKGEN_PLL_SYS0_PLL_DIV);
 	pdiv = (regval & BCHP_CLKGEN_PLL_SYS0_PLL_DIV_PDIV_MASK) >>

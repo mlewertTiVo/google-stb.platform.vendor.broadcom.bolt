@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -12,8 +12,8 @@
  *
 ***************************************************************************/
 
-#include "avs_bsu.h"
-#include "board.h"
+#include <avs_bsu.h>
+#include <board.h>
 
 #if !defined(ENABLE_AVS_INIT)
 
@@ -47,50 +47,85 @@ void avs_info_print()
 
 #else /* ENABLE_AVS_INIT */
 
-#include "common.h"
-#include "avs_regs.h"
-#include "bchp_avs_cpu_data_mem.h"
+#include <avs_fw_interface.h>
+#include <avs_regs.h>
+#include <bchp_aon_ctrl.h>
+#include <bchp_avs_cpu_data_mem.h>
+#include <bchp_common.h>
+#include <board_init.h>
+#include <common.h>
+#include <lib_printf.h>
 
-#include "bchp_common.h"
+#include <stdbool.h>
+
 #ifdef BCHP_AVS_TMON_REG_START
-#include "bchp_avs_tmon.h"
+#include <bchp_avs_tmon.h>
 #else
-#include "bchp_avs_hw_mntr.h"
+#include <bchp_avs_hw_mntr.h>
 #endif
-#include "lib_printf.h"
-#include "avs_fw_interface.h"
 
-static uint32_t fsbl_enabled_overtemp;
+static bool fsbl_enabled_overtemp = false;
 
 /*********************************************************************
- *  avs_ssbl_init()
+ * check_overtemp_was_enabled()
  *
- * Currently we setup:
+ * NOTE: This function should be called before the first reference to
+ *       'fsbl_enabled_overtemp'. Calling this multiple times does not
+ *       penalize you a lot, but there is no reason to abuse it.
  *
- * 1. If the FSBL enabled the reset on overtemp feature. We check
- * this by sampling the associated register field that could have
- * been modified by AVS FSBL code. It must be done *ONLY ONCE*
- * before any call to avs_do_reset_on_overtemp()
+ * 'fsbl_enabled_overtemp' reflects whether the overtemp feature was
+ * enabled by FSBL, which may be different from SSBL if they are not
+ * from the same build.
  *
- *  fsbl_enabled_overtemp actually reflects that the overtemp
- * was overridden in FSBL code - which may be different from
- * SSBL if the FSBL was not part of the same build.
+ * If the overtemp feature is not enabled by FSBL, the overtemp reset
+ * should not be enabled in SSBL. If enabled only in SSBL, the feature
+ * gets disabled on S3 warm boot, resulting in inconsistent behaviors.
  *
- *  Input parameters:
- *	pmap_id: PMap ID to be applied
+ * It is considered that the overtemp feature was enabled by FSBL if:
+ * - 'overtemp' is a reset reason, or
+ *   (The feature was enabled. Or, the current reset could not occur.)
+ * - the overtemp reset has already been enabled.
+ *   (FSBL is the only suspect. No one else does prior to this point.)
+ ********************************************************************* */
+static void check_overtemp_was_enabled(void)
+{
+	static bool has_been_checked = false;
+
+	if (has_been_checked)
+		return;
+
+	if (board_init_reset_history_value() &
+		BCHP_AON_CTRL_RESET_HISTORY_overtemp_reset_MASK) {
+		/* One of reset causes was overtemp. It is assumed
+		 * that FSBL enables the overtemp feature.
+		 */
+		fsbl_enabled_overtemp = true;
+	} else {
+		/* check whether FSBL enabled the feature */
+		const uint32_t regval =
+#ifdef BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD
+			BDEV_RD_F(AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET,
+				enable);
+#else
+			BDEV_RD_F(AVS_HW_MNTR_TEMPERATURE_RESET_ENABLE,
+				reset_enable);
+#endif
+		fsbl_enabled_overtemp = (regval != 0);
+	}
+
+	has_been_checked = true;
+}
+
+/*********************************************************************
+ * avs_ssbl_init()
  *
- *  Return value:
- *	nothing
+ * The PMap of the selected board type gets applied.
+ *
+ * Input parameter:
+ *  pmap_id: PMap ID to be applied
  ********************************************************************* */
 void avs_ssbl_init(unsigned int pmap_id)
 {
-	fsbl_enabled_overtemp =
-#ifdef BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD
-		BDEV_RD_F(AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET, enable);
-#else
-		BDEV_RD_F(AVS_HW_MNTR_TEMPERATURE_RESET_ENABLE, reset_enable);
-#endif
-
 #ifdef DVFS_SUPPORT
 	dvfs_init_board_pmap(pmap_id);
 #endif
@@ -110,6 +145,9 @@ void avs_ssbl_init(unsigned int pmap_id)
  ********************************************************************* */
 void avs_do_reset_on_overtemp(int en)
 {
+	/* make sure that 'fsbl_enabled_overtemp' is valid before using it */
+	check_overtemp_was_enabled();
+
 	if (fsbl_enabled_overtemp)
 #ifdef BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD
 		BDEV_WR_F(AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET,
@@ -216,6 +254,9 @@ void avs_info_print(void)
 	if (firmware_running) {
 		struct at_runtime results;
 		unsigned revision;
+		const char *revision_format;
+		const char *new_format = ", FW=[%d.%d.%d.%d]\n";
+		const char *old_format = ", FW=[%c.%c.%c.%c]\n";
 
 		get_avs_fw_results(&results);
 
@@ -227,13 +268,20 @@ void avs_info_print(void)
 			mantissa(results.PV0), fraction(results.PV0),
 			mantissa(results.MV0), fraction(results.MV0)
 		);
+
 		revision = results.revision;
-		xprintf(", FW=%08x [%c.%c.%c.%c]\n", revision,
-			(revision >> 24 & 0xFF),
-			(revision >> 16 & 0xFF),
-			(revision >> 8 & 0xFF),
-			(revision >> 0 & 0xFF)
-		);
+
+		if ((revision >> 24) < '0')
+			revision_format = new_format;
+		else
+			revision_format = old_format;
+
+		xprintf(revision_format,
+			(revision >> 24) & 0xFF,
+			(revision >> 16) & 0xFF,
+			(revision >>  8) & 0xFF,
+			(revision >>  0) & 0xFF);
+
 #if defined(AVS_DUAL_MONITORS) || defined(AVS_DUAL_DOMAINS)
 		struct board_type *b = board_thisboard();
 

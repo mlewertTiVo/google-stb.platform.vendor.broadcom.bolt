@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -116,7 +116,7 @@ int select_image(image_info *info)
 			aon_value = AON_FW_TYPE_AVS;
 			boot_status_shift = BOOT_AVS_STATUS_SHIFT;
 			break;
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	case IMAGE_TYPE_MEMSYS:
 			image_name_ptr = "MEMSYS:";
 			image_offset = PARAM_1ST_MEMSYS_PART_OFFSET;
@@ -130,9 +130,15 @@ int select_image(image_info *info)
 			sys_die(DIE_UNKNOWN_IMAGE_TYPE, "unknown image type");
 			break;
 	}
+#if (CFG_ZEUS5_1)
+	image_ptr = (uint32_t *)(SEC_PARAM_START_SRAM+image_offset);
+	part_ptr = (uint32_t *)(SEC_PARAM_START_SRAM+part_offset);
+	ctrl_ptr = (uint32_t *)(SEC_PARAM_START_SRAM+ctrl_offset);
+#else
 	image_ptr = (uint32_t *)(SRAM_ADDR+image_offset);
 	part_ptr = (uint32_t *)(SRAM_ADDR+part_offset);
 	ctrl_ptr = (uint32_t *)(SRAM_ADDR+ctrl_offset);
+#endif
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &= ~AON_FW_TYPE_MASK;
 	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |= aon_value;
 
@@ -180,7 +186,7 @@ int select_image(image_info *info)
 		sys_die(DIE_BOOT_2ND_IMAGE_FAILED, "Boot 2nd image failed");
 	}
 
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	/* select 2nd image if boot 1st image failed or
 	 * 1st image does not exist
 	 */
@@ -192,7 +198,30 @@ int select_image(image_info *info)
 			~(BOOT_IMAGE_STATUS_MASK << boot_status_shift);
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |=
 			(boot_status << boot_status_shift);
-
+#if (CFG_ZEUS5_1)
+		if (info->image_type == IMAGE_TYPE_BFW) {
+			image_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
+				PARAM_2ND_BFW_PART_OFFSET);
+			part_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
+				PARAM_2ND_BFW_PART);
+			ctrl_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
+				PARAM_2ND_BFW_CTRL);
+		} else if (info->image_type == IMAGE_TYPE_AVS) {
+			image_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
+				PARAM_2ND_AVS_PART_OFFSET);
+			part_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
+				PARAM_2ND_AVS_PART);
+			ctrl_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
+				PARAM_2ND_AVS_CTRL);
+		} else {
+			image_ptr = (uint32_t *)(SEC_PARAM_START_SRAM +
+				PARAM_2ND_MEMSYS_PART_OFFSET);
+			part_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
+				PARAM_2ND_MEMSYS_PART);
+			ctrl_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
+				PARAM_2ND_MEMSYS_CTRL);
+		}
+#else /* (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0) */
 		if (info->image_type == IMAGE_TYPE_BFW) {
 			image_ptr = (uint32_t *) (SRAM_ADDR+
 				PARAM_2ND_BFW_PART_OFFSET);
@@ -203,15 +232,15 @@ int select_image(image_info *info)
 				PARAM_2ND_AVS_PART_OFFSET);
 			part_ptr = (uint32_t *) (SRAM_ADDR+PARAM_2ND_AVS_PART);
 			ctrl_ptr = (uint32_t *) (SRAM_ADDR+PARAM_2ND_AVS_CTRL);
-		}
 #if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
-		else {
-			image_ptr = (uint32_t *)(SRAM_ADDR+
+		} else {
+			image_ptr = (uint32_t *)(SRAM_ADDR +
 				PARAM_2ND_MEMSYS_PART_OFFSET);
-			part_ptr = (uint32_t *) (SRAM_ADDR+
+			part_ptr = (uint32_t *) (SRAM_ADDR +
 				PARAM_2ND_MEMSYS_PART);
-			ctrl_ptr = (uint32_t *) (SRAM_ADDR+
+			ctrl_ptr = (uint32_t *) (SRAM_ADDR +
 				PARAM_2ND_MEMSYS_CTRL);
+#endif
 		}
 #endif
 	}
@@ -279,7 +308,7 @@ void sec_init(void)
 	uint32_t  *dst;
 	int __maybe_unused ret;
 
-#if CFG_ZEUS4_2 && !defined(CFG_FULL_EMULATION)
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_1) && !defined(CFG_FULL_EMULATION)
 	if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS)
 		& 0x0f000000) == 0x07000000) {
 		if (sec_memsys_ready())
@@ -292,6 +321,7 @@ void sec_init(void)
 		sys_die(DIE_OTP_READ_FAILED, "OTP read failed");
 
 	dst = (uint32_t *) (BOOT_PARAMETER_OFFSET+SRAM_ADDR);
+#if (!CFG_ZEUS5_1)
 	/* if bseck is enabled, then get the boot params from BSP */
 	if ((CFG_ZEUS4_2 || CFG_ZEUS5_0) && otp_val) {
 		if (sec_get_bootparam(dst)) /* get boot params from BSP */
@@ -299,8 +329,15 @@ void sec_init(void)
 				"Get boot param failed");
 		return;
 	}
+#endif
 
-#if CFG_ZEUS5_0
+#if (CFG_ZEUS5_0 || CFG_ZEUS5_1)
+	#if (CFG_ZEUS5_1)
+		if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS) &
+			0x0f000000) == 0x0a000000)
+			dst = (uint32_t *) SEC_PARAM_START_SRAM;
+	#endif
+
 	ret = load_from_flash(dst, SEC_PARAM_OFFSET_FLASH, BOOT_PARAMETER_SIZE);
 #else
 	ret = load_from_flash(dst, BOOT_PARAMETER_OFFSET, BOOT_PARAMETER_SIZE);
@@ -322,7 +359,7 @@ void sec_bfw_load(bool warm_boot)
 {
 #ifdef BFW_LOAD
 	uint32_t ret;
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	uint32_t *page_table = 0;
 	uint32_t bfw_buffer_addr;
 	int bypass_emmc_data_part = 1;
@@ -354,7 +391,7 @@ void sec_bfw_load(bool warm_boot)
 	}
 #endif
 
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	if (g_info.flash.cs == 1 || bypass_emmc_data_part != 1) {
 		__puts("using page list, ");
 #if CFG_PM_S3
@@ -404,7 +441,7 @@ void sec_bfw_load(bool warm_boot)
 #ifdef SECURE_BOOT
 void sec_set_memc(struct fsbl_info *info)
 {
-#if !(CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if !(CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	return;
 #else
 	uint32_t memsys_ctrl;
@@ -447,7 +484,7 @@ void sec_verify_memsys(void)
 	uint32_t flash_offs = MEMSYS_TEXT_OFFS;
 	size_t len = MEMSYS_SIZE;
 	struct board_type *b = get_tmp_board();
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	image_info info;
 
 	info.image_type = IMAGE_TYPE_MEMSYS;
@@ -517,7 +554,7 @@ void sec_scramble_sdram(bool warm_boot)
 
 void sec_mitch_check(void)
 {
-#if !defined(S_UNITTEST) && !defined(CFG_FULL_EMULATION)
+#if !defined(S_UNITTEST)
 
 	__puts("MICH: ");
 	/* if blank chip, skip disable_MICH */

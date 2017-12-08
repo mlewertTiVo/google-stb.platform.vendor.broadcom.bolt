@@ -11,10 +11,12 @@
 #include <bchp_ebi.h>
 #include <board.h>
 #include <board_init.h>
+#include <error.h>
 #include <flash.h>
 #include <macaddr.h>
 #include <splash-api.h>
 #include <ssbl-common.h>
+
 
 static void turnoff_xor_cs0()
 {
@@ -49,6 +51,50 @@ static int nand_boot_read_disturb(void)
 	bolt_close(sfd);
 
 	return ret;
+}
+
+static int nand_vendor_feature_cmds(void)
+{
+	const struct nand_feature *board_nf;
+	struct nand_feature nf;
+	struct flash_feature_cmd_info fci;
+	unsigned int feature_ioctl;
+	int sfd, ret;
+
+	board_nf = board_flash_nand_feature();
+	if (!board_nf)
+		return BOLT_OK;
+
+	nf = *board_nf;
+
+	sfd = bolt_open("flash0.bolt");
+	if (sfd < 0) {
+		xprintf("cannot open flash0.bolt: %d\n", sfd);
+		return sfd;
+	}
+
+	while (nf.addr != 0) {
+		fci.feature_addr = nf.addr;
+		fci.data_buf = &nf.data[0];
+		fci.data_buf_len = sizeof(nf.data);
+		if (nf.set == 0)
+			feature_ioctl = IOCTL_FLASH_GET_FEATURE;
+		else
+			feature_ioctl = IOCTL_FLASH_SET_FEATURE;
+
+		ret = bolt_ioctl(sfd, feature_ioctl, &fci, sizeof(fci), NULL,
+				 0);
+		if (ret) {
+			xprintf("NAND SET/GET FEATURE command failed\n");
+			return ret;
+		}
+
+		nf = *++board_nf;
+	};
+
+	bolt_close(sfd);
+
+	return BOLT_OK;
 }
 
 void enable_emmc_flash(void)
@@ -154,8 +200,10 @@ void board_init_flash(void)
 	/* Perform final configuration, after registering all flashes */
 	flash_configure_finalize();
 
-	if (boot_mode == BOOT_FROM_NAND)
+	if (boot_mode == BOOT_FROM_NAND) {
 		nand_boot_read_disturb();
+		nand_vendor_feature_cmds();
+	}
 
 	bolt_set_envdevice("flash0.nvram"); /* set nvram */
 

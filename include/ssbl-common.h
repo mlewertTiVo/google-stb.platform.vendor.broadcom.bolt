@@ -134,12 +134,32 @@ struct dvfs_params {
 	uint32_t pstate;
 } dvfs_params;
 
+
+#define NAND_FEATURE_DATA_MAX	4
+struct nand_feature {
+	uint32_t addr;
+	uint8_t data[NAND_FEATURE_DATA_MAX];
+	int	set;
+};
+
+enum pad_ctrl {
+	PAD_CTRL_NONE,
+	PAD_CTRL_HIGH,
+	PAD_CTRL_LOW,
+};
+
+struct pad_params {
+	int id;
+	enum pad_ctrl ctrl;
+};
+
 typedef struct ssbl_board_params
 {
 	uint32_t     rtsdefault;
 	enet_params  enet[NUM_ENET+1];
 	moca_params  moca[NUM_MOCA+1];
 	ext_moca_params external_moca[NUM_EXT_MOCA+1];
+	const struct nand_feature *nand_feature;
 	sdio_params  sdio[NUM_SDIO+1];
 	struct reg_update sdio_pinsel;
 	gpio_key_params gpio_key[MAX_GPIO_KEY+1];
@@ -149,6 +169,7 @@ typedef struct ssbl_board_params
 	const dt_ops_s *dt_ops;
 	struct partition_profile *mapselect;
 	struct  dvfs_params  dvfs;
+	struct pad_params pad_rgmii[NUM_RGMII_PADS_TO_CONTROL+1];
 } ssbl_board_params;
 
 
@@ -159,7 +180,7 @@ struct rts {
 	uint32_t *values[];
 };
 
-struct aon_history {
+struct reset_history {
 	uint32_t  mask;
 	char     *name;
 };

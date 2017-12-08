@@ -22,6 +22,10 @@ ifeq ($(MEMC_REV),B300_H00)
  SHMOO_API := V5
 endif
 
+ifeq ($(MEMC_REV),B310_G00)
+ SHMOO_API := V5
+endif
+
 ifeq ($(CFG_EMULATION),1)
  SHMOO_S =
  LIB_MEMSYS =
