@@ -40,6 +40,9 @@
 #define IOCTL_USBBDC_GET_BULKOUT_MINSIZE	20
 #define IOCTL_USBBDC_GET_BULKOUT_MAXSIZE	21
 #define IOCTL_USBBDC_QUEUE_BULKOUT		22
+#define IOCTL_FLASH_SET_FEATURE			23
+#define IOCTL_FLASH_GET_FEATURE			24
+
 
 typedef struct flash_range_s {
 	uint64_t range_base;
@@ -94,6 +97,12 @@ struct ether_phy_info {
 	enum ether_phy_type type;
 	unsigned long *phyaddr;
 	int version;
+};
+
+struct flash_feature_cmd_info {
+	uint32_t feature_addr;
+	uint8_t *data_buf;
+	int data_buf_len;
 };
 
 /*  *********************************************************************

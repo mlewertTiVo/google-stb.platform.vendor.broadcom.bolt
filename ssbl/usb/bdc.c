@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -157,6 +155,7 @@ static int bdc_mfnum(bdc_softc *softc)
 static int bdc_start(bdc_softc *softc, physaddr_t base)
 {
 	uint32_t reg, temp;
+	unsigned int srr_buf_size;
 
 	softc->regs = base;
 	if (softc->debug & DBG_INIT1)
@@ -179,18 +178,19 @@ static int bdc_start(bdc_softc *softc, physaddr_t base)
 			printf("BDC: sp: %d bytes\n", temp);
 	}
 
-	/* set up SRR0 */
+	/* set up SRR0 : #entries == 2 ** (SRR0_SIZE + 1) */
 	softc->srr0_size = 1 << (SRR0_SIZE+1);
-	softc->srr0 = KUMALLOC(softc->srr0_size, SRR0_ALIGN);
+	srr_buf_size = softc->srr0_size * sizeof(bdc_sr_t);
+	softc->srr0 = KUMALLOC(srr_buf_size, SRR0_ALIGN);
 	if (softc->srr0 == NULL) {
 		xprintf("BDC: Failed to allocate SRR buffer\n");
 		return 0;
 	}
-	memset(softc->srr0, 0, softc->srr0_size);
+	memset(softc->srr0, 0, srr_buf_size);
 	softc->srr0_dq = 0;
 	if (softc->debug & DBG_INIT1) {
-		xprintf("BDC: srr0 addr=%p, size=%d\n",
-		softc->srr0, softc->srr0_size);
+		xprintf("BDC: srr0 addr=%p, #entries=%d, size=%d\n",
+			softc->srr0, softc->srr0_size, srr_buf_size);
 	}
 	temp = BDC_VTOP(softc->srr0) + M_SRRBAL0_SWS +
 		V_SRRBAL0_SIZ(SRR0_SIZE);
@@ -322,19 +322,19 @@ static int bdc_init_buffers(bdc_softc *softc)
 static void bdc_free_buffers(bdc_softc *softc)
 {
 	if (softc->scrpad)
-		KFREE(softc->scrpad);
+		KUFREE(softc->scrpad);
 	softc->scrpad = 0;
 	if (softc->srr0)
-		KFREE(softc->srr0);
+		KUFREE(softc->srr0);
 	softc->srr0 = 0;
 	if (softc->ep0_ring)
-		KFREE(softc->ep0_ring);
+		KUFREE(softc->ep0_ring);
 	softc->ep0_ring = 0;
 	if (softc->bulkin_ring)
-		KFREE(softc->bulkin_ring);
+		KUFREE(softc->bulkin_ring);
 	softc->bulkin_ring = 0;
 	if (softc->bulkout_ring)
-		KFREE(softc->bulkout_ring);
+		KUFREE(softc->bulkout_ring);
 	softc->bulkout_ring = 0;
 	if (softc->bulkout_buf)
 		KFREE(softc->bulkout_buf);
@@ -1103,7 +1103,7 @@ static void bdc_probe(bolt_driver_t *drv, unsigned long probe_a,
 	if (env_getenv("BDCOFF"))
 		return;
 
-	softc = (bdc_softc *) KUMALLOC(sizeof(bdc_softc), 0);
+	softc = (bdc_softc *) KMALLOC(sizeof(bdc_softc), 0);
 	if (softc == NULL) {
 		xprintf("BDC: Failed to allocate softc memory.\n");
 		return;
@@ -1137,7 +1137,7 @@ static void bdc_probe(bolt_driver_t *drv, unsigned long probe_a,
 
 	/* Failed, free resources */
 	bdc_free_buffers(softc);
-	KUFREE(softc);
+	KFREE(softc);
 }
 
 int usb_init_bdc(physaddr_t base, physaddr_t ctrl)

@@ -777,11 +777,11 @@ asciidoc.install(4);
 </div>
 <div id="content">
 <div class="sect1">
-<h2 id="_bolt_sqa_release_v1_33_22nd_september_2017">1.  Bolt SQA Release v1.33, 22nd September 2017</h2>
+<h2 id="_bolt_sqa_release_v1_34_16th_november_2017">1.  Bolt SQA Release v1.34, 16th November 2017</h2>
 <div class="sectionbody">
 <div class="literalblock">
 <div class="content">
-<pre><code>        o Supported chip families: 7250b0 7260a0 7268b0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+<pre><code>        o Supported chip families: 7250b0 7260a0 7268b0 7271b0 7278a0 7278b0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
         o Toolchain: stbgcc-4.8-1.1
         o AVS versions:
                 o v0.3.2
@@ -795,11 +795,12 @@ asciidoc.install(4);
                         o 7364c0
                 o v0.3.4
                         o 7439b0
-                o v0.5.3
+                o v1.1.0
                         o 7271b0
                         o 7268b0
                         o 7260a0
                         o 7278a0
+                        o 7278b0
         o AVS Pending PVT testing:
         o SHMOO versions:
                 o DDR3 upto 2133 unless otherwise noted
@@ -825,6 +826,7 @@ asciidoc.install(4);
                         o 7268b0:  5.4.2.0 (M1*)
                         o 7271b0:  5.4.2.0 (M1*)
                         o 7278a0:  5.1.0.4 (M4*)
+                        o 7278b0:  5.5.0.4 (M8)
 
 * Denotes:
                 o Samsung, SK-Hynix, and Micron LPDDR4-3200 supported on 4 or more PCB layers
@@ -835,7 +837,18 @@ asciidoc.install(4);
 </div></div>
 <div class="sect2">
 <h3 id="_known_issues">1.1.  Known Issues</h3>
-<div class="paragraph"><p>None</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+S3 not currently supported in 7278b0
+</p>
+</li>
+<li>
+<p>
+Splash screen not currently supported in 7278b0
+</p>
+</li>
+</ul></div>
 </div>
 <div class="sect2">
 <h3 id="_compatibility">1.2.  Compatibility</h3>
@@ -1133,32 +1146,31 @@ to the version your BOLT release wants (in bolt/config/toolchain):
 <hr />
 </div>
 <div class="sect2">
-<h3 id="_upgrade_to_v1_33_criteria">1.4.  Upgrade to v1.33 criteria</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2435">SWBOLT-2435</a> Added <em>linux,pci-domain</em> property for PCIe node.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2424">SWBOLT-2424</a> Added document for SSDP and CoAP.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2443">SWBOLT-2443</a> BFW is now successfully loaded from eMMC against software reset, for example the <em>reboot</em> BOLT command. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2423">SWBOLT-2423</a> Corrected PCIe vreg polarity on BCM97278HB. <sup><span class="red silver-background">blocker</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2427">SWBOLT-2427</a> Correctly programmed 7278 switch LED controller.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2426">SWBOLT-2426</a> Embedded toolchain info in BOLT logo.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2415">SWBOLT-2415</a> Fixed PHY type in BDC node for XHCI only systems.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2417">SWBOLT-2417</a> Fixed build errors with stbgcc-6.3.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2395">SWBOLT-2395</a> Fixed problem with CoAP client not being able to consistently halt board from executing startup command.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2422">SWBOLT-2422</a> Fixed writing to NAND_CMD_ADDRESS in 7278a0.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2447">SWBOLT-2447</a> Increased margins on 7439 by 20mV.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2394">SWBOLT-2394</a> Provided more identifiable names in SSDP presence messages.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2438">SWBOLT-2438</a> Shmoo for 7268b0 and 7271b0 has been updated to v5.4.1.0. MCB&#8217;s have to be regenerated. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2437">SWBOLT-2437</a> Shmoo has been updated to v3.6.0.0 for 7260a0 DDR4. MCB&#8217;s have also been regenerated for DDR4. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2433">SWBOLT-2433</a> Support for 72518a0 has been added.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2414">SWBOLT-2414</a> Support for BCM97271VC4L has been added.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2440">SWBOLT-2440</a> The convention of splash generated files has been corrected.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2413">SWBOLT-2413</a> Updated AVS firmware to v0.5.1: use only internal AVS PMAP clock values.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2425">SWBOLT-2425</a> Updated AVS firmware to v0.5.2: support PMAP holes, default margins values only, central oscillators 1 and 3 to set thresholds, modify max_voltage for 72604A0.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2446">SWBOLT-2446</a> Updated AVS firmware to v0.5.3: add PMAP data for 72518, improved voltage measurement averaging.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2273">SWBOLT-2273</a> Updated clock tree for 7260a0 and 7439b0.</p></div>
+<h3 id="_upgrade_to_v1_34_criteria">1.4.  Upgrade to v1.34 criteria</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2350">SWBOLT-2350</a> Added interface specification version to AVS API.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2436">SWBOLT-2436</a> Added support for the 7278B0. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2473">SWBOLT-2473</a> Added the ability to select the RX equalizer mode with a specific value.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2453">SWBOLT-2453</a> Board profile BCM97268USFFA4L should set rts mode to 5 by default.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2491">SWBOLT-2491</a> Buffer allocation in USB BDC has been corrected so that the heap of un-cached memory does not get corrupted.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2444">SWBOLT-2444</a> Enable splash by changing family specific config file.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2472">SWBOLT-2472</a> Enabled second SYSTEMPORT Lite instance.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2484">SWBOLT-2484</a> Fixed STB boot-up problem after a warm-reboot (emmc and nonsecure boot).</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2459">SWBOLT-2459</a> Fixed build error with "config COAP off".</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2477">SWBOLT-2477</a> Fixed build failure when setting enet phy_id to probe.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2498">SWBOLT-2498</a> Fixed build problem where everything always compiles.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2478">SWBOLT-2478</a> Fixed compile problem with bolt v1.27 for BCM72604 DTS generated file.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2432">SWBOLT-2432</a> If the overtemp is a reset cause, it gets enabled by SSBL after cooling down the chip via performing temperature parking.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2229">SWBOLT-2229</a> On 7271b0, MTSIF/RGMII pads of ON/OFF domain are configured to 2.5V/3.3V by default if MTSIF/RGMII is/are pinmux&#8217;ed. <em>pad_rgmii</em> configuration command can be used to override the default and configure the pads to 1.5V/1.8V.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2492">SWBOLT-2492</a> On chips that PCIe and SATA are mutually exclusive, a feature that is deselected by an associated strap setting will be disabled in BOLT. Such deselection will propagate to Linux.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2468">SWBOLT-2468</a> Provide api for setting and getting features to NAND flash.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2448">SWBOLT-2448</a> SDIO pin selection is now properly handled for 7260a0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2457">SWBOLT-2457</a> Set timeout_txdma for MoCA ethernet.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2487">SWBOLT-2487</a> USB BDC driver has been added to 7278a0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2500">SWBOLT-2500</a> Updated DVFS firmware: Save/restore state information after an over-temp reset. Removed printable ascii limit to revision number. Initial pmap tables for 7278b0.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_broadcom_fae_access">1.5.  Broadcom FAE access</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.33%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.34%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
 </div>
 </div>
 </div>
@@ -1194,7 +1206,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-11-09 18:06:33 PST
+ 2017-12-07 23:39:45 PST
 </div>
 </div>
 </body>

@@ -471,7 +471,7 @@ static struct bsu_api bsu_xapi = {
 	.xfn_bolt_writeblk = bolt_writeblk,
 	.xfn_bolt_inpstat = bolt_inpstat,
 
-	.xfn_aon_reset_string = aon_reset_as_string,
+	.xfn_aon_reset_string = board_init_reset_history_string,
 
 	/* v8 */
 	.xfn_invalidate_d_cache = invalidate_d_cache,

@@ -2240,6 +2240,14 @@ static void bolt_otp_unpopulate(void *fdt)
 		if (OTP_OPTION_PCIE_DISABLE())
 			rm_nodes(fdt, "pcie", p_root);
 #endif
+	/* boot strap can also prevent PCIe/SATA from selected */
+	if (board_does_strap_disable_pcie())
+		rm_nodes(fdt, "pcie", p_root);
+
+	if (board_does_strap_disable_sata()) {
+		rm_nodes(fdt, "sata", p_rdb);
+		rm_nodes(fdt, "sata_phy", p_rdb);
+	}
 
 #if defined(BCHP_PCIE_0_RC_CFG_TYPE1_REG_START) && \
 	defined(OTP_OPTION_PCIE0_DISABLE)
@@ -2813,8 +2821,8 @@ static int bolt_populate_pmap(void *fdt)
 	}
 
 	for (i = 0; i < PMAP_MAX_MUXES; i++) {
-		xsprintf(node, "pmap-mux%d:pmap-mux%d@%x",
-			i, i, BPHYSADDR(pmapMuxes[i].reg));
+		xsprintf(node, "pmap-mux%d@%x",
+			i, BPHYSADDR(pmapMuxes[i].reg));
 
 		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
 		if (offset >= 0)
@@ -2859,8 +2867,8 @@ static int bolt_populate_pmap(void *fdt)
 	}
 
 	for (i = 0; i < PMAP_MAX_DIVIDERS; i++) {
-		xsprintf(node, "pmap-divider%d:pmap-divider%d@%x",
-			i, i, BPHYSADDR(pmapDividers[i].reg));
+		xsprintf(node, "pmap-divider%d@%x",
+			i, BPHYSADDR(pmapDividers[i].reg));
 
 		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
 		if (offset >= 0)
@@ -2906,8 +2914,8 @@ static int bolt_populate_pmap(void *fdt)
 
 #ifdef PMAP_MAX_MULTIPLIERS
 	for (i = 0; i < PMAP_MAX_MULTIPLIERS; i++) {
-		xsprintf(node, "pmap-multiplier%d:pmap-multiplier%d@%x",
-			i, i, BPHYSADDR(pmapMultipliers[i].reg));
+		xsprintf(node, "pmap-multiplier%d@%x",
+			i, BPHYSADDR(pmapMultipliers[i].reg));
 
 		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
 		if (offset >= 0)
@@ -3037,12 +3045,10 @@ int bolt_devtree_boltset(void *fdt)
 	if (rc)
 		goto out;
 
-	/* SWBOLT-99
-	*/
 	rc = bolt_dt_addprop_u32(fdt, bolt, "reset-history",
-				 get_aon_reset_history());
+		board_init_reset_history_value());
 
-	s = aon_reset_as_string();
+	s = board_init_reset_history_string();
 	if (s) {
 		rc = bolt_dt_addprop_str(fdt, bolt, "reset-list", s);
 		if (rc)

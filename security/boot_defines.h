@@ -14,7 +14,26 @@
 #include <stdint.h>
 #include <compiler.h>
 
-#if CFG_ZEUS5_0
+#if CFG_ZEUS5_1
+
+#define BOOT_PARAMETER_OFFSET                   (0x0000D000)
+#define BOOT_PARAMETER_SIZE                     (0x00000400)
+
+#define BFW2_IMAGE_FLASH_OFFSET                 (BFW_TEXT_OFFS)
+#define BFW1_IMAGE_FLASH_OFFSET                 (0x00100000)
+#define BFW_SIGNATURE_OFFSET                    (0x0003802C)
+#define BFW_KEY3_OFFSET                         (0x0003812C)
+
+#define AVS2_IMAGE_FLASH_OFFSET                 (AVS_TEXT_OFFS)
+#define AVS1_IMAGE_FLASH_OFFSET                 (0x00139000)
+
+#define MEMSYS2_IMAGE_FLASH_OFFSET              (MEMSYS_TEXT_OFFS)
+#define MEMSYS1_IMAGE_FLASH_OFFSET              (0x0013E000)
+#define MEMSYS_PARAMETER_OFFSET                 (MEMSYSFW_SIZE)
+#define MEMSYS_SIGNATURE_OFFSET                 (MEMSYSFW_SIZE+0x14)
+#define MEMSYS_KEY4_OFFSET                      (MEMSYSFW_SIZE+0x118)
+
+#elif CFG_ZEUS5_0
 
 #define BOOT_PARAMETER_OFFSET                   (0x00000040)
 #define BOOT_PARAMETER_SIZE                     (0x00000160)
@@ -111,17 +130,38 @@
 #define MEMC_S3_WARM_BOOT_EN                    0x4
 #define MEMC_SSC_EN                             0x8
 
+#if CFG_ZEUS5_1
+#define OTP_SECURE_BOOT_BIT                   0x8c
+#define OTP_MICH_ENABLE_BIT                     0x8d
+#define OTP_MEM_SCRAM_ENABLE_BIT                0x21
+#define OTP_BOOT_CODE_DECRYPT_ENABLE            0x156
+#define OTP_HOST_BOOT_CODE_DECRYPT_BIT          OTP_BOOT_CODE_DECRYPT_ENABLE
+#define OTP_BFW_AUTH_HASH_MODE_DISABLE_BIT     135
+#define OTP_BFW_AUTH_RSA_MODE_DISABLE_BIT      136
+#define OTP_BSECK_ENABLE_BIT                    0x82
+#define OTP_AVS_VERIFY_ENABLE_BIT               0x93
+#define OTP_FORCE_DRAM_SCRAM_BIT                0x21
+#define OTP_SAGE_SECURE_ENABLE_BIT              0xa6
+#else
 #define OTP_SECURE_BOOT_BIT                     0x4a
 #define OTP_MICH_ENABLE_BIT                     0x4b
 #define OTP_MEM_SCRAM_ENABLE_BIT                0x12
 #define OTP_HOST_BOOT_CODE_DECRYPT_BIT          0x50
-#define OTP_HOST_BOOT_CODE_DECRYPT_EXT_BIT      0x274
 #define OTP_BSECK_RELOAD_BIT                    0x58
 #define OTP_BSECK_ENABLE_BIT                    0x59
-#define OTP_BSECKPointerInFlash_BIT             0xd
 #define OTP_AVS_VERIFY_ENABLE_BIT               0x256
 #define OTP_FORCE_DRAM_SCRAM_BIT                0x12
 #define OTP_SAGE_SECURE_ENABLE_BIT              0xd4
+#endif
+
+#if CFG_ZEUS5_0 || CFG_ZEUS5_1
+#define OTP_IP_LICENSING_CHECK_ENABLE_BIT       0xd9
+#else
+#define OTP_IP_LICENSING_CHECK_ENABLE_BIT       0x46
+#endif
+
+#define OTP_HOST_BOOT_CODE_DECRYPT_EXT_BIT      0x274
+#define OTP_BSECKPointerInFlash_BIT             0xd
 
 #define BSP_S_FW_MAJOR_VERSION_SHIFT            18
 #define BSP_S_FW_MINOR_VERSION_SHIFT            12
@@ -183,7 +223,31 @@
 #define PARAM_CTRL_WORD_ENABLE_MASK             0x80000000
 #define PARAM_CTRL_MEMSYS_DISABLE_SHIFT         21
 
-#if CFG_ZEUS5_0
+#if CFG_ZEUS5_1
+/* boot param for second image  */
+#define PARAM_2ND_BFW_PART                      0x0000002C
+#define PARAM_2ND_BFW_PART_OFFSET               0x00000030
+#define PARAM_2ND_BFW_CTRL                      0x00000034
+#define PARAM_2ND_AVS_PART                      0x00000038
+#define PARAM_2ND_AVS_PART_OFFSET               0x0000003C
+#define PARAM_2ND_AVS_CTRL                      0x00000048
+#define PARAM_2ND_MEMSYS_PART                   0x0000004C
+#define PARAM_2ND_MEMSYS_PART_OFFSET            0x00000050
+#define PARAM_2ND_MEMSYS_CTRL                   0x00000058
+
+/* boot param for first image  */
+#define PARAM_1ST_BFW_PART                      0x0000005C
+#define PARAM_1ST_BFW_PART_OFFSET               0x00000060
+#define PARAM_1ST_BFW_CTRL                      0x00000064
+#define PARAM_1ST_AVS_PART                      0x00000068
+#define PARAM_1ST_AVS_PART_OFFSET               0x0000006C
+#define PARAM_1ST_AVS_CTRL                      0x00000078
+#define PARAM_1ST_MEMSYS_PART                   0x0000007C
+#define PARAM_1ST_MEMSYS_PART_OFFSET            0x00000080
+#define PARAM_1ST_MEMSYS_CTRL                   0x00000088
+#define PARAM_DTU_ENABLE                        0x0000009C
+
+#elif CFG_ZEUS5_0
 /* boot param for second image  */
 #define PARAM_2ND_BFW_PART                      0x0000008C
 #define PARAM_2ND_BFW_PART_OFFSET               0x00000090
@@ -250,7 +314,12 @@
 #endif
 
 /* boot param for SSBL */
-#if CFG_ZEUS5_0
+#if CFG_ZEUS5_1
+#define PARAM_SSBL_SIZE                         (SEC_PARAM_START_SRAM + 0x0000000C)
+#define PARAM_SSBL_PART                         (SEC_PARAM_START_SRAM + 0x0000008C)
+#define PARAM_SSBL_PART_OFFSET                  (SEC_PARAM_START_SRAM + 0x00000090)
+#define PARAM_SSBL_CTRL                         (SEC_PARAM_START_SRAM + 0x000000A0)
+#elif CFG_ZEUS5_0
 #define PARAM_SSBL_SIZE                         0x0000004C
 #define PARAM_SSBL_PART                         0x000000EC
 #define PARAM_SSBL_PART_OFFSET                  0x000000F0
@@ -268,11 +337,16 @@
 #endif
 
 /* board param for AVS */
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if CFG_ZEUS4_2 || CFG_ZEUS5_0
 #define PARAM_AVS_PARAM_0                       0x000000D4
 #define PARAM_AVS_PARAM_1                       0x000000E4
-#define PARAM_AVS_PARAM_1_PMAP_MASK             0x1F
+#define PARAM_SYSTEM_PARAM_0                    0x00000118
+#elif CFG_ZEUS5_1
+#define PARAM_AVS_PARAM_0                       0x00000094
+#define PARAM_AVS_PARAM_1                       0x000000A4
+#define PARAM_SYSTEM_PARAM_0                    0x00000036
 #endif
+#define PARAM_AVS_PARAM_1_PMAP_MASK             0x1F
 
 #define PARAM_SRR_SIZE_MB                       0x00000120
 
@@ -463,8 +537,13 @@ void handle_boot_err(uint32_t err_code);
 void check_return_val(uint32_t val, uint32_t reg,
 			uint32_t bit2set, uint32_t err_code);
 
+void sec_print_bsp_version(void);
+
 #if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
 uint32_t sec_bfw_load_impl(image_info *info, uint32_t pagelist);
+#elif  CFG_ZEUS5_1
+uint32_t sec_bfw_load_impl(image_info *info, uint32_t bfw_offset);
+uint32_t sec_bfw_verify(uint32_t bfw_offset);
 #else
 uint32_t bseck_reload(void);
 #endif
@@ -494,10 +573,11 @@ int      get_image_info(image_info *info);
 int      set_image_info(image_info *info);
 
 void     sec_print_bsp_version(void);
+const char *sec_get_bsp_version(void);
 void     sec_print_bsp_debug_info(void);
 void     set_trace(uint32_t val);
 
-#if CFG_ZEUS4_2
+#if CFG_ZEUS4_2 || CFG_ZEUS5_1
 uint32_t sec_memsys_ready(void);
 #endif
 

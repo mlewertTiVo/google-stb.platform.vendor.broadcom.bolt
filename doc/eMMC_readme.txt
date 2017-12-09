@@ -37,20 +37,23 @@ Following is the BOLT output from "show devices" on a system booting from eMMC:
 ----
 Device Name          Description
 -------------------  ---------------------------------------------------------
-              uart0  16550 DUART at 0xf040b400 channel 0
+              uart0  16550 DUART at 0x840c000 channel 0
                mem0  Memory
-             flash0  EMMC flash Data : 0x000000000-0x370000000 (14080MB)
+             flash0  EMMC flash Data : 0x000000000-0xE8F800000 (59640MB)
       flash0.macadr  EMMC flash Data : 0x000004400-0x000004800 (1024B)
        flash0.nvram  EMMC flash Data : 0x000004800-0x000014800 (64KB)
         flash0.wlan  EMMC flash Data : 0x000014800-0x000024800 (64KB)
       flash0.kernel  EMMC flash Data : 0x000024800-0x000824800 (8MB)
       flash0.splash  EMMC flash Data : 0x000824800-0x0008A4800 (512KB)
      flash0.devtree  EMMC flash Data : 0x0008A4800-0x0008B4800 (64KB)
-      flash0.rootfs  EMMC flash Data : 0x0008B4800-0x36FFFBE00 (14072MB)
+        flash0.bp30  EMMC flash Data : 0x0008B4800-0x0008C4800 (64KB)
+        flash0.bp31  EMMC flash Data : 0x0008C4800-0x0008D4800 (64KB)
+      flash0.rootfs  EMMC flash Data : 0x0008D4800-0xE8F7FBE00 (59632MB)
              flash1  EMMC flash Boot1: 0x000000000-0x000400000 (4MB)
              flash2  EMMC flash Boot2: 0x000000000-0x000400000 (4MB)
-             flash3  EMMC flash RPMB : 0x000000000-0x000020000 (128KB)
-               eth0  GENET Internal Ethernet at 0xf0b60000
+             flash3  EMMC flash RPMB : 0x000000000-0x000400000 (4MB)
+              sata0  SATA3 AHCI Device
+               eth0  SYSTEMPORT Internal Ethernet at 0x09300000
 ----
 
 
@@ -94,7 +97,7 @@ pass the "/dev/mmcblkxxx" or GUID based partition name for the kernels rootfs. E
 or
 
 ---- 
-     boot flash0.kernel: "root=/dev/mmcblk0p7 rootwait rw debug"
+     boot flash0.kernel: "root=/dev/mmcblk0p9 rootwait rw debug"
 ---- 
 
 [1][[1]] The BOLT partition name is taken from the GPT partition name.
@@ -121,7 +124,7 @@ blank eMMC device (assumes starting with SPI as the boot device):
 +
 ----
       ifconfig -auto eth0
-      flash <TFTP IP ADDR>/bolt-7445d0.bin emmcflash1
+      flash <TFTP IP ADDR>/bolt-7278b0.bin emmcflash1
 ----
 
    6. Set board boot shape to boot from eMMC and reboot.
@@ -134,7 +137,7 @@ blank eMMC device (assumes starting with SPI as the boot device):
 +
 ----
       ifconfig eth0 -auto
-      boot <TFTP IP ADDR> vmlinuz-initrd-7445d0 'ip=dhcp debug'
+      boot <TFTP IP ADDR> vmlinuz-initrd-arm 'ip=dhcp debug'
 ----
 
   10. Run 'sgdisk' to create the software partitions:
@@ -148,25 +151,27 @@ blank eMMC device (assumes starting with SPI as the boot device):
       sgdisk -a 1 -n 4:292:16675 -c 4:"kernel" /dev/mmcblk0
       sgdisk -a 1 -n 5:16676:17699 -c 5:"splash" /dev/mmcblk0
       sgdisk -a 1 -n 6:17700:17827 -c 6:"devtree" /dev/mmcblk0
-      sgdisk -n 7:17828:`sgdisk -E /dev/mmcblk0` -c 7:"rootfs" /dev/mmcblk0
+      sgdisk -a 1 -n 7:17828:17955 -c 7:"bp30" /dev/mmcblk0
+      sgdisk -a 1 -n 8:17956:18083 -c 8:"bp31" /dev/mmcblk0
+      sgdisk -n 9:18084:`sgdisk -E /dev/mmcblk0` -c 9:"rootfs" /dev/mmcblk0
 ----
 
   11. Copy a kernel and rootfs to eMMC. The following example will copy a
-      kernel and rootfs to the correct eMMC flash partitions for a 7445d0 system:
+      kernel and rootfs to the correct eMMC flash partitions for a 7278b0 system:
 +
 [source,shell]
 ----
-      mkfs.ext4 /dev/mmcblk0p7
-      mount /dev/mmcblk0p7 /mnt/hd
+      mkfs.ext4 /dev/mmcblk0p9
+      mount /dev/mmcblk0p9 /mnt/hd
       cd /mnt/hd
-      tftp <TFTP IP ADDR> -g -r vmlinuz-7445d0
-      dd if=vmlinuz-7445d0 of=/dev/mmcblk0p4
-      rm vmlinuz-7445d0
-      tftp <TFTP IP ADDR> -g -r nfsroot-7445d0.tar.bz2
-      tar -xjf nfsroot-7445d0.tar.bz2
+      tftp <TFTP IP ADDR> -g -r vmlinuz-arm
+      dd if=vmlinuz-arm of=/dev/mmcblk0p4
+      rm vmlinuz-arm
+      tftp <TFTP IP ADDR> -g -r nfsroot-arm.tar.bz2
+      tar -xjf nfsroot-arm.tar.bz2
       mv romfs/* .
       rmdir romfs
-      rm nfsroot-7445d0.tar.bz2
+      rm nfsroot-arm.tar.bz2
 ----
 
   12. Reboot the system.
@@ -176,7 +181,7 @@ blank eMMC device (assumes starting with SPI as the boot device):
   14. Boot the kernel. Example:
 +
 ----
-      boot flash0.kernel: "root=/dev/mmcblk0p7 rootwait rw debug"
+      boot flash0.kernel: "root=/dev/mmcblk0p9 rootwait rw debug"
 ----
 --
 

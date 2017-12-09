@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -7,16 +7,18 @@
  *
  ***************************************************************************/
 
-#include "board_init.h"
-#include "board.h"
-#include "board_params.h"
+#include <board.h>
+#include <board_init.h>
+#include <board_params.h>
 #include <bchp_sun_top_ctrl.h>
 #include <ddr.h>
 #include <error.h>
+#include <lib_physio.h>
 #ifdef DVFS_SUPPORT
 #include <pmap.h>
 #endif
 
+#include <stdbool.h>
 
 /*
  * No floating point in BOLT so we have to scale. The
@@ -227,6 +229,27 @@ unsigned int board_bootmode(void)
 		return BOOT_DEV_ERROR;
 }
 
+bool board_does_strap_disable_pcie(void)
+{
+#ifdef BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_pcie_sata_MASK
+	/* strap_pcie_sata == 0 means SATA over PCIe */
+	return 0 == (BDEV_RD(BCHP_SUN_TOP_CTRL_STRAP_VALUE_0) &
+		BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_pcie_sata_MASK);
+#endif
+
+	return false; /* no way to disable PCIe */
+}
+
+bool board_does_strap_disable_sata(void)
+{
+#ifdef BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_pcie_sata_MASK
+	/* strap_pcie_sata != 0 means PCIe over SATA */
+	return 0 != (BDEV_RD(BCHP_SUN_TOP_CTRL_STRAP_VALUE_0) &
+		BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_pcie_sata_MASK);
+#endif
+
+	return false; /* no way to disable SATA */
+}
 
 struct board_type *board_thisboard(void)
 {
@@ -247,6 +270,16 @@ struct partition_profile *board_flash_partition_table(void)
 		return NULL;
 
 	return board_params[inf->board_idx].mapselect;
+}
+
+const struct nand_feature *board_flash_nand_feature(void)
+{
+	struct fsbl_info *inf = get_inf();
+
+	if (!inf)
+		return NULL;
+
+	return board_params[inf->board_idx].nand_feature;
 }
 
 const struct dvfs_params *board_dvfs(void)
@@ -483,6 +516,46 @@ dt_ops_s *board_dt_ops(void)
 	return NULL;
 }
 
+static void board_control_pad_rgmii(const struct pad_params pad_rgmii[])
+{
+#ifdef BCHP_SUN_TOP_CTRL_GENERAL_CTRL_1_multi_D_pad_modehv_override_MASK
+	const struct pad_params *p;
+
+	for (p = pad_rgmii; p != NULL; ++p) {
+		unsigned int modehv;
+
+		if (p->id == -1) /* end of list */
+			return;
+
+		if (p->ctrl == PAD_CTRL_NONE) /* hardware default */
+			continue;
+
+		if (p->ctrl == PAD_CTRL_HIGH) {
+			modehv = 1;
+		} else {
+			/* PAD_CTRL_LOW */
+			modehv = 0;
+		}
+
+		switch (p->id) {
+		case 0:
+			BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_1,
+				multi_D_pad_modehv_override, 1);
+			BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_NO_SCAN_0,
+				rgmii_0_pad_modehv, modehv);
+			break;
+		case 1:
+			BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_1,
+				multi_E_pad_modehv_override, 1);
+			BDEV_WR_F(SUN_TOP_CTRL_GENERAL_CTRL_NO_SCAN_0,
+				rgmii_1_pad_modehv, modehv);
+			break;
+		default:
+			return;
+		}
+	}
+#endif
+}
 
 void board_pinmux(void)
 {
@@ -491,6 +564,8 @@ void board_pinmux(void)
 
 	if (!inf)
 		return;
+
+	board_control_pad_rgmii(board_params[inf->board_idx].pad_rgmii);
 
 	if (board_params[inf->board_idx].pinmuxfn)
 		board_params[inf->board_idx].pinmuxfn();

@@ -88,7 +88,7 @@ static inline void *flash_offs_to_va(uint32_t offs)
 
 static void do_nand_cmd(uint32_t cmd, uint32_t addr)
 {
-#if NAND_CONTROLLER_REVISION >= 0x703
+#ifdef BCHP_NAND_CMD_ADDRESS_CS_SEL_SHIFT
 	BDEV_WR64(BCHP_NAND_CMD_ADDRESS, addr);
 #else
 	BDEV_WR(BCHP_NAND_CMD_EXT_ADDRESS, 0);

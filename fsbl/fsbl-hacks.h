@@ -13,22 +13,34 @@
 #include <lib_types.h>
 #include "fsbl.h"
 
+#if defined(CONFIG_BCM7255)
+void bcm7255_enable_qam(void);
+#else
+static inline void bcm7255_enable_qam(void) { }
+#endif
+
 #if defined(CONFIG_BCM7260A0)
 void bcm7260a0_patch_mpm(void);
 #else
 static inline void bcm7260a0_patch_mpm(void) { }
 #endif
 
+#if defined(CONFIG_BCM7260B0)
+void bcm7260b0_bp3_apply_otp(void);
+#else
+static inline void bcm7260b0_bp3_apply_otp(void) { }
+#endif
+
 #if defined(CONFIG_BCM7260) || \
 	defined(CONFIG_BCM7268) || \
 	defined(CONFIG_BCM7271) || \
-	defined(CONFIG_BCM7278A0)
+	defined(CONFIG_BCM7278)
 void orion_hack_early_bus_cfg(void);
 #else
 static inline void orion_hack_early_bus_cfg(void) { }
 #endif
 
-#if defined(CONFIG_BCM7278A0)
+#if defined(CONFIG_BCM7278)
 void dtu_preparation(unsigned int num_memc);
 #else
 static inline void dtu_preparation(unsigned int num_memc) { }
