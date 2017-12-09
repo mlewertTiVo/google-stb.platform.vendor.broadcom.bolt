@@ -160,7 +160,7 @@ void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 		mdio_set_clr_bits(mdio, phy[i], 0x1f, 0x0000, 0x0004);
 	}
 }
-#elif defined(CONFIG_BCM7278A0)
+#elif defined(CONFIG_BCM7278)
 /* Workaround based on HW7278-359 */
 void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 {

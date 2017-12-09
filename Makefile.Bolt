@@ -1,5 +1,5 @@
 ################################################################################
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 #  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 #  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -26,6 +26,9 @@ include security/security.inc
 include common/common.inc
 include stub64/stub.64.inc
 include psci32/psci32.inc
+ifeq ($(CFG_ZEUS5_1),1)
+include ssbm/ssbm.inc
+endif
 
 include build/utils.mk
 include build/ver.mk
@@ -41,6 +44,10 @@ ifneq ($(STUB64_START),)
 FAMILY_DEPS+= $(ODIR)/stub.64.bin $(ODIR)/smm.64.bin $(ODIR)/psci32.bin
 endif
 
+ifeq ($(CFG_ZEUS5_1),1)
+FAMILY_DEPS+= $(ODIR)/ssbm.bin
+endif
+
 $(FAMILY): $(FAMILY_DEPS)
 
 ################################################################################
@@ -48,6 +55,11 @@ $(FAMILY): $(FAMILY_DEPS)
 ################################################################################
 COMMON_DEPS	:= Makefile fsbl/fsbl.inc avs/avs.inc shmoo/shmoo.inc shmoo/memsys.inc
 COMMON_DEPS	+= ssbl/ssbl.inc custom/custom.inc splash/splash.inc common/common.inc
+
+ifeq ($(CFG_ZEUS5_1),1)
+COMMON_DEPS += ssbm/ssbm.inc
+endif
+
 COMMON_O	:= $(call src2obj,$(COMMON_S))
 FSBL_S		+= $(AVS_FSBL_S) $(COMMON_S)
 SSBL_S		+= $(AVS_SSBL_S) $(SPLASH_S) $(COMMON_S)
@@ -56,6 +68,7 @@ FSBL_O		:= $(call src2obj,$(FSBL_S))
 STUB_O		:= $(call src2obj,$(STUB_S))
 SMM_O		:= $(call src2obj,$(SMM_S))
 PSCI32_O	:= $(call src2obj,$(PSCI32_S))
+SSBM_O  	:= $(call src2obj,$(SSBM_S))
 BSL_O		:= $(call src2obj,$(BSL_S))
 ASL_O		:= $(call src2obj,$(ASL_S))
 SHMOO_O		:= $(call src2obj,$(SHMOO_S))
@@ -138,6 +151,10 @@ ifeq ($(CFG_ZEUS4_2),1)
 endif
 ifeq ($(CFG_ZEUS5_0),1)
    ZEUS_VER:=zeus50
+endif
+
+ifeq ($(CFG_ZEUS5_1),1)
+   ZEUS_VER:=zeus51
 endif
 
 ifeq ($(ZEUS_REVOCATION),1)
@@ -294,6 +311,21 @@ $(ODIR)/psci32.bin: $(ODIR)/psci32.elf $(ODIR)/psci32.asm
 
 ################################################################################
 
+ifeq ($(CFG_ZEUS5_1),1)
+$(ODIR)/ssbm.o: $(SSBM_O) $(ODIR)/ssbm.lds  $(BSL) $(LIBGCC)
+	$(call pretty_print,LD32,$@)
+	$(Q)$(LD) $(LDFLAGS) -T $(ODIR)/ssbm.lds -o $@ $(filter-out %.lds, $^)
+
+$(ODIR)/ssbm.elf: $(ODIR)/ssbm-stripped.o $(ODIR)/ssbm.lds
+	$(call pretty_print,LD32,$@)
+	$(Q)$(LD) $(LDFLAGS) -Map $(ODIR)/ssbm.map -T $(ODIR)/ssbm.lds -o $@ $(filter-out %.lds, $^)
+	$(Q)$(STRIP) --remove-section=$(ARCH_RM) $@
+
+$(ODIR)/ssbm.bin: $(ODIR)/ssbm.elf $(ODIR)/ssbm.asm
+endif
+
+################################################################################
+
 $(ODIR)/fsbl.o: $(FSBL_O) $(ODIR)/fsbl.lds $(BSL) $(ASL) $(LIBGCC) $(LIB_MEMSYS_SUPP)
 	$(call pretty_print,LD,$@)
 	$(Q)$(LD) $(LDFLAGS) --gc-sections -T $(ODIR)/fsbl.lds -o $@ $(filter-out %.lds, $^)
@@ -317,7 +349,11 @@ $(ODIR)/memsys_alt.o: $(MEMSYS_ALT_O) $(ODIR)/memsys_alt.lds $(MEMSYS_ALT_LIB) $
 $(ODIR)/avs_fw.o: $(AVS_FW_S)
 	$(Q)$(OBJCOPY) -I binary -O $(ARCH_OFORMAT) -B $(ARCH) $^ $@
 
+ifeq ($(CFG_ZEUS5_1),1)
+SSBL_DEPS:=$(SSBL_O) $(ODIR)/ssbl.lds $(CA_LIB) $(CA_LIB_EXT) $(BSL) $(LIBGCC)
+else
 SSBL_DEPS:=$(SSBL_O) $(ODIR)/ssbl.lds $(CA_LIB) $(CA_LIB_EXT) $(LIBGCC)
+endif
 SSBL_DEPS+= $(ODIR)/config_dtb.o $(ODIR)/build_date.o
 
 # Have a rule for this or else make thinks they are intermediary build
@@ -336,7 +372,7 @@ SSBL_DEPS+= $(patsubst %.dtb,%.dtb.o,$(BOARD_DTB))
 
 $(ODIR)/ssbl.o: $(SSBL_DEPS)
 	$(call pretty_print,LD,$@)
-	$(Q)$(LD) $(LDFLAGS) --gc-sections -T $(ODIR)/ssbl.lds -o $@ $(filter-out %.lds, $^) $(SSBL_EXTLIBS)
+	$(Q)$(LD) $(LDFLAGS) --gc-sections -T $(ODIR)/ssbl.lds -o $@ $(filter-out %.lds, $^) $(BSL) $(SSBL_EXTLIBS)
 
 $(ODIR)/bolt.elf: $(patsubst %,$(ODIR)/%-stripped.o,$(BOLT_CORE)) $(ODIR)/bolt.lds
 	$(call pretty_print,LD,$@)
@@ -429,7 +465,11 @@ bloatcheck: $(ODIR)/fsbl.o $(ODIR)/ssbl.o $(ODIR)/bolt.elf $(ODIR)/fsbl-old.o $(
 # Security is allowed to override the final patching. Not applicable to generic
 # BOLT though.
 
+ifeq ($(CFG_ZEUS5_1),1)
+FINAL_PRODUCTS := $(ODIR)/bolt.bin $(ODIR)/fsbl.bin $(ODIR)/ssbl.bin $(ODIR)/memsys.bin $(ODIR)/ssbm.bin
+else
 FINAL_PRODUCTS := $(ODIR)/bolt.bin $(ODIR)/fsbl.bin $(ODIR)/ssbl.bin $(ODIR)/memsys.bin
+endif
 
 include security/postmake.mk
 -include security/secpatch.mk
@@ -443,9 +483,17 @@ endif
 ifeq ($(SECPATCH),1)
 postpatch: secpatch
 else
+ifeq ($(CFG_ZEUS5_1),1)
 postpatch: $(GEN)/scripts/patcher.pl $(FINAL_PRODUCTS)
 	$(call pretty_print,EXEC,$@)
 	$(call stubpatch)
+	$(call ssbmpatch)
+#	$(call smmpatch)
+else
+postpatch: $(GEN)/scripts/patcher.pl $(FINAL_PRODUCTS)
+	$(call pretty_print,EXEC,$@)
+	$(call stubpatch)
+endif
 	$(Q)echo $(EXTRA_DEFINES) > $(GEN)/$(FAMILY)/.common_flags
 	$(Q)$(ROOT)/scripts/postpatch.pl -D $(ODIR) -G $(GEN)/$(FAMILY) -o -z $(ZEUS_VER) \
 		$(DEBUG_POSTPATCH) \

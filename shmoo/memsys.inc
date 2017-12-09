@@ -28,6 +28,9 @@ else
  ifeq ($(MEMC_REV),B300_H00)
   LIB_MEMSYS_SUPP += $(ROOT)/shmoo/$(MEMC_REV)/lib/memsys-supplement.a
  endif
+ifeq ($(MEMC_REV),B310_G00)
+  LIB_MEMSYS_SUPP += $(ROOT)/shmoo/$(MEMC_REV)/lib/memsys-supplement.a
+ endif
 endif
 
 $(SHMOO_S):

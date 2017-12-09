@@ -11,10 +11,11 @@
 #define __ASSEMBLER__
 #endif
 
-#include "aarch64/armv8-regs.h"
-#include "aarch64/armv8-macros.h"
+#include <aarch64/armv8-regs.h>
+#include <aarch64/armv8-macros.h>
 #include <config.h>
 #include <psci.h>
+#include <bchp_common.h>
 
 #define PSCI_STACK_SIZE		2048
 #define A32_FIXED_ONMODE	A32_SPSR_MODE_Hyp
@@ -37,7 +38,7 @@
 .section .init
 .align 11
 
-/* aarch64 EL3 handler for exceptions, especially 
+/* aarch64 EL3 handler for exceptions, especially
  * System Management Mode (EL3) features for PSCI.
  *
  * ==> VBAR_EL3 should have already been setup in FSBL
@@ -321,7 +322,7 @@ ENTRY_PROC(init_counters)
 	mov	x7, #0x1 /* Timers: interrupt enabled, masked */
 
 	/* Counter-timer Hyp Physical Timer Control register,
-	 * CNTHP_CTL (EL2, EL3) 
+	 * CNTHP_CTL (EL2, EL3)
 	 */
 	mrs	x8, cnthp_ctl_el2
 	isb
@@ -420,7 +421,9 @@ END_PROC(exec64)
  * x1: linux_entry
  */
 #if CFG_TRUSTZONE_MON
-.global bl31_params
+.global mon_params
+.global brcmstb_params
+.global uart_base
 
 ENTRY_PROC(exec64_el3)
 	mov	x7, x1	/* aarch64 executable (Linux) entry address */
@@ -428,8 +431,11 @@ ENTRY_PROC(exec64_el3)
 	/* uses: x0 x1 x2 x3 x4 */
 	bl	gic_secure_init
 
-	adr	x0, bl31_params
-	mov	x2, xzr
+	adr	x0, mon_params
+	adr	x1, brcmstb_params
+	ldr	x2, uart_base
+	movz	x3, #(BCHP_PHYSICAL_OFFSET >> 16), LSL #16
+	add	x2, x2, x3
 	mov	x3, xzr
 	barrier
 	br	x7	/* go! */

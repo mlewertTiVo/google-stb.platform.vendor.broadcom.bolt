@@ -26,6 +26,12 @@ ifeq ($(CFG_ZEUS4_1),1)
  SEC_BFW = 1.0.0,2.0.0
 endif
 
+ifeq ($(CFG_ZEUS5_1),1)
+ SEC_PFX := ba
+ SEC_BBL = 2.0.0
+ SEC_BFW = 2.0.1
+endif
+
 #default
 ifeq ($(SEC_PFX),)
  SEC_PFX := ba,ba,ba,bb,bb

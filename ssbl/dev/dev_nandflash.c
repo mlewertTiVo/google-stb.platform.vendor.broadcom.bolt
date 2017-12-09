@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -121,6 +121,28 @@ enum {
 enum {
 	NAND_BLOCK_STATUS_GOOD		= 0,
 	NAND_BLOCK_STATUS_BAD,
+};
+
+/* Low-level operation types: command, address, write, or read */
+enum llop_type {
+	LL_OP_CMD,
+	LL_OP_ADDR,
+	LL_OP_WR,
+	LL_OP_RD,
+};
+
+enum {
+	LLOP_RE				= BIT(16),
+	LLOP_WE				= BIT(17),
+	LLOP_ALE			= BIT(18),
+	LLOP_CLE			= BIT(19),
+	LLOP_RETURN_IDLE		= BIT(31),
+	LLOP_DATA_MASK			= 0x0000ffff
+};
+
+enum nand_feature_cmd {
+	NAND_GET_FEATURE_CMD = 0xee,
+	NAND_SET_FEATURE_CMD = 0xef,
 };
 
 /* Flash cache size, in bytes */
@@ -811,7 +833,7 @@ static uint32_t do_nand_cmd(struct nand_probe_info *info, uint32_t cmd,
 
 	DBG("NAND cmd: %#04x @ %llx\n", cmd, addr);
 
-#if NAND_CONTROLLER_REVISION >= 0x703
+#ifdef BCHP_NAND_CMD_ADDRESS_CS_SEL_SHIFT
 	/* 64 bit register */
 	addr &= BCHP_NAND_CMD_ADDRESS_ADDRESS_MASK;
 	addr |= ((uint64_t)info->cs) << BCHP_NAND_CMD_ADDRESS_CS_SEL_SHIFT;
@@ -834,6 +856,88 @@ static uint32_t do_nand_cmd(struct nand_probe_info *info, uint32_t cmd,
 			cmd, addr);
 
 	return BDEV_RD(BCHP_NAND_INTFC_STATUS) & NAND_STATUS_FAIL;
+}
+
+/******************************************************************************
+ *
+ * Function Name: do_nand_low_level_op
+ * Description: function perfroms low level ops for doing vendor specific
+ *              commands
+ * Arguments: low level op code, data to write
+ * Returns:
+ *
+ *****************************************************************************/
+static void do_nand_low_level_op(struct nand_dev *nand, enum llop_type type,
+				 uint32_t data, bool last_op)
+
+{
+	struct nand_probe_info *info = &nand->info;
+	uint32_t tmp;
+
+	tmp = data & LLOP_DATA_MASK;
+	switch (type) {
+	case LL_OP_CMD:
+		tmp |= LLOP_WE | LLOP_CLE;
+		break;
+	case LL_OP_ADDR:
+		/* WE | ALE */
+		tmp |= LLOP_WE | LLOP_ALE;
+		break;
+	case LL_OP_WR:
+		/* WE */
+		tmp |= LLOP_WE;
+		break;
+	case LL_OP_RD:
+		/* RE */
+		tmp |= LLOP_RE;
+		break;
+	}
+
+	if (last_op)
+		tmp |= LLOP_RETURN_IDLE;
+
+	BDEV_WR(BCHP_NAND_LL_OP, tmp);
+	tmp = BDEV_RD(BCHP_NAND_LL_OP);
+	DBG("NAND_LL_OP %x\n", tmp);
+
+	do_nand_cmd(info, NAND_CMD_LOW_LEVEL_OP, 0);
+}
+
+/******************************************************************************
+ *
+ * Function Name: nand_set_get_feature
+ * Description: function set or gets vendor specific features
+ * Arguments: Feature command, sub feature param data to write
+ * Returns : buffer with data as part of the buf argument on reads
+ *
+ *****************************************************************************/
+static void nand_set_get_feature(struct nand_dev *nand,
+				 enum nand_feature_cmd cmd, uint32_t addr,
+				 uint8_t *buf, int len)
+{
+	int i;
+
+	if (!buf || !len)
+		return;
+
+	do_nand_low_level_op(nand, LL_OP_CMD, cmd, false);
+	do_nand_low_level_op(nand, LL_OP_ADDR, addr, false);
+
+	switch (cmd) {
+	case NAND_SET_FEATURE_CMD:
+		for (i = 0; i < len; i++)
+			do_nand_low_level_op(nand, LL_OP_WR, buf[i],
+					     (i + 1) == len);
+		break;
+
+	case NAND_GET_FEATURE_CMD:
+		for (i = 0; i < len; i++) {
+			do_nand_low_level_op(nand, LL_OP_RD, 0, (i + 1) == len);
+			buf[i] = BDEV_RD(BCHP_NAND_LL_RDDATA) & 0xff;
+		}
+
+		break;
+	}
 }
 
 static int nand_get_block_status(struct nand_dev *nand, uint64_t blk_addr)
@@ -1073,8 +1177,11 @@ static int nand_write_page(struct nand_dev *nand,
 		 * we call do_nand_cmd() where we do the same for each
 		 * subpage
 		 */
-#if NAND_CONTROLLER_REVISION >= 0x703
+#ifdef BCHP_NAND_CMD_ADDRESS_CS_SEL_SHIFT
 		/* 64 bit register */
+		addr &= BCHP_NAND_CMD_ADDRESS_ADDRESS_MASK;
+		addr |= ((uint64_t)info->cs) <<
+			BCHP_NAND_CMD_ADDRESS_CS_SEL_SHIFT;
 		BDEV_WR64(BCHP_NAND_CMD_ADDRESS, addr + i);
 #else
 		BDEV_WR(BCHP_NAND_CMD_ADDRESS, addr + i);
@@ -2531,10 +2638,13 @@ static int nanddrv_ioctl(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 	nvram_info_t *nvinfo;
 	struct flash_info *info;
 	flash_range_t range;
+	struct flash_feature_cmd_info *nand_feature_cmd_info;
 	int offset;
+	int ioctl_cmd;
 
 	/* Informationaly ioctl's don't need to scan for bad blocks */
-	switch ((int)buffer->buf_ioctlcmd) {
+	ioctl_cmd = (int)buffer->buf_ioctlcmd;
+	switch (ioctl_cmd) {
 	case IOCTL_NVRAM_GETINFO:
 	case IOCTL_FLASH_GETINFO:
 	case IOCTL_FLASH_GETPARTINFO:
@@ -2544,7 +2654,7 @@ static int nanddrv_ioctl(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 		nand_ensure_block_array_valid(part);
 	}
 
-	switch ((int)buffer->buf_ioctlcmd) {
+	switch (ioctl_cmd) {
 	case IOCTL_NVRAM_GETINFO:
 		/*
 		 * We only support NVRAM on flashes that have been partitioned
@@ -2609,6 +2719,18 @@ static int nanddrv_ioctl(bolt_devctx_t * ctx, iocb_buffer_t * buffer)
 
 	case IOCTL_FLASH_HANDLE_PARTITION_READ_DISTURB:
 		nand_handle_partition_read_disturb(ctx);
+		return 0;
+
+	case IOCTL_FLASH_SET_FEATURE :
+	case IOCTL_FLASH_GET_FEATURE :
+		nand_feature_cmd_info = (struct flash_feature_cmd_info *)buffer->buf_ptr;
+		nand_set_get_feature(softc,
+				     ioctl_cmd == IOCTL_FLASH_SET_FEATURE ?
+				     NAND_SET_FEATURE_CMD :
+				     NAND_GET_FEATURE_CMD,
+				     nand_feature_cmd_info->feature_addr,
+				     nand_feature_cmd_info->data_buf,
+				     nand_feature_cmd_info->data_buf_len);
 		return 0;
 
 	default:

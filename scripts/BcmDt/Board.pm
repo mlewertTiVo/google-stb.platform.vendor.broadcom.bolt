@@ -271,7 +271,7 @@ sub gen_enet_dts($) {
 					 substr($e->{phy_speed}, 1, -1));
 			$text .= "\t\tfull-duplex;\n";
 			$text .= "\t};\n";
-		} else {
+		} elsif ($e->{phy_id} ne "\"probe\"") {
 			$text .= sprintf("\tphy-handle = <&phy%d>;\n",
 					 substr($e->{phy_id}, 1, -1));
 

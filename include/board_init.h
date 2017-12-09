@@ -10,32 +10,27 @@
 #ifndef __BOARD_INIT_H__
 #define __BOARD_INIT_H__
 
-#include "lib_types.h"
-#include "lib_string.h"
-#include "lib_printf.h"
+#include <bolt.h>
+#include <common.h>
+#include <console.h>
+#include <dev_emmcflash.h>
+#include <dev_norflash.h>
+#include <devfuncs.h>
+#include <device.h>
+#include <env_subr.h>
+#include <flash-partitions.h>
+#include <iocb.h>
+#include <ioctl.h>
+#include <lib_printf.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <macaddr.h>
+#include <ssbl-common.h>
+#include <timer.h>
+#include <ui_command.h>
+#include <usbdt.h>
 
-#include "bolt.h"
-#include "iocb.h"
-#include "device.h"
-#include "ioctl.h"
-#include "devfuncs.h"
-
-#include "timer.h"
-#include "console.h"
-#include "ui_command.h"
-#include "env_subr.h"
-
-#include "dev_norflash.h"
-#include "dev_emmcflash.h"
-
-#include "macaddr.h"
-
-#include "common.h"
-
-#include "ssbl-common.h"
-#include "flash-partitions.h"
-#include "usbdt.h"
-
+#include <stdint.h>
 
 /* driver handles
 */
@@ -77,6 +72,9 @@ void sata_exit(void);
 
 void board_init_flash(void);
 void board_init_hdmi(void);
+void board_init_reset_history(void);
+uint32_t board_init_reset_history_value(void);
+char *board_init_reset_history_string(void);
 
 void board_init_enet(void);
 void enet_exit(void);

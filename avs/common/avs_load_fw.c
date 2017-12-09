@@ -543,14 +543,13 @@ static void avs_dump_results(void)
 {
 	struct at_runtime results;
 	uint32_t *p = (uint32_t *)&results;
-	unsigned i, revision;
+	unsigned i;
 
 	for (i = 0; i < sizeof(results) / sizeof(*p); i++)
 		p[i] =
 		    BDEV_RD(BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE +
 				(i * 4));
 
-	revision = results.revision;
 	avs_print_string_val("status=", results.status);
 	avs_print_cr_lf();
 
@@ -569,16 +568,7 @@ static void avs_dump_results(void)
 	}
 #endif
 
-	avs_print_string_val("AVS FW rev=", revision);
-	avs_print_string(" [");
-	avs_print_char(revision >> 24 & 0xFF);
-	avs_print_char('.');
-	avs_print_char(revision >> 16 & 0xFF);
-	avs_print_char('.');
-	avs_print_char(revision >> 8 & 0xFF);
-	avs_print_char('.');
-	avs_print_char(revision >> 0 & 0xFF);
-	avs_print_string("]");
+	avs_print_string_val("AVS FW rev=0x", results.revision);
 	avs_print_cr_lf();
 }
 
@@ -721,8 +711,13 @@ static void setup_avs_params(int en, int pmap_id)
 #ifdef PARAM_AVS_PARAM_0
 	/* read run time AVS params from secure */
 	/* parameter section, if they exist.    */
+#if CFG_ZEUS5_1
+	param0 = DEV_RD(SEC_PARAM_START_SRAM + PARAM_AVS_PARAM_0);
+	param1 = DEV_RD(SEC_PARAM_START_SRAM + PARAM_AVS_PARAM_1);
+#else
 	param0 = DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_0);
 	param1 = DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1);
+#endif
 #endif
 
 #define DEFAULT_PSTATE 4 /* 0 starts up at fastest state, 4 at slowest */

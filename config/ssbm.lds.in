@@ -1,0 +1,56 @@
+/***************************************************************************
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ *
+ ***************************************************************************/
+
+MEMORY {
+	ssbm : ORIGIN = @SSBM_RAM_ADDR@, LENGTH = @SSBM_SIZE@
+}
+
+SECTIONS {
+	.ssbm.text :
+	{
+		_ftext = .;
+		* (.init);
+		* (.text*);
+		. = ALIGN(8);
+		_etext = .;
+	}  > ssbm =@FILLB@
+
+	.ssbm.data BLOCK(4096*15) : AT(@SSBM_RAM_ADDR@ + @SSBM_SIZE@ - 0x1000)
+	{
+		_fdata = .;
+		* (.rodata*);
+		. = ALIGN(16);
+		* (.data*);
+		. = ALIGN(16);
+		_edata = .;
+	} > ssbm =@FILLB@
+
+
+	.bss :
+	{
+		_fbss = .;
+		* (.bss*);
+		* (.sbss*);
+		. = ALIGN(16);
+	} > ssbm =0x00
+
+
+	.ssbm.bss :
+	{
+		* (.bss*);
+		* (.sbss*);
+		. = ALIGN(16);
+		_ebss = .;
+	} > ssbm =0x00
+
+	.ARM.exidx : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
+
+	_end = .;
+	ssbm_end = .;
+};

@@ -27,8 +27,6 @@ static void setup_rts(unsigned long base, uint32_t *tbl)
 	c = tbl[0];
 	tbl++;
 
-	xprintf("%d clients, ", c);
-
 	for (i = 0; i < c; i++)
 		BDEV_WR(base + (i<<2), tbl[i]);
 }
@@ -150,9 +148,7 @@ void board_init_rts(void)
 			continue;
 		}
 
-		xprintf("RTS%d: %#08x, ", i, rts_bases[i]);
 		setup_rts(rts_bases[i], r->values[i]);
-		xprintf("ok\n");
 	}
 }
 

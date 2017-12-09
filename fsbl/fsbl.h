@@ -32,7 +32,7 @@
 
 #define CRLF "\r\n"
 
-#if CFG_ZEUS5_0
+#if (CFG_ZEUS5_0) || (CFG_ZEUS5_1)
 /* MEMSYS and then MCB/BOARD in the upper 36KiB out of 96KiB */
 #define SHMOO_SRAM_ADDR (SRAM_ADDR + MEMSYS_MCB_OFFSET)
 #else

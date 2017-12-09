@@ -71,6 +71,8 @@ do
  if [[ ${#Z} -le 0 ]]; then
   Z="zeus"
  fi
+ find_section $f "RESERVEDDATA" $Z
+ find_section $f "ZEUS51MARK" $Z
  find_section $f "KEY" $Z
  find_section $f "BBL" $Z
  find_section $f "BFW" $Z

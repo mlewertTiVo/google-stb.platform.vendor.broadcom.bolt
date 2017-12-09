@@ -1,5 +1,5 @@
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -34,6 +34,24 @@ stubpatch = \
 		echo "  PATCH   $(ODIR)/stub.64.bin"; \
 		scripts/bpatch.pl -a $(STUB64_OFFSET) \
 		-p $(ODIR)/stub.64.bin \
+		-i $(ODIR)/bolt.bin \
+		-o $(ODIR)/bolt.bin > /dev/null 2>&1; \
+	fi
+
+smmpatch = \
+	$(Q)if [ -f $(ODIR)/smm.64.bin ]; then \
+		echo "  PATCH   $(ODIR)/smm.64.bin"; \
+		scripts/bpatch.pl -a $(SMM64_OFFSET) \
+		-p $(ODIR)/smm.64.bin \
+		-i $(ODIR)/bolt.bin \
+		-o $(ODIR)/bolt.bin > /dev/null 2>&1; \
+	fi
+
+ssbmpatch = \
+	$(Q)if [ -f $(ODIR)/ssbm.bin ]; then \
+		echo "  PATCH   $(ODIR)/ssbm.bin"; \
+		scripts/bpatch.pl -a $(SSBM_TEXT_OFFS) \
+		-p $(ODIR)/ssbm.bin \
 		-i $(ODIR)/bolt.bin \
 		-o $(ODIR)/bolt.bin > /dev/null 2>&1; \
 	fi

@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
 # *
 # *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -736,7 +736,9 @@ sub do_secpatch($$$$)
 	assemble_sections_of_interest($odir, $bfw, $bfw_ver);
 
 	# --- Area reserved in FSBL for security ---
-	patch_zeus_ver(\$image, 0x900);
+	patch_zeus_ver(\$image, 0x900)
+		if (!cfg_is("CFG_ZEUS5_1"));
+
 	patch_presence(\$image, 0x904);
 	# make sure signed & enc status are cleaned out
 	patch_u32(\$image, 0x908, 0x00000000);
@@ -755,7 +757,7 @@ sub do_secpatch($$$$)
 		if (! cfg_is("CFG_NOSHMOO"));
 
 	write_binfile($fname, $image)
-		if (! cfg_is("CFG_ZEUS5_0"));
+		if (! (cfg_is("CFG_ZEUS5_0") || cfg_is("CFG_ZEUS5_1")) );
 }
 
 
@@ -815,6 +817,24 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 			if ($arg_debug);
 	}
 
+	if (cfg_is("CFG_ZEUS5_1")) {
+		my $file_reserveddata = "security/" . $arg_family . "/reserveddata.bin";
+		my $file_zeus51_mark = "security/" . "/zeus51-mark.bin";
+		my $sub_reserveddata = "-t reserveddata -p $file_reserveddata -i $arg_odir/$bname";
+		my $sub_zeus51_mark = "-t zeus51mark -p $file_zeus51_mark -i $arg_odir/$bname";
+
+		if (-f $file_reserveddata) {
+			$r = do_shell("$cmd $sub_reserveddata");
+			print "\n$r"
+				if ($arg_debug);
+		}
+
+		if (-f $file_zeus51_mark) {
+			$r = do_shell("$cmd $sub_zeus51_mark");
+			print "\n$r"
+				if ($arg_debug);
+		}
+	}
 	if ($arg_keep == 1) {
 		$r = do_shell("cp $arg_odir/$bname $arg_odir/last.bin");
 		print "\n$r"

@@ -101,7 +101,7 @@ static void overtemp_check(void)
 		if (!otalarm && (temperature >= OT_ALARM_HYST_HI)) {
 			err_msg("[OVERTEMP ALARM %03d]", temperature);
 			sprintf(otmsg, OT_ALARM_PROMPT, temperature);
-			arch_set_cpu_clk_ratio(CPU_CLK_RATIO_QUARTER);
+			arch_set_cpu_clk_ratio(CPU_CLK_RATIO_EIGHTH);
 			otalarm = 1;
 			ot_splash_image_change();
 		} else if (otalarm && (temperature <= OT_ALARM_HYST_LO)) {
@@ -222,8 +222,6 @@ void bolt_overtemp_init(void)
 	*/
 	TIMER_SET(ovtimer, OT_POLL_INTERVAL * BOLT_HZ);
 	bolt_bg_add(overtemp_task, NULL);
-
-	xprintf("AVS: temperature monitoring enabled\n");
 }
 
 

@@ -36,7 +36,11 @@ ifeq ($(CFG_DUMMY_SECURITY),y)
  FSBL_S += security/dummy.c
 endif
 
-ifeq ($(CFG_ZEUS5_0),1)
+ifeq ($(CFG_ZEUS5_1),1)
+SSBL_S += \
+	security/ssbl-zeus51.c
+
+else ifeq ($(CFG_ZEUS5_0),1)
 SSBL_S += \
 	security/ssbl-zeus50.c
 else
