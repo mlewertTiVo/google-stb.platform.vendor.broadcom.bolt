@@ -609,6 +609,15 @@ The MAC address of the principal Ethernet device. This is set by the
 if the partition is invalid. It may be overridden by your own value via
 the 'macprog' BOLT command.
 
+ COAP_SSDP_ENABLE
+~~~~~~~~~~~~~~~~~
+If set, will enable both CoAP and SSDP.
+Requires a reboot for change to take effect.
+
+----
+setenv -p COAP_SSDP_ENABLE 1
+----
+
 ------------------------------------------------------------------------- {qwe}
 
 

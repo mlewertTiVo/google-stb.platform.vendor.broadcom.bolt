@@ -130,14 +130,14 @@ void select_rescue_loader(void)
 	Rescue Loader will be run */
 }
 
-void fsbl_set_srr(struct board_type *b, struct fsbl_info *info)
+bool fsbl_set_srr(struct board_type *b, struct fsbl_info *info)
 {
 	static const uint32_t MAX_SRR_SIZE_MB = 255;
 	uint32_t size_mb;
 	uint32_t offset_mb;
 
 	if (b == NULL || info == NULL)
-		return;
+		return false;
 
 	/* retrieve the required size of SRR */
 	size_mb = *((uint32_t *)(SRAM_ADDR + PARAM_SRR_SIZE_MB));
@@ -172,12 +172,36 @@ void fsbl_set_srr(struct board_type *b, struct fsbl_info *info)
 			__puts("@");
 			writeint(offset_mb);
 			puts(" failed");
+			info->srr_size_mb = 0;
+			info->srr_offset_mb = 0;
+			return false;
 		}
 	}
 
 	/* pass the information to SSBL so that it is passed up to Linux */
 	info->srr_size_mb = (uint16_t) size_mb;
 	info->srr_offset_mb = (uint16_t) offset_mb;
+	return true;
+}
+
+static void bp3_apply_otp(void)
+{
+#ifdef BCHP_SUN_TOP_CTRL_IP_DISABLE_UNLOCK
+	uint32_t bp3_enable, rval;
+
+	rval = sec_read_otp_bit(OTP_IP_LICENSING_CHECK_ENABLE_BIT, &bp3_enable);
+	if (rval)
+		sys_die(DIE_OTP_READ_FAILED, "OTP read failed");
+
+	/* adjust IP_DISABLE_xxx based on read OTP bit */
+	if (bp3_enable) {
+		bcm7255_enable_qam();
+		BDEV_WR(BCHP_SUN_TOP_CTRL_IP_DISABLE_UNLOCK, 0);
+	} else {
+		BDEV_WR(BCHP_SUN_TOP_CTRL_IP_DISABLE_0, 0);
+	}
+#endif
+	bcm7260b0_bp3_apply_otp();
 }
 
 void fsbl_main(void)
@@ -194,13 +218,13 @@ void fsbl_main(void)
 	int en_avs_thresh;
 #ifndef SECURE_BOOT
 	int bypass_avs;
-	struct boards_nvm_list *nvm_boards;
 #endif
 	uint32_t mhl_power;
 #endif
 	int i;
 	bool warm_boot;
 	__maybe_unused bool resume_ddr_phys;
+	bool is_srr_allocated = false;
 
 	late_cpu_init();
 	late_release_resets();
@@ -239,7 +263,7 @@ void fsbl_main(void)
 
 	sec_init(); /* send out memsys_ready_for_init and get boot parameter */
 
-#if !(CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if !(CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	sec_bfw_load(warm_boot);
 #endif
 
@@ -260,8 +284,21 @@ void fsbl_main(void)
 		(uint32_t *)pnvm, sizeof(*pnvm));
 
 	__puts("AVS: overtemp mon ");
-	en_avs_thresh = (info.saved_board.hardflags &
+	if (BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY) &
+		BCHP_AON_CTRL_RESET_HISTORY_overtemp_reset_MASK) {
+		/* if one of reset causes is overtemp, do not re-enable
+		 * at this point so that the overtemp condition does not
+		 * reset the chip over and over again.
+		 *
+		 * As long as OVERTEMP is enabled, it gets re-enabled
+		 * in SSBL after SSBL performs temperature parking and
+		 * the chip cools down.
+		 */
+		en_avs_thresh = 0;
+	} else {
+		en_avs_thresh = (info.saved_board.hardflags &
 					FSBL_HARDFLAG_OTPARK_MASK)? 0 : 1;
+	}
 	avs_set_temp_threshold(STB_DEVICE, en_avs_thresh);
 	if (en_avs_thresh)
 		puts("ON");
@@ -299,16 +336,16 @@ void fsbl_main(void)
 	do_shmoo_menu = board_select(&info, SHMOO_SRAM_ADDR);
 
 #ifndef SECURE_BOOT
-	nvm_boards = (struct boards_nvm_list *) SHMOO_SRAM_ADDR;
 	pmap_id = FSBL_HARDFLAG_PMAP_ID(info.saved_board.hardflags);
 	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD)
 		/* board default PMap ID as it is overridden */
 		pmap_id = AVS_PMAP_ID(info.board_types[info.board_idx].avs);
-	if (pmap_id >= nvm_boards->n_pmaps)
-		pmap_id = 0; /* fall back to PMap ID #0 */
 #else /* SECURE BOOT */
 #if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
 	pmap_id =  DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1) &
+			PARAM_AVS_PARAM_1_PMAP_MASK;
+#elif  CFG_ZEUS5_1
+	pmap_id = DEV_RD(SEC_PARAM_START_SRAM + PARAM_AVS_PARAM_1) &
 			PARAM_AVS_PARAM_1_PMAP_MASK;
 #endif
 #endif
@@ -367,9 +404,13 @@ void fsbl_main(void)
 
 	sec_memsys_region_disable();
 
+	bp3_apply_otp();
+
+	is_srr_allocated = fsbl_set_srr(b, &info);
+
 	sec_scramble_sdram(warm_boot);
 
-#if CFG_ZEUS5_0
+#if (CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	dtu_load(b, warm_boot);
 #endif
 
@@ -380,24 +421,28 @@ void fsbl_main(void)
 	 */
 	restore_val = AON_REG(AON_REG_MAGIC_FLAGS);
 
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	if (warm_boot)
 		AON_REG(AON_REG_MAGIC_FLAGS) = BRCMSTB_S3_MAGIC;
 
+#if !CFG_ZEUS5_1
 	sec_bfw_load(warm_boot);
+#endif
 #endif
 	if (warm_boot) {
 		fsbl_init_warm_boot(restore_val);
-#if CFG_ZEUS5_0
+#if (CFG_ZEUS5_0 || CFG_ZEUS5_1)
 		dtu_verify(b->nddr);
 #endif
 	}
 
-#if CFG_ZEUS4_2
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_1)
 	dtu_load(b, warm_boot);
 #endif
 
-	fsbl_set_srr(b, &info); /* after loading BFW */
+	/* if previous set_srr fail, do it again after loading BFW */
+	if (!is_srr_allocated)
+		fsbl_set_srr(b, &info);
 
 	for (i = 0; i < (int)b->nddr; i++) {
 		const struct ddr_info *ddr;
@@ -471,7 +516,11 @@ void fsbl_main(void)
 #ifndef CFG_EMULATION
 void *copy_code(void)
 {
+#if (CFG_ZEUS5_1)
+	void *dst = (void *)SSBM_RAM_ADDR;
+#else
 	void *dst = (void *)SSBL_RAM_ADDR;
+#endif
 #if SSBL_SOFTLOAD
 	mmu_disable();
 	__puts("softload SSBL @ ");
@@ -480,15 +529,21 @@ void *copy_code(void)
 	getchar();
 	getchar();
 #else
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0)
+#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0  || CFG_ZEUS5_1)
 	struct fsbl_flash_partition flash;
 	uint32_t ctrl_word, flash_offs, ssbl_size;
 
+#if (CFG_ZEUS5_1)
+	flash_offs = DEV_RD(PARAM_SSBL_PART_OFFSET);
+	ssbl_size =  DEV_RD(PARAM_SSBL_SIZE);
+	ctrl_word = DEV_RD(PARAM_SSBL_CTRL);
+	flash.part_offs = DEV_RD(PARAM_SSBL_PART);
+#else
 	flash_offs = DEV_RD(SRAM_ADDR + PARAM_SSBL_PART_OFFSET);
 	ssbl_size =  DEV_RD(SRAM_ADDR + PARAM_SSBL_SIZE);
 	ctrl_word = DEV_RD(SRAM_ADDR + PARAM_SSBL_CTRL);
 	flash.part_offs = DEV_RD(SRAM_ADDR + PARAM_SSBL_PART);
-
+#endif
 	ssbl_size += 512;
 
 	/* partition size is in 1k size. Change it to byte */
@@ -497,6 +552,11 @@ void *copy_code(void)
 	flash.cs = (ctrl_word & PARAM_IMAGE_CS_MASK) >> PARAM_IMAGE_CS_SHIFT;
 
 	__puts("COPY CODE... ");
+#if (CFG_ZEUS5_1)
+	/* copy SSBM+SSBL to SSBM address */
+	flash_offs = flash_offs - SSBM_SIZE;
+	ssbl_size = ssbl_size + SSBM_SIZE;
+#endif
 	if (load_from_flash_ext(dst, flash_offs, ssbl_size, &flash) < 0)
 		sys_die(DIE_FLASH_READ_FAILURE, "flash read failure");
 #else

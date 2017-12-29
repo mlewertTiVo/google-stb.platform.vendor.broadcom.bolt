@@ -44,7 +44,7 @@ int ui_init_coapcmds(void)
 	return 0;
 }
 
-static int ui_cmd_coap_listen(ui_cmdline_t *cmd, int argc, char *argv[])
+int do_coap_listen(void)
 {
 	int ret;
 
@@ -54,6 +54,11 @@ static int ui_cmd_coap_listen(ui_cmdline_t *cmd, int argc, char *argv[])
 		return 0;
 	} else
 		return -1;
+}
+
+static int ui_cmd_coap_listen(ui_cmdline_t *cmd, int argc, char *argv[])
+{
+	return do_coap_listen();
 }
 
 static int ui_cmd_coap_term(ui_cmdline_t *cmd, int argc, char *argv[])

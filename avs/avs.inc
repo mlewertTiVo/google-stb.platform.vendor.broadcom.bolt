@@ -11,18 +11,18 @@
 AVS_DUAL:=
 
 # Whitelists
-AVS_SETUPS   :=7250b0 7260a0 7268b0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
-AVS_FIRMWARES:=7250b0 7260a0 7268b0 7271b0 7278a0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+AVS_SETUPS   :=7250b0 7260a0 7268b0 7271b0 7278a0 7278b0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+AVS_FIRMWARES:=7250b0 7260a0 7268b0 7271b0 7278a0 7278b0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
 
 # for bsu and temp_reset:
 # These parts use an older set of conversion functions for PVTMON
 AVS_OLD_CALCS:=74371
 
 # These parts can be used on reference boards configured with one or two power domains
-AVS_DUAL_DOMAINS:=7260a0 7268b0 7271b0 7278a0
+AVS_DUAL_DOMAINS:=7260a0 7268b0 7271b0 7278a0 7278b0
 
 # These parts support dynamic voltage and frequency scaling
-DVFS_SUPPORT:=7260a0 7268b0 7271b0 7278a0
+DVFS_SUPPORT:=7260a0 7268b0 7271b0 7278a0 7278b0
 
 # ***************************************************************************
 

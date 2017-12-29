@@ -70,7 +70,7 @@ int ui_init_ssdpcmds(void)
 
 ssdp_context_t g_ctx;
 
-static int ui_cmd_ssdp_start(ui_cmdline_t *cmd, int argc, char *argv[])
+int do_ssdp_start(void)
 {
 	ssdp_context_t *ctx = &g_ctx;
 
@@ -85,7 +85,12 @@ static int ui_cmd_ssdp_start(ui_cmdline_t *cmd, int argc, char *argv[])
 	return BOLT_OK;
 }
 
-static int ui_cmd_ssdp_stop(ui_cmdline_t *cmd, int argc, char *argv[])
+static int ui_cmd_ssdp_start(ui_cmdline_t *cmd, int argc, char *argv[])
+{
+	return do_ssdp_start();
+}
+
+int do_ssdp_stop(void)
 {
 	ssdp_context_t *ctx = &g_ctx;
 
@@ -94,5 +99,10 @@ static int ui_cmd_ssdp_stop(ui_cmdline_t *cmd, int argc, char *argv[])
 
 	/* terminate ssdp */
 	return ssdp_term(ctx);
+}
+
+static int ui_cmd_ssdp_stop(ui_cmdline_t *cmd, int argc, char *argv[])
+{
+	return do_ssdp_stop();
 }
 #endif /* CFG_SSDP */

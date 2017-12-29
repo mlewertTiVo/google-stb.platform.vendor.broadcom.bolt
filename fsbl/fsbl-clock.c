@@ -49,6 +49,7 @@ static int current_cpu_mhz = 1503; /* everybody defaults to 1.5GHz */
 #ifdef BCHP_XPT_PMU_REG_START
 static void adjust_xpt_clocks(void)
 {
+#ifndef CFG_FULL_EMULATION
 	/* disable some of submodules to reduce power consumption */
 	BDEV_WR(BCHP_XPT_PMU_CLK_CTRL,
 		(1 << BCHP_XPT_PMU_CLK_CTRL_TSIO_DISABLE_SHIFT) |
@@ -73,6 +74,7 @@ static void adjust_xpt_clocks(void)
 #endif
 		(1 << BCHP_XPT_PMU_CLK_CTRL_RSBUFF_DISABLE_SHIFT) |
 		(0 << BCHP_XPT_PMU_CLK_CTRL_FE_DISABLE_SHIFT));
+#endif	/* CFG_FULL_EMULATION */
 }
 #endif
 
@@ -968,7 +970,6 @@ void adjust_clocks(struct board_type *b, uint32_t mhl_power)
 {
 	if (b == NULL)
 		return;
-
 #ifdef BCHP_XPT_PMU_REG_START
 	adjust_xpt_clocks();
 #endif

@@ -22,13 +22,19 @@
 #include <bchp_mpm_cpu_data_mem.h>
 #endif
 
-#if defined(CONFIG_BCM7278A0)
+#if defined(CONFIG_BCM7278)
 #include <bchp_aon_ctrl.h>
 #include <bchp_clkgen.h>
 #endif
 
+#if defined(CONFIG_BCM7255)
+void bcm7255_enable_qam(void)
+{
+	BDEV_WR_F(SUN_TOP_CTRL_IP_DISABLE_0, ufe_disable, 0);
+}
+#endif
+
 #if defined(CONFIG_BCM7260A0)
-static const uint32_t MPM_TIMEOUT = 3*27000000; /* 3 seconds */
 static const uint32_t MPM_PATCH_DATA[] = { 0x0, 0xEA8, 0x0 };
 static const uint32_t MPM_PATCH_OFFSET = 0x5D60;
 
@@ -92,12 +98,73 @@ void bcm7260a0_patch_mpm(void)
 }
 #endif
 
+#if defined(CONFIG_BCM7260B0)
+void bcm7260b0_bp3_apply_otp(void)
+{
+	uint32_t bp3_enable, rval, data;
+
+	rval = sec_read_otp_bit(OTP_IP_LICENSING_CHECK_ENABLE_BIT, &bp3_enable);
+	if (rval)
+		sys_die(DIE_OTP_READ_FAILED, "OTP read failed");
+
+	/* SUN_TOP_CTRL_GENERAL_CTRL_0 should not be adjusted afterward */
+	if (bp3_enable) {
+		/* set GISB 15 to protect SUN_TOP_CTRL_GENERAL_CTRL_0 except SAGE/BSP */
+		REG(BCHP_SUN_GISB_ARB_BP_HI_START_ADDR_15) = 0x0;
+		REG(BCHP_SUN_GISB_ARB_BP_START_ADDR_15) =
+			BPHYSADDR(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0);
+		REG(BCHP_SUN_GISB_ARB_BP_HI_END_ADDR_15) = 0x0;
+		REG(BCHP_SUN_GISB_ARB_BP_END_ADDR_15) =
+			BPHYSADDR(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0+0x3);
+		REG(BCHP_SUN_GISB_ARB_BP_READ_15) =
+			~(BCHP_SUN_GISB_ARB_BP_READ_15_scpu_0_MASK |
+			BCHP_SUN_GISB_ARB_BP_READ_15_bsp_0_MASK);
+		REG(BCHP_SUN_GISB_ARB_BP_WRITE_15) =
+			~(BCHP_SUN_GISB_ARB_BP_WRITE_15_scpu_0_MASK |
+			BCHP_SUN_GISB_ARB_BP_WRITE_15_bsp_0_MASK);
+		REG(BCHP_SUN_GISB_ARB_BP_ENABLE_15) =
+			(BCHP_SUN_GISB_ARB_BP_ENABLE_15_block_MASK |
+			BCHP_SUN_GISB_ARB_BP_ENABLE_15_address_MASK |
+			BCHP_SUN_GISB_ARB_BP_ENABLE_15_access_MASK);
+
+		/* set GISB 14 to block access to GISB 14/15 except SAGE/BSP  */
+		REG(BCHP_SUN_GISB_ARB_BP_HI_START_ADDR_14) = 0x0;
+		REG(BCHP_SUN_GISB_ARB_BP_START_ADDR_14) =
+			BPHYSADDR(BCHP_SUN_GISB_ARB_BP_HI_START_ADDR_14);
+		REG(BCHP_SUN_GISB_ARB_BP_HI_END_ADDR_14) = 0x0;
+		REG(BCHP_SUN_GISB_ARB_BP_END_ADDR_14) =
+			BPHYSADDR(BCHP_SUN_GISB_ARB_BP_ENABLE_15+0x3);
+		REG(BCHP_SUN_GISB_ARB_BP_READ_14) =
+			~(BCHP_SUN_GISB_ARB_BP_READ_14_scpu_0_MASK |
+			BCHP_SUN_GISB_ARB_BP_READ_14_bsp_0_MASK);
+		REG(BCHP_SUN_GISB_ARB_BP_WRITE_14) =
+			~(BCHP_SUN_GISB_ARB_BP_WRITE_14_scpu_0_MASK |
+			BCHP_SUN_GISB_ARB_BP_WRITE_14_bsp_0_MASK);
+		REG(BCHP_SUN_GISB_ARB_BP_ENABLE_14) =
+			(BCHP_SUN_GISB_ARB_BP_ENABLE_14_block_MASK |
+			BCHP_SUN_GISB_ARB_BP_ENABLE_14_address_MASK |
+			BCHP_SUN_GISB_ARB_BP_ENABLE_14_access_MASK);
+	} else {
+		data = REG(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0);
+		data &= ~(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_hdcp22_disable_MASK
+			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_dv_hdr_disable_MASK |
+			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_vmxwatermarking_disable_MASK |
+			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_hdcp_disable_MASK |
+			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_macrovision_disable_MASK |
+			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_cwmcwatermarking_disable_MASK |
+			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_tc_itm_disable_MASK |
+			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_tc_hdr_disable_MASK);
+		REG(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0) = data;
+	}
+}
+#endif
+
 #if defined(CONFIG_BCM7260) || \
 	defined(CONFIG_BCM7268) || \
 	defined(CONFIG_BCM7271) || \
-	defined(CONFIG_BCM7278A0)
+	defined(CONFIG_BCM7278)
 
-#if defined(CONFIG_BCM7278A0)
+#if defined(CONFIG_BCM7278)
 static void fixup_v7_32(void)
 {
 	/* Fixup v7-32 memory map (power on reset values in parenthesis):
@@ -206,7 +273,7 @@ static void fixup_v7_64(void)
 
 void orion_hack_early_bus_cfg(void)
 {
-#if defined(CONFIG_BCM7278A0)
+#if defined(CONFIG_BCM7278)
 	/* Hard code SCB to 486 MHz until PMap's are defined,
 	 * then AVS will take care of it.
 	 */
@@ -254,7 +321,7 @@ void orion_hack_early_bus_cfg(void)
 		(4 << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT7_BUSNUM_SHIFT));
 #endif
 
-#if defined(CONFIG_BCM7278A0)
+#if defined(CONFIG_BCM7278)
 	/* fixup range limits depending on v7-32 or v7-64 */
 	if (is_mmap_v7_64())
 		fixup_v7_64();

@@ -1637,15 +1637,8 @@ match your setup.
 </div>
 <div class="sect2">
 <h3 id="_configuring_the_build">9.3.  Configuring the build</h3>
-<div class="paragraph"><p>The splash is normally disabled by default in BOLT. To enable
-it, edit the following lines in config/stdbuild.cfg:</p></div>
-<div class="listingblock">
-<div class="content">
-<pre><code> config SPLASH       off
- config SPLASH_PAL   default
- config SPLASH_FILE  "\"flash0.splash\""</code></pre>
-</div></div>
-<div class="paragraph"><p>Enable splash:</p></div>
+<div class="paragraph"><p>The splash is normally disabled by default in BOLT. To enable it, add
+the following lines in config/family-$(FAMILY).cfg</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>  config SPLASH            ON</code></pre>
@@ -2083,7 +2076,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-08-25 14:02:12 PDT
+ 2017-12-27 23:52:14 PST
 </div>
 </div>
 </body>

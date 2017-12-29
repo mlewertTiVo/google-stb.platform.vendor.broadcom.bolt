@@ -29,6 +29,7 @@ extern const int buildyear;
 extern const char builddate[];
 extern const char builduser[];
 extern const char buildtag[];
+extern const char toolchainver[];
 
 #define BOLT_INIT_SAFE	0x00010000	/* "Safe mode" */
 #define BOLT_INIT_USER	0x0000FFFF	/* these are BSP-specific flags */
@@ -40,6 +41,8 @@ extern const char buildtag[];
 
 #define BOLT_BUFFER_CONSOLE "buffer"
 #define BOLT_MAX_HANDLE 64	/* max file handles */
+#define NODENAME_STR "NODENAME"
+#define STARTUP_WAIT_TIME_STR "STARTUP_WAIT_TIME"
 
 /*  *********************************************************************
     *  prototypes

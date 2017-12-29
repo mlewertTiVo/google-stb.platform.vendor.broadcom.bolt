@@ -205,6 +205,26 @@ static void avs_ask_limits(struct at_initialization *params)
 #endif
 }
 
+/* this is debug code and will be optimized out when debug not enabled */
+static void avs_ask_trap_vddc(struct at_initialization *params)
+{
+	int disable_otp_vtrap_data = 0;
+	int disable_check_vddcmon_warning = 0;
+
+	if (ask_y_or_n("Use modified VTRAP_DATA/VDDCMON_WARNING", false))
+		return;
+
+	disable_otp_vtrap_data = avs_get_int_number(
+		"Disable USE_OTP_VTRAP_DATA (1=yes)", 0);
+	disable_check_vddcmon_warning = avs_get_int_number(
+		"Disable USE_CHECK_VDDCMON_WARNING (1=yes)", 0);
+	if (disable_otp_vtrap_data != 0)
+		params->unused |= UNUSED_DISABLE_USE_OTP_VTRAP_DATA;
+
+	if (disable_check_vddcmon_warning != 0)
+		params->unused |= UNUSED_DISABLE_USE_CHECK_VDDCMON_WARNING;
+}
+
 #if (BCHP_CHIP==7445) || defined(CONFIG_BCM7439B0)
 /* specials: Vmin_avs=0.86V Vmax_avs=1.035V VmarginL=50mV VmarginH=100mV */
 #define DEFAULT_MIN_VOLTAGE  860    /* default minimum voltage in mV */
@@ -350,6 +370,7 @@ static void avs_get_default_params(struct at_initialization *params)
 	if (ENABLE_TEST_PROMPTS) {
 		avs_ask_margins(params);
 		avs_ask_limits(params);
+		avs_ask_trap_vddc(params);
 	}
 }
 
@@ -522,14 +543,13 @@ static void avs_dump_results(void)
 {
 	struct at_runtime results;
 	uint32_t *p = (uint32_t *)&results;
-	unsigned i, revision;
+	unsigned i;
 
 	for (i = 0; i < sizeof(results) / sizeof(*p); i++)
 		p[i] =
 		    BDEV_RD(BCHP_AVS_CPU_DATA_MEM_WORDi_ARRAY_BASE +
 				(i * 4));
 
-	revision = results.revision;
 	avs_print_string_val("status=", results.status);
 	avs_print_cr_lf();
 
@@ -548,16 +568,7 @@ static void avs_dump_results(void)
 	}
 #endif
 
-	avs_print_string_val("AVS FW rev=", revision);
-	avs_print_string(" [");
-	avs_print_char(revision >> 24 & 0xFF);
-	avs_print_char('.');
-	avs_print_char(revision >> 16 & 0xFF);
-	avs_print_char('.');
-	avs_print_char(revision >> 8 & 0xFF);
-	avs_print_char('.');
-	avs_print_char(revision >> 0 & 0xFF);
-	avs_print_string("]");
+	avs_print_string_val("AVS FW rev=0x", results.revision);
 	avs_print_cr_lf();
 }
 
@@ -575,7 +586,7 @@ static int avs_wait_for_firmware(int en)
 			complete = AVS_SUCCESS;
 			break;
 		}
-		if (data == INIT_FAILED) {
+		if ((data == INIT_FAILED) || (data == AVS_BAD_PMAP)) {
 			complete = AVS_FAILURE;
 			break;
 		}
@@ -700,8 +711,13 @@ static void setup_avs_params(int en, int pmap_id)
 #ifdef PARAM_AVS_PARAM_0
 	/* read run time AVS params from secure */
 	/* parameter section, if they exist.    */
+#if CFG_ZEUS5_1
+	param0 = DEV_RD(SEC_PARAM_START_SRAM + PARAM_AVS_PARAM_0);
+	param1 = DEV_RD(SEC_PARAM_START_SRAM + PARAM_AVS_PARAM_1);
+#else
 	param0 = DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_0);
 	param1 = DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1);
+#endif
 #endif
 
 #define DEFAULT_PSTATE 4 /* 0 starts up at fastest state, 4 at slowest */

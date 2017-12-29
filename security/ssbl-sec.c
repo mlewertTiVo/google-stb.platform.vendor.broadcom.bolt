@@ -24,7 +24,6 @@
 
 #define CMD_INBUFFER2		(2 * 384) /* 0x300 */
 #define CMD_OUTBUFFER2		(3 * 384) /* 0x480 */
-#define OTP_SECURE_BOOT_BIT	0x4a
 #define BSP_VER_STRLEN		10
 #define BSP_TIMEOUT_MS		10 /* milliseconds */
 

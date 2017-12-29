@@ -861,6 +861,7 @@ static void genet_ether_init(bolt_driver_t * drv, int instance)
 		if (!OTP_OPTION_MOCA_DISABLE())
 #endif
 			port_ctl_set_physpeed(softc);
+			softc->timeout_txdma = get_clocks_per_usec() * 5000; /* 5 milliseconds */
 		return;
 	} else if (strcmp(softc->phyintf, "INT") != 0) {
 		xsprintf(env_var, "ETH%d_MDIO_MODE", instance);

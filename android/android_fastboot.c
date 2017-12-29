@@ -43,7 +43,11 @@
  * purpose. Any image bigger than the staging buffer size will
  * be re-sparsed by host fastboot application.
  */
+#if defined(CONFIG_BCM7278)
+#define FB_FLASH_STAGING_BUFFER		(0x60000000)
+#else
 #define FB_FLASH_STAGING_BUFFER		(0x20000000)
+#endif
 #define FB_FLASH_STAGING_BUFFER_SIZE	(1024*1024*256)
 
 /* The 64 defined bytes, plus \0 */

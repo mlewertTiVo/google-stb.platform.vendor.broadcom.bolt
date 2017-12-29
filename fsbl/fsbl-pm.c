@@ -370,7 +370,11 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 	__puts("OS reentry @ ");
 #ifndef SECURE_BOOT
 	if (!fsbl_pm_mem_verify(flags)) {
+#if (CFG_ZEUS5_1)
+		void (*reentry)(int);
+#else
 		void (*reentry)();
+#endif
 
 		/*
 		 * Without memory verification, we skip the anti-glitch
@@ -379,7 +383,11 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 		 */
 #ifdef STUB64_START
 		if (flags & S3_FLAG_PSCI_BOOT)
+#if (CFG_ZEUS5_1)
+			reentry = (void (*)())(uintptr_t)SSBM_RAM_ADDR;
+#else
 			reentry = (void (*)())(uintptr_t)psci_base;
+#endif
 		else
 #endif
 			reentry = (void (*)())(uintptr_t)params->reentry;
@@ -387,7 +395,11 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 		writehex((uint32_t)reentry);
 		puts(" !verif");
 
+#if (CFG_ZEUS5_1)
+		(*reentry)(0);
+#else
 		(*reentry)();
+#endif
 		/* Unexpected return. */
 		sys_die(DIE_PM_RET_FROM_S3, "RET!"); /* Unexpected return. */
 	}

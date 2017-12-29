@@ -26,6 +26,9 @@ void board_init_avs(void)
 	if (dvfs == NULL) {
 		xprintf("AVS: cannot get board DVFS params!\n");
 		return;
+	} else if (is_pmap_valid(dvfs->pmap)) {
+		xprintf("AVS: Invalid PMap in DVFS params!\n");
+		return;
 	}
 
 #ifdef SECURE_BOOT

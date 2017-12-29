@@ -81,6 +81,11 @@
 #define MCPB_INIT_SHIFT		1
 #define MCPB_DATA_ENDIAN_CONTROL	(0 << 10)
 #define MCPB_MEMDMA_PIPE_ENABLE	(0 << 26)
+#ifdef BCHP_XPT_MEMDMA_MCPB_CH0_RUN
+#define MCPB_CONTROL_IN_EACH_CHANNEL_REG_BLOCK 1
+#else
+#undef MCPB_CONTROL_IN_EACH_CHANNEL_REG_BLOCK
+#endif
 
 #define REG_MCPB_PARSER BCHP_XPT_MEMDMA_MCPB_CH0_SP_PARSER_CTRL
 #define REG_MCPB_PKT_LEN BCHP_XPT_MEMDMA_MCPB_CH0_SP_PKT_LEN
@@ -103,6 +108,11 @@
 #define MCPB_INIT_SHIFT		0
 #define MCPB_DATA_ENDIAN_CONTROL	(1 << 10)
 #define MCPB_MEMDMA_PIPE_ENABLE	(1 << 26)
+#ifdef BCHP_XPT_MCPB_CH0_RUN
+#define MCPB_CONTROL_IN_EACH_CHANNEL_REG_BLOCK 1
+#else
+#undef MCPB_CONTROL_IN_EACH_CHANNEL_REG_BLOCK
+#endif
 
 #define REG_MCPB_PARSER BCHP_XPT_MCPB_CH0_SP_PARSER_CTRL
 #define REG_MCPB_PKT_LEN BCHP_XPT_MCPB_CH0_SP_PKT_LEN
@@ -183,6 +193,21 @@ static inline void xpt_set_power(int on)
 
 static void mcpb_run(int enable, unsigned int channel)
 {
+#ifdef MCPB_CONTROL_IN_EACH_CHANNEL_REG_BLOCK
+	unsigned long reg = MCPB_CHx_SPACING(channel);
+
+#if CFG_MEMDMA_MCPB
+	reg += BCHP_XPT_MEMDMA_MCPB_CH0_RUN;
+	BDEV_WR_RB(reg, !!enable);
+#else
+	reg += BCHP_XPT_MCPB_CH0_RUN;
+	BDEV_WR(reg, !!enable);
+#endif
+#else
+	/* The control register is outside the channel register block that
+	 * corresponds to the channel. The interface to the control regster
+	 * is the combination of 'control' and the channel number.
+	 */
 #if CFG_MEMDMA_MCPB
 	BDEV_WR_RB(BCHP_XPT_MEMDMA_MCPB_RUN_SET_CLEAR,
 			(!!enable << 8) | channel);
@@ -190,6 +215,7 @@ static void mcpb_run(int enable, unsigned int channel)
 	BDEV_WR(BCHP_XPT_MCPB_RUN_SET_CLEAR, ((!!enable << 8) | channel));
 
 #endif
+#endif /* MCPB_CONTROL_IN_EACH_CHANNEL_REG_BLOCK */
 }
 
 static void wdma_run(int enable, unsigned int channel)
@@ -237,7 +263,11 @@ static void memdma_init_mcpb_channel(unsigned int channel, enum xpt_dma_mode mod
 	unsigned long dma_data_ctrl = REG_MCPB_DMA_DATA + offs;
 #ifdef REG_MCPB_PARSER_BAND_ID
 	unsigned long parser_band_id_ctrl = REG_MCPB_PARSER_BAND_ID +
+#ifdef MCPB_CONTROL_IN_EACH_CHANNEL_REG_BLOCK
+		offs;
+#else
 		channel * sizeof(uint32_t);
+#endif
 #endif
 
 #ifdef REG_MCPB_PARSER_BAND_ID

@@ -22,18 +22,17 @@
 
 #include <bchp_clkgen.h>
 
-#define AVS_RDB_DATE 20161101 /* %y%m%d */
-#define AVS_RDB_TIME 1430 /* %h%m */
-#define AVS_DOC_VER 4
+#define AVS_DOC_VER 5
+
+enum pmaps {
+	PMap_e0 = 0,
+	PMap_e1 = 1,
+	PMap_e2 = 2,
+	PMap_eMax,
+};
 
 struct pmapParameters {
-	uint16_t ndiv_int;
-	uint8_t pdiv;
-	uint8_t mdiv_p0;
-	uint8_t mdiv_p1;
-	uint8_t mdiv_p2;
-	uint8_t mdiv_p3;
-	uint8_t mdiv_p4;
+	enum pmaps pmapId;
 	unsigned int num_domains;
 	char *desc;
 };
@@ -41,12 +40,9 @@ struct pmapParameters {
 #ifndef AVS_ONCE
 #define AVS_ONCE
 static const struct pmapParameters pmapTable[] = {
-	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 2, .desc = "PMap0"},
-	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 1, .desc = "PMap1"},
-	{ .ndiv_int = 200, .pdiv = 3, .mdiv_p0 = 2, .mdiv_p1 = 3, .mdiv_p2 = 4,
-	  .mdiv_p3 = 6, .mdiv_p4 = 9, .num_domains = 2, .desc = "PMap2"},
+	{ PMap_e0, 2, "PMap0"},
+	{ PMap_e1, 1, "PMap1"},
+	{ PMap_e2, 2, "PMap2"},
 };
 
 static const int PMAP_MAX = sizeof(pmapTable)/sizeof(pmapTable[0]);
@@ -58,13 +54,13 @@ struct pmapReg {
 };
 
 static const struct pmapReg pmapMuxes[] = {
-	{ BCHP_CLKGEN_ITU656_0_MUX_SELECT,
-	BCHP_CLKGEN_ITU656_0_MUX_SELECT_VEC_ITU656_0_CLOCK_MASK,
-	BCHP_CLKGEN_ITU656_0_MUX_SELECT_VEC_ITU656_0_CLOCK_SHIFT
-	},
 	{ BCHP_CLKGEN_RAAGA_DSP_TOP_0_INST_RAAGA0,
 	BCHP_CLKGEN_RAAGA_DSP_TOP_0_INST_RAAGA0_DSP_CLOCK_SELECT_RAAGA0_MASK,
 	BCHP_CLKGEN_RAAGA_DSP_TOP_0_INST_RAAGA0_DSP_CLOCK_SELECT_RAAGA0_SHIFT
+	},
+	{ BCHP_CLKGEN_ITU656_0_MUX_SELECT,
+	BCHP_CLKGEN_ITU656_0_MUX_SELECT_VEC_ITU656_0_CLOCK_MASK,
+	BCHP_CLKGEN_ITU656_0_MUX_SELECT_VEC_ITU656_0_CLOCK_SHIFT
 	},
 	{ BCHP_CLKGEN_SMARTCARD_MUX_SELECT,
 	BCHP_CLKGEN_SMARTCARD_MUX_SELECT_SC0_CLOCK_MASK,
@@ -73,15 +69,15 @@ static const struct pmapReg pmapMuxes[] = {
 	{ BCHP_CLKGEN_SMARTCARD_MUX_SELECT,
 	BCHP_CLKGEN_SMARTCARD_MUX_SELECT_SC1_CLOCK_MASK,
 	BCHP_CLKGEN_SMARTCARD_MUX_SELECT_SC1_CLOCK_SHIFT
-	}
+	},
 };
 
 #define PMAP_MAX_MUXES (sizeof(pmapMuxes)/sizeof(pmapMuxes[0]))
 
 static const uint8_t pmapMuxValues[][PMAP_MAX_MUXES] = {
-	{0, 0, 0, 0},
-	{0, 0, 0, 0},
-	{0, 0, 0, 0}
+	{ 0, 0, 0, 0,},
+	{ 0, 0, 0, 0,},
+	{ 0, 0, 0, 0,},
 };
 
 static const struct pmapReg pmapDividers[] = {
@@ -101,23 +97,26 @@ static const struct pmapReg pmapDividers[] = {
 	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_MASK,
 	BCHP_CLKGEN_PLL_HVD_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_SHIFT
 	},
+	{ BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4,
+	BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4_MDIV_CH4_MASK,
+	BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4_MDIV_CH4_SHIFT
+	},
 	{ BCHP_CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_5,
 	BCHP_CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_MASK,
 	BCHP_CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_SHIFT
 	},
-	{ BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4,
-	BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4_MDIV_CH4_MASK,
-	BCHP_CLKGEN_PLL_XPT_PLL_CHANNEL_CTRL_CH_4_MDIV_CH4_SHIFT
-	}
 };
 
 #define PMAP_MAX_DIVIDERS \
 	(sizeof(pmapDividers)/sizeof(pmapDividers[0]))
 
 static const uint8_t pmapDividerValues[][PMAP_MAX_DIVIDERS] = {
-	{8, 6, 7, 6, 3, 7},
-	{8, 6, 7, 6, 3, 7},
-	{8, 6, 7, 6, 3, 7},
+	{  8,  6,  7,  6,  7,  3,},
+	{  8,  6,  7,  6,  7,  3,},
+	{  8,  6,  7,  6,  7,  3,},
+};
+
+static const struct pmapReg pmapMultipliers[] = {
 };
 
 #endif

@@ -10,6 +10,7 @@ use Carp;
 use Getopt::Std;
 use lib dirname(File::Spec->rel2abs(__FILE__));
 
+use BcmPadRgmii;
 use BcmSdio;
 use BcmUtils;
 use DevTree;
@@ -130,6 +131,7 @@ my @configs = (
 	       "ZEUS4_2",
 	       "ZEUS4_2_1",
 	       "ZEUS5_0",
+	       "ZEUS5_1",
 	       "ZIMG_LDR",
 	       "ZLIB",
 	);
@@ -137,6 +139,7 @@ my @configs = (
 my @bsc_freqs = (375000, 390000, 187500, 200000, 
 		 93750, 97500, 46875, 50000);
 
+my @pmaps;
 # ----------------------------------------
 # cmdline options
 my $arg_family = undef;
@@ -455,6 +458,13 @@ sub new($$) {
 	return $s;
 }
 
+package NandFeature;
+sub new($$) {
+	my ($class, $s) = @_;
+	bless $s, $class;
+	return $s;
+}
+
 package Section;
 sub new($$) {
 	my ($class, $s) = @_;
@@ -678,6 +688,7 @@ sub new($$) {
 	$s->{mset} = [];
 	$s->{nandchip} = [];
 	$s->{nandshape} = [];
+	$s->{pad_rgmii} = [];
 	$s->{pmux} = [];
 	$s->{rdb} = "";
 	$s->{rtconfig} = [];
@@ -715,6 +726,8 @@ sub add($$$) {
 		die("duplicate rtsconfig! $part->{file} id:$part->{id}\n")
 			if ($found);
 		push @{$s->{rtsconfig}}, $part;
+	} elsif ($item eq 'pad_rgmii') {
+		push @{$s->{pad_rgmii}}, $part;
 	} elsif ($item eq 'pmux') {
 		push @{$s->{pmux}}, $part;
 	} elsif ($item eq 'gpio_key') {
@@ -725,6 +738,8 @@ sub add($$$) {
 		push @{$s->{bt_rfkill_gpio}}, $part;
 	} elsif ($item eq 'section') {
 		push @{$s->{section}}, $part;
+	} elsif ($item eq 'nand_feature') {
+		push @{$s->{nand_feature}}, $part;
 	} elsif ($item eq 'avs') {
 		for $r (@{$s->{avs}}) {
 			if (defined($r->{domains})) {
@@ -844,7 +859,7 @@ sub add($$$) {
 
 		push @{$s->{dts_include}}, $part;
 	} else {
-		die "incorrect value: '" + $item + "'";
+		die "incorrect value: '" . $item . "'";
 	}
 }
 
@@ -1637,9 +1652,27 @@ sub cmd_avs($) {
 	}
 
 	if (defined($o->{pmap})){
-		# TODO: replace 30 with 'PMAP_MAX' of include/${family}/pmap.h
-		if ($o->{pmap} < 0 || $o->{pmap} > 30) {
-			cfg_error("option for pmap must be [0..30]");
+		open my $fh, '<', "include/$arg_family/pmap.h" or
+			die "Can't read file: $!";
+		my $flag=0;
+		if(!scalar @pmaps){
+			while (<$fh>) {
+				if(/enum pmaps \{/) {
+					$flag=1;
+				}
+				if ($flag) {
+					if(/PMap_e(\d)/) {
+						push (@pmaps, $1);
+					}
+					if (/\};/) {
+						$flag=0;
+					}
+				}
+			}
+		}
+		close($fh);
+		if (!grep {$_ eq $o->{pmap}} @pmaps) {
+			cfg_error("Invalid option for pmap");
 		}
 	}
 	else {
@@ -1759,6 +1792,16 @@ sub cmd_vreg($)
 	subcmd_dt_ops('compile_prop', $args);
 }
 	
+sub cmd_pad_rgmii($) {
+	my ($f) = @_;
+	check_family_onwards();
+	check_in_chip_or_board();
+	shift @$f; # drop 'pad_rgmii'.
+	my $o = check_opts($f, [qw/id voltage/], []);
+
+	$Current->add('pad_rgmii', BcmPadRgmii->new($o));
+}
+
 sub cmd_pcie($) {
 	my ($f) = @_;
 	check_family_onwards();
@@ -1836,6 +1879,26 @@ sub cmd_pcie($) {
 			subcmd_dt_ops('compile_prop', $args);
 		}
 	}
+}
+
+sub cmd_nand_feature($) {
+	my ($f) = @_;
+	check_family_onwards();
+	check_in_chip_or_board();
+	shift @$f; # drop 'nand_feature'.
+	my $o = check_opts($f, [qw/set addr/], [qw/data/]);
+	cfg_error('must have -data when -set==1')
+		if ($o->{set} && !$o->{data});
+	cfg_error('why have -data when -set==0?')
+		if (!$o->{set} && $o->{data});
+	$o->{addr} = hex $o->{addr};
+	if ($o->{data}) {
+		cfg_error('-data argument should be in form (<hex>)(,<hex>)*')
+			if ($o->{data} !~ /^((0x)?[a-f0-9]{1,2})(,(0x)?[a-f0-9]{1,2})*$/i);
+		my @a = map { hex($_) } split /,/, $o->{data};
+		$o->{data} = \@a;
+	}
+	$Current->add('nand_feature', NandFeature->new($o));
 }
 
 sub cmd_sata($) {
@@ -2111,7 +2174,9 @@ my %commands = (
 		'moca' =>	\&cmd_moca,
 		'mset' =>	\&cmd_mset,
 		'nandchip' =>	\&cmd_nandchip,
+		'nand_feature'=>\&cmd_nand_feature,
 		'nandshape' =>	\&cmd_nandshape,
+		'pad_rgmii' =>  \&cmd_pad_rgmii,
 		'pcie' =>	\&cmd_pcie,
 		'pmux' =>	\&cmd_pmux,
 		'rtsbase' =>	\&cmd_rtsbase,
@@ -2693,6 +2758,14 @@ sub gen_bt_rfkill_gpio($) {
 	return $text . "\t\t\t{ NULL, NULL, -1, -1, 0}\n\t\t},\n";
 }
 
+sub gen_nand_feature($$) {
+	my ($b, @a) = @_;
+
+	return ""
+		if (!@a || (@a == 1 && !$a[0]));
+	return "\t\t.nand_feature = \&$b->{board}_nand_feature[0],\n";
+}
+
 sub resolve_var
 {
 	my ($h, $x, $depvars) = @_;
@@ -3118,6 +3191,34 @@ sub processed_dt_ops() {
 	return $text;
 }
 
+sub processed_nand_feature() {
+	my $text = '';
+	for my $b (get_valid_boards()) {
+		next if !$b->{nand_feature};
+		my @a = @{$b->{nand_feature}};
+		next if !@a;
+		$text .= "static const __maybe_unused struct nand_feature " . $b->{board} . 
+			"_nand_feature[] = {\n";
+		foreach my $s (@a) {
+			$text .= "\t{\n";
+			$text .= "\t\t.set = " . $s->{set} . ",\n";
+			$text .= sprintf "\t\t.addr = 0x%x,\n", $s->{addr};
+			$text .= sprintf "\t\t.data = { ";
+			if ($s->{set}) {
+				foreach (@{$s->{data}}) {
+					$text .= sprintf "0x%02x, ", $_;
+				}
+			}
+			$text .= "},\n";
+			$text .= "\t},\n";
+		}
+		$text .= "\t{ .set = -1, .addr = 0, },\n";
+		$text .= "};\n";
+		$text .= "\n";
+	}
+	return $text;
+}
+
 sub processed_board_types() {
 	my $domains = 0;
 	my $pmap = 0;
@@ -3232,9 +3333,11 @@ sub processed_board_params() {
 		$text .= gen_gpio_key($b->{gpio_key});
 		$text .= gen_gpio_led($b->{gpio_led});
 		$text .= gen_bt_rfkill_gpio($b->{bt_rfkill_gpio});
+		$text .= gen_nand_feature($b, $b->{nand_feature});
 		$text .= gen_pinmux_fn($b->{board});
 		$text .= gen_dt_ops_ptr($b->{board});
 		$text .= gen_flash_map_selection($b->{mapselect});
+		$text .= BcmPadRgmii::gen_pad_rgmii($b->{pad_rgmii});
 		$text .= BcmSdio::gen_sdio($b->{sdio});
 		$text .= BcmSdio::gen_sdio_pinsel($b->{sdio_pinsel});
 		$text .= "\n\t}, /* " . $b->{board} . " */\n";
@@ -3534,14 +3637,16 @@ sub processed_nandchip() {
 }
 
 
-sub processed_aon_history() {
+sub processed_aon_reset_history() {
 	my $rh = ::get_bchp_info($Family->{familyname});
 	my $regex = '(?=^((?!reserved).)*$)BCHP_AON_CTRL_RESET_HISTORY_[A-Za-z_0-9]*_MASK';
-	my $aon = BcmUtils::get_rdb_fields($regex, $rh->{rh_defines});
+	my $reset_reasons = BcmUtils::get_rdb_fields($regex, $rh->{rh_defines});
 	my $all_lengths = 0;
 	my $max_length = 0;
-	my $text = "static const struct aon_history __maybe_unused aon[] = {\n";
-	foreach my $mask (@{$aon}) {
+	my $text = "#include <bchp_aon_ctrl.h>\n\n";
+
+	$text .= "static const struct reset_history __maybe_unused reset_reasons[] = {\n";
+	foreach my $mask (@{$reset_reasons}) {
 		my $n = $mask;
 		# matches get_aon_history_fields() grep
 		$n =~ s/BCHP_AON_CTRL_RESET_HISTORY_//;
@@ -3555,8 +3660,8 @@ sub processed_aon_history() {
 		$max_length = $l if ($l > $max_length);
 	}
 	$text .= "\t{ 0, NULL }\n};\n\n";
-	$text .= "#define AON_HISTORY_TOTAL_STRLENS " . $all_lengths . "\n";
-	$text .= "#define AON_HISTORY_MAX_STRLEN " . $max_length . "\n\n";
+	$text .= "#define RESET_HISTORY_TOTAL_STRLENS " . $all_lengths . "\n";
+	$text .= "#define RESET_HISTORY_MAX_STRLEN " . $max_length . "\n\n";
 	return $text;
 }
 
@@ -3652,6 +3757,8 @@ sub processed_config() {
 	$ctext .= "#define NUM_SWITCH_PHY " . gen_num_switch_phy($Family) . "\n";
 	$ctext .= "#define NUM_MOCA " . gen_num_moca($Family) . "\n";
 	$ctext .= "#define NUM_BSC " . gen_num_bsc($Family) . "\n";
+	$ctext .= "#define NUM_RGMII_PADS_TO_CONTROL " .
+		BcmPadRgmii::get_num($Family) . "\n";
 	$ctext .= "#define NUM_SDIO " . BcmSdio::get_num($Family) . "\n";
 	$ctext .= "#define NUM_ENET " . ($n_genet, $n_switch_ports)[$n_genet < $n_switch_ports] . "\n";
 	# BCM6802/3 have 2 configurable Ethernet ports
@@ -3894,11 +4001,6 @@ sub process_dev_tree($)
 		BcmDt::Devices::merge_clocks_file($rh->{rh_defines},
 			$dt, $clks_file)
 	} else {
-		# we must insert clock-frequency into the UARTS.
-		my $ni = BcmDt::Devices::insert_clk_frequency_into_uarts($rdb);
-		print "$P: WARN: no clocks or clock-freqs inserted for uart!\n"
-			if (!$ni && BcmUtils::get_num_serial($rh->{rh_defines}));
-
 		print "  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n";
 		print "  WARNING: no clock tree present\n";
 		print "  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n";
@@ -4350,6 +4452,7 @@ sub main()
 
 	my $text = "";
 
+	BcmPadRgmii::scan_pinsel($Family);
 	my $sdio_pinsel_type = BcmSdio::get_pinsel_type($Family);
 	BcmSdio::prepare_sdio_pinsel($sdio_pinsel_type, $Family);
 
@@ -4364,11 +4467,14 @@ sub main()
 	write_textfile("$D/board_params.c", BcmUtils::create_copyright_header("c") . $genmarker
 		. $partion_header_files . $pinmux_header_files);
 	write_textfile("$D/dt_ops.h", gen_dt_ops_attrs());
-	    
+
 	$text = processed_ssbl_pinmux();
 	append_textfile("$D/board_params.c",  $text);
 
 	PcieRanges::processed_pcie_ranges();
+
+	$text = processed_nand_feature();
+	append_textfile("$D/board_params.c",  $text);
 
 	$text = processed_dt_ops();
 	append_textfile("$D/board_params.c",  $text);
@@ -4412,7 +4518,7 @@ sub main()
 
 	# ----------------------------------------
 
-	write_textfile("$D/aon_history.h", processed_aon_history());
+	write_textfile("$D/reset_history.h", processed_aon_reset_history());
 
 	write_textfile("$D/otp_status.h", processed_otp());
 
