@@ -1,0 +1,10 @@
+diff -Naur  zlib-1.2.8/inflate.c zlib-1.2.8/inflate.c
+--- zlib-1.2.8/inflate.c	2012-08-13 00:02:40.000000000 -0700
++++ zlib-1.2.8/inflate.c	2017-07-28 18:29:06.139487628 -0700
+@@ -1505,5 +1505,5 @@ z_streamp strm;
+     struct inflate_state FAR *state;
+ 
+-    if (strm == Z_NULL || strm->state == Z_NULL) return -1L << 16;
++    if (strm == Z_NULL || strm->state == Z_NULL) return ~((1U << 16) - 1);
+     state = (struct inflate_state FAR *)strm->state;
+     return ((long)(state->back) << 16) +

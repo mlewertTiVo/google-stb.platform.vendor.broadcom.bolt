@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -64,7 +64,6 @@ void board_device_init(void)
 	to before board_final_init() but after board_device_init() and
 	so we ensure the display RTS is still setup correctly for it. */
 	board_init_rts();
-	board_init_rts_show(1 /* selected */);
 }
 
 

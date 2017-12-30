@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2013, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,16 +7,20 @@
  *
  ***************************************************************************/
 
-#include "board_init.h"
-#include "otp_status.h"
-#include "bchp_sun_top_ctrl.h"
-#include "lib_physio.h"
-#include "timer.h"
+#include <bchp_sun_top_ctrl.h>
+#include <board.h>
+#include <board_init.h>
+#include <lib_physio.h>
+#include <otp_status.h>
+#include <timer.h>
 
 #if CFG_SATA
 void board_init_sata(void)
 {
 	int port;
+
+	if (board_does_strap_disable_sata())
+		return;
 
 #ifdef OTP_OPTION_SATA_DISABLE
 	if (!OTP_OPTION_SATA_DISABLE())

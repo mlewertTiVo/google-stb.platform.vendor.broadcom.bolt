@@ -444,8 +444,11 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	writehex(PSCI_BASE);
 
 	/* TBD: 2nd level 4KiB Table */
+#ifndef SSBM_RAM_ADDR
+	/* With SSBM, page table for PSCI is set after SSBL page is set up */
 	arch_mark_executable(PSCI_BASE, SECTION_SIZE, true);
 	arch_mark_uncached(PSCI_BASE,  SECTION_SIZE);
+#endif
 	puts(" OK");
 
 	dsb(); /* make sure its there before we call it */

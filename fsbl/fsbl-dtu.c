@@ -231,7 +231,7 @@ static bool dtu_config_status(void)
 {
 	bool configured = false;
 
-#if (CFG_ZEUS4_2_1 || CFG_ZEUS5_0)
+#if (CFG_ZEUS4_2_1 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	configured = (*(uint32_t *)(PARAM_DTU_ENABLE + SRAM_ADDR) != 0);
 #endif
 	return configured;

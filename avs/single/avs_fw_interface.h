@@ -47,6 +47,9 @@ struct at_initialization {
 	uint32_t slope_adj_factor; /* scaling factor when adjusting voltage */
 } at_initialization;
 
+#define UNUSED_DISABLE_USE_OTP_VTRAP_DATA		(1 << 0)
+#define UNUSED_DISABLE_USE_CHECK_VDDCMON_WARNING	(1 << 1)
+
 /* Definitions for the miscellaneous flags: */
 #define AVS_FLAGS_1_OVER_TEMP   (1<<0)  /* firmware init due to over-temperature
 					 * condition */
@@ -60,6 +63,7 @@ struct at_initialization {
 #define INIT_FAILED    0xF0	/* firmware failed to initialize */
 #define AVS_NOT_FOUND  0xF1	/* firmware entered AVS_NOT_FOUND */
 #define CHIP_MISMATCH  0xF2	/* firmware build doesn't match chip version */
+#define AVS_BAD_PMAP   0xF4	/* firmware entered AVS_NOT_FOUND */
 
 /* AVS "not found" condition is used to indicate when AVS is not able to use
    the voltage regulator to control the voltage level.	That is, it received

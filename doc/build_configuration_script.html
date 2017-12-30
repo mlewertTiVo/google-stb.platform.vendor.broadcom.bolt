@@ -1050,6 +1050,8 @@ No other text apart from comments must appear after it.</p></div>
     memsys
     moca
     ext_moca
+    nand_feature
+    pad_rgmii
     pmux
     rtsdefault
     pcie
@@ -1775,7 +1777,10 @@ SSBL.</p></div>
 <div class="sect3">
 <h4 id="_sata">5.14.5. sata</h4>
 <div class="paragraph"><p>If you choose to generate a <em>sata</em> node, you may optionally
-define the following options: <em>-phy-enable-ssc-mask</em>.</p></div>
+define the following options:</p></div>
+<div class="paragraph"><p><em>-phy-enable-ssc-mask</em></p></div>
+<div class="paragraph"><p><em>-phy-rxaeq-mode</em></p></div>
+<div class="paragraph"><p><em>-phy-rxaeq-value</em></p></div>
 <div class="paragraph"><p>The <em>-phy-enable-ssc-mask</em> option takes in a hexadecimal value,
 where the least-significant bit corresponds to port 0. A bit value
 of <em>1</em> means that spread-spectrum clocking will be enabled on the
@@ -1786,8 +1791,46 @@ entry will be:</p></div>
 <div class="content">
 <pre><code>        dt autogen -node sata -phy-enable-ssc-mask 0x3</code></pre>
 </div></div>
-<div class="paragraph"><p>More information about the SATA DT binding can be found at in the
-kernel sources, under <em>Documentation/devicetree/bindings/ata/brcm-sata.txt</em>.</p></div>
+<div class="paragraph"><p>The <em>-phy-rxaeq-mode</em> option takes in a string value, which must be one of:
+"off", "auto" or "manual". When "manual" is used, the <em>-phy-rxaeq-value</em>
+property which takes an integer ranging from 0 through 63 (inclusive) must be
+specified.</p></div>
+<div class="paragraph"><p>To disable the SATA PHY RX equalizer mode (default) on SATA ports 0 and 1, the
+autogen entry will be:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>        dt autogen -node sata -phy-rxaeq off|off</code></pre>
+</div></div>
+<div class="paragraph"><p>To enable the SATA PHY RX equalizer automatic mode on SATA ports 0 and 1, the
+autogen entry will be:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>        dt autogen -node sata -phy-rxaeq-mode auto|auto</code></pre>
+</div></div>
+<div class="paragraph"><p>To enable the SATA PHY RX equalizer manual mode on SATA ports 0 and 1, with the
+specified values, the autogen entry will be:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>        dt autogen -node sata -phy-rxaeq-mode manual|manual -phy-rxaeq-value 16|63</code></pre>
+</div></div>
+<div class="paragraph"><p>To enable the SATA PHY RX equalizer manual mode on SATA port 0 with the specified value and disable it on port 1, the autogen entry will be:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>        dt autogen -node sata -phy-rxaeq-mode manual|off -phy-rxaeq-value 16</code></pre>
+</div></div>
+<div class="paragraph"><p>To enable the SATA PHY RX equalizer automatic mode on SATA port 0 and set it to
+manual on port 1 with the specified value, the autogen entry will be:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>        dt autogen -node sata -phy-rxaeq-mode auto|manual -phy-rxaeq-value |16</code></pre>
+</div></div>
+<div class="paragraph"><p>More information about the SATA DT binding can be found at in the kernel
+sources:</p></div>
+<div class="paragraph"><p>3.14 kernel: <em>Documentation/devicetree/bindings/ata/brcm-sata.txt</em> covers both
+the SATA controller and PHY.</p></div>
+<div class="paragraph"><p>4.1 and newer kernels:
+SATA controller: <em>Documentation/devicetree/bindings/ata/brcm,sata-brcmstb.txt</em>
+SATA PHY: <em>Documentation/devicetree/bindings/phy/brcm,brcmstb-sata-phy.txt</em></p></div>
 <div class="paragraph"><p>If you use this command (dt autogen), it must be in the "[family]"
 section.  In addition, you must use the <em>dts</em> command first.  The dts
 command specifies the Device Tree textfile to start with, and
@@ -2312,6 +2355,10 @@ noprobe - set to 32
 </p>
 </li>
 </ul></div>
+<div class="paragraph"><p>It is not recommended to use "probe" or "noprobe" but instead use the actual
+MDIO bus address for the PHY. Board designs may have to specifically configure
+PHY chips to use a particular MDIO bus address, therefore, the PHY address is
+known at BOLT build time.</p></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -2430,7 +2477,32 @@ For all other properties see [enet]
 <div class="paragraph"><p>See also: pmux</p></div>
 </div>
 <div class="sect2">
-<h3 id="_pmux">5.22.  pmux</h3>
+<h3 id="_pad_rgmii">5.22.  pad_rgmii</h3>
+<div class="paragraph"><p>Usage: pad_rgmii -id &lt;0|1&gt; -voltage &lt;none|high|low&gt;</p></div>
+<div class="paragraph"><p>The voltage level of RGMII (or MTSIF) pads needs be adjusted by software
+for 7271b0. By default, it is configured to HIGH voltage (2.5V or 3.3V)
+if RGMII or MTSIF interface is selected on pads of the ON/OFF domain.
+If the target board is designed for LOW voltage (1.5V or 1.8V), it is
+recommended to override the default configuration using this command.</p></div>
+<div class="paragraph"><p>Example:
+The following example configures the pads of the RGMII (or MTSIF)
+interface #1 for the 1.5V or 1.8V board design of the interface.</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>pad_rgmii -id 1 -voltage low</code></pre>
+</div></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content"><em>pad_rgmii</em> is applicable to 7271b0 only.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>See also: pmux</p></div>
+</div>
+<div class="sect2">
+<h3 id="_pmux">5.23.  pmux</h3>
 <div class="paragraph"><p>Usage: pmux -pin &lt;pin&gt; -sel &lt;field&gt; [-pull &lt;none|up|down&gt;] [-n &lt;int&gt;]</p></div>
 <div class="paragraph"><p>See also: [family] [chip] [board]</p></div>
 <div class="paragraph"><p>Note: sets pinmuxing and pad control.  Also: supplants the pinmux command.</p></div>
@@ -2499,7 +2571,7 @@ If specified under [chip] (to be inherited by boards)
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ddr">5.23.  ddr</h3>
+<h3 id="_ddr">5.24.  ddr</h3>
 <div class="paragraph"><p>Usage: ddr -n &lt;WHICH&gt; -size_mb &lt;SIZE&gt; [-base_mb &lt;BASE&gt;] -clk &lt;SHMOO SPEED&gt; -size_bits &lt;SHMOO SIZE&gt; -width &lt;SHMOO WIDTH&gt; -phy &lt;PHY WIDTH&gt; -fixed - -custom &lt;TAG&gt;</p></div>
 <div class="paragraph"><p>Note: Set ddr parameters</p></div>
 <div class="paragraph"><p>See also: [board] [chip] [mmap]</p></div>
@@ -2654,7 +2726,7 @@ command (ddr) anywhere in your config.</td>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_bid">5.24.  bid</h3>
+<h3 id="_bid">5.25.  bid</h3>
 <div class="paragraph"><p>Usage: bid &lt;hex value&gt;</p></div>
 <div class="paragraph"><p>Note: Set the board ID</p></div>
 <div class="paragraph"><p>See also: i2cbus</p></div>
@@ -2669,7 +2741,7 @@ first stage bootloader (FSBL) menu. If no boards match
 an ID then the menu is presented.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_dt">5.25.  dt</h3>
+<h3 id="_dt">5.26.  dt</h3>
 <div class="paragraph"><p>Usage:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2746,7 +2818,7 @@ dt cull -root /rdb -node sata@f045a000 -prop status</code></pre>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_rtsdefault">5.26.  rtsdefault</h3>
+<h3 id="_rtsdefault">5.27.  rtsdefault</h3>
 <div class="paragraph"><p>Usage: rtsdefault -id &lt;BOX MODE&gt;</p></div>
 <div class="paragraph"><p>Note: Sets the default rts <em>box mode</em> for a chip or board</p></div>
 <div class="paragraph"><p>See also: rtsbase rtsconfig</p></div>
@@ -2766,7 +2838,7 @@ is not set.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_avs">5.27.  avs</h3>
+<h3 id="_avs">5.28.  avs</h3>
 <div class="paragraph"><p>Usage: avs [enable | disable] -domains &lt;VOLTAGE DOMAINS&gt; -mode &lt;avs|dfs|dvfs&gt; -pmap &lt;MAP&gt; -pstate &lt;STATE&gt;</p></div>
 <div class="paragraph"><p>Note: Sets the default AVS state and number of voltage domains. Also sets
 the DVFS mode, pmap and pstate.</p></div>
@@ -2804,7 +2876,60 @@ in [family], [chip] and [board].</p></div>
 and <em>-pstate</em> are integers.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_sdio">5.28.  sdio</h3>
+<h3 id="_nand_feature">5.29.  nand_feature</h3>
+<div class="paragraph"><p>Usage: nand_feature -set &lt;0 | 1&gt; -addr &lt;ADDRESS&gt; [-data &lt;P1&gt;,&lt;P2&gt;,&lt;P3&gt;,&lt;P4&gt;]</p></div>
+<div class="paragraph"><p>Note: sends vendor specific  SET/GET_FEATURE lowlevel ops to nand part. data
+      is provided only for SET Feature. Refer to nand datasheet for vendor
+      specific set/get feature commands</p></div>
+<div class="paragraph"><p>See also: n/a</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+-set 0 used for getting and -set 1 for setting a feature
+</p>
+</li>
+<li>
+<p>
+&lt;ADDRESS&gt; byte address of the feature being set
+</p>
+</li>
+<li>
+<p>
+&lt;P1&gt; byte 1 for SET FEATURE only
+</p>
+</li>
+<li>
+<p>
+&lt;P2&gt; byte 2 for SET FEATURE only
+</p>
+</li>
+<li>
+<p>
+&lt;P3&gt; byte 3 for SET FEATURE only
+</p>
+</li>
+<li>
+<p>
+&lt;P4&gt; byte 4 for SET FEATURE only
+</p>
+</li>
+</ul></div>
+<div class="paragraph"><p>Example:</p></div>
+<div class="listingblock">
+<div class="content">
+<pre><code> nand_feature -set 0 -addr 0x80
+ nand_feature -set 1 -addr 0x80 -data 0x2,0x0,0x0,0x0
+ nand_feature -set 0 -addr 0x80</code></pre>
+</div></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>For micron parts to set the drive strength to half.
+The example gets current feture set value, sets the new value and
+gets it again to verify.</code></pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_sdio">5.30.  sdio</h3>
 <div class="paragraph"><p>Usage: sdio -controller &lt;N&gt; -type &lt;T&gt; [-uhs] [-host_driver_strength &lt;S&gt;] [-host_hs_driver_strength &lt;S&gt;] [-card_driver_strength &lt;S&gt;]</p></div>
 <div class="paragraph"><p>Note: Sets the default SIO hardware operating mode</p></div>
 <div class="paragraph"><p>See also: dt autogen -node sdio</p></div>
@@ -2865,7 +2990,7 @@ by adding the property "no-1-8-v".
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_vreg">5.29.  vreg</h3>
+<h3 id="_vreg">5.31.  vreg</h3>
 <div class="paragraph"><p>Usage: vreg -name &lt;string&gt; -gpio &lt;gpio&gt; -pin &lt;int&gt; -active hi|lo \
                 [-udelay &lt;int&gt;]  [-uvolts &lt;int&gt;] [-on_at_boot &lt;int&gt;]</p></div>
 <div class="paragraph"><p>This per-board command was created to support the pcie/sata turning
@@ -2918,7 +3043,7 @@ pcie or sata command.</p></div>
 <div class="paragraph"><p>vreg -name wifi -gpio upg_gio -pin 14 -active lo</p></div>
 </div>
 <div class="sect2">
-<h3 id="_pcie">5.30.  pcie</h3>
+<h3 id="_pcie">5.32.  pcie</h3>
 <div class="paragraph"><p>Usage: pcie -controller &lt;N&gt; -type &lt;T&gt; [-ssc 1] [-gen &lt;G&gt;] [-pwr &lt;V&gt;]</p></div>
 <div class="paragraph"><p>Note: Sets the default PCIe hardware operating mode on a per board basis.</p></div>
 <div class="paragraph"><p>See also: dt autogen -node pcie</p></div>
@@ -3000,7 +3125,7 @@ Linux boot failure.</td>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_sata_2">5.31.  sata</h3>
+<h3 id="_sata_2">5.33.  sata</h3>
 <div class="paragraph"><p>Usage: sata -controller &lt;N&gt; [-pwr &lt;V&gt;]</p></div>
 <div class="paragraph"><p>Note: Sets the default SATA hardware operating mode on a per board basis.</p></div>
 <div class="paragraph"><p>See also: dt autogen -node sata</p></div>
@@ -3031,7 +3156,7 @@ command described here modifies or deletes individual SATA devices on
 a per board basis.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usb">5.32.  usb</h3>
+<h3 id="_usb">5.34.  usb</h3>
 <div class="paragraph"><p>Usage: usb -controller &lt;N&gt; -type &lt;T&gt; [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual|typec_pd]</p></div>
 <div class="paragraph"><p>Note: Sets the default USB hardware operating mode on a per board basis.</p></div>
 <div class="paragraph"><p>See also: dt autogen -node usb</p></div>
@@ -3070,7 +3195,7 @@ command described here modifies or deletes individual USB devices on
 a per board basis.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_gpio_key">5.33.  gpio_key</h3>
+<h3 id="_gpio_key">5.35.  gpio_key</h3>
 <div class="paragraph"><p>Usage: gpio_key -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -code &lt;KEY_CODE&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the gpio button. You can create multiple gpio buttons.</p></div>
 <div class="paragraph"><p>If Nexus is build with NEXUS_HAS_GPIO=1, the Nexus will take ownership of all GPIO pins.
@@ -3116,7 +3241,7 @@ the gpio button.</p></div>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_gpio_led">5.34.  gpio_led</h3>
+<h3 id="_gpio_led">5.36.  gpio_led</h3>
 <div class="paragraph"><p>Usage: gpio_led -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -pol &lt;POLARITY&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the gpio led driver. You can create multiple gpio leds.</p></div>
 <div class="paragraph"><p>See also: dt autogen gpio</p></div>
@@ -3150,7 +3275,7 @@ the gpio button.</p></div>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_bt_rfkill_gpio">5.35.  bt_rfkill_gpio</h3>
+<h3 id="_bt_rfkill_gpio">5.37.  bt_rfkill_gpio</h3>
 <div class="paragraph"><p>Usage: bt_rfkill_gpio -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -pol &lt;POLARITY&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the Bluetooth rfkill gpio. You can have up to 2 GPIOs, one for vreg and another for reset.</p></div>
 <div class="paragraph"><p>Check the hardware schematics to ensure the correct &lt;NAME_OF_GPIO_CONTROLLER&gt; and &lt;GPIO_PIN&gt;
@@ -3206,7 +3331,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer-text">
 Version 1.37<br />
 Last updated
- 2017-08-25 14:02:12 PDT
+ 2017-12-27 23:52:14 PST
 </div>
 </div>
 </body>

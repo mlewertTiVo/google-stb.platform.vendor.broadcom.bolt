@@ -327,6 +327,8 @@ Commands that enact a configuration at runtime.
     memsys
     moca
     ext_moca
+    nand_feature
+    pad_rgmii
     pmux
     rtsdefault
     pcie
@@ -1018,7 +1020,13 @@ SSBL.
 sata
 ^^^^
 If you choose to generate a 'sata' node, you may optionally
-define the following options: '-phy-enable-ssc-mask'.
+define the following options:
+
+'-phy-enable-ssc-mask'
+
+'-phy-rxaeq-mode'
+
+'-phy-rxaeq-value'
 
 The '-phy-enable-ssc-mask' option takes in a hexadecimal value,
 where the least-significant bit corresponds to port 0. A bit value
@@ -1032,8 +1040,54 @@ entry will be:
 	dt autogen -node sata -phy-enable-ssc-mask 0x3
 ----
 
-More information about the SATA DT binding can be found at in the
-kernel sources, under 'Documentation/devicetree/bindings/ata/brcm-sata.txt'.
+The '-phy-rxaeq-mode' option takes in a string value, which must be one of:
+"off", "auto" or "manual". When "manual" is used, the '-phy-rxaeq-value'
+property which takes an integer ranging from 0 through 63 (inclusive) must be
+specified.
+
+To disable the SATA PHY RX equalizer mode (default) on SATA ports 0 and 1, the
+autogen entry will be:
+
+----
+	dt autogen -node sata -phy-rxaeq off|off
+----
+
+To enable the SATA PHY RX equalizer automatic mode on SATA ports 0 and 1, the
+autogen entry will be:
+
+----
+	dt autogen -node sata -phy-rxaeq-mode auto|auto
+----
+
+To enable the SATA PHY RX equalizer manual mode on SATA ports 0 and 1, with the
+specified values, the autogen entry will be:
+
+----
+	dt autogen -node sata -phy-rxaeq-mode manual|manual -phy-rxaeq-value 16|63
+----
+
+To enable the SATA PHY RX equalizer manual mode on SATA port 0 with the specified value and disable it on port 1, the autogen entry will be:
+
+----
+	dt autogen -node sata -phy-rxaeq-mode manual|off -phy-rxaeq-value 16
+----
+
+To enable the SATA PHY RX equalizer automatic mode on SATA port 0 and set it to
+manual on port 1 with the specified value, the autogen entry will be:
+
+----
+	dt autogen -node sata -phy-rxaeq-mode auto|manual -phy-rxaeq-value |16
+----
+
+More information about the SATA DT binding can be found at in the kernel
+sources:
+
+3.14 kernel: 'Documentation/devicetree/bindings/ata/brcm-sata.txt' covers both
+the SATA controller and PHY.
+
+4.1 and newer kernels:
+SATA controller: 'Documentation/devicetree/bindings/ata/brcm,sata-brcmstb.txt'
+SATA PHY: 'Documentation/devicetree/bindings/phy/brcm,brcmstb-sata-phy.txt'
 
 If you use this command (dt autogen), it must be in the "[family]" 
 section.  In addition, you must use the 'dts' command first.  The dts
@@ -1481,6 +1535,10 @@ phy_id <ID> - The id or address of a connected PHY.
 * noprobe - set to 32
 * <value> - set to <value>
 
+It is not recommended to use "probe" or "noprobe" but instead use the actual
+MDIO bus address for the PHY. Board designs may have to specifically configure
+PHY chips to use a particular MDIO bus address, therefore, the PHY address is
+known at BOLT build time.
 
 WARNING: Do NOT use these values for any other device apart from the
 physical 'eth' device BOLT (may) use. Any [non]probed value will
@@ -1577,6 +1635,27 @@ Note: DEPRECATED from configuration file version 1.6, use pmux instead.
 
 See also: pmux
 
+
+ pad_rgmii
+~~~~~~~~~~
+Usage: pad_rgmii -id <0|1> -voltage <none|high|low>
+
+The voltage level of RGMII (or MTSIF) pads needs be adjusted by software
+for 7271b0. By default, it is configured to HIGH voltage (2.5V or 3.3V)
+if RGMII or MTSIF interface is selected on pads of the ON/OFF domain.
+If the target board is designed for LOW voltage (1.5V or 1.8V), it is
+recommended to override the default configuration using this command.
+
+Example:
+The following example configures the pads of the RGMII (or MTSIF)
+interface #1 for the 1.5V or 1.8V board design of the interface.
+----
+pad_rgmii -id 1 -voltage low
+----
+
+NOTE: 'pad_rgmii' is applicable to 7271b0 only.
+
+See also: pmux
 
 
  pmux
@@ -1857,6 +1936,36 @@ in [family], [chip] and [board].
 
 Note: Sets the mode, pmap and p-state. The parameters for the '-pmap' option
 and '-pstate' are integers.
+
+ nand_feature
+~~~~~~~~~~~~~
+Usage: nand_feature -set <0 | 1> -addr <ADDRESS> [-data <P1>,<P2>,<P3>,<P4>]
+
+Note: sends vendor specific  SET/GET_FEATURE lowlevel ops to nand part. data
+      is provided only for SET Feature. Refer to nand datasheet for vendor 
+      specific set/get feature commands
+
+See also: n/a
+
+* -set 0 used for getting and -set 1 for setting a feature
+* <ADDRESS> byte address of the feature being set
+* <P1> byte 1 for SET FEATURE only
+* <P2> byte 2 for SET FEATURE only
+* <P3> byte 3 for SET FEATURE only
+* <P4> byte 4 for SET FEATURE only
+
+
+Example:
+----
+ nand_feature -set 0 -addr 0x80
+ nand_feature -set 1 -addr 0x80 -data 0x2,0x0,0x0,0x0
+ nand_feature -set 0 -addr 0x80
+----
+
+ For micron parts to set the drive strength to half.
+ The example gets current feture set value, sets the new value and
+ gets it again to verify.
+
 
  sdio
 ~~~~~

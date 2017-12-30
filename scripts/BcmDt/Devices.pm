@@ -12,6 +12,7 @@ use warnings FATAL=>q(all);
 no if $] >= 5.017011, warnings => 'experimental::smartmatch';
 use Data::Dumper;
 use File::Basename;
+use Math::BigInt;
 use BcmUtils;
 use Carp;
 use Math::BigInt;
@@ -120,7 +121,7 @@ sub find_l2_irq0_interrupt($$$)
 sub bphysaddr($$)
 {
 	my ($rh, $offset) = @_;
-	return $rh->{phys_offset} + $offset;
+	return Math::BigInt->new($rh->{phys_offset}) + $offset;
 }
 
 sub get_reg_range($$)
@@ -144,7 +145,7 @@ sub get_offset_from_base($$$)
 	my $reg_end = $bchp_defines->{"${prefix}_REG_END"};
 	return undef if (!defined $reg_start || !defined $reg_end);
 
-	my $reg_offset = $bchp_defines->{$reg_name} - $reg_start;
+	my $reg_offset = Math::BigInt->new($bchp_defines->{$reg_name}) - $reg_start;
 	return $reg_offset;
 }
 
@@ -167,7 +168,8 @@ sub get_reg_names_from_regexp($$)
 			keys %${bchp_defines};
 	}
 
-	my @a = sort { $bchp_defines->{$a} <=> $bchp_defines->{$b} }
+	my @a = sort { Math::BigInt->new($bchp_defines->{$a}) <=>
+		       Math::BigInt->new($bchp_defines->{$b}) }
 		grep { /$re/ } @pre_filtered_names;
 
 	die ("Failed to find in RDB: \"" . $re . "\"") if !@a;
@@ -183,7 +185,7 @@ sub get_reg_range_from_regexp($$)
 
 	my @a = get_reg_names_from_regexp($rh, $re);
 	my $start  = $bchp_defines->{$a[0]};
-	my $size = $bchp_defines->{$a[-1]} - $start + 4;
+	my $size = Math::BigInt->new($bchp_defines->{$a[-1]}) - $start + 4;
 	return (bphysaddr($rh, $start), $size);
 }
 
@@ -670,6 +672,7 @@ sub start_uart_body($$$$$$)
 	my %default = ("compatible" => "ns16550a",
 		       "reg-shift" => [ "hex", 2 ],
 		       "reg-io-width" => [ "hex", 4 ],
+			"clock-frequency" => [ "dec", 81000000 ],
 		      );
 	override_default(\%default, $info);
 
@@ -951,6 +954,7 @@ sub add_usb_v2($$$$$)
 
 		my $usb_info = { top => sprintf('%x', $usb_start), xhci => [], ohci => [],
 				 ehci => [], bdc => [] };
+		my $has_ehci=0;
 		foreach my $type ('ehci', 'ohci', 'xhci', 'bdc') {
 			for ($j=0; 1; $j++) {
 				$t = '';
@@ -958,6 +962,9 @@ sub add_usb_v2($$$$$)
 				my ($start, $size) 
 					= get_reg_range($rh, "${pre}_${mid}");
 				last if (!defined $start);
+				if ($type eq 'ehci') {
+				    $has_ehci = 1;
+				}
 				my $intr_name;
 				if ($type eq 'bdc') {
 					$intr_name = sprintf("USB%d_USBD", $i);
@@ -988,7 +995,13 @@ sub add_usb_v2($$$$$)
 				$t .= sprintf("%s = \"%s\";\n", 'compatible', $compatible);
 				$t .= sprintf("%s = <0x%x 0x%x>;\n", 'reg', $start, $size);
 				$t .= output_interrupt_prop($rh, \%intr_prop);
-				$t .= sprintf("phys = <&usbphy_%d 0x%d>;\n", $i, $type eq 'xhci' ? 1 : 0);
+
+				my $phy_arg = 0;
+				if (($type eq 'xhci') || (($type eq "bdc") &&
+					!$has_ehci)) {
+				    $phy_arg = 1;
+				}
+				$t .= sprintf("phys = <&usbphy_%d 0x%d>;\n", $i, $phy_arg);
 				$t .= "phy-names = \"usbphy\";";
 				$t .= "};\n";
 				if ($dt) {
@@ -1264,6 +1277,26 @@ sub add_sata($$$$)
 		$ssc_mask = 0;
 	}
 
+	my @rxaeq_mode = ("off", "off");
+	if ($info->{"-phy-rxaeq-mode"}) {
+		@rxaeq_mode = split('\|', $info->{"-phy-rxaeq-mode"}->[0]);
+
+		foreach (@rxaeq_mode) {
+			die ("Invalid PHY RX equalizer mode: $_")
+				if ($_ !~ /(off|auto|automatic|manual)/);
+		}
+	}
+
+	my @rxaeq_vals;
+	if ($info->{"-phy-rxaeq-mode"} and $info->{"-phy-rxaeq-values"}) {
+		@rxaeq_vals = split('\|', $info->{"-phy-rxaeq-values"}->[0]);
+
+		foreach (@rxaeq_vals) {
+			die ("Invalid PHY RX equalizer value: $_")
+				if ($_ ne "" and int($_) > 63);
+		}
+	}
+
 	my %default_phy = (compatible => [ 'string', [
 			   $rh->{chip_arch} eq "MIPS" ? "brcm,bcm7425-sata-phy" : "brcm,bcm7445-sata-phy",
 			   "brcm,phy-sata3"]],
@@ -1343,6 +1376,14 @@ sub add_sata($$$$)
 			$t .= sprintf("reg = <%d>;\n", $j);
 			$t .= "#phy-cells = <0>;\n";
 			$t .= "brcm,enable-ssc;\n" if ($ssc_mask & (1 << $j));
+			if ($rxaeq_mode[$j] ne "off") {
+				$t .= sprintf("brcm,rxaeq-mode = \"%s\";\n",
+						$rxaeq_mode[$j]);
+				if ($rxaeq_mode[$j] eq "manual") {
+					$t .= sprintf("brcm,rxaeq-value = <%d>;\n",
+						$rxaeq_vals[$j]);
+				}
+			}
 			$t .= "};\n";
 			$phy_node->add_node(DevTree::node->new($t));
 
@@ -1542,6 +1583,7 @@ sub add_pcie($$$$$)
 		$t .= "msi-controller;\n";
 		$t .= "msi-parent = <\&$pcie_label>;\n";
 		$t .= output_default(\%default);
+		$t .= "linux,pci-domain = <$i>;\n";
 		$t .= "interrupt-map = <";
 		for (my $j=0; $j<4; $j++) {
 			# Some day we will switch to using the proper legacy
@@ -3018,6 +3060,10 @@ sub output_switch_port_layout($$$)
 			if ($port_layout->{"$_"} eq "cpu") {
 				$t .= "ethernet = <&enet_0>;\n";
 			}
+
+			if ($port_layout->{"$_"} eq "wifi") {
+				$t .= "ethernet = <&enet_1>;\n";
+			}
 			$t .= "};\n";
 
 			add_reference_alias($dt, $port_label, $port_label);
@@ -3852,21 +3898,22 @@ sub gen_clocks_prop
 # FUNCTION:
 #
 ###############################################################
-sub insert_clk_frequency_into_uarts($)
+sub delete_serial_freq_prop_in_uarts($)
 {
     my ($dt) = @_;
-    my $count = 0;
-
-    my $text = "clock-frequency = <81000000>;";
 
     foreach my $uart (@serial_names) {
 	my $re = qr/$uart/;
 	my ($x) = $dt->find_node($re);
-	next if !$x;
-	$x->add_prop(DevTree::prop->new($text));
-	$count++;
+	die "internal error: could not find uart node"
+		if !$x;
+	die "internal error: could not find serial's clock prop"
+		if !$x->find_prop(qr/clocks/);
+	die "internal error: could not find serial's clock-frequency prop"
+		if !$x->find_prop(qr/clock-frequency/);
+	die "internal error: could not remove serial's clock-frequency prop"
+		if !$x->del_prop(qr/clock-frequency/);
     }
-    return $count;
 }
     
 
@@ -4209,15 +4256,8 @@ STOP
 	# UART
 	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'none',
 		qr/^UART/, qr/^serial/);
-	if ($ni) {
-	    print "$P: WARN: no clocks inserted for uart!\n"
-		if (!$ni && BcmUtils::get_num_serial($bd));
-	} else {
-	    $ni = insert_clk_frequency_into_uarts($rdb);
-	    print "$P: WARN: no clocks or clock-freqs inserted for uart!\n"
-		if (!$ni && BcmUtils::get_num_serial($bd));
-	}
-
+	delete_serial_freq_prop_in_uarts($rdb)
+		if $ni;
 
 	####################
 	# USB, old way

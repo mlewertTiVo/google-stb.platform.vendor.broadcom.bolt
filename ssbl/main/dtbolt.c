@@ -2240,6 +2240,14 @@ static void bolt_otp_unpopulate(void *fdt)
 		if (OTP_OPTION_PCIE_DISABLE())
 			rm_nodes(fdt, "pcie", p_root);
 #endif
+	/* boot strap can also prevent PCIe/SATA from selected */
+	if (board_does_strap_disable_pcie())
+		rm_nodes(fdt, "pcie", p_root);
+
+	if (board_does_strap_disable_sata()) {
+		rm_nodes(fdt, "sata", p_rdb);
+		rm_nodes(fdt, "sata_phy", p_rdb);
+	}
 
 #if defined(BCHP_PCIE_0_RC_CFG_TYPE1_REG_START) && \
 	defined(OTP_OPTION_PCIE0_DISABLE)
@@ -2564,7 +2572,7 @@ static int bolt_set_emmc_devname(void *fdt, int sdhci_node)
 
 	reg = DT_PROP_DATA_TO_U32(prop->data, 0);
 
-	xsprintf(emmc_devname, "%08x.%s", reg, name);
+	xsprintf(emmc_devname, "%x.%s", reg, name);
 	env_setenv("EMMC_DEVNAME", emmc_devname, 0);
 
 	return BOLT_OK;
@@ -2802,6 +2810,7 @@ static int bolt_populate_pmap(void *fdt)
 	char node[80];
 	unsigned int data, i;
 	unsigned int pmap_number = board_pmap();
+	unsigned int pmap_index = board_pmap_index(pmap_number);
 	int brcmstb_clk_node = 0, offset = 0, pmap_node;
 
 	brcmstb_clk_node = bolt_devtree_node_from_path(fdt,
@@ -2812,8 +2821,8 @@ static int bolt_populate_pmap(void *fdt)
 	}
 
 	for (i = 0; i < PMAP_MAX_MUXES; i++) {
-		xsprintf(node, "pmap-mux%d:pmap-mux%d@%x",
-			i, i, BPHYSADDR(pmapMuxes[i].reg));
+		xsprintf(node, "pmap-mux%d@%x",
+			i, BPHYSADDR(pmapMuxes[i].reg));
 
 		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
 		if (offset >= 0)
@@ -2852,14 +2861,14 @@ static int bolt_populate_pmap(void *fdt)
 			goto out;
 
 		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
-			pmapMuxValues[pmap_number][i]);
+			pmapMuxValues[pmap_index][i]);
 		if (rc)
 			goto out;
 	}
 
 	for (i = 0; i < PMAP_MAX_DIVIDERS; i++) {
-		xsprintf(node, "pmap-divider%d:pmap-divider%d@%x",
-			i, i, BPHYSADDR(pmapDividers[i].reg));
+		xsprintf(node, "pmap-divider%d@%x",
+			i, BPHYSADDR(pmapDividers[i].reg));
 
 		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
 		if (offset >= 0)
@@ -2898,15 +2907,15 @@ static int bolt_populate_pmap(void *fdt)
 			goto out;
 
 		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
-			pmapDividerValues[pmap_number][i]);
+			pmapDividerValues[pmap_index][i]);
 		if (rc)
 			goto out;
 	}
 
 #ifdef PMAP_MAX_MULTIPLIERS
 	for (i = 0; i < PMAP_MAX_MULTIPLIERS; i++) {
-		xsprintf(node, "pmap-multiplier%d:pmap-multiplier%d@%x",
-			i, i, BPHYSADDR(pmapMultipliers[i].reg));
+		xsprintf(node, "pmap-multiplier%d@%x",
+			i, BPHYSADDR(pmapMultipliers[i].reg));
 
 		offset = bolt_devtree_subnode(fdt, node, brcmstb_clk_node);
 		if (offset >= 0)
@@ -2945,7 +2954,7 @@ static int bolt_populate_pmap(void *fdt)
 			goto out;
 
 		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
-			pmapMultiplierValues[pmap_number][i]);
+			pmapMultiplierValues[pmap_index][i]);
 		if (rc)
 			goto out;
 	}
@@ -2960,8 +2969,7 @@ int bolt_devtree_boltset(void *fdt)
 {
 	int rc = 0;
 	struct board_type *b = board_thisboard();
-	char *r = board_init_current_rts();
-	int bm = board_init_current_rts_boxmode();
+	int boxmode = board_init_rts_current_boxmode();
 	char *s, bs[16]; /* 10 + sign + \0 + guard */
 	int bolt;
 
@@ -3037,12 +3045,10 @@ int bolt_devtree_boltset(void *fdt)
 	if (rc)
 		goto out;
 
-	/* SWBOLT-99
-	*/
 	rc = bolt_dt_addprop_u32(fdt, bolt, "reset-history",
-				 get_aon_reset_history());
+		board_init_reset_history_value());
 
-	s = aon_reset_as_string();
+	s = board_init_reset_history_string();
 	if (s) {
 		rc = bolt_dt_addprop_str(fdt, bolt, "reset-list", s);
 		if (rc)
@@ -3062,10 +3068,15 @@ int bolt_devtree_boltset(void *fdt)
 	if (rc)
 		goto out;
 
-	rc = bolt_dt_addprop_str(fdt, bolt, "rts", (r) ? r : "");
+	/* The property of 'rts' has been deprecated. So has its string
+	 * format. It was something like "CCYYMMDDHHMMSS_shortdesc_box%d".
+	 * But, Nexus looked only at "_box%d" even when 'rts' was used.
+	 */
+	xsprintf(bs, "deprecated_format_box%d", boxmode);
+	rc = bolt_dt_addprop_str(fdt, bolt, "rts", bs);
 	if (rc)
 		goto out;
-	xsprintf(bs, "%d", bm);
+	xsprintf(bs, "%d", boxmode);
 	rc = bolt_dt_addprop_str(fdt, bolt, "box", bs);
 	if (rc)
 		goto out;

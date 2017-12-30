@@ -24,11 +24,6 @@ const struct boards_nvm_list nvm_boards
 	.n_boards = ARRAY_SIZE(board_types) |
 		(FSBLINFO_CURRENT_VERSION << FSBLINFO_VERSION_SHIFT),
 	.board_types = board_types,
-#if defined(DVFS_SUPPORT)
-	.n_pmaps = ARRAY_SIZE(pmapTable),
-#else
-	.n_pmaps = 0,
-#endif
 };
 
 #endif

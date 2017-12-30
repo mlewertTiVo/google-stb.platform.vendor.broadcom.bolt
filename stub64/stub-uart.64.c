@@ -21,7 +21,7 @@
 
 /* do *not* include fsbl.h or lib_physio.h! */
 
-static const uint64_t uart_base  = (unsigned)BCHP_UARTA_REG_START;
+const uint64_t uart_base  = (unsigned)BCHP_UARTA_REG_START;
 
 
 void uart_init(void)

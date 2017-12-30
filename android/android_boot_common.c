@@ -766,6 +766,14 @@ static enum bootpath select_boot_path(int *slot, int selected)
 		}
 		if (eio->magic == EIO_BOOT_MAGIC) {
 			if (eio->current < EIO_BOOT_NUM_ALT_PART) {
+				/* one time only switching of slot following application reboot into a new context,
+				 * this happens following update of inactive boot partition content.
+				 */
+				if (eio->onboot != -1) {
+					eio->current = eio->onboot;
+					eio->onboot = -1;
+					os_printf("Warning: on-boot new slot %d from application\n", eio->current);
+				}
 				if (eio->slot[eio->current].boot_ok) {
 					*slot = eio->current;
 					eio->slot[eio->current].boot_ok = 0; /* reset, let application mark it. */

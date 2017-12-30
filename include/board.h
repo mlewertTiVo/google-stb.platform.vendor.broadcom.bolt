@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,27 +10,24 @@
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
-#include "lib_types.h"
-#include "ssbl-common.h"
-#include "lib_string.h"
-#include "arch_ops.h"
+#include <arch_ops.h>
+#include <lib_string.h>
+#include <lib_types.h>
+#include <ssbl-common.h>
+
+#include <stdbool.h>
 
 #define get_cpu_freq_mhz() ((uint32_t)(arch_get_cpu_freq_hz() / 1000000))
 #define get_timer_freq_mhz() (arch_get_timer_freq_hz() / 1000000)
 #define get_clocks_per_usec() get_timer_freq_mhz()
-
-
-/* SWBOLT-99 (bcm_init_history)
-*/
-void         aon_reset_history(void);
-uint32_t get_aon_reset_history(void);
-char         *aon_reset_as_string(void);
 
 /* board
 */
 void                board_printinfo(void);
 void                board_print_ddrspeed(void);
 unsigned int        board_bootmode(void);
+bool                board_does_strap_disable_pcie(void);
+bool                board_does_strap_disable_sata(void);
 const char         *board_name(void);
 const enet_params  *board_enet(int instance);
 unsigned int        board_num_active_memc(void);
@@ -43,13 +40,13 @@ uint32_t            board_totaldram( void ); /* in Mb */
 struct ddr_info    *board_find_ddr(struct board_type *b, uint32_t idx);
 dt_ops_s           *board_dt_ops(void);
 const struct dvfs_params *board_dvfs(void);
-char               *board_init_current_rts(void);
-int                 board_init_current_rts_boxmode(void);
 const sdio_params  *board_sdio(int sdio);
 const gpio_key_params *board_gpio_keys(void);
 const gpio_led_params *board_gpio_leds(void);
 const bt_rfkill_params *board_bt_rfkill_gpios(void);
 #ifdef DVFS_SUPPORT
+unsigned int board_pmap_index(unsigned int pmap);
+int is_pmap_valid(unsigned int pmap);
 unsigned int        board_pmap(void);
 #endif
 
@@ -57,6 +54,7 @@ unsigned int        board_pmap(void);
 const struct ssbl_board_params *board_current_params(void);
 
 struct partition_profile *board_flash_partition_table(void);
+const struct nand_feature *board_flash_nand_feature(void);
 
 /* ssbl_main
 */

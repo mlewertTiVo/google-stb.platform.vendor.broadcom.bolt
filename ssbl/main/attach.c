@@ -19,12 +19,14 @@
 #include "iocb.h"
 #include "device.h"
 #include "error.h"
+#include "timer.h"
 
 /*  *********************************************************************
     *  Constants
     ********************************************************************* */
 
 #define BOLT_MAX_DEVINST 64	/* max # of instances of devices */
+static const unsigned int POLL_SLEEP_TIME = 20; /* 20 milliseconds */
 
 /*  *********************************************************************
     *  Globals
@@ -288,4 +290,40 @@ void bolt_attach_init(void)
 char *bolt_device_name(bolt_devctx_t *ctx)
 {
 	return ctx->dev_dev->dev_fullname;
+}
+
+/*  *********************************************************************
+    *  bolt_waitdev(waittime, devdesc)
+    *
+    *  This routine is called to wait for a particular device to get
+    *  initialized.
+    *
+    *  Input parameters:
+    *       waittime - in millisecs the max wait time for device to initialize.
+    *       devdesc - device description of the device.(Ex: USB-Ethernet)
+    *
+    *  Return value:
+    *      pointer to structure bolt_device_t if device initialized successfully
+    *      NULL otherwise.
+    ********************************************************************* */
+
+bolt_device_t *bolt_waitdev(int waittime, char *devdesc)
+{
+	queue_t *qb;
+	bolt_device_t *dev;
+	int idx;
+	int cnt;
+
+	cnt = waittime / POLL_SLEEP_TIME;
+	for (idx = 0; idx < cnt; ++idx) {
+		for (qb = bolt_devices.q_next; qb != &bolt_devices;
+			qb = qb->q_next) {
+			dev = (bolt_device_t *) qb;
+			if (lib_strstr(dev->dev_description, devdesc))
+				return dev;
+		}
+		bolt_msleep(POLL_SLEEP_TIME);
+	}
+
+	return NULL;
 }
