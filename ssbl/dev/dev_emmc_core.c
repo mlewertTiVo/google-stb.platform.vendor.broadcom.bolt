@@ -2291,13 +2291,23 @@ int emmc_select_partition(struct emmc_chip *chip, int id)
 
 void emmc_set_boot_partition(struct emmc_chip *chip, int id)
 {
+	uint32_t partition_config = 0x00;
+
+	emmc_cmd8_send_ext_csd(chip);
+
+	/* set the boot selection field, but retain select partition field */
+	partition_config = chip->extcsd.PARTITION_CONFIG;
+	partition_config &= ~PCFG_BOOT_PARTITION_ENABLE_MASK;
+	if (id == 0)
+		partition_config |= PCFG_BOOT_PARTITION_ENABLE_BOOT1;
+	else
+		partition_config |= PCFG_BOOT_PARTITION_ENABLE_BOOT2;
+
 	cmd6_switch_extcsd(chip,
-			Idx_ExtCSD_ACC_WRB,
-			Idx_ExtCSD_PARTITION_CONFIG,
-			PCFG_BOOT_ACK |
-			(id ? PCFG_BOOT_PARTITION_ENABLE_BOOT2 :
-				PCFG_BOOT_PARTITION_ENABLE_BOOT1));
-	os_msleep(chip->dev_config.partition_switch_time);
+			   Idx_ExtCSD_ACC_WRB,
+			   Idx_ExtCSD_PARTITION_CONFIG,
+			   PCFG_BOOT_ACK |
+			   partition_config);
 }
 
 
