@@ -806,6 +806,13 @@ static int fastboot_erase_ptn(const char *devname, const char *partition)
 	int fd = 0;
 	struct fastboot_ptentry *ptn;
 	uint8_t *input_buffer = (uint8_t *) FB_FLASH_STAGING_BUFFER;
+	int early_exit = 0;
+#if defined(DROID_VERITY_y)
+	if (!os_strncmp(partition, BOOT_SLOT_SYSTEM_PREFIX, os_strlen(BOOT_SLOT_SYSTEM_PREFIX)) ||
+		!os_strncmp(partition, BOOT_SLOT_VENDOR_PREFIX, os_strlen(BOOT_SLOT_VENDOR_PREFIX))) {
+		early_exit = 1;
+	}
+#endif
 
 	DLOG("Partition to be erased: %s\n", partition);
 
@@ -841,6 +848,11 @@ static int fastboot_erase_ptn(const char *devname, const char *partition)
 	curr_read_ptr = input_buffer;
 
 	DLOG("start at LBA: 0x%x\n", ptn->start);
+
+	if (early_exit) {
+		os_printf("Erasing image - early exit.\n");
+		goto exit;
+	}
 
 	while (byte_cnt >= DATA_MAX_SIZE) {
 		amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset,
