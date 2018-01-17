@@ -34,22 +34,6 @@
  * Constant definitions
  */
 
-/* TODO:add runtime check to make sure the board has enough memory for staging buffer*/
-/* Use upper 512MB of DDR0 for Android fastboot flash. It is assumed that
- * Android runs on platform with at least 1GB of DDR memory.
- * It is also assumed that BOLT code won't be using upper 512MB.
- * The staging buffer size is set to be 256MB. It could be increased
- * to 512MB but we don't so we can have upper most 256MB for debugging
- * purpose. Any image bigger than the staging buffer size will
- * be re-sparsed by host fastboot application.
- */
-#if defined(CONFIG_BCM7278)
-#define FB_FLASH_STAGING_BUFFER		(0x60000000)
-#else
-#define FB_FLASH_STAGING_BUFFER		(0x20000000)
-#endif
-#define FB_FLASH_STAGING_BUFFER_SIZE	(1024*1024*256)
-
 /* The 64 defined bytes, plus \0 */
 #define RESPONSE_LEN	(64 + 1)
 /* header when using handshake. */

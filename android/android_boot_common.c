@@ -24,6 +24,7 @@
 #include "fastboot.h" /* to access partition table that has Android-style
 			flash naming */
 #include "eio_boot.h"
+#include "verity.h"
 
 #define AON_REG_ADDR(idx)			((volatile uint32_t *) \
 		REG_ADDR(BCHP_AON_CTRL_SYSTEM_DATA_RAMi_ARRAY_BASE + (idx) * 4))
@@ -49,6 +50,7 @@
 #define BOOT_SLOT_DEV_DEFAULT   "flash0"
 
 #define BOOT_VARIANT_ENG "=eng"
+#define BOOT_VARIANT_USERDEBUG "=userdebug"
 
 /* Boot path supported. */
 enum bootpath {
@@ -405,13 +407,16 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	int fd=-1;
 	char *fb_flashdev_mode_str;
 	struct fastboot_ptentry *ptn;
-	int ro = 1;
+	int ro = 1, udbg = 0, ret;
 
 	if (cmdline) {
 		char *p = NULL;
 		p = os_strstr(cmdline, BOOT_VARIANT_ENG);
 		if (p)
 			ro = 0;
+		p = os_strstr(cmdline, BOOT_VARIANT_USERDEBUG);
+		if (p)
+			udbg = 1;
 	}
 
 	/* Partition table needed in these two cases */
@@ -545,6 +550,47 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 				BOOT_SLOT_SYSTEM_PREFIX, slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
 			ptn = fastboot_flash_find_ptn(partname);
 			if (ptn != NULL) {
+				fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+				os_sprintf(dt_add_cmd, "%s.%s", fb_flashdev_mode_str, partname);
+				fd = bolt_open(dt_add_cmd);
+				if (fd >= 0) {
+					ret = bolt_readblk(fd, ptn->length-FEC_BLOCKSIZE,
+						(unsigned char *)FB_FLASH_STAGING_BUFFER, FEC_BLOCKSIZE);
+					if (ret != FEC_BLOCKSIZE) {
+						os_printf("Error reading %u bytes for fec-block @0x%.16llx from %s: %d\n",
+							FEC_BLOCKSIZE, ptn->length-FEC_BLOCKSIZE, dt_add_cmd, ret);
+					} else {
+						fec_header_t *fec;
+						u64 vmeta = 0;
+						fec = (fec_header_t *)FB_FLASH_STAGING_BUFFER;
+						if (fec->magic == FEC_MAGIC) {
+							os_printf("fec: magic:0x%x,version:0x%x,size:0x%x,roots:0x%x,size:0x%x,inps:0x%.16llx\n",
+								fec->magic, fec->version, fec->size, fec->roots, fec->fec_size, fec->inp_size);
+							vmeta = fec->inp_size-VERITY_METADATA_SIZE;
+						} else {
+							vmeta = ptn->length-VERITY_METADATA_SIZE;
+						}
+						ret = bolt_readblk(fd, vmeta,
+							(unsigned char *)(FB_FLASH_STAGING_BUFFER+FEC_BLOCKSIZE),
+							VERITY_METADATA_SIZE);
+						if (ret != VERITY_METADATA_SIZE) {
+							os_printf("Error reading %u bytes for verity-meta @0x%.16llx (size:0x%.16llx,name:%s): %d\n",
+								VERITY_METADATA_SIZE, vmeta, ptn->length, dt_add_cmd, ret);
+						} else {
+							android_metadata_header_t *amh;
+							amh = (android_metadata_header_t *)(FB_FLASH_STAGING_BUFFER+FEC_BLOCKSIZE);
+							os_printf("android-meta-header-magic = 0x%x\n", amh->magic_number);
+							if (udbg && amh->magic_number == VERITY_METADATA_MAGIC_DISABLE)
+								// -userdebug image and verity magic marked disabled, allow remount
+								// of /root in read-write.  note that if we get this incorrectly, system
+								// will crash on dm-verity validation, so there is no security risk in
+								// marking this loosely (but we of course mark it accurately to what we
+								// can gather and omit to mark on error).
+								ro = 0;
+						}
+					}
+					bolt_close(fd);
+				}
 			        bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
 						       " root=/dev/dm-0 dm=\"system none %s,0 1 android-verity PARTUUID=%s\"",
 							ro?"ro":"rw", ptn->uuid);
