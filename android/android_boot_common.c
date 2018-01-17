@@ -48,6 +48,8 @@
 
 #define BOOT_SLOT_DEV_DEFAULT   "flash0"
 
+#define BOOT_VARIANT_ENG "=eng"
+
 /* Boot path supported. */
 enum bootpath {
 	BOOTPATH_LEGACY,
@@ -403,6 +405,14 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 	int fd=-1;
 	char *fb_flashdev_mode_str;
 	struct fastboot_ptentry *ptn;
+	int ro = 1;
+
+	if (cmdline) {
+		char *p = NULL;
+		p = os_strstr(cmdline, BOOT_VARIANT_ENG);
+		if (p)
+			ro = 0;
+	}
 
 	/* Partition table needed in these two cases */
 	if ((boot_path == BOOTPATH_LEGACY || boot_path == BOOTPATH_AB_SYSTEM) && la) {
@@ -536,7 +546,8 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 			ptn = fastboot_flash_find_ptn(partname);
 			if (ptn != NULL) {
 			        bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
-						       " root=/dev/dm-0 dm=\"system none ro,0 1 android-verity PARTUUID=%s\"", ptn->uuid);
+						       " root=/dev/dm-0 dm=\"system none %s,0 1 android-verity PARTUUID=%s\"",
+							ro?"ro":"rw", ptn->uuid);
 			} else {
 				os_printf("device '%s', PARTUUID for '%s' failed -- aborting boot.\n", la->la_device, partname);
 				fastboot_flash_dump_ptn();
