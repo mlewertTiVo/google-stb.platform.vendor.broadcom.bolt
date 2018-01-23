@@ -540,7 +540,7 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 	}
 
 	if ((bl_img_hdr->bolt_img_size > ptn->length)) {
-		os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%d\n",
+		os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%lld\n",
 				ptn_name, bl_img_hdr->bolt_img_size, ptn->length);
 		os_sprintf(response, "FAILimage too large for '%s' partition", ptn_name);
 		goto exit;
@@ -580,7 +580,7 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 	}
 
 	if ((bl_img_hdr->bsu_img_size > ptn->length)) {
-		os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%d\n",
+		os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%lld\n",
 				ptn_name, bl_img_hdr->bsu_img_size, ptn->length);
 		os_sprintf(response, "FAILimage too large for '%s' partition", ptn_name);
 		goto exit;
@@ -621,7 +621,7 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 		}
 
 		if ((bl_img_hdr->bl31_img_size > ptn->length)) {
-			os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%d\n",
+			os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%lld\n",
 					ptn_name, bl_img_hdr->bl31_img_size, ptn->length);
 			os_sprintf(response, "FAILimage too large for '%s' partition", ptn_name);
 			goto exit;
@@ -733,7 +733,7 @@ static int fastboot_flash_dev_write(const char *flash_devname,
 	}
 
 	if (download_bytes > ptn->length) {
-		os_printf("image too large for the partition, download_bytes=%d, ptn.length=%d\n",
+		os_printf("image too large for the partition, download_bytes=%d, ptn.length=%lld\n",
 				download_bytes, ptn->length);
 		os_sprintf(response, "FAILimage too large for partition");
 		return BOLT_OK;
@@ -784,8 +784,8 @@ exit_send_resp:
 static int fastboot_erase_ptn(const char *devname, const char *partition)
 {
 	int res = BOLT_OK;
-	unsigned int byte_cnt, amtcopy;
-	unsigned long long curr_write_offset;
+	unsigned int amtcopy;
+	unsigned long long curr_write_offset, byte_cnt;
 	unsigned char *curr_read_ptr;
 	int fd = 0;
 	struct fastboot_ptentry *ptn;
@@ -831,7 +831,7 @@ static int fastboot_erase_ptn(const char *devname, const char *partition)
 	curr_write_offset = (unsigned long long) ptn->start * BYTES_PER_LBA;
 	curr_read_ptr = input_buffer;
 
-	DLOG("start at LBA: 0x%x\n", ptn->start);
+	DLOG("start at LBA: 0x%x (size: 0x%llx)\n", ptn->start, ptn->length);
 
 	if (early_exit) {
 		os_printf("Erasing image - early exit.\n");
@@ -842,7 +842,7 @@ static int fastboot_erase_ptn(const char *devname, const char *partition)
 		amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset,
 						curr_read_ptr, DATA_MAX_SIZE);
 		if (amtcopy != DATA_MAX_SIZE) {
-			os_printf("Failed to write image. Remaining bytes: %d\n",
+			os_printf("Failed to write image. Remaining bytes: %lld\n",
 						byte_cnt);
 			res = BOLT_ERR_IOERR;
 			goto exit;
@@ -856,7 +856,7 @@ static int fastboot_erase_ptn(const char *devname, const char *partition)
 		amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset,
 						curr_read_ptr, byte_cnt);
 		if (amtcopy != byte_cnt) {
-			os_printf("Failed to write image. Remaining bytes: %d\n",
+			os_printf("Failed to write image. Remaining bytes: %lld\n",
 						byte_cnt);
 			res = BOLT_ERR_IOERR;
 			goto exit;
