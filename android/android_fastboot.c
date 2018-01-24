@@ -1,18 +1,18 @@
-/*****************************************************************************
-*
-* Copyright 2014 - 2015 Broadcom Corporation.  All rights reserved.
-*
-* Unless you and Broadcom execute a separate written software license
-* agreement governing use of this software, this software is licensed to you
-* under the terms of the GNU General Public License version 2, available at
-* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
-*
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a
-* license other than the GPL, without Broadcom's express prior written
-* consent.
-*
-*****************************************************************************/
+/*
+ * Copyright 2014-current Broadcom Corporation.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <error.h>
 #include <env_subr.h>
@@ -33,22 +33,6 @@
 /*
  * Constant definitions
  */
-
-/* TODO:add runtime check to make sure the board has enough memory for staging buffer*/
-/* Use upper 512MB of DDR0 for Android fastboot flash. It is assumed that
- * Android runs on platform with at least 1GB of DDR memory.
- * It is also assumed that BOLT code won't be using upper 512MB.
- * The staging buffer size is set to be 256MB. It could be increased
- * to 512MB but we don't so we can have upper most 256MB for debugging
- * purpose. Any image bigger than the staging buffer size will
- * be re-sparsed by host fastboot application.
- */
-#if defined(CONFIG_BCM7278)
-#define FB_FLASH_STAGING_BUFFER		(0x60000000)
-#else
-#define FB_FLASH_STAGING_BUFFER		(0x20000000)
-#endif
-#define FB_FLASH_STAGING_BUFFER_SIZE	(1024*1024*256)
 
 /* The 64 defined bytes, plus \0 */
 #define RESPONSE_LEN	(64 + 1)
@@ -556,7 +540,7 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 	}
 
 	if ((bl_img_hdr->bolt_img_size > ptn->length)) {
-		os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%d\n",
+		os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%lld\n",
 				ptn_name, bl_img_hdr->bolt_img_size, ptn->length);
 		os_sprintf(response, "FAILimage too large for '%s' partition", ptn_name);
 		goto exit;
@@ -596,7 +580,7 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 	}
 
 	if ((bl_img_hdr->bsu_img_size > ptn->length)) {
-		os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%d\n",
+		os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%lld\n",
 				ptn_name, bl_img_hdr->bsu_img_size, ptn->length);
 		os_sprintf(response, "FAILimage too large for '%s' partition", ptn_name);
 		goto exit;
@@ -637,7 +621,7 @@ static int fastboot_flash_write_bootloader(const char *flash_devname,
 		}
 
 		if ((bl_img_hdr->bl31_img_size > ptn->length)) {
-			os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%d\n",
+			os_printf("image too large for '%s' ptn, img_size=%d, ptn.length=%lld\n",
 					ptn_name, bl_img_hdr->bl31_img_size, ptn->length);
 			os_sprintf(response, "FAILimage too large for '%s' partition", ptn_name);
 			goto exit;
@@ -749,7 +733,7 @@ static int fastboot_flash_dev_write(const char *flash_devname,
 	}
 
 	if (download_bytes > ptn->length) {
-		os_printf("image too large for the partition, download_bytes=%d, ptn.length=%d\n",
+		os_printf("image too large for the partition, download_bytes=%d, ptn.length=%lld\n",
 				download_bytes, ptn->length);
 		os_sprintf(response, "FAILimage too large for partition");
 		return BOLT_OK;
@@ -800,12 +784,19 @@ exit_send_resp:
 static int fastboot_erase_ptn(const char *devname, const char *partition)
 {
 	int res = BOLT_OK;
-	unsigned int byte_cnt, amtcopy;
-	unsigned long long curr_write_offset;
+	unsigned int amtcopy;
+	unsigned long long curr_write_offset, byte_cnt;
 	unsigned char *curr_read_ptr;
 	int fd = 0;
 	struct fastboot_ptentry *ptn;
 	uint8_t *input_buffer = (uint8_t *) FB_FLASH_STAGING_BUFFER;
+	int early_exit = 0;
+#if defined(DROID_VERITY_y)
+	if (!os_strncmp(partition, BOOT_SLOT_SYSTEM_PREFIX, os_strlen(BOOT_SLOT_SYSTEM_PREFIX)) ||
+		!os_strncmp(partition, BOOT_SLOT_VENDOR_PREFIX, os_strlen(BOOT_SLOT_VENDOR_PREFIX))) {
+		early_exit = 1;
+	}
+#endif
 
 	DLOG("Partition to be erased: %s\n", partition);
 
@@ -840,13 +831,18 @@ static int fastboot_erase_ptn(const char *devname, const char *partition)
 	curr_write_offset = (unsigned long long) ptn->start * BYTES_PER_LBA;
 	curr_read_ptr = input_buffer;
 
-	DLOG("start at LBA: 0x%x\n", ptn->start);
+	DLOG("start at LBA: 0x%x (size: 0x%llx)\n", ptn->start, ptn->length);
+
+	if (early_exit) {
+		os_printf("Erasing image - early exit.\n");
+		goto exit;
+	}
 
 	while (byte_cnt >= DATA_MAX_SIZE) {
 		amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset,
 						curr_read_ptr, DATA_MAX_SIZE);
 		if (amtcopy != DATA_MAX_SIZE) {
-			os_printf("Failed to write image. Remaining bytes: %d\n",
+			os_printf("Failed to write image. Remaining bytes: %lld\n",
 						byte_cnt);
 			res = BOLT_ERR_IOERR;
 			goto exit;
@@ -860,7 +856,7 @@ static int fastboot_erase_ptn(const char *devname, const char *partition)
 		amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset,
 						curr_read_ptr, byte_cnt);
 		if (amtcopy != byte_cnt) {
-			os_printf("Failed to write image. Remaining bytes: %d\n",
+			os_printf("Failed to write image. Remaining bytes: %lld\n",
 						byte_cnt);
 			res = BOLT_ERR_IOERR;
 			goto exit;
