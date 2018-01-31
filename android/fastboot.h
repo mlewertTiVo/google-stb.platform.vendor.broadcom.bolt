@@ -1,23 +1,39 @@
-/*****************************************************************************
-*
-* Copyright 2014-2015 Broadcom Corporation.  All rights reserved.
-*
-* Unless you and Broadcom execute a separate written software license
-* agreement governing use of this software, this software is licensed to you
-* under the terms of the GNU General Public License version 2, available at
-* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
-*
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a
-* license other than the GPL, without Broadcom's express prior written
-* consent.
-*
-*****************************************************************************/
+/*
+ * Copyright 2014-current Broadcom Corporation.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef _FASTBOOT_H
 #define _FASTBOOT_H
 
 #include "android_types.h"
+
+/* TODO:add runtime check to make sure the board has enough memory for staging buffer*/
+/* Use upper 512MB of DDR0 for Android fastboot flash. It is assumed that
+ * Android runs on platform with at least 1GB of DDR memory.
+ * It is also assumed that BOLT code won't be using upper 512MB.
+ * The staging buffer size is set to be 256MB. It could be increased
+ * to 512MB but we don't so we can have upper most 256MB for debugging
+ * purpose. Any image bigger than the staging buffer size will
+ * be re-sparsed by host fastboot application.
+ */
+#if defined(CONFIG_BCM7278)
+#define FB_FLASH_STAGING_BUFFER         (0x60000000)
+#else
+#define FB_FLASH_STAGING_BUFFER         (0x20000000)
+#endif
+#define FB_FLASH_STAGING_BUFFER_SIZE    (1024*1024*256)
 
 #define FASTBOOT_VERSION                "0.4"
 #define FASTBOOT_HANDSHAKE              "FB01"
