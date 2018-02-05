@@ -89,8 +89,8 @@ extern "C" {
 #define MEMSYS_FW_VERSION_ENG_SHIFT         0
     
 #define MEMSYS_FW_VERSION_MAJOR             5
-#define MEMSYS_FW_VERSION_MINOR             6
-#define MEMSYS_FW_VERSION_PATCH             0
+#define MEMSYS_FW_VERSION_MINOR             4
+#define MEMSYS_FW_VERSION_PATCH             9
 #define MEMSYS_FW_VERSION_ENG               0
     
 #define MEMSYS_FW_VERSION                                         \
@@ -385,9 +385,6 @@ typedef enum memsys_error_shmoo
     MEMSYS_ERROR_SHMOO_DCPU_DMEM_MISMATCH,                  // word 4: 0x00002000
     MEMSYS_ERROR_SHMOO_DCPU_TIMEOUT,                        // word 4: 0x00004000
     MEMSYS_ERROR_SHMOO_LP4_DQS_OSC_INVALID,                 // word 4: 0x00008000
-    MEMSYS_ERROR_SHMOO_LP4_DT_TIMEOUT,                      // word 4: 0x00100000
-    MEMSYS_ERROR_SHMOO_LP4_DT_OSC_START_FAIL,               // word 4: 0x00200000
-    MEMSYS_ERROR_SHMOO_LP4_DT_READ_OSC_FAIL,                // word 4: 0x00400000
 
     MEMSYS_ERROR_SHMOO_MAX
 } memsys_error_shmoo_e;
