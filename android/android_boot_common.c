@@ -86,7 +86,9 @@ struct img_hdr {
 
 	unsigned tags_addr;
 	unsigned page_size;
-	unsigned unused[2];
+	unsigned unused;
+
+	unsigned os_version;
 
 	unsigned char name[BOOT_NAME_SIZE];
 	unsigned char cmdline[BOOT_ARGS_SIZE];
@@ -640,6 +642,7 @@ static int imgload_internal(enum bootpath boot_path, int slot, fileio_ctx_t *fsc
 	char bootargs_buf[BOOT_ARGS_SIZE];
 	int bootargs_len;
 	int skip_ramfs = (boot_path == BOOTPATH_AB_SYSTEM) ? 1 : 0;
+	unsigned ver, lvl;
 
 	if (fs_read(fsctx, ref, (uint8_t *) &hdr, sizeof(hdr)) != sizeof(hdr))
 		return BOLT_ERR_IOERR;
@@ -662,6 +665,12 @@ static int imgload_internal(enum bootpath boot_path, int slot, fileio_ctx_t *fsc
 	os_printf("%14s: %p\n", "second_addr", hdr.second_addr);
 	os_printf("%14s: %p\n", "tags_addr", hdr.tags_addr);
 	os_printf("%14s: %u\n", "page_size", hdr.page_size);
+	ver = (hdr.os_version >> 11) & 0x003FFFFF;
+	lvl = hdr.os_version & 0x000007FF;
+	os_printf("%14s: %u.%u.%u\n", "android_ver",
+		(ver>>14)&0x0000007F, (ver>>7)&0x0000007F, ver&0x0000007F);
+	os_printf("%14s: %u-%u\n", "sec_patch",
+		lvl&0x0000000F, ((lvl>>4)&0x0000007F)+2000);
 	os_printf("%14s: '%s'\n", "name", hdr.name);
 	os_printf("%14s: '%s'\n", "cmdline", hdr.cmdline);
 	os_printf("%14s: %u\n", "id", hdr.id);
