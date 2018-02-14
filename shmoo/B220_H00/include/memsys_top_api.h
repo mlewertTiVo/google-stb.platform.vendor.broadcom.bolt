@@ -90,7 +90,7 @@ extern "C" {
     
 #define MEMSYS_FW_VERSION_MAJOR             5
 #define MEMSYS_FW_VERSION_MINOR             6
-#define MEMSYS_FW_VERSION_PATCH             0
+#define MEMSYS_FW_VERSION_PATCH             1
 #define MEMSYS_FW_VERSION_ENG               0
     
 #define MEMSYS_FW_VERSION                                         \
