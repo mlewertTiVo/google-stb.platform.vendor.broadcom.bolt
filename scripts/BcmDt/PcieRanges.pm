@@ -342,7 +342,7 @@ sub processed_pcie_outbound_ranges_board()
 		my @ranges;
 		my $chip = ::get_family_name();
 
-		if ($chip =~ /^(7250|7260|7268|7271|7364|7366|74371|7439|7445)/
+		if ($chip =~ /^(7250|7255|7260|7268|7271|7364|7366|74371|7439|7445)/
 		    && $num_pcie == 1) {
 			# The only device gets the full 512M.
 			@ranges = (@r0, @r1, @r2, @r3);

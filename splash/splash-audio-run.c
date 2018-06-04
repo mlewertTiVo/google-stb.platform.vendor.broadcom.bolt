@@ -350,7 +350,7 @@ int splash_audio_script_run(unsigned int size, unsigned int address,
 #endif
 
 	for (addr = BCHP_AUD_FMM_BF_CTRL_SOURCECH_RINGBUF_0_RDADDR;
-		addr <= BCHP_AUD_FMM_BF_CTRL_DESTCH_RINGBUF_11_MI_VALID;
+		addr <=  BCHP_AUD_FMM_BF_CTRL_REG_END;
 		addr += sizeof(addr))
 		BDEV_AUD_WRITE(addr, 0);
 
@@ -362,10 +362,10 @@ int splash_audio_script_run(unsigned int size, unsigned int address,
 	 * buffer address and the first source channel ring buffer address.
 	 * These may not be contiguous in the future chips.
 	 */
-	count = (BCHP_AUD_FMM_BF_CTRL_DESTCH_RINGBUF_11_RDADDR -
-		BCHP_AUD_FMM_BF_CTRL_SOURCECH_RINGBUF_0_RDADDR) / addr_increment;
+	count = 2 * (BCHP_AUD_FMM_BF_CTRL_SOURCECH_CFGi_ARRAY_END + 1 +
+			BCHP_AUD_FMM_BF_CTRL_DESTCH_CFGi_ARRAY_END + 1);
 	for (i = 0, addr = BCHP_AUD_FMM_BF_CTRL_SOURCECH_RINGBUF_0_RDADDR;
-		i <= count; addr += addr_increment, i++) {
+		i < count; addr += addr_increment, i++) {
 		data0 = data + i * 0x800;
 		data1 = data0 + size - 1;
 		BDEV_AUD_WRITE(addr, data0);

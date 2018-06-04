@@ -1,5 +1,5 @@
 ################################################################################
-# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -10,16 +10,18 @@ package BcmSdio;
 use strict;
 use warnings FATAL=>q(all);
 
+my $reg_type1 = "BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0";
+my $reg_type2 = "BCHP_SUN_TOP_CTRL_GENERAL_CTRL_1";
+
 sub new($$) {
 	my ($class, $s) = @_;
 	bless $s, $class;
 	return $s;
 }
 
-sub get_num($) {
-	my ($f) = @_;
-	my $rh = ::get_bchp_info($f->{familyname});
-	my $bchp_defines = $rh->{rh_defines};
+# get_num_sdio, unlike get_num, takes as its argument the bchp_define hahsref.
+sub get_num_sdio($) {
+	my ($bchp_defines) = @_;
 	my $count = 0;
 	my $tmp;
 
@@ -31,6 +33,15 @@ sub get_num($) {
 	cfg_error("unexpected script problem with get_num_sdio(): $count < 0")
 		if scalar($count) < 0;
 	return $count;
+}
+
+# get_num, unlike get_num_sdio, takes as its argument a Board object.
+sub get_num($) {
+	my ($f) = @_;
+	die if (!ref $f || "Board" ne ref $f);
+	my $rh = ::get_bchp_info($f->{familyname});
+	my $bchp_defines = $rh->{rh_defines};
+	return get_num_sdio($bchp_defines);
 }
 
 ########################################################################
@@ -59,18 +70,16 @@ sub get_num($) {
 sub get_pinsel_type($)
 {
 	my ($f) = @_;
-	my ($family_name) = $f->{familyname};
-	my %pin_sel_tbl = (
-	       "7250b0" => "1",
-	       "7260a0" => "2",
-	       "7268b0" => "2",
-	       "7271b0" => "2",
-	       "7364b0" => "1",
-	       "7364c0" => "1",
-        );
+	my $rh = ::get_bchp_info($f->{familyname});
+	my $bchp_defines = $rh->{rh_defines};
 
-	return ($pin_sel_tbl{$family_name})
-		if defined($pin_sel_tbl{$family_name});
+	my $type1 = $reg_type1 . '_sdio0_alt_pin_sel_MASK';
+	my $type2_0 = $reg_type2 . '_sdio_0_pin_sel_MASK';
+	my $type2_1 = $reg_type2 . '_sdio_1_pin_sel_MASK';
+
+	return 1 if defined($bchp_defines->{$type1});
+	return 2 if defined($bchp_defines->{$type2_0}) and
+		defined($bchp_defines->{$type2_0});
 
 	return 0;
 }
@@ -105,8 +114,8 @@ sub prepare_sdio_pinsel_type1($) {
 		aon_gpio_15 => 'SD_CARD0_WPROT',
 		aon_gpio_14 => 'SD_CARD0_PRES',);
 	my $pattern = "sd_card0_";
-	my $mask = "BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_sdio0_alt_pin_sel_MASK";
-	my $val = "1<<BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_sdio0_alt_pin_sel_SHIFT";
+	my $mask = $reg_type1 . "_sdio0_alt_pin_sel_MASK";
+	my $val = "1<<" . $reg_type1 . "_sdio0_alt_pin_sel_SHIFT";
 
 	my $fsbl_from_def = 0;
 	my $fsbl_from_alt = 0;
@@ -144,8 +153,7 @@ sub prepare_sdio_pinsel_type1($) {
 			}
 		}
 		if ($ssbl_from_alt) {
-			$b->{sdio_pinsel}->{regset} =
-				"BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0";
+			$b->{sdio_pinsel}->{regset} = $reg_type1;
 			$b->{sdio_pinsel}->{mask} = $mask;
 			$b->{sdio_pinsel}->{val} = $val;
 		}
@@ -203,10 +211,6 @@ sub prepare_sdio_pinsel_type2($) {
 	my $fsbl_1_def = 0;
 	my $fsbl_1_alt = 0;
 	my $pattern = "sd_card";
-	my $mask0 = "BCHP_SUN_TOP_CTRL_GENERAL_CTRL_1_sdio_0_pin_sel_MASK";
-	my $mask1 = "BCHP_SUN_TOP_CTRL_GENERAL_CTRL_1_sdio_1_pin_sel_MASK";
-	my $val0 = "(1<<BCHP_SUN_TOP_CTRL_GENERAL_CTRL_1_sdio_0_pin_sel_SHIFT)";
-	my $val1 = "(1<<BCHP_SUN_TOP_CTRL_GENERAL_CTRL_1_sdio_0_pin_sel_SHIFT)";
 
 	for my $p (@{$board->{pmux}}) {
 		my @pins = $p->get_pins(1);
@@ -232,6 +236,10 @@ sub prepare_sdio_pinsel_type2($) {
 	}
 
 	for $b (::get_valid_boards()) {
+		my $mask0 = $reg_type2 . "_sdio_0_pin_sel_MASK";
+		my $mask1 = $reg_type2 . "_sdio_1_pin_sel_MASK";
+		my $val0 = "(1<<" . $reg_type2 . "_sdio_0_pin_sel_SHIFT)";
+		my $val1 = "(1<<" . $reg_type2 . "_sdio_1_pin_sel_SHIFT)";
 		my $ssbl_0_def = $fsbl_0_def;
 		my $ssbl_0_alt = $fsbl_0_alt;
 		my $ssbl_1_def = $fsbl_1_def;
@@ -259,8 +267,7 @@ sub prepare_sdio_pinsel_type2($) {
 			}
 		}
 		if ($ssbl_0_alt || $ssbl_1_alt) {
-			$b->{sdio_pinsel}->{regset} =
-				"BCHP_SUN_TOP_CTRL_GENERAL_CTRL_1";
+			$b->{sdio_pinsel}->{regset} = $reg_type2;
 			if (!$ssbl_0_alt) {
 				$mask0 = "0";
 				$val0 = "0";

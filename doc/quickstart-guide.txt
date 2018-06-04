@@ -121,9 +121,9 @@ environments PATH variable. There is no special
 TOOLCHAIN variable or anything else to set up.
 
 In this example the Broadcom supplied GCC toolchain 
-package is called 'stbgcc-4.8-1.1.tar.bz2'
+package is called 'stbgcc-6.3-1.2.tar.bz2'
 and the BOLT source code package is called
-'bolt-v1.34.tgz' The exact names depend upon
+'bolt-v1.42.tgz' The exact names depend upon
 the release you get from us.
 
 First unpack and install the toolchain in
@@ -138,22 +138,22 @@ as an example location only.
 Now copy over the toolchain from the install media:
 
 ----
- [user@machine]$cp /media/cdrom/broadcom/stbgcc-4.8-1.1.tar.bz2 /projects/stbtc/
+ [user@machine]$cp /media/cdrom/broadcom/stbgcc-6.3-1.2.tar.bz2 /projects/stbtc/
 ----
 
 Unpack it:
 
 ----
  [user@machine]$cd /projects/stbtc/
- [user@machine]$bunzip2  stbgcc-4.8-1.1.tar.bz2
- [user@machine]$tar -xf stbgcc-4.8-1.1.tar
+ [user@machine]$bunzip2  stbgcc-6.3-1.2.tar.bz2
+ [user@machine]$tar -xf stbgcc-6.3-1.2.tar
 ----
 
 
 Set PATH:
 
 ----
- [user@machine]$export PATH=/projects/stbtc/stbgcc-4.8-1.1/bin:$PATH
+ [user@machine]$export PATH=/projects/stbtc/stbgcc-6.3-1.2/bin:$PATH
 ----
 
 That's all there is to it!
@@ -163,8 +163,8 @@ toolchain's gcc compiler:
 
 ----
 [user@machine]$ arm-linux-gcc --version
-arm-linux-gcc (Broadcom stbgcc-4.8-1.1) 4.8.4 20141110 (prerelease)
-Copyright (C) 2013 Free Software Foundation, Inc.
+arm-linux-gcc (crosstool-NG ) 6.3.0
+Copyright (C) 2016 Free Software Foundation, Inc.
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ----
@@ -179,8 +179,8 @@ your development location. In this case we use the
 
 ----
  [user@machine]$mkdir ~/bolt
- [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.34.tgz
- [user@machine]$tar -xzf bolt-v1.34.tgz
+ [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.42.tgz
+ [user@machine]$tar -xzf bolt-v1.42.tgz
 ----
 
 
@@ -191,7 +191,7 @@ style line endings for the UNIX(R) style BOLT requires. BOLT will fail to
 build if this happens.
 
 ----
- [user@machine]$cd ~/bolt/bolt-v1.34
+ [user@machine]$cd ~/bolt/bolt-v1.42
 ----
 
 
@@ -236,10 +236,10 @@ bolt-$(VERSION)-$(FAMILY)-[ba|bb|xx]-bfw-$(BFW_VER).bin
 [source,shell]
 ----
 ls -l objs/7445d0/bolt-*.bin
-lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.34-7445d0-ba-bfw-4.1.5.bin
-lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.34-7445d0-bb-bfw-4.1.5.bin
--rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.34-7445d0-ba-bfw-4.1.5.bin
--rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.34-7445d0-bb-bfw-4.1.5.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-ba.bin -> bolt-v1.42-7445d0-ba-bfw-4.1.5.bin
+lrwxrwxrwx 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-bb.bin -> bolt-v1.42-7445d0-bb-bfw-4.1.5.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.42-7445d0-ba-bfw-4.1.5.bin
+-rw-rw-r-- 1 user group 371060 Jan 1 12.59 objs/7445d0/bolt-v1.42-7445d0-bb-bfw-4.1.5.bin
 ----
 
 For brevity we also symlink the longer BOLT binary names

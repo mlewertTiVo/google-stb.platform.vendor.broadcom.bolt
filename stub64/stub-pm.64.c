@@ -10,7 +10,7 @@
 #include <aarch64/armv8-regs.h>
 #include <aarch64/armv8-cop.h>
 #include <aon_defs.h>
-#include <psci64.h>
+#include "stub.64.h"
 
 /*
  * On S3 wake reprogram VBAR_EL3 (PSCI vector table base)

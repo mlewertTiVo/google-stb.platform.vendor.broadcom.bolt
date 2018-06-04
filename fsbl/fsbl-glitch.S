@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -138,7 +138,11 @@ clear_sram:
 	ldr		r1, =anti_glitch_b
 
 	@ A15:0xffe1_0000, A53:0xffe2_0000
+#if (CFG_ZEUS_VERSION >= 0x510)
+	ldr		r2, =(SRAM_ADDR + SRAM_LEN - SEC_PARAM_LEN)
+#else
 	ldr		r2, =(SRAM_ADDR + SRAM_LEN)
+#endif
 	mov  		r3, #0
 	sram_memset	clear2, r1, r2, r3
 
@@ -236,8 +240,10 @@ ENTRY_PROC(anti_glitch_b)
 	rsb		r4, r5, r4
 	str		r4,	[r1]
 
+#if !CFG_ZEUS5_1
 	ldr		r2,	=sec_mitch_check
 	blx		r2
+#endif
 
 	ldr		r2,	=anti_glitch_a
 	blx		r2
@@ -290,6 +296,10 @@ ENTRY_PROC(anti_glitch_d)
 	ldr		r3,	=handle_boot_err
 
 	@ call linux_entry()
+#if CFG_SSBM
+	@ pass 0 into SSBM. It is used as a S3 flag for SSBM.
+	mov		r0,	#0
+#endif
 	blx		r2
 	mov		r0,	#ERR_GLITCH_TRACE_CHECK
 	blx		r3

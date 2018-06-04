@@ -53,7 +53,7 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[]);
 static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[]);
 #if defined(DVFS_SUPPORT)
 static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[]);
-static unsigned int dvfs_show_board_config(struct board_type *b, struct fsbl_info *inf);
+static unsigned int dvfs_show_board_config(struct fsbl_info *inf);
 #endif
 #endif
 static int ui_cmd_rts(ui_cmdline_t *cmd, int argc, char *argv[]);
@@ -712,7 +712,7 @@ static int ui_cmd_boards(ui_cmdline_t *cmd, int argc, char *argv[])
 	xprintf(" AVS %s, load/run status: %x\n", s, inf->avs_err);
 
 #if defined(DVFS_SUPPORT) && !defined(SECURE_BOOT)
-	if(dvfs_show_board_config(b, inf))
+	if (dvfs_show_board_config(inf))
 		return BOLT_ERR;
 #endif
 
@@ -800,10 +800,10 @@ static int ui_cmd_setboard(ui_cmdline_t *cmd, int argc, char *argv[])
 }
 
 #if defined(DVFS_SUPPORT)
-static unsigned int dvfs_show_board_config(struct board_type *b, struct fsbl_info *inf)
+static unsigned int dvfs_show_board_config(struct fsbl_info *inf)
 {
 	char *ds;
-	unsigned int pmap_id;
+	struct board_type *b;
 	const struct dvfs_params *dvfs = board_dvfs();
 
 	if (!dvfs)
@@ -827,13 +827,8 @@ static unsigned int dvfs_show_board_config(struct board_type *b, struct fsbl_inf
 		break;
 	}
 
-	pmap_id = FSBL_HARDFLAG_PMAP_ID(inf->saved_board.hardflags);
-	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD) {
-		/* respect the board default PMap configuration */
-		pmap_id = dvfs->pmap;
-	}
 	xprintf(" DVFS mode: %s (%d), ", ds, dvfs->mode);
-	xprintf(" pmap: %d, ", pmap_id);
+	xprintf(" pmap: %d, ", avs_get_current_pmap());
 	xprintf(" pstate: %d\n", dvfs->pstate);
 	return BOLT_OK;
 }
@@ -870,7 +865,7 @@ static int ui_cmd_pmap(ui_cmdline_t *cmd, int argc, char *argv[])
 		return BOLT_ERR_INV_PARAM;
 	}
 
-	pmap_id_old = board_pmap();
+	pmap_id_old = avs_get_current_pmap();
 	if (is_pmap_valid(pmap_id_old))
 		xprintf("Stored PMap ID %d is invalid.\n", pmap_id_old);
 

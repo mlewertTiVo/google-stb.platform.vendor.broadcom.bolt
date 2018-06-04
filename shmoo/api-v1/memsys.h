@@ -33,8 +33,13 @@
        bits[3:0]  - Number of EDIS HW blocks for each PHY
        bits[31:4] - Register offset between EDIS HW blocks (0 for one EDIS)
 */
+#ifdef BCHP_MEMC_EDIS_0_1_REG_START
 #define EDIS_NPHY 0x2 /* FIXME: should snoop from RDB on config */
 #define EDIS_OFFS (BCHP_MEMC_EDIS_0_1_REG_START - BCHP_MEMC_EDIS_0_0_REG_START)
+#else
+#define EDIS_NPHY 0x1
+#define EDIS_OFFS 0
+#endif
 
 #define MEMC(n)		BCHP_MEMC_GEN_##n##_CORE_REV_ID
 #define SHIM_PHY(n)	BCHP_SHIMPHY_ADDR_CNTL_##n##_CONFIG

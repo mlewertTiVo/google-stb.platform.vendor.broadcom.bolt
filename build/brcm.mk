@@ -38,13 +38,17 @@ stubpatch = \
 		-o $(ODIR)/bolt.bin > /dev/null 2>&1; \
 	fi
 
-smmpatch = \
-	$(Q)if [ -f $(ODIR)/smm.64.bin ]; then \
-		echo "  PATCH   $(ODIR)/smm.64.bin"; \
-		scripts/bpatch.pl -a $(SMM64_OFFSET) \
-		-p $(ODIR)/smm.64.bin \
+secparampatch = \
+	$(Q)if [ -f $(ODIR)/secparam.bin ]; then \
+		echo "  PATCH   $(ODIR)/secparam.bin"; \
+		scripts/bpatch.pl -a $(SEC_PARAM_OFFSET) \
+		-p $(ODIR)/secparam.bin \
 		-i $(ODIR)/bolt.bin \
 		-o $(ODIR)/bolt.bin > /dev/null 2>&1; \
+		scripts/bpatch.pl -a $(SEC_PARAM_OFFSET) \
+		-p $(ODIR)/secparam.bin \
+		-i $(ODIR)/fsbl.bin \
+		-o $(ODIR)/fsbl.bin > /dev/null 2>&1; \
 	fi
 
 ssbmpatch = \

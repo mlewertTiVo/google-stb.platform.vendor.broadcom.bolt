@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -23,6 +23,9 @@
 #include <lib_types.h>
 #include "mmap-dram.h" /* gen/${family}/ */
 #include "ssbl-sec.h"
+#if CFG_MON64
+#include "mon64.h"
+#endif
 
 /* The stack and heap must be SECTION (1MiB) aligned and
 sized in multiples of it for us to reliably mark *only*
@@ -293,17 +296,19 @@ static void construct_dram_pages(uint32_t *pt1)
 
 /* Use the pre-processor to stringify the name
 */
+#define _PSCI32_VAR(odir, modname) _binary_ ## odir ## _psci32_bin_ ## modname
+#define PSCI32_VAR(odir, modname) _PSCI32_VAR(odir, modname)
+
+extern unsigned char PSCI32_VAR(ODIR, start);
+extern unsigned char PSCI32_VAR(ODIR, size);
+
+#if !CFG_MON64
 #define _SMM_VAR(odir, modname) _binary_ ## odir ## _smm_64_bin_ ## modname
 #define SMM_VAR(odir, modname) _SMM_VAR(odir, modname)
 
 extern unsigned char SMM_VAR(ODIR, start);
 extern unsigned char SMM_VAR(ODIR, size);
 
-#define _PSCI32_VAR(odir, modname) _binary_ ## odir ## _psci32_bin_ ## modname
-#define PSCI32_VAR(odir, modname) _PSCI32_VAR(odir, modname)
-
-extern unsigned char PSCI32_VAR(ODIR, start);
-extern unsigned char PSCI32_VAR(ODIR, size);
 
 static void install_smm64(void)
 {
@@ -322,6 +327,14 @@ static void install_smm32(void)
 		(uint8_t *)&PSCI32_VAR(ODIR, start),
 		(uint32_t)&PSCI32_VAR(ODIR, size));
 }
+#else
+static void psci32_install(void)
+{
+	memcpy((uint8_t *)PSCI_BASE,
+		(uint8_t *)&PSCI32_VAR(ODIR, start),
+		(uint32_t)&PSCI32_VAR(ODIR, size));
+}
+#endif
 
 /*
  * SSBL code for Power on/cold boot.
@@ -430,6 +443,28 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	supplement_fsbl_pagetable(pt_1st, was_guard_page_correct);
 	/* The whole DDR area has been marked XN */
 #ifdef STUB64_START
+#if CFG_MON64
+	if (arch_booted64()) {
+#ifdef SECURE_BOOT
+		/* Delay mon64 decryption until SSBL is up */
+#else
+		__puts("INSTALL mon64 @ ");
+		writehex(MON64_BASE);
+		mon64_install(M64BIN_RAM_ADDR, M64BIN_SIZE, NULL);
+#endif
+	}
+	else {
+		__puts("CLR PSCI MEM @ ");
+		writehex(PSCI_BASE);
+		memset((void *)PSCI_BASE, 0, PSCI_SIZE);
+		puts(" OK");
+
+		__puts("INSTALL psci32 @ ");
+		writehex(PSCI_BASE);
+		psci32_install();
+	}
+
+#else /* CFG_MON64 */
 	__puts("CLR PSCI MEM @ ");
 	writehex(PSCI_BASE);
 	memset((void *)PSCI_BASE, 0, PSCI_SIZE);
@@ -442,10 +477,15 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 		install_smm32();
 
 	writehex(PSCI_BASE);
+#endif /* CFG_MON64 */
 
 	/* TBD: 2nd level 4KiB Table */
-#ifndef SSBM_RAM_ADDR
-	/* With SSBM, page table for PSCI is set after SSBL page is set up */
+#if !CFG_ZEUS5_1
+	/* For ZEUS5_1, SSBM is currently combined with PSCI in terms of address
+	 * and page table for PSCI is set after SSBL page is set up.
+	 * For all other chips, SSBM and PSCI are still separate and
+	 * PSCI page table still is set up separately here.
+	 */
 	arch_mark_executable(PSCI_BASE, SECTION_SIZE, true);
 	arch_mark_uncached(PSCI_BASE,  SECTION_SIZE);
 #endif
@@ -461,7 +501,7 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	if (_fsbl_info->psci_base != PSCI_BASE)
 		reprogram_psci_base(_fsbl_info->psci_base, PSCI_BASE,
 			arch_booted64(), false);
-#endif
+#endif /* STUB64_START */
 	arch_mark_executable(SRAM_ADDR, SRAM_LEN, false);
 	set_ssbl_page(pt_1st, _fdata);
 
@@ -504,7 +544,11 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	puts(" OK");
 
 	__puts("CLR SRAM ");
+#if (CFG_ZEUS_VERSION >= 0x510)
+	memset((void *)SRAM_ADDR, 0, SRAM_LEN - SEC_PARAM_LEN);
+#else
 	memset((void *)SRAM_ADDR, 0, SRAM_LEN);
+#endif
 	puts(" OK");
 
 #if (CFG_CMD_LEVEL >= 5)
@@ -543,7 +587,7 @@ void ssbl_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	puts(" OK");
 
 	puts("GO!");
-	
+
 	/* SWBOLT-1757: The compiler may choose to put its
 	 * parameters on the stack so we set SP last, just
 	 * before we call ssbl_main() or else _fbss, _ebss

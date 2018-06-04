@@ -64,10 +64,36 @@ struct tz_reg_group s_tz_reg_groups[] = {
 
 struct tz_mem_layout s_tz_mem_layout_32MB = {
 	.tzioc_offset   = 0x00000000,
-	.tzioc_size     = 0x01000000,
+	.tzioc_size     = 0x00400000,
 
-	.os_offset      = 0x01000000,
-	.os_size        = 0x01000000,
+	.os_offset      = 0x00400000,
+	.os_size        = 0x01c00000,
+
+	/* overlapping, non-persistant */
+	.load_offset    = 0x01600000,
+	.load_size      = 0x00a00000,
+
+	.t2n_offset     = 0x00001000,
+	.t2n_size       = 0x000ff000,
+	.n2t_offset     = 0x00100000,
+	.n2t_size       = 0x000ff000,
+
+	.tzheaps_offset = 0x00200000,
+	.tzheaps_size   = 0x00100000,
+	.nwheaps_offset = 0x00300000,
+	.nwheaps_size   = 0x00100000
+};
+
+
+struct tz_mem_layout s_tz_mem_layout_64MB = {
+	.tzioc_offset   = 0x00000000,
+	.tzioc_size     = 0x00800000,
+
+	.os_offset      = 0x00800000,
+	.os_size        = 0x02c00000,
+
+	.load_offset    = 0x03400000,
+	.load_size      = 0x00c00000,
 
 	.t2n_offset     = 0x00001000,
 	.t2n_size       = 0x001ff000,
@@ -75,27 +101,8 @@ struct tz_mem_layout s_tz_mem_layout_32MB = {
 	.n2t_size       = 0x001ff000,
 
 	.tzheaps_offset = 0x00400000,
-	.tzheaps_size   = 0x00400000,
-	.nwheaps_offset = 0x00800000,
-	.nwheaps_size   = 0x00800000
-};
-
-
-struct tz_mem_layout s_tz_mem_layout_16MB = {
-	.tzioc_offset   = 0x00000000,
-	.tzioc_size     = 0x00400000,
-
-	.os_offset      = 0x00400000,
-	.os_size        = 0x00c00000,
-
-	.t2n_offset     = 0x00001000,
-	.t2n_size       = 0x0007f000,
-	.n2t_offset     = 0x00080000,
-	.n2t_size       = 0x0007f000,
-
-	.tzheaps_offset = 0x00100000,
-	.tzheaps_size   = 0x00100000,
-	.nwheaps_offset = 0x00200000,
+	.tzheaps_size   = 0x00200000,
+	.nwheaps_offset = 0x00600000,
 	.nwheaps_size   = 0x00200000
 };
 

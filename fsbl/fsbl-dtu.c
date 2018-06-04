@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -229,12 +229,11 @@ static inline void dtu_config_s3(void)
  */
 static bool dtu_config_status(void)
 {
-	bool configured = false;
-
-#if (CFG_ZEUS4_2_1 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
-	configured = (*(uint32_t *)(PARAM_DTU_ENABLE + SRAM_ADDR) != 0);
+#if (CFG_ZEUS_VERSION >= 0x421)
+	return (*(uint32_t *)(SEC_PARAM_START_SRAM + PARAM_DTU_ENABLE) != 0);
+#else
+	return false;
 #endif
-	return configured;
 }
 
 /*
@@ -336,6 +335,12 @@ bool dtu_translate(unsigned int memc_index, bool enable)
 	if (timeout >= DTU_TIMEOUT) {
 		puts("dtu_translate - timeout");
 		status = false;
+	} else {
+		__puts("DTU: ");
+		if (enable)
+			puts("enabled");
+		else
+			puts("disabled");
 	}
 
 	return status;
@@ -531,6 +536,34 @@ void dtu_verify(unsigned int num_memc)
 	if (enabled) {
 		for (index = 0; index < num_memc; index++)
 			dtu_verify_map(index);
+	}
+}
+
+/*
+ * dtu_init
+ * Disable DTU when it is disabled in parameter section. We need to
+ * disable DTU for backward compatibilty purpose(BFW 4.3.5 needs DTU
+ * disabled before it is loaded). For BFW 4.2.5 or versions that released
+ * later, DTU can be either disabled or enabled after loading BFW
+ */
+void dtu_init(struct board_type *b)
+{
+	unsigned int index;
+	bool enable;
+
+	if (!dtu_is_available() || dtu_is_disabled())
+		return;
+
+	enable = dtu_config_status();
+
+	/* If DTU is disabled in parameter section, disable DTU
+	 * otherwise let dtu_load enable the DTU
+	*/
+	if (!enable) {
+		for (index = 0; index < b->nddr; index++) {
+			dtu_reload(index, false);
+			dtu_translate(index, false);
+		}
 	}
 }
 

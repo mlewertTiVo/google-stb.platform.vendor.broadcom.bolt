@@ -133,6 +133,13 @@ ENTRY_PROC(bolt_launch32)
 END_PROC(bolt_launch32)
 
 
+ENTRY_PROC(bolt_launch_mon64)
+	mov	r0, r1
+	mov	r4, #0
+	b	psci_exec
+END_PROC(bolt_launch_mon64)
+
+
 ENTRY_PROC(psci)
 	smc	#0 /* do the PSCI call */
 	isb

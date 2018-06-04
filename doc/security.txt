@@ -20,7 +20,7 @@ names:
  ASL - security/<chip family>/asl-lib.a 
  BSL - security/<chip family>/bsl-lib.a 
 
-The generic BOLT release ships with an *EMPTY* ASL, and a BSL made with the
+The generic BOLT release ships only with a BSL made with the
 following (default) build options:
 
 ----
@@ -33,18 +33,6 @@ are in general only for Broadcom internal usage.
 The default security build options can be seen by doing 'make opts' in the
 main bolt directory. These security options are NOT set in the configuration
 scripts and have to be used on the BOLT make commandline.
-
-If you require ASL or BSL for another configuration please contact
-your FAE. Once delivered, please replace the existing ASL or BSL
-with the new libraries.
-
-Note that the build options used to make the the ASL and BSL must match
-the build options used to make BOLT. E.g. if you have an ASL for secure
-boot (SECURE_BOOT=y) for a 7445d0 chip, you would create a new bolt
-using 'make 7445d0 SECURE_BOOT=y'
-
-NOTE: Be aware that if you delete ASL or BSL libraries then BOLT will
-recreate EMPTY versions of them at build time.
 
 If we make with SECURE_BOOT=y then we no longer load the SHMOO section
 of BOLT but go with fixed MCBs in the MEMSYS section of BOLT. This security
@@ -194,7 +182,7 @@ Example of patching a replacement BBL into a BOLT binary:
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2016, Broadcom Ltd.
+Copyright (C) 2018, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.
 

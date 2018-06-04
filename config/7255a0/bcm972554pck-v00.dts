@@ -1,0 +1,8 @@
+&bscd {
+	ina219@40 {
+		compatible = "ti,ina219";
+		reg = <0x40>;
+		/* in micro omhms */
+		shunt-resistor = <20300>;
+	};
+};

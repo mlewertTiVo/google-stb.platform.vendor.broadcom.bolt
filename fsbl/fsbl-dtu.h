@@ -20,11 +20,13 @@
 
 void dtu_load(struct board_type *b, bool warm_boot);
 void dtu_verify(unsigned int num_memc);
+void dtu_init(struct board_type *b);
 
 #else
 
 static inline void dtu_load(struct board_type *b, bool warm_boot) { }
 static inline void dtu_verify(unsigned int num_memc) { }
+static inline void dtu_init(struct board_type *b) { }
 
 #endif
 

@@ -1,0 +1,122 @@
+/***************************************************************************
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ *
+ ***************************************************************************/
+
+/* bolt-stub.lds.in */
+
+MEMORY {
+	fsbl	: ORIGIN = @FSBL_TEXT_ADDR@,	LENGTH = @FSBL_SIZE@
+	bbl		: ORIGIN = @BBL_TEXT_ADDR@,	LENGTH = @BBL_SIZE@
+	shmoo	: ORIGIN = @SHMOO_TEXT_ADDR@,	LENGTH = @SHMOO_SIZE@
+	boards	: ORIGIN = @BOARDS_TEXT_ADDR@,	LENGTH = @BOARDS_SIZE@
+	gap		: ORIGIN = @GAP_TEXT_ADDR@,	LENGTH = @GAP_SIZE@
+	ssbl	: ORIGIN = @SSBL_RAM_ADDR@,	LENGTH = @SSBL_SIZE@
+
+	bfw		: ORIGIN = @BFW_TEXT_ADDR@,	LENGTH = @BFW_SIZE@
+	avs_fw	: ORIGIN = @AVS_TEXT_ADDR@,	LENGTH = @AVS_SIZE@
+	memsys	: ORIGIN = @MEMSYS_TEXT_ADDR@,	LENGTH = @MEMSYS_SIZE@
+	memsys_alt	: ORIGIN = @MEMSYS_ALT_TEXT_ADDR@,	LENGTH = @MEMSYS_ALT_SIZE@
+	mon64_bin	: ORIGIN = @M64BIN_TEXT_ADDR@,	LENGTH = @M64BIN_SIZE@
+}
+
+SECTIONS {
+
+	.fsbl : {
+		* (.fsbl.vectors);
+		. = @SEC_PARAM_OFFSET@;
+		* (.fsbl.init.sec_params);
+		* (.fsbl.stubloader);
+		* (.fsbl.init);
+		* (.fsbl.init.rodata);
+		* (.fsbl.text);
+		* (.fsbl.rodata);
+		* (.fsbl.data);
+		* (.fsbl.bss);
+	} >fsbl
+
+	.bbl : AT(@BBL_TEXT_ADDR@) {
+		* (.bbl.data);
+	} >bbl
+
+	.shmoo : AT(@SHMOO_TEXT_ADDR@) {
+		* (.shmoo.board);
+		* (.shmoo.mcb);
+		* (.shmoo.submcb);
+		* (.shmoo.mcbdata);
+	} >shmoo
+
+	.boards : AT(@BOARDS_TEXT_ADDR@) {
+		* (.boards.header);
+		* (.boards.rodata*);
+	} >boards
+
+	.gap : AT(@GAP_TEXT_ADDR@) {
+	} >gap
+
+	.ssbl : AT(@SSBL_TEXT_ADDR@) {
+		* (.ssbl.vectors);
+		* (.ssbl.init);
+		* (.ssbl.text);
+		* (.ssbl.rodata*);
+		. = ALIGN(4096);
+		* (.ssbl.data*);
+		* (.ssbl.bss*);
+	} >ssbl
+
+	. = ALIGN(4);
+	__exidx_start = .;
+	PROVIDE(__exidx_start = __exidx_start);
+
+	.ARM.exidx :
+	{
+		*(.ARM.exidx* .gnu.linkonce.armexidx.*);
+	} >ssbl /* index entries for section unwinding */
+
+	. = ALIGN(4);
+	__exidx_end = .;
+	PROVIDE(__exidx_end = __exidx_end);
+
+	/* Keep the u32 end of SSBL image marker.
+	 * This ensures the SSBL binary stays the
+	 * same SSBL_SIZE instead of smaller.
+	 */
+	.end : AT(@SSBL_TEXT_ADDR@ + (@SSBL_SIZE@ - 4))
+	{
+		KEEP(* (.ssbl.end));
+	} > ssbl
+
+	.bfw : AT(@BFW_TEXT_ADDR@) {
+		* (.bfw.data);
+	} >bfw
+
+	.avs_fw : AT(@AVS_TEXT_ADDR@) {
+		* (.data);
+	} >avs_fw
+
+	.memsys : AT(@MEMSYS_TEXT_ADDR@) {
+		* (.memsys.init.rodata);
+		* (.memsys.init*);
+		* (.memsys.text);
+		* (.memsys.mcb);
+		* (.memsys.mcbdata);
+		* (.memsys.data);
+	} >memsys
+
+	.memsys_alt : AT(@MEMSYS_ALT_TEXT_ADDR@) {
+		* (.memsys_alt.init.rodata);
+		* (.memsys_alt.init*);
+		* (.memsys_alt.text);
+		* (.memsys_alt.mcb);
+		* (.memsys_alt.mcbdata);
+		* (.memsys_alt.data);
+	} >memsys_alt
+
+	.mon64_bin : AT(@M64BIN_TEXT_ADDR@) {
+		* (.mon64_bin.data);
+	} >mon64_bin
+}

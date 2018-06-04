@@ -29,10 +29,10 @@ void tz_smm_set_params(bolt_loadargs_t *la)
 	r1 = la->la_address;
 	r2 = 0;
 	r3 = la->la_flags;
-	if (la->la_flags&LOADFLG_SECURE) {
+	if (la->la_flags & LOADFLG_SECURE) {
 		t = tz_info();
 		if (t)
-			r2 = (unsigned int)t->dt_addr;
+			r2 = (unsigned int)t->dt_address;
 	} else {
 		bolt_devtree_getenvs(&p);
 		if (p.dt_address)
@@ -40,12 +40,12 @@ void tz_smm_set_params(bolt_loadargs_t *la)
 		r2 = (unsigned long) fdt;
 	}
 	xprintf("SMM: set params for %s...\n",
-			(la->la_flags&LOADFLG_SECURE) ? "BL32" : "BL33");
+                (la->la_flags & LOADFLG_SECURE) ? "Astra" : "Linux");
+
 	b0 = psci(r0, r1, r2, r3);
 	if (PSCI_SUCCESS != b0) {
 		err_msg("SMM: set params failed 0x%lx\n", b0);
 		return;
 	}
-
 #endif /* STUB64_START */
 }

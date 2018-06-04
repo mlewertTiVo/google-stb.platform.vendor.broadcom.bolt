@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -100,6 +100,14 @@ void bolt_launch64_el3(unsigned long ept, unsigned long param1,
 
 void bolt_launch32(unsigned long ept, unsigned long param1,
 		unsigned long param2, unsigned long param3);
+
+#if CFG_MON64
+void bolt_start_mon64(unsigned long param1,
+		unsigned long param2, unsigned long param3);
+
+void bolt_launch_mon64(unsigned long ept, unsigned long param1,
+		unsigned long param2, unsigned long param3);
+#endif
 
 unsigned long psci(unsigned long r0, unsigned long r1,
 		unsigned long r2, unsigned long r3);

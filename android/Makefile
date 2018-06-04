@@ -1,17 +1,17 @@
 ###############################################################################
+#  Copyright 2014-current Broadcom Corporation.
 #
-# Copyright 2014 Broadcom Corporation.  All rights reserved.
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
 #
-# Unless you and Broadcom execute a separate written software license
-# agreement governing use of this software, this software is licensed to you
-# under the terms of the GNU General Public License version 2, available at
-# http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+#       http://www.apache.org/licenses/LICENSE-2.0
 #
-# Notwithstanding the above, under no circumstances may you combine this
-# software in any way with any other Broadcom software provided under a
-# license other than the GPL, without Broadcom's express prior written
-# consent.
-#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 ###############################################################################
 
 SAVED_FAMILY := $(shell [ -e $(GEN)/.family ] && cat $(GEN)/.family || echo unknown)
@@ -31,7 +31,7 @@ endif
 ODIR := objs/$(FAMILY)
 OBJS := init.o arm-eabi.o gpt_table_in_flash.o android_bsu.o \
 	android_boot.o android_fastboot.o android_boot_common.o
-ifeq ($(CFG_TRUSTZONE_MON),1)
+ifeq ($(CFG_TRUSTZONE_CMD),1)
 OBJS += android_trusty_boot.o
 endif
 OBJS += gpt.bin.gen.o
@@ -58,6 +58,7 @@ CFLAGS := $(COMMON_FLAGS) $(ARCH_CFLAGS) -nostdlib -ffreestanding -Os \
 	  $(CSTRICT) -g -ffunction-sections -fdata-sections -DBSU
 CFLAGS += -DDROID_BSU -DDROID_PRODUCT='"${TARGET_BOARD_PLATFORM}"'
 CFLAGS += -DDROID_VERITY_${LOCAL_DEVICE_USE_VERITY}
+CFLAGS += -DDROID_FIXED_SLOT_${LOCAL_DEVICE_USE_FIXED_SLOT}
 AFLAGS := $(COMMON_FLAGS) -D__ASSEMBLER__ -D_ASMLANGUAGE
 LDFLAGS := $(ARCH_LDFLAGS)
 LIBGCC := $(GEN)/android/boltinc/thirdparty/libgcc/libgcc.a

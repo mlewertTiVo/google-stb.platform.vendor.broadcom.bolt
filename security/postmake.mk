@@ -1,5 +1,5 @@
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -27,14 +27,14 @@ ifeq ($(CFG_ZEUS4_1),1)
 endif
 
 ifeq ($(CFG_ZEUS5_1),1)
- SEC_PFX := ba
- SEC_BBL = 2.0.0
- SEC_BFW = 2.0.1
+ SEC_PFX := b0,b1
+ SEC_BBL := 2.0.0,2.1.1
+ SEC_BFW := 2.0.2,2.1.3
 endif
 
 #default
 ifeq ($(SEC_PFX),)
- SEC_PFX := ba,ba,ba,bb,bb
- SEC_BBL := 1.0.0,1.0.0,1.0.0,1.0.1,3.1.1
- SEC_BFW := 1.0.0,1.1.0,2.0.0,4.2.5,4.2.5
+ SEC_PFX := ba,ba,bb,bb,bb
+ SEC_BBL := 1.0.0,1.0.0,1.0.1,3.1.1,3.2.0
+ SEC_BFW := 1.0.0,2.0.0,4.2.5,4.2.5,4.4.2
 endif

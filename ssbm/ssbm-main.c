@@ -11,11 +11,13 @@
 #include <arch-mmu.h>
 #include <arm-start.h>
 #include <arm-macros.h>
+#include <bchp_bsp_glb_control.h>
 #include <bsp_config.h>
 #include <common.h>
 #include <ddr.h>
 #include <hwuart.h>
 #include <lib_types.h>
+#include <ssbl-sec.h>
 
 #include <stdbool.h>
 
@@ -53,13 +55,14 @@ struct fsbl_info *board_info(void)
 	return _fsbl_info;
 }
 
+const uint32_t uart_base = (BCHP_PHYSICAL_OFFSET+BCHP_UARTA_REG_START);
+
 static int putchar(int c)
 {
-	if ((_fsbl_info) && (_fsbl_info->uart_base)) {
-		while (!(DEV_RD(_fsbl_info->uart_base + LSR_REG) & LSR_THRE))
-			;
-		DEV_WR(_fsbl_info->uart_base + THR_REG, c);
-	}
+	while (!(DEV_RD(uart_base + LSR_REG) & LSR_THRE))
+		;
+	DEV_WR(uart_base + THR_REG, c);
+
 	return 0;
 }
 
@@ -253,6 +256,14 @@ void ssbm_main(uint32_t _end, uint32_t _fbss, uint32_t _ebss, uint32_t _fdata)
 	puts("SSBM1");
 	/* if cold boot, just jump to SSBL entry point */
 	if (_fsbl_info != 0) {
+#if CFG_ZEUS5_1
+		/* For non-ZEUS 5.1, MICH is always disabled in FSBL.
+		 *  For ZEUS 5.1, MICH is disabled in SSBM if cold boot;
+		 *  MICH is disabled in FSBL if warm boot
+		 */
+		sec_mitch_check();
+#endif
+
 		reentry = (void (*)(void *))(uintptr_t)SSBL_RAM_ADDR;
 		(*reentry)(_fsbl_info);
 	}

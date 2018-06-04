@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -36,7 +36,6 @@
 #endif
 
 #define TEMP_BUF_SIZE 256
-void     sec_print_bsp_version(void);
 
 static int __maybe_unused sec_check_for_IRDY2(void)
 {
@@ -101,54 +100,29 @@ int sec_get_random_num(uint32_t *dest, int num)
 
 int select_image(image_info *info)
 {
-#ifdef SECURE_BOOT
-	uint32_t __maybe_unused disaster;
-#endif
-	int res, sfd = 0;
+	uint32_t disaster;
 	uint32_t boot_status;
-	uint32_t __maybe_unused *image_ptr = 0;
-	uint32_t __maybe_unused *part_ptr = 0;
-	uint32_t __maybe_unused *ctrl_ptr = 0;
-	uint32_t aon_value = 0;
+	uint32_t image_offset = PARAM_1ST_BFW_PART_OFFSET;
+	uint32_t part_offset = PARAM_1ST_BFW_PART;
+	uint32_t ctrl_offset = PARAM_1ST_BFW_CTRL;
+	uint32_t aon_fw_type = 0;
 	uint32_t boot_status_shift = 0;
-	uint8_t  temp_buf[TEMP_BUF_SIZE];
 
-	/* Use just one AON register to store the status.
-	 * First byte has the status of BFW.
-	 * Second byte has the status of AVS.
-	 * Third byte has the status of MEMSYS.
+	/* Use just one AON register to store the status
+ 	 * LSB:   BFW in lower 6bits
+	 * LSB+1: AVS in lower 6bits
+	 * LSB+2: MEMSYS in lower 6bits
+	 * MSB:   SSBL in lower 6bits, for Zeus 5.1 or later
+	 * MSb:   BSP reset flag
 	 */
 	if (info->image_type != IMAGE_TYPE_BFW)
 		sys_die(DIE_UNKNOWN_IMAGE_TYPE, "unknown image type");
 
-	if (board_bootmode() == BOOT_FROM_EMMC)
-		sfd = bolt_open("flash1");
-	else
-		sfd = bolt_open("flash0");
-	if (sfd < 0) {
-		xprintf("bfw:cannot open flash\n");
-		return 1;
-	}
-
-	res = bolt_readblk(sfd, (bolt_offset_t)SEC_PARAM_OFFSET_FLASH,
-		temp_buf, TEMP_BUF_SIZE);
-	if (res != TEMP_BUF_SIZE) {
-		xprintf("bfw:cannot read flash\n");
-		bolt_close(sfd);
-		return 1;
-	}
-
-	aon_value = AON_FW_TYPE_BFW;
+	aon_fw_type = AON_FW_TYPE_BFW;
 	boot_status_shift = BOOT_BFW_STATUS_SHIFT;
-
-	image_ptr = (uint32_t *)(temp_buf+PARAM_2ND_BFW_PART_OFFSET);
-	part_ptr = (uint32_t *)(temp_buf+PARAM_2ND_BFW_PART);
-	ctrl_ptr = (uint32_t *)(temp_buf+PARAM_2ND_BFW_CTRL);
-	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &= ~AON_FW_TYPE_MASK;
-	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |= aon_value;
-
 	boot_status = REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
-#ifdef SECURE_BOOT
+	info->ctrl_word = *(uint32_t *)(SEC_PARAM_START_SRAM + ctrl_offset);
+
 #ifdef CFG_FULL_EMULATION
 	/* no sec in generic emulation */
 	disaster = 0;
@@ -160,9 +134,9 @@ int select_image(image_info *info)
 	if ((disaster &
 		BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR_DISASTER_RECOVER_MASK) ||
 		(boot_status & BOOT_BSP_RESET_MASK)) {
-		xprintf("*** BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR is set.");
+		xprintf("*BSP DWNLD_ERR is set.");
 		/* reset by BSP, set error to failure causer */
-		boot_status = sec_get_aon_boot_status(boot_status_shift);
+		boot_status = sec_get_aon_boot_status(aon_fw_type);
 
 		/* set bsp reset flag if BSP bootrom clear it */
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |= BOOT_BSP_RESET_FLAG;
@@ -185,7 +159,8 @@ int select_image(image_info *info)
 		}
 	}
 
-	boot_status = sec_get_aon_boot_status(boot_status_shift);
+	boot_status = sec_get_aon_boot_status(aon_fw_type);
+
 	if  (boot_status == BOOT_STATUS_2_FAIL) {
 		xprintf("bfw: %x", boot_status);
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &=
@@ -198,16 +173,16 @@ int select_image(image_info *info)
 	 */
 	if ((boot_status == BOOT_STATUS_2_SUCCESS) ||
 		(boot_status == BOOT_STATUS_1_FAIL) ||
-		(((*ctrl_ptr) & PARAM_CTRL_WORD_ENABLE_MASK) == 0)) {
+		((info->ctrl_word & PARAM_CTRL_WORD_ENABLE_MASK) == 0)) {
 		boot_status = (boot_status & ~BOOT_IMAGE_MASK) | BOOT_2ND_IMAGE;
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &=
 			~(BOOT_IMAGE_STATUS_MASK << boot_status_shift);
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |=
 			(boot_status << boot_status_shift);
 
-		image_ptr = (uint32_t *) (temp_buf+PARAM_2ND_BFW_PART_OFFSET);
-		part_ptr = (uint32_t *) (temp_buf+PARAM_2ND_BFW_PART);
-		ctrl_ptr = (uint32_t *) (temp_buf+PARAM_2ND_BFW_CTRL);
+		image_offset = PARAM_2ND_BFW_PART_OFFSET;
+		part_offset = PARAM_2ND_BFW_PART;
+		ctrl_offset = PARAM_2ND_BFW_CTRL;
 	}
 	else {
 		boot_status = (boot_status & ~BOOT_IMAGE_MASK) | BOOT_1ST_IMAGE;
@@ -215,22 +190,18 @@ int select_image(image_info *info)
 			~(BOOT_IMAGE_STATUS_MASK << boot_status_shift);
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |=
 			(boot_status << boot_status_shift);
-		image_ptr = (uint32_t *) (temp_buf+PARAM_1ST_BFW_PART_OFFSET);
-		part_ptr = (uint32_t *) (temp_buf+PARAM_1ST_BFW_PART);
-		ctrl_ptr = (uint32_t *) (temp_buf+PARAM_1ST_BFW_CTRL);
 	}
-#else
-	boot_status = (boot_status & ~BOOT_IMAGE_MASK) | BOOT_2ND_IMAGE;
-#endif
 
-	info->addr_offset = *image_ptr;
-	info->flash.part_offs = *part_ptr;
-	/* partition size is in 1k size. Change it to byte */
-	info->flash.part_size = ((*ctrl_ptr & PARAM_PART_SIZE_MASK)
-		>> PARAM_PART_SIZE_SHIFT)*1024;
-	info->flash.cs = (*ctrl_ptr & PARAM_IMAGE_CS_MASK)
-		>> PARAM_IMAGE_CS_SHIFT;
-	info->ctrl_word = *ctrl_ptr;
+	info->ctrl_word = *(uint32_t *)(SEC_PARAM_START_SRAM + ctrl_offset);
+	info->addr_offset = *(uint32_t *)(SEC_PARAM_START_SRAM + image_offset);
+	info->flash.part_offs =
+		*(uint32_t *)(SEC_PARAM_START_SRAM + part_offset);
+	info->flash.part_size =
+		((info->ctrl_word & PARAM_PART_SIZE_MASK) >>
+		PARAM_PART_SIZE_SHIFT);
+	info->flash.part_size *= 1024;  /* convert into bytes from Kbytes */
+	info->flash.cs = (info->ctrl_word & PARAM_IMAGE_CS_MASK)>>
+		PARAM_IMAGE_CS_SHIFT;
 
 	/* set aon status to booting */
 	boot_status = (boot_status & ~BOOT_STATUS_MASK) | BOOT_STATUS_BOOTING;
@@ -243,35 +214,12 @@ int select_image(image_info *info)
 	xprintf(" part_offset: %x", (unsigned int) info->flash.part_offs);
 	xprintf(" bootStatus: %x\n", REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH));
 
-	bolt_close(sfd);
 	return 0;
 }
 
-void sec_set_aon_boot_status(int reg_idx_shift, int success)
+void sec_handle_boot_status(uint32_t aon_fw_type, int success)
 {
-	uint32_t status;
-
-	status = REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
-	status &= ~(BOOT_STATUS_MASK << reg_idx_shift);
-	if (success)
-		status |= (BOOT_STATUS_SUCCESS << reg_idx_shift);
-	else
-		status |= (BOOT_STATUS_FAIL << reg_idx_shift);
-	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) = status;
-}
-
-uint32_t sec_get_aon_boot_status(int reg_idx_shift)
-{
-	uint32_t status;
-
-	status = (REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) >> reg_idx_shift);
-	return (status & BOOT_IMAGE_STATUS_MASK);
-}
-
-
-void sec_handle_boot_status(int aon_reg_shift, int success)
-{
-	sec_set_aon_boot_status(aon_reg_shift, success);
+	sec_set_aon_boot_status(aon_fw_type, success);
 
 	if (!success)
 		sys_die(DIE_NO_BFW_IMAGE, "bad BFW image");
@@ -304,7 +252,7 @@ void bfw_main(void)
 	clear_all_d_cache();
 
 	ret = sec_bfw_verify(BFW_RAM_BASE);
-	sec_handle_boot_status(BOOT_BFW_STATUS_SHIFT, !ret);
+	sec_handle_boot_status(AON_FW_TYPE_BFW, !ret);
 
 	xprintf("BFW: ");
 	sec_print_bsp_version();

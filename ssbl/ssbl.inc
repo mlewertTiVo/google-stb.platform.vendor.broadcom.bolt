@@ -37,8 +37,15 @@ SSBL_S += \
 	security/bsp_utils.c \
 	security/mem_auth_new.c \
 	security/decrypt_ssbl.c \
-	security/xpt_dma.c \
+	security/xpt_dma.c
+
+ifeq ($(CFG_ZEUS5_1),1)
+SSBL_S += \
+	security/verify_kernel-zeus51.c
+else
+SSBL_S += \
 	security/verify_kernel.c
+endif
 endif
 
 ifeq ($(CFG_ENET),1)

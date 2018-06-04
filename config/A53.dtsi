@@ -65,3 +65,5 @@
 	};
 
 };
+
+/include/ "A53-scmi.dtsi"

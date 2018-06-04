@@ -32,7 +32,7 @@ ifneq ($(STUB64_START),)
 # Should work: ARCHFLAGS:=-march=armv7-a -mabi=aapcs -mrestrict-it, but
 # gcc sometimes generates bad IT block assembly with stbgcc-4.8-1.1, see
 # bug: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67591
-ARCHFLAGS:= -mcpu=cortex-a53 -march=armv8-a -mabi=aapcs
+ARCHFLAGS:= -mcpu=cortex-a53 -mabi=aapcs
 else
 ARCHFLAGS:=-march=armv7-a -mabi=aapcs
 endif

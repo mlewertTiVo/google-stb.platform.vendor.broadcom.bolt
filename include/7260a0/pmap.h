@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2017, Broadcom
+ *     Copyright (c) 2012-2018, Broadcom
  *     All Rights Reserved
  *     Confidential Property of Broadcom
  *
@@ -22,10 +22,11 @@
 
 #include <bchp_clkgen.h>
 
-#define AVS_DOC_VER 7
+#define AVS_DOC_VER 9
 
 enum pmaps {
 	PMap_e0 = 0,
+	PMap_e3 = 3,
 	PMap_e4 = 4,
 	PMap_e6 = 6,
 	PMap_e8 = 8,
@@ -42,6 +43,7 @@ struct pmapParameters {
 #define AVS_ONCE
 static const struct pmapParameters pmapTable[] = {
 	{ PMap_e0, 1, "PMap0"},
+	{ PMap_e3, 1, "PMap3"},
 	{ PMap_e4, 2, "PMap4"},
 	{ PMap_e6, 2, "PMap6"},
 	{ PMap_e8, 2, "PMap8"},
@@ -118,6 +120,7 @@ static const struct pmapReg pmapMuxes[] = {
 
 static const uint8_t pmapMuxValues[][PMAP_MAX_MUXES] = {
 	{ 0, 0, 0, 0, 0, 0, 3, 3, 1, 0, 0, 0, 0, 0,},
+	{ 0, 1, 1, 1, 1, 1, 3, 3, 1, 0, 0, 0, 0, 0,},
 	{ 0, 0, 0, 0, 0, 0, 3, 3, 1, 0, 0, 0, 0, 0,},
 	{ 0, 0, 0, 0, 0, 0, 3, 3, 1, 0, 0, 0, 0, 0,},
 	{ 0, 0, 0, 0, 0, 0, 3, 3, 1, 0, 0, 0, 0, 0,},
@@ -179,6 +182,7 @@ static const struct pmapReg pmapDividers[] = {
 
 static const uint8_t pmapDividerValues[][PMAP_MAX_DIVIDERS] = {
 	{  1,  3,  6, 12,  8, 12,  7,  7,  0,  0,  0,  0,},
+	{  1,  3, 16,  0,  0,  0,  0,  0,  5,  5, 15, 15,},
 	{  1,  3,  6, 12,  6,  8,  7,  7,  0,  0,  0,  0,},
 	{  1,  3,  5, 10,  5,  5,  6,  6,  0,  0,  0,  0,},
 	{  1,  3, 14,  0,  6,  6, 12, 12,  0,  0,  0,  0,},
@@ -199,6 +203,7 @@ static const struct pmapReg pmapMultipliers[] = {
 	(sizeof(pmapMultipliers)/sizeof(pmapMultipliers[0]))
 
 static const uint8_t pmapMultiplierValues[][PMAP_MAX_MULTIPLIERS] = {
+	{  60, 200,},
 	{  60, 200,},
 	{  60, 200,},
 	{  60, 194,},

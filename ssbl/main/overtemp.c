@@ -19,21 +19,11 @@
 #include "splash-api.h"
 #include "splash-media.h"
 #endif
+#include "aon_defs.h"
+#include "bchp_aon_ctrl.h"
 #include "board.h"
-
-
-/* Set the over temperature alarm hysteresis.
-* You *MUST* check with Broadcom if you wish to
-* use alternate values.
-*/
-#ifndef OT_ALARM_HYST_HI
-#define OT_ALARM_HYST_HI 125
-#endif
-
-#ifndef OT_ALARM_HYST_LO
-#define OT_ALARM_HYST_LO 110
-#endif
-
+#include "board_init.h"
+#include "overtemp.h"
 
 /* Poll for the current chip temperature every N seconds. */
 #define OT_POLL_INTERVAL 2
@@ -45,7 +35,8 @@
 static bolt_timer_t ovtimer;
 static int otalarm;
 static char otmsg[40] = {'\0'};
-
+static uint8_t park_high = OVERTEMP_ALARM_PARK_HIGH;
+static uint8_t park_low = OVERTEMP_ALARM_PARK_LOW;
 
 static void ot_splash_image_change(void)
 {
@@ -93,25 +84,28 @@ static void overtemp_check(void)
 	bool fw_running;
 
 	rc = avs_get_data(&voltage, &temperature, &fw_running);
-	if (!rc && voltage) {
-		temperature = FROM_FW_TEMP(temperature);
-#if (CFG_CMD_LEVEL >= 5)
-		xprintf("[chip temperature: %dC]\n", temperature);
-#endif
-		if (!otalarm && (temperature >= OT_ALARM_HYST_HI)) {
-			err_msg("[OVERTEMP ALARM %03d]", temperature);
-			sprintf(otmsg, OT_ALARM_PROMPT, temperature);
-			arch_set_cpu_clk_ratio(CPU_CLK_RATIO_EIGHTH);
-			otalarm = 1;
-			ot_splash_image_change();
-		} else if (otalarm && (temperature <= OT_ALARM_HYST_LO)) {
-			info_msg("[OVERTEMP ALARM OFF %03d]", temperature);
-			arch_set_cpu_clk_ratio(CPU_CLK_RATIO_ONE);
-			otalarm = 0;
-			ot_splash_image_change();
-		}
-	} else
+	if (rc != 0 || voltage == 0) {
 		err_msg("AVS: temperature monitoring disrupted");
+		return;
+	}
+
+	temperature = FROM_FW_TEMP(temperature);
+#if (CFG_CMD_LEVEL >= 5)
+	xprintf("[chip temperature: %dC]\n", temperature);
+#endif
+
+	if (!otalarm && (temperature >= park_high)) {
+		err_msg("[OVERTEMP ALARM %03d]", temperature);
+		sprintf(otmsg, OT_ALARM_PROMPT, temperature);
+		arch_set_cpu_clk_ratio(CPU_CLK_RATIO_EIGHTH);
+		otalarm = 1;
+		ot_splash_image_change();
+	} else if (otalarm && (temperature <= park_low)) {
+		info_msg("[OVERTEMP ALARM OFF %03d]", temperature);
+		arch_set_cpu_clk_ratio(CPU_CLK_RATIO_ONE);
+		otalarm = 0;
+		ot_splash_image_change();
+	}
 }
 
 
@@ -215,6 +209,11 @@ void bolt_overtemp_init(void)
 		warn_msg("AVS: temperature will not be monitored");
 		return;
 	}
+
+	if (board_init_reset_history_value() &
+		BCHP_AON_CTRL_RESET_HISTORY_overtemp_reset_MASK)
+		overtemp_get_parkhighlow(AON_REG(AON_REG_OVERTEMP),
+			&park_high, &park_low);
 
 	overtemp_park();
 

@@ -1,5 +1,5 @@
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -24,12 +24,6 @@ else
   MEMSYS_ALT_S = shmoo/memsys_wrapper.c
   MEMSYS_ALT_LIB = $(ROOT)/shmoo/$(MEMC_ALT)/lib/memsysinitlib.a
   $(info ALT MEMSYS: $(subst ./shmoo/,,$(MEMSYS_ALT_LIB)))
- endif
- ifeq ($(MEMC_REV),B300_H00)
-  LIB_MEMSYS_SUPP += $(ROOT)/shmoo/$(MEMC_REV)/lib/memsys-supplement.a
- endif
-ifeq ($(MEMC_REV),B310_G00)
-  LIB_MEMSYS_SUPP += $(ROOT)/shmoo/$(MEMC_REV)/lib/memsys-supplement.a
  endif
 endif
 

@@ -24,7 +24,5 @@ SMM_S += \
 	stub64/bakery_lock_normal.64.c \
 	stub64/psci-cache.64.c
 
-ifeq ($(CFG_TRUSTZONE_MON),1)
 SMM_S += \
 	stub64/smm-setparms.64.c
-endif

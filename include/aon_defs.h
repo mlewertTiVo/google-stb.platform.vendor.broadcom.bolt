@@ -72,12 +72,14 @@ enum {
 /* AON_REG_BOOT_STATUS 8 is not used anymore from bolt v0.90 and on */
 #define AON_REG_DRAM_SCRAMBLE_FLAGS		8
 #define AON_REG_PSCI_BASE			10 /* valid if PSCI present */
-#define AON_REG_AVS_FLAGS			11
-/* spare: a whole 4 registers! */
+#define AON_REG_OVERTEMP			11 /* Bits [23:0] */
+#define AON_REG_HDMI_TMDS_CONFIG	AON_REG_OVERTEMP /* Bits [31:24] */
+
+/* spare: a whole 3 registers! */
 #define AON_REG_MEMSYS_STATE			16
 #if DDRPHY_VER == 0x48
-/* Revision H (0x48 in ASCII) requires 86 of 32-bit registers */
-#define MEMSYS_STATE_LEN			86
+/* Revision H (0x48 in ASCII) requires 89 of 32-bit registers */
+#define MEMSYS_STATE_LEN			89
 #else
 #define MEMSYS_STATE_LEN			80
 #endif

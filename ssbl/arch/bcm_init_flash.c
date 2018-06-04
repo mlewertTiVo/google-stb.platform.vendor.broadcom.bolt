@@ -24,12 +24,16 @@ static void turnoff_xor_cs0()
 	BDEV_WR_F(EBI_CS_CONFIG_0, mask_en, 0);
 }
 
-
 static void enable_nand_flash(int cs)
 {
 #if CFG_NAND_FLASH
 	bolt_add_device(&nandflashdrv, cs, 0, NULL);
 #endif
+}
+
+static void enable_spi_flash(int cs)
+{
+	bolt_add_device(&spiflashdrv, cs, 0, NULL);
 }
 
 static int nand_boot_read_disturb(void)
@@ -171,7 +175,7 @@ void board_init_flash(void)
 	turnoff_xor_cs0();
 
 	if (boot_mode == BOOT_FROM_SPI) {
-		bolt_add_device(&spiflashdrv, 0, 0, NULL);
+		enable_spi_flash(0); /* CS0 */
 	} else if (boot_mode == BOOT_FROM_NOR) {
 		/* nor flash detected */
 		memset(&fprobe, 0, sizeof(fprobe));
@@ -196,6 +200,9 @@ void board_init_flash(void)
 	if (boot_mode == BOOT_FROM_NOR || boot_mode == BOOT_FROM_SPI) {
 		enable_nand_flash(1); /* CS1 */
 	}
+
+	if (boot_mode == BOOT_FROM_NAND || boot_mode == BOOT_FROM_EMMC)
+		enable_spi_flash(1); /* CS1 */
 
 	/* Perform final configuration, after registering all flashes */
 	flash_configure_finalize();

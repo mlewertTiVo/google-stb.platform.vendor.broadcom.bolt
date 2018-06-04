@@ -1,5 +1,5 @@
 ################################################################################
-# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 # 
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -12,6 +12,8 @@ use warnings FATAL=>q(all);
 use POSIX;
 use Data::Dumper;
 use File::Basename;
+use Carp;
+use Math::BigInt;
 
 my $P = basename $::0;
 our $Debug = 0;
@@ -397,7 +399,11 @@ sub grok_defines_from_c_incl_files
 				my ($key, $val) = ($1, $2);
 				warn "$P: wrn: redefining '$key'.\n"
 					if (exists $rh->{$key});
-				$val = hex($val) if ($val =~ /^0x[0-9A-F]{1,8}$/i);
+ 				if ($val =~ /^0x[0-9A-F]{1,8}$/i) {
+ 					$val = hex($val);
+ 				} elsif ($val =~ /^0x[0-9A-F]+$/i) {
+ 					$val = Math::BigInt->new($val);
+ 				}
 				$rh->{$key} = $val;
 				push @{$ra}, [$key, $val];
 			}
@@ -724,10 +730,13 @@ sub get_num_l1_intr_regs($)
 	return $get_num_l1_intr_regs
 		if defined $get_num_l1_intr_regs;
 	my $bchp_defines = shift;
-	my $fmt = 'BCHP_HIF_CPU_INTR1_INTR_W%d_STATUS';
+	my $fmt = $::g_intr1_info{prefix} . '_W%d_STATUS';
+
 	my $i = 0;
 	for ($i=0; $i<100; $i++) {
 		my $r = sprintf($fmt, $i);
+		die "$P: err: cannot find any l1 intr registers!\n "
+			if ($i == 0 && !defined $bchp_defines->{$r});
 		last if !defined $bchp_defines->{$r};
 	}
 	return ($get_num_l1_intr_regs = $i);
@@ -1231,25 +1240,23 @@ sub get_num_v3d_mmu($)
 	return $count;
 }
 
+sub get_num_sun_rng($)
+{
+	my $bchp_defines = shift;
+	my $count = 0;
+
+	$count ++ if (defined($bchp_defines->{"BCHP_SUN_RNG_REG_START"}));
+
+	return $count;
+}
+
 #SWBOLT-1715
 sub mcp_wr_pairing_allowed($)
 {
 	my $family_name = shift;
-	my %mcp_wp_allowed_tbl = (
-	       "7250b0" => "1",
-	       "7260a0" => "1",
-	       "7268b0" => "1",
-	       "7271b0" => "1",
-	       "7278a0" => "1",
-	       "7278b0" => "1",
-	       "7364b0" => "1",
-	       "7364c0" => "1",
-	       "74371a0" => "1",
-	       "7439b0" => "1",
-	       "7445e0" => "1",
-        );
+	my @disallowed = ('7366c0', '7445d0');
 
-	return defined($mcp_wp_allowed_tbl{$family_name}) ? 1 : 0;
+	return grep(/^$family_name$/, @disallowed) ? 0 : 1;
 }
 
 sub validate_gic_interrupt_cells($)
@@ -1318,6 +1325,146 @@ sub get_arch($)
 {
 	my $bchp_defines = shift;
 	return defined($bchp_defines->{BCHP_BOOTSRAM_TM_REG_START}) ? "ARM" : "MIPS";
+}
+
+###################################################################
+# FUNCTION:
+#  reg_prop_str($n_addr_cells, $n_size_cells, $a0, $s0, $a1, $s1, ...)
+#
+# ARGS:
+#  $n_addr_cells -- the number of address cells.
+#  $n_size_cells -- the number of size cells.
+#  $addr0 -- the address of the first address region.
+#  $size0 -- the address of the first address region.
+#  ...
+#
+# DESCRIPTION:
+#  Prints out the "reg" property for a device tree using the
+#  address and size cell constraints.
+#
+# RETURNS:
+#  DT string for the "reg" property.
+#
+sub reg_prop_str
+{
+	croak "Must have an even number of arguments"
+		if (scalar(@_) % 2);
+	my $addr_cells = shift;
+	my $size_cells = shift;
+	my $n = scalar(@_) / 2;
+	my @all_regions;
+
+	for (my $i = 0; $i < $n; $i++) {
+		my $addr = shift;
+		my $size = shift;
+		my @region;
+
+		for (my $j = 0; $j < $size_cells; $j++) {
+			unshift @region, sprintf("0x%x", $size & 0xffffffff);
+			# We shift twice by 16 because if we have a 32 bit
+			# int and we shift 32 the result is unpredictable.
+			$size >>= 16;
+			$size >>= 16;
+		}		
+		for (my $j = 0; $j < $addr_cells; $j++) {
+			unshift @region, sprintf("0x%x", $addr & 0xffffffff);
+			# We shift twice by 16 because if we have a 32 bit
+			# int and we shift 32 the result is unpredictable.
+			$addr >>= 16;
+			$addr >>= 16;
+		}		
+		push @all_regions, '<' . join(' ', @region) . '>';
+	}
+	return 'reg = ' . join(",\n\t", @all_regions) . ";\n";
+}
+
+
+###################################################################
+# FUNCTION:
+#  rdb_reg_prop_str($a0, $s0, $a1, $s1, ...)
+#
+# ARGS:
+#  $addr0 -- the address of the first address region.
+#  $size0 -- the address of the first address region.
+#  ...
+#
+# DESCRIPTION:
+#  Prints out the "reg" property for a device tree under the rdb node.  
+#
+# RETURNS:
+#  DT string for the "reg" property under the rdb node.
+#
+sub rdb_reg_prop_str
+{
+	croak "Must have an even number of arguments"
+		if (scalar(@_) % 2);
+	return reg_prop_str(::get_rdb_addr_cells(), ::get_rdb_size_cells(), @_);
+}
+
+
+###################################################################
+# FUNCTION:
+#  ranges_prop_str($ncac, $npac, $ncsc, $ca0, $pa0, $cs0, ...)
+#
+# ARGS:
+#  $ncac -- number of child address cells
+#  $npac -- number of parent address cells
+#  $ncsc -- number of child size cells
+#  $ca0  -- child address of first range
+#  $pa0  -- parent address of first range
+#  $cs0  -- child size of first range
+#  ...
+#
+# DESCRIPTION:
+#  Prints out the "ranges" property for a device tree.  The ordering
+#  of the paramter triplets mirrors the ordering of the device tree
+#  string.
+#
+# RETURNS:
+#  DT string for the "ranges" property.
+#
+sub ranges_prop_str
+{
+	my $ncac = shift;
+	my $npac = shift;
+	my $ncsc = shift;
+
+	croak "number of parameters should be multiple of three"
+		if (scalar(@_) % 3);
+		
+	my $n = scalar(@_) / 3;
+	my @all_ranges;
+
+	for (my $i = 0; $i < $n; $i++) {
+		my $child_addr = shift;
+		my $parent_addr = shift;
+		my $child_size = shift;
+		my @range;
+
+		for (my $j = 0; $j < $ncsc; $j++) {
+			unshift @range, sprintf("0x%x", $child_size & 0xffffffff);
+			# We shift twice by 16 because if we have a 32 bit
+			# int and we shift 32 the result is unpredictable.
+			$child_size >>= 16;
+			$child_size >>= 16;
+		}		
+		for (my $j = 0; $j < $npac; $j++) {
+			unshift @range, sprintf("0x%x", $parent_addr & 0xffffffff);
+			# We shift twice by 16 because if we have a 32 bit
+			# int and we shift 32 the result is unpredictable.
+			$parent_addr >>= 16;
+			$parent_addr >>= 16;
+		}		
+		for (my $j = 0; $j < $ncac; $j++) {
+			unshift @range, sprintf("0x%x", $child_addr & 0xffffffff);
+			# We shift twice by 16 because if we have a 32 bit
+			# int and we shift 32 the result is unpredictable.
+			$child_addr >>= 16;
+			$child_addr >>= 16;
+		}		
+		push @all_ranges, join(" ", @range);
+	}
+	return 'ranges = <' . join("\n          ", @all_ranges) . ">;\n";
 }
 
 1;

@@ -1,7 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2015, Broadcom Corporation
- *     All Rights Reserved
- *     Confidential Property of Broadcom Corporation
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -30,6 +28,9 @@ int ui_init_memtestcmds(void);
 int ui_init_ethertestcmds(void);
 int ui_init_rpmb_cmds(void);
 int ui_init_shacmds(void);
+#if CFG_MON64
+int ui_init_mon64(void);
+#endif
 int ui_init_tz(void);
 int ui_init_secureloadcmds(void);
 

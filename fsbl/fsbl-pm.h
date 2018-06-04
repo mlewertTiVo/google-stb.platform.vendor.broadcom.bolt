@@ -38,7 +38,4 @@ static inline void fsbl_init_warm_boot(uint32_t flags)
 bool must_resume_ddr_phys(void);
 void fsbl_resume_ddr_phys(void);
 
-unsigned long psci(unsigned long r0, unsigned long r1,
-		unsigned long r2, unsigned long r3);
-
 #endif /* _FSBL_PM_H */

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -73,12 +73,12 @@ void report_hex(const char *msg, uint32_t hexnum);
 
 static inline uint32_t rdb_read(uint32_t reg)
 {
-	return *(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET);
+	return *(volatile uint32_t *)(reg + (unsigned)BCHP_PHYSICAL_OFFSET);
 }
 
 static inline void rdb_write(uint32_t reg, uint32_t value)
 {
-	*(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET) = value;
+	*(volatile uint32_t *)(reg + (unsigned)BCHP_PHYSICAL_OFFSET) = value;
 }
 
 static inline uint64_t rdb_read64(uint32_t reg)
@@ -90,7 +90,7 @@ static inline uint64_t rdb_read64(uint32_t reg)
 	 */
 	register uint64_t value asm("r2");
 
-	reg |= BCHP_PHYSICAL_OFFSET;
+	reg += BCHP_PHYSICAL_OFFSET;
 
 	/* check register is u64 aligned in the RDB */
 	if (reg & 0x7)
@@ -114,7 +114,7 @@ static inline void rdb_write64(uint32_t reg, uint64_t value)
 	 * and make it so.
 	 */
 	okvalue = value;
-	reg |= BCHP_PHYSICAL_OFFSET;
+	reg += BCHP_PHYSICAL_OFFSET;
 	if (reg & 0x7)
 		report_hex("ALIGN!W64", reg);
 

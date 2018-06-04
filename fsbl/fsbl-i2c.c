@@ -22,36 +22,7 @@
 */
 #define BOARD_ID_CHIP_ADDR 0x3E
 
-/*
-	Keep this in sync with existing hardware
-*/
-typedef struct bsc_regs_s {
-	uint32_t chip_address; // BSC Chip Address And Read/Write Control
-	uint32_t data_in0;     // BSC Write Data Register 0
-	uint32_t data_in1;     // BSC Write Data Register 1
-	uint32_t data_in2;     // BSC Write Data Register 2
-	uint32_t data_in3;     // BSC Write Data Register 3
-	uint32_t data_in4;     // BSC Write Data Register 4
-	uint32_t data_in5;     // BSC Write Data Register 5
-	uint32_t data_in6;     // BSC Write Data Register 6
-	uint32_t data_in7;     // BSC Write Data Register 7
-	uint32_t cnt_reg;	   // BSC Transfer Count Register
-	uint32_t ctl_reg;	   // BSC Control Register
-	uint32_t iic_enable;   // BSC Read/Write Enable And Interrupt
-	uint32_t data_out0;    // BSC Read Data Register 0
-	uint32_t data_out1;    // BSC Read Data Register 1
-	uint32_t data_out2;    // BSC Read Data Register 2
-	uint32_t data_out3;    // BSC Read Data Register 3
-	uint32_t data_out4;    // BSC Read Data Register 4
-	uint32_t data_out5;    // BSC Read Data Register 5
-	uint32_t data_out6;    // BSC Read Data Register 6
-	uint32_t data_out7;    // BSC Read Data Register 7
-	uint32_t ctlhi_reg;    // BSC Control Register
-	uint32_t scl_param;    // BSC SCL Parameter Register
-} bsc_regs_t;
-
-
-static uint32_t get_i2c_id(volatile bsc_regs_t *i2c)
+static uint32_t get_i2c_id(volatile struct bsc_regs_s *i2c)
 {
 	volatile uint32_t v;
 	signed int count = 10; /* ~10msec */
@@ -122,10 +93,10 @@ static uint32_t get_i2c_id(volatile bsc_regs_t *i2c)
 uint8_t get_ext_board_id(void)
 {
 	uint32_t v = 0, n = 0;
-	volatile bsc_regs_t *i2c;
+	volatile struct bsc_regs_s *i2c;
 
 	while (fsbl_i2c_bus[n] != 0) {
-		i2c = (volatile bsc_regs_t *)BPHYSADDR(fsbl_i2c_bus[n]);
+		i2c = (volatile struct bsc_regs_s *)BPHYSADDR(fsbl_i2c_bus[n]);
 		v = get_i2c_id(i2c);
 		if (v)
 			break;

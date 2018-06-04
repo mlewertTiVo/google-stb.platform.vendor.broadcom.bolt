@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -33,7 +33,7 @@ struct tz_info *tz_info(void)
 }
 
 #if CFG_TRUSTZONE_MON
-static int tz_bl31_init(void)
+static int tz_mon_init(void)
 {
 	struct tz_info *t;
 	struct memory_area list;
@@ -54,13 +54,13 @@ static int tz_bl31_init(void)
 	for ( ; qe != (queue_t *)&list; qe = qe->q_next) {
 		struct memory_area *m = (struct memory_area *)qe;
 
-		if (m->tag == NULL || strcmp(m->tag, "BL31"))
+		if (m->tag == NULL || strcmp(m->tag, "MON"))
 			continue;
 
 		/* match */
 		rc = BOLT_OK;
-		t->bl31_addr = m->offset;
-		t->bl31_size = m->size;
+		t->mon_addr = m->offset;
+		t->mon_size = m->size;
 		break;
 	}
 
@@ -79,66 +79,56 @@ static int tz_memory_init(void)
 {
 	struct tz_info *t;
 	struct memory_area list;
-	queue_t *qe;
 	int count;
-	int rc;
-	struct board_type *b;
-	unsigned int i;
-	unsigned int total_mb, reserve_mb;
+	bool found;
 	int64_t retval;
 
 	t = tz_info();
 	if (!t)
 		return BOLT_ERR;
 
-	b = board_thisboard();
-	if (b == NULL)
-		return BOLT_ERR;
-
-	total_mb = 0;
-	for (i = 0; i < b->nddr; i++) {
-		struct ddr_info *ddr = board_find_ddr(b, i);
-
-		if (!ddr)
-			continue;
-
-		total_mb += ddr->size_mb;
+#if CFG_MON64
+	/* Reserve memory for mon64 to TZ mailbox */
+	retval = bolt_reserve_memory(_KB(4), _KB(4),
+		BOLT_RESERVE_MEMORY_OPTION_DT_NEW, "TZMBOX");
+	if (retval < 0) {
+		err_msg("failed to reserve 4 KB for TZMBOX %lld\n", retval);
+		return BOLT_ERR_NOMEM;
 	}
+#endif
 
-	/* - 32MB if total is over 1GB, 16MB otherwise
-	 * - highest available under 4GB boundary
-	 * - no memory controller preferrence
-	 * - DT to be created under /reserved-memory
-	 */
-	reserve_mb = (total_mb > 1024) ? 32 : 16;
-	reserve_mb *= 1024 * 1024;
-	retval = bolt_reserve_memory(reserve_mb, _KB(4),
+	/* Reserve 64MB of memory for TrustZone by default */
+	retval = bolt_reserve_memory(64 * 1024 * 1024, _KB(4),
 		BOLT_RESERVE_MEMORY_OPTION_DT_NEW, "TZOS");
 	if (retval < 0) {
-		reserve_mb /= 1024 * 1024;
-		err_msg("failed to reserve %d MB for TrustZone %lld\n",
-			reserve_mb, retval);
+		err_msg("failed to reserve 64 MB for TZOS %lld\n", retval);
+		return BOLT_ERR_NOMEM;
 	}
-	t->mem_addr = (uint64_t) retval;
+
+	t->mem_addr = (uint64_t)retval;
 
 	count = bolt_reserve_memory_getlist(&list);
 	if (count <= 0)
 		return BOLT_ERR_NOMEM;
 
-	rc = BOLT_ERR_NOMEM;
-	qe = q_getfirst((queue_t *)&list);
-	for ( ; qe != (queue_t *)&list; qe = qe->q_next) {
-		struct memory_area *m = (struct memory_area *)qe;
+	found = false;
+	while (!q_isempty((queue_t *)&list)) {
+		queue_t *q = q_getfirst((queue_t *)&list);
+		struct memory_area *m = (struct memory_area *)q;
 
-		if (t->mem_addr != m->offset)
+		if (found || t->mem_addr != m->offset) {
+			q_dequeue(q);
+			KFREE(q);
 			continue;
+		}
 
-		/* match */
-		rc = BOLT_OK;
+		found = true;
+		/* Already set mem_addr */
 		t->mem_size = m->size;
-		/* already done t->mem_addr */
+
 		switch (m->options & BOLT_RESERVE_MEMORY_OPTION_MEMC_MASK) {
 		case BOLT_RESERVE_MEMORY_OPTION_MEMC_0:
+		default:
 			t->which = 0;
 			break;
 		case BOLT_RESERVE_MEMORY_OPTION_MEMC_1:
@@ -147,23 +137,10 @@ static int tz_memory_init(void)
 		case BOLT_RESERVE_MEMORY_OPTION_MEMC_2:
 			t->which = 2;
 			break;
-		default:
-			rc = BOLT_ERR_NOMEM;
-			goto out;
 		}
-
-		break;
 	}
 
-out:
-	while (!q_isempty((queue_t *)&list)) {
-		queue_t *q = q_getfirst((queue_t *)&list);
-
-		q_dequeue(q);
-		KFREE(q);
-	}
-
-	return rc;
+	return BOLT_OK;
 }
 
 static int tz_reg_group_init(void)
@@ -275,9 +252,9 @@ int tz_init(void)
 
 #if CFG_TRUSTZONE_MON
 	/*
-	 * Scan for BL31 memory
+	 * Scan for monitor memory
 	 */
-	rc = tz_bl31_init();
+	rc = tz_mon_init();
 	if (rc)
 		return rc;
 #endif
@@ -292,18 +269,7 @@ int tz_init(void)
 	/*
 	 * Decide memory layout
 	 */
-	if (t->mem_size == 0x2000000) {
-		/* 32MB */
-		t->mem_layout = &s_tz_mem_layout_32MB;
-	} else if (t->mem_size == 0x1000000) {
-		/* 16MB */
-		t->mem_layout = &s_tz_mem_layout_16MB;
-	} else {
-		xprintf("TZ memory size of 0x%x is not supported\n",
-			(unsigned int)t->mem_size);
-
-		return BOLT_ERR;
-	}
+	t->mem_layout = &s_tz_mem_layout_64MB;
 
 	/*
 	 * Decide reg group maps to use
@@ -330,4 +296,3 @@ int tz_init(void)
 }
 
 /* EOF */
-

@@ -799,11 +799,46 @@ running bolt (with the changes) on a reference board configured (via
 <em>strap</em> DIP switches) for NAND boot.</p></div>
 <div class="paragraph"><p>Type <em>make boardinfo</em> to see what is available:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make boardinfo
+<span style="color: #990000">...</span>
+<span style="color: #990000">...</span>
+<span style="color: #990000">===[</span> 7445d0 <span style="color: #990000">]===</span>
+        BCM97445SVMB         -     7445d0
+        BCM97445VMS          -     7445d0
+        BCM97445VMS_PCI      - BCM97445VMS
+        BCM97445C            -     7445d0
+        BCM97445C_V30        -  BCM97445C
+        BCM97445DBS          -     7445d0
+        BCM97445LCC          -     7445d0
+        BCM97252SVMB         -     7252d0
+        BCM97252C            -     7252d0
+        BCM97444SVMB         -     7444d0
+        BCM97448SV           -     7448d0
+        BCM97449SV           -     7449d0
+<span style="color: #990000">...</span>
+<span style="color: #990000">...</span></tt></pre></div></div>
 <div class="paragraph"><p>We want BCM97252C and that is a 7252d0 chip, of the 7445d0 family of chips. That
 means we work off config/family-7445d0.cfg and its associated files:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> ls -l config/family-7445d0<span style="color: #990000">*</span>
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">63949</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">1</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">64850</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">1000</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">43563</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">2</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">64053</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">3</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">42868</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">4</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">42805</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">5</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">42831</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">6</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">65603</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0-box<span style="color: #993399">7</span><span style="color: #990000">.</span>rts
+-rw-rw-r-- <span style="color: #993399">1</span> user users <span style="color: #993399">52440</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">17</span><span style="color: #990000">:</span><span style="color: #993399">09</span> config/family-7445d0<span style="color: #990000">.</span>cfg
+-rw-rw-r-- <span style="color: #993399">1</span> user users   <span style="color: #993399">154</span> Oct <span style="color: #993399">29</span> <span style="color: #993399">15</span><span style="color: #990000">:</span><span style="color: #993399">57</span> config/family-7445d0<span style="color: #990000">.</span>dts</tt></pre></div></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -815,9 +850,33 @@ means we work off config/family-7445d0.cfg and its associated files:</p></div>
 <div class="paragraph"><p>Now copy over the config file as we can then alter that while retaining the
 ability to make for the reference box:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cp config/family-7445d0<span style="color: #990000">.</span>cfg config/platform<span style="color: #990000">.</span>cfg</tt></pre></div></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make 7445d0 <span style="color: #009900">CFG</span><span style="color: #990000">=</span>config/platform<span style="color: #990000">.</span>cfg
+  <span style="color: #990000">================================</span>
+  CFG<span style="color: #990000">.</span>PL  config/platform<span style="color: #990000">.</span>cfg
+  FAMILY  7445d0
+  <span style="color: #990000">================================</span>
+  <span style="color: #990000">...</span>
+  <span style="color: #990000">...</span>
+  <span style="color: #990000">...</span>
+  LD      objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>elf
+  OBJCOPY objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>bin
+  INFO    objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>txt
+  OBJDUMP objs<span style="color: #990000">/</span>7445d0/bolt<span style="color: #990000">.</span>asm
+  SPLIT   objs<span style="color: #990000">/</span>7445d0/fsbl<span style="color: #990000">.</span>bin
+  SPLIT   objs<span style="color: #990000">/</span>7445d0/ssbl<span style="color: #990000">.</span>bin
+  SPLIT   objs<span style="color: #990000">/</span>7445d0/memsys<span style="color: #990000">.</span>bin
+  EXEC    postpatch
+  PATCH   bolt-v<span style="color: #993399">0.93</span>-7445d0-ba-bfw-<span style="color: #993399">2.1</span><span style="color: #990000">.</span><span style="color: #993399">0</span><span style="color: #990000">.</span>bin<span style="color: #990000">...</span> OK</tt></pre></div></div>
 <div class="paragraph"><p>The bolt-v0.93-7445d0-ba-bfw-2.1.0.bin produced should be the same (sans the
 build date) as the reference build. From now on when you build you will always
 do "make 7445d0 CFG=config/platform.cfg" to pick up your platform specific
@@ -875,11 +934,26 @@ ones you want so we end up with one [chip] and one [board] heading.</p></div>
 <div class="paragraph"><p>If you forget to delete a board that has a deleted chip heading then you might see,
 as we did upon trying to make bolt-*.bin again, the following error:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make clean<span style="color: #990000">;</span>make 7445d0 <span style="color: #009900">CFG</span><span style="color: #990000">=</span>config/platform<span style="color: #990000">.</span>cfg
+/projects/stbtc/stbgcc-<span style="color: #993399">4.5</span><span style="color: #990000">.</span><span style="color: #993399">4</span>-<span style="color: #993399">2.6</span>/bin/arm-linux-gcc is <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> your path<span style="color: #990000">.</span>
+  <span style="color: #990000">================================</span>
+  CFG<span style="color: #990000">.</span>PL  config/platform<span style="color: #990000">.</span>cfg
+  FAMILY  7445d0
+  <span style="color: #990000">================================</span>
+Error<span style="color: #990000">:</span> inherited chip <span style="color: #FF0000">'7449d0'</span> has not been defined
+    <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> <span style="color: #FF0000">'config/platform.cfg'</span><span style="color: #990000">:</span><span style="color: #993399">175</span></tt></pre></div></div>
 <div class="paragraph"><p>Delete the errant board and continue on to remake bolt and
 reflash it on your reference board:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make clean<span style="color: #990000">;</span>make 7445d0 <span style="color: #009900">CFG</span><span style="color: #990000">=</span>config/platform<span style="color: #990000">.</span>cfg</tt></pre></div></div>
 <div class="paragraph"><p>As it boots you should see the line "single board" appear. BOLT
 knows that if you only have a single board that it should boot it,
 regardless of any other parameter such as product id and board id.</p></div>
@@ -927,7 +1001,11 @@ defaults from. These can be overridden in your config/platform.cfg file,
 <div class="paragraph"><p>To preserve building for reference boards e.g. for comparisons,
 we copy over stdbuild.cfg before we edit it:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cp config/stdbuild<span style="color: #990000">.</span>cfg config/platbuild<span style="color: #990000">.</span>cfg</tt></pre></div></div>
 <div class="paragraph"><p>Now edit config/platform.cfg to use config/platbuild.cfg
 instead of config/stdbuild.cfg; diff of config/platform.cfg
 before and after editing:</p></div>
@@ -971,7 +1049,20 @@ for Device Tree. Try turning USB off and rebuilding:</p></div>
 + config USB_ETH           off</code></pre>
 </div></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make clean<span style="color: #990000">;</span>make 7445d0 <span style="color: #009900">CFG</span><span style="color: #990000">=</span>config/platform<span style="color: #990000">.</span>cfg
+/projects/stbtc/stbgcc-<span style="color: #993399">4.5</span><span style="color: #990000">.</span><span style="color: #993399">4</span>-<span style="color: #993399">2.6</span>/bin/arm-linux-gcc is <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> your path<span style="color: #990000">.</span>
+  <span style="color: #990000">================================</span>
+  CFG<span style="color: #990000">.</span>PL  config/platform<span style="color: #990000">.</span>cfg
+  FAMILY  7445d0
+  <span style="color: #990000">================================</span>
+Error<span style="color: #990000">:</span> Configure <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> USB is off<span style="color: #990000">,</span> but <span style="color: #FF0000">'dt autogen usb'</span> specified<span style="color: #990000">!</span>
+    <span style="font-weight: bold"><span style="color: #0000FF">in</span></span> <span style="color: #FF0000">'config/stddevices.cfg'</span><span style="color: #990000">:</span><span style="color: #993399">17</span>
+        included from <span style="color: #FF0000">'config/platform.cfg'</span><span style="color: #990000">:</span><span style="color: #993399">85</span>
+make<span style="color: #990000">:</span> <span style="color: #990000">***</span> <span style="color: #990000">[</span>gen<span style="color: #990000">/</span>7445d0/aon_history<span style="color: #990000">.</span>h<span style="color: #990000">]</span> Error <span style="color: #993399">25</span></tt></pre></div></div>
 <div class="paragraph"><p>BOLT takes a template Device Tree at build time and then
 modifies it based on which chip it is actually running on at
 that time.</p></div>
@@ -1017,7 +1108,11 @@ the <em>example</em> config is commented out.</p></div>
 <div class="paragraph"><p>Remember to modify the <em>mapselect</em> line in your config/platform.cfg
 to use the same name as the flash map used.</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cp config/flashmaps<span style="color: #990000">.</span>cfg  config/platmap<span style="color: #990000">.</span>cfg</tt></pre></div></div>
 <div class="paragraph"><p>Edit config/platmap.cfg:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -1231,7 +1326,17 @@ or pseudo-CFI parameter tables. If your SPI flash device does not support these
 and is not recognized in BOLT you can add it to the device ID lookup table in
 <em>ssbl/dev/dev_spiflash.c</em>, below is an example for a Winbond W25Q16CV device:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="font-weight: bold"><span style="color: #0000FF">static</span></span> <span style="color: #008080">spi_flash_device_lookup_t</span> spi_id_table<span style="color: #990000">[]</span> <span style="color: #990000">=</span> <span style="color: #FF0000">{</span>
+        <span style="font-style: italic"><span style="color: #9A1900">/* ID, ID len, total_size, sector_size, page_size */</span></span>
+        <span style="color: #990000">...</span>
+        <span style="color: #FF0000">{</span> <span style="color: #FF0000">{</span><span style="color: #993399">0xef</span><span style="color: #990000">,</span> <span style="color: #993399">0x40</span><span style="color: #990000">,</span> <span style="color: #993399">0x15</span><span style="color: #FF0000">}</span><span style="color: #990000">,</span>             <span style="color: #993399">3</span><span style="color: #990000">,</span> <span style="font-weight: bold"><span style="color: #000000">_MB</span></span><span style="color: #990000">(</span><span style="color: #993399">2</span><span style="color: #990000">),</span>    <span style="font-weight: bold"><span style="color: #000000">_KB</span></span><span style="color: #990000">(</span><span style="color: #993399">64</span><span style="color: #990000">),</span> <span style="color: #993399">256</span> <span style="color: #FF0000">}</span><span style="color: #990000">,</span>
+        <span style="color: #990000">...</span>
+        <span style="color: #FF0000">{</span> <span style="color: #FF0000">{}</span><span style="color: #990000">,</span>                             <span style="color: #993399">0</span><span style="color: #990000">,</span> <span style="color: #993399">0</span><span style="color: #990000">,</span>         <span style="color: #993399">0</span><span style="color: #990000">,</span>       <span style="color: #993399">0</span> <span style="color: #FF0000">}</span><span style="color: #990000">,</span>
+<span style="color: #FF0000">}</span><span style="color: #990000">;</span></tt></pre></div></div>
 </div>
 <div class="sect2">
 <h3 id="_adding_nand_devices">4.4.  Adding NAND Devices</h3>
@@ -1457,13 +1562,21 @@ error reporting and extra fluff) is put into a file named
 plat.dts, then it is converted into the binary format BOLT
 can read:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> gen/dtc/dtc -I dts -O dtb plat<span style="color: #990000">.</span>dts <span style="color: #990000">&gt;</span> plat<span style="color: #990000">.</span>dtb</tt></pre></div></div>
 <div class="paragraph"><p>From there its flashed back (e.g. for testing) to flash0.devtree.
 Note that the flash0.devtree flash partition is for development
 purposes. Its not used by Broadcom and should not be used in
 products.</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cp plat<span style="color: #990000">.</span>dtb /tftpboot<span style="color: #990000">/</span></tt></pre></div></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; ifconfig eth0 -auto
@@ -1527,21 +1640,39 @@ and test them without a Linux kernel rebuild.</td>
 to it. In the Broadcom Linux deliverable use the makesystem
 to set it up:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make menuconfig-linux
+ boot options -<span style="color: #990000">&gt;</span> <span style="color: #009900">CONFIG_ARM_APPENDED_DTB</span><span style="color: #990000">=[*]</span></tt></pre></div></div>
 <div class="paragraph"><p>In the same boot options menu unset any <em>ATAGS</em> support
 option, then save and exit. Next set as a default if
 required, then rebuild Linux:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make save_defaults
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make vmlinuz-initrd-7445d0</tt></pre></div></div>
 <div class="paragraph"><p>The Linux (initrd) image will then be made and can
 be joined with a BOLT dtb file:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> cat <span style="color: #990000">~</span>/uclinux-rootfs/images/vmlinuz-initrd-7445d0 <span style="color: #990000">~</span>/bolt/bolt<span style="color: #990000">.</span>dtb <span style="color: #990000">&gt;</span> /tftpboot/zimage_dtb</tt></pre></div></div>
 <div class="paragraph"><p>The file bolt/bolt.dtb was made by doing a <em>dt bolt;dt show</em>
 and screen scraping the results to bolt.dts so it can
 be processed by the dtc tool in the BOLT build directory:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> gen/dtc/dtc -I dts -O dtb bolt<span style="color: #990000">.</span>dts <span style="color: #990000">&gt;</span>  bolt<span style="color: #990000">.</span>dtb</tt></pre></div></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1673,10 +1804,35 @@ for <em>some</em> chips.</td>
 To do this run <strong>splash_create_flash_file</strong> in the BOLT source directory with the
 options as shown below:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make env
+
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> <span style="color: #990000">.</span>/gen/scripts/splash_create_flash_file <span style="color: #990000">\</span>
+        -b splash/splash<span style="color: #990000">.</span>bmp  <span style="color: #990000">\</span>
+        -p splash/audio-testtones<span style="color: #990000">.</span>bin <span style="color: #990000">\</span>
+        -o splash/splash<span style="color: #990000">.</span>bin
+
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> ls -l splash/splash<span style="color: #990000">.</span>bin
+-rw-rw-r-- <span style="color: #993399">1</span> user user <span style="color: #993399">442576</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12</span><span style="color: #990000">:</span><span style="color: #993399">00</span> splash/splash<span style="color: #990000">.</span>bin</tt></pre></div></div>
 <div class="paragraph"><p>Alternately, compression (via the <em>-z</em> flag) of the meda file is now supported:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> make env
+
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> <span style="color: #990000">.</span>/gen/scripts/splash_create_flash_file <span style="color: #990000">\</span>
+        -b splash/splash<span style="color: #990000">.</span>bmp <span style="color: #990000">\</span>
+        -p splash/audio-testtones<span style="color: #990000">.</span>bin <span style="color: #990000">\</span>
+        -t splash/fire<span style="color: #990000">.</span>bmp <span style="color: #990000">\</span>
+        -z -o splash/splash<span style="color: #990000">.</span>zb
+
+<span style="color: #990000">[</span>user@linuxbox<span style="color: #990000">]</span> ls -l splash/splash<span style="color: #990000">.</span>zb
+-rw-rw-r-- <span style="color: #993399">1</span> user user <span style="color: #993399">184877</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12</span><span style="color: #990000">:</span><span style="color: #993399">00</span> splash/splash<span style="color: #990000">.</span>zb</tt></pre></div></div>
 <div class="paragraph"><p>As you can see in the above example the compressed media file is approximately 41% smaller
 than the uncompressed. This even with another bitmap added (<em>-t</em> flag for the image to be
 shown when the box goes over a preset temperature.)</p></div>
@@ -2076,7 +2232,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-12-07 23:39:45 PST
+ 2018-06-01 16:37:41 PDT
 </div>
 </div>
 </body>

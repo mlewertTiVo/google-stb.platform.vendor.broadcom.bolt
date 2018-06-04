@@ -47,7 +47,6 @@ const bt_rfkill_params *board_bt_rfkill_gpios(void);
 #ifdef DVFS_SUPPORT
 unsigned int board_pmap_index(unsigned int pmap);
 int is_pmap_valid(unsigned int pmap);
-unsigned int        board_pmap(void);
 #endif
 
 /* generic access */

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -62,22 +62,22 @@ struct psci_cfg {
 
 static inline uint32_t rdb_read(uint64_t reg)
 {
-	return *(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET);
+	return *(volatile uint32_t *)(reg + (unsigned)BCHP_PHYSICAL_OFFSET);
 }
 
 static inline void rdb_write(uint64_t reg, uint32_t value)
 {
-	*(volatile uint32_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET) = value;
+	*(volatile uint32_t *)(reg + (unsigned)BCHP_PHYSICAL_OFFSET) = value;
 }
 
 static inline uint64_t rdb_read64(uint64_t reg)
 {
-	return *(volatile uint64_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET);
+	return *(volatile uint64_t *)(reg + (unsigned)BCHP_PHYSICAL_OFFSET);
 }
 
 static inline void rdb_write64(uint64_t reg, uint64_t value)
 {
-	*(volatile uint64_t *)(reg | (unsigned)BCHP_PHYSICAL_OFFSET) = value;
+	*(volatile uint64_t *)(reg + (unsigned)BCHP_PHYSICAL_OFFSET) = value;
 }
 
 /* stub-uart */
@@ -130,11 +130,9 @@ uint32_t rac_disable_and_flush(void);
 int rac_enable(uint32_t rac_cfg0);
 int rac_is_enabled(void);
 
-#if CFG_TRUSTZONE_MON
 /* Trustzone Monitor */
 void tz_sm_set_loadaddr(uint64_t x0, uint64_t x1, uint64_t x2, uint64_t x3,
 			uint64_t x4 /* current stack pointer */);
-#endif /* CFG_TRUSTZONE_MON */
 
 /* smm-psci */
 struct psci_cfg *get_config(void);

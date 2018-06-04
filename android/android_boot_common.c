@@ -1,18 +1,18 @@
-/*****************************************************************************
-*
-* Copyright 2016 Broadcom.  All rights reserved.
-*
-* Unless you and Broadcom execute a separate written software license
-* agreement governing use of this software, this software is licensed to you
-* under the terms of the GNU General Public License version 2, available at
-* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
-*
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a
-* license other than the GPL, without Broadcom's express prior written
-* consent.
-*
-*****************************************************************************/
+/*
+ * Copyright 2014-current Broadcom Corporation.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <error.h>
 #include <zimage.h>
@@ -24,6 +24,7 @@
 #include "fastboot.h" /* to access partition table that has Android-style
 			flash naming */
 #include "eio_boot.h"
+#include "verity.h"
 
 #define AON_REG_ADDR(idx)			((volatile uint32_t *) \
 		REG_ADDR(BCHP_AON_CTRL_SYSTEM_DATA_RAMi_ARRAY_BASE + (idx) * 4))
@@ -47,6 +48,9 @@
 #define BOOT_NAME_SIZE	16
 
 #define BOOT_SLOT_DEV_DEFAULT   "flash0"
+
+#define BOOT_VARIANT_ENG "=eng"
+#define BOOT_VARIANT_USERDEBUG "=userdebug"
 
 /* Boot path supported. */
 enum bootpath {
@@ -82,7 +86,9 @@ struct img_hdr {
 
 	unsigned tags_addr;
 	unsigned page_size;
-	unsigned unused[2];
+	unsigned unused;
+
+	unsigned os_version;
 
 	unsigned char name[BOOT_NAME_SIZE];
 	unsigned char cmdline[BOOT_ARGS_SIZE];
@@ -377,6 +383,74 @@ char *get_vendor_image_type()
 	return env_vdrimgname;
 }
 
+#if !defined(DROID_VERITY_n)
+int read_verity_state(char *partname, struct fastboot_ptentry *ptn,
+	int udbg, int *readonly)
+{
+	char *fb_flashdev_mode_str;
+	char name[64+64];
+	int fd = -1;
+	int ret = BOLT_OK;
+
+	fb_flashdev_mode_str = env_getenv("FB_DEVICE_TYPE");
+	os_sprintf(name, "%s.%s", fb_flashdev_mode_str, partname);
+	fd = bolt_open(name);
+	if (fd < 0) {
+		ret = BOLT_ERR;
+		goto out;
+	}
+
+	ret = bolt_readblk(fd, ptn->length-FEC_BLOCKSIZE,
+		(unsigned char *)FB_FLASH_STAGING_BUFFER, FEC_BLOCKSIZE);
+	if (ret != FEC_BLOCKSIZE) {
+		os_printf("Error reading %u bytes for fec-block @0x%.16llx from %s: %d\n",
+			FEC_BLOCKSIZE, ptn->length-FEC_BLOCKSIZE, name, ret);
+		ret = BOLT_ERR;
+		goto out;
+	}
+
+	fec_header_t *fec;
+	u64 vmeta = 0;
+	fec = (fec_header_t *)FB_FLASH_STAGING_BUFFER;
+	if (fec->magic == FEC_MAGIC) {
+		os_printf("%s:fec: magic:0x%x,version:0x%x,size:0x%x,roots:0x%x,size:0x%x,inps:0x%.16llx\n",
+			name, fec->magic, fec->version, fec->size, fec->roots, fec->fec_size, fec->inp_size);
+		vmeta = fec->inp_size-VERITY_METADATA_SIZE;
+	} else {
+		vmeta = ptn->length-VERITY_METADATA_SIZE;
+	}
+	ret = bolt_readblk(fd, vmeta,
+		(unsigned char *)(FB_FLASH_STAGING_BUFFER+FEC_BLOCKSIZE),
+		VERITY_METADATA_SIZE);
+	if (ret != VERITY_METADATA_SIZE) {
+		os_printf("Error reading %u bytes for verity-meta @0x%.16llx (size:0x%.16llx,name:%s): %d\n",
+			VERITY_METADATA_SIZE, vmeta, ptn->length, name, ret);
+		ret = BOLT_ERR;
+		goto out;
+	}
+	android_metadata_header_t *amh;
+	amh = (android_metadata_header_t *)(FB_FLASH_STAGING_BUFFER+FEC_BLOCKSIZE);
+	os_printf("%s: android-meta-header-magic = 0x%x\n", name, amh->magic_number);
+	if (amh->magic_number == VERITY_METADATA_MAGIC_DISABLE) {
+		os_printf("%s: verity DISABLED\n", name);
+		if (udbg) {
+			// -userdebug image and verity magic marked disabled, allow remount
+			// of /root in read-write.  note that if we get this incorrectly, system
+			// will crash on dm-verity validation, so there is no security risk in
+			// marking this loosely (but we of course mark it accurately to what we
+			// can gather and omit to mark on error).
+			if (readonly != NULL) *readonly = 0;
+		}
+	}
+	ret = BOLT_OK;
+
+out:
+	if (fd >= 0)
+		bolt_close(fd);
+	return ret;
+}
+#endif
+
 /*  *********************************************************************
     *  gen_bootargs(la,bootargs_buf,cmdline,boot_path,slot)
     *
@@ -400,9 +474,25 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 {
 	int bootargs_buflen = 0;
 	char dt_add_cmd[BOOT_ARGS_SIZE+64];
-	int fd=-1;
+	int fd = -1;
 	char *fb_flashdev_mode_str;
 	struct fastboot_ptentry *ptn;
+#if !defined(DROID_VERITY_n)
+	int ro = 1, udbg = 0, ret;
+	char partname[64];
+#endif
+
+#if !defined(DROID_VERITY_n)
+	if (cmdline) {
+		char *p = NULL;
+		p = os_strstr(cmdline, BOOT_VARIANT_ENG);
+		if (p)
+			ro = 0;
+		p = os_strstr(cmdline, BOOT_VARIANT_USERDEBUG);
+		if (p)
+			udbg = 1;
+	}
+#endif
 
 	/* Partition table needed in these two cases */
 	if ((boot_path == BOOTPATH_LEGACY || boot_path == BOOTPATH_AB_SYSTEM) && la) {
@@ -528,27 +618,51 @@ static int gen_bootargs(bolt_loadargs_t *la, char *bootargs_buf, const char *cmd
 			is_dmverity_eio_mode(slot) ? "eio" : "enforcing");
 		bolt_docommands(dt_add_cmd);
 		os_printf("dm-verity bootmode: '%s'.\n", is_dmverity_eio_mode(slot) ? "eio" : "enforcing");
-
-		if (boot_path == BOOTPATH_AB_SYSTEM && la) {
-			char partname[64];
-			os_sprintf(partname, "%s_%s",
-				BOOT_SLOT_SYSTEM_PREFIX, slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
-			ptn = fastboot_flash_find_ptn(partname);
-			if (ptn != NULL) {
-			        bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
-						       " root=/dev/dm-0 dm=\"system none ro,0 1 android-verity PARTUUID=%s\"", ptn->uuid);
-			} else {
-				os_printf("device '%s', PARTUUID for '%s' failed -- aborting boot.\n", la->la_device, partname);
-				fastboot_flash_dump_ptn();
-			}
-		}
-	} else {
+	}
 #if !defined(DROID_VERITY_n)
+	else {
 		// TODO: add detection for corrupted verity block in non-AB mode.
 		os_sprintf(dt_add_cmd, "dt add prop /firmware/android veritymode s '%s'", "enforcing");
 		bolt_docommands(dt_add_cmd);
-#endif
 	}
+#endif
+
+#if !defined(DROID_VERITY_n)
+	if (boot_path == BOOTPATH_AB_SYSTEM && la) {
+		os_sprintf(partname, "%s_%s",
+			BOOT_SLOT_SYSTEM_PREFIX, slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
+		ptn = fastboot_flash_find_ptn(partname);
+		if (ptn != NULL) {
+			ret = read_verity_state(partname, ptn, udbg, &ro);
+			if (ret != BOLT_OK) {
+				ro = 0;
+			}
+			bootargs_buflen += os_sprintf(bootargs_buf + bootargs_buflen,
+				" root=/dev/dm-0 dm=\"system none %s,0 1 android-verity PARTUUID=%s\"",
+				ro?"ro":"rw", ptn->uuid);
+		} else {
+			os_printf("device '%s', PARTUUID for '%s' failed -- aborting boot.\n", la->la_device, partname);
+			fastboot_flash_dump_ptn();
+		}
+		os_sprintf(partname, "%s_%s",
+			BOOT_SLOT_VENDOR_PREFIX, slot == 0 ? BOOT_SLOT_0_SUFFIX : BOOT_SLOT_1_SUFFIX);
+		ptn = fastboot_flash_find_ptn(partname);
+		if (ptn != NULL) {
+			ret = read_verity_state(partname, ptn, 0, NULL);
+		}
+	} else if (boot_path == BOOTPATH_LEGACY && la) {
+		os_sprintf(partname, "%s", BOOT_SLOT_SYSTEM_PREFIX);
+		ptn = fastboot_flash_find_ptn(partname);
+		if (ptn != NULL) {
+			ret = read_verity_state(partname, ptn, 0, NULL);
+		}
+		os_sprintf(partname, "%s", BOOT_SLOT_VENDOR_PREFIX);
+		ptn = fastboot_flash_find_ptn(partname);
+		if (ptn != NULL) {
+			ret = read_verity_state(partname, ptn, 0, NULL);
+		}
+	}
+#endif
 
 	return bootargs_buflen;
 }
@@ -583,6 +697,7 @@ static int imgload_internal(enum bootpath boot_path, int slot, fileio_ctx_t *fsc
 	char bootargs_buf[BOOT_ARGS_SIZE];
 	int bootargs_len;
 	int skip_ramfs = (boot_path == BOOTPATH_AB_SYSTEM) ? 1 : 0;
+	unsigned ver, lvl;
 
 	if (fs_read(fsctx, ref, (uint8_t *) &hdr, sizeof(hdr)) != sizeof(hdr))
 		return BOLT_ERR_IOERR;
@@ -605,6 +720,12 @@ static int imgload_internal(enum bootpath boot_path, int slot, fileio_ctx_t *fsc
 	os_printf("%14s: %p\n", "second_addr", hdr.second_addr);
 	os_printf("%14s: %p\n", "tags_addr", hdr.tags_addr);
 	os_printf("%14s: %u\n", "page_size", hdr.page_size);
+	ver = (hdr.os_version >> 11) & 0x003FFFFF;
+	lvl = hdr.os_version & 0x000007FF;
+	os_printf("%14s: %u.%u.%u\n", "android_ver",
+		(ver>>14)&0x0000007F, (ver>>7)&0x0000007F, ver&0x0000007F);
+	os_printf("%14s: %u-%u\n", "sec_patch",
+		lvl&0x0000000F, ((lvl>>4)&0x0000007F)+2000);
 	os_printf("%14s: '%s'\n", "name", hdr.name);
 	os_printf("%14s: '%s'\n", "cmdline", hdr.cmdline);
 	os_printf("%14s: %u\n", "id", hdr.id);
@@ -727,6 +848,15 @@ static enum bootpath select_boot_path(int *slot, int selected)
 	char flash_devname[20];
 	struct eio_boot *eio = &eio_commander;
 	int ret;
+   int fixed = 0;
+
+#if defined(DROID_FIXED_SLOT_y)
+	fixed = 1;
+	fb_flashdev_mode_str = env_getenv("DROID_FIXED_SLOT_n");
+	if (fb_flashdev_mode_str != NULL) {
+		fixed = 0;
+	}
+#endif
 
 	os_memset(eio, 0, sizeof(*eio));
 
@@ -762,6 +892,9 @@ static enum bootpath select_boot_path(int *slot, int selected)
 			 * the slot selection in this case, it must be the one we picked prior.
 			 */
 			*slot = eio->current;
+			if (fixed && eio->current != 0) {
+				*slot = 0;
+			}
 			goto ret_ab_system;
 		}
 		if (eio->magic == EIO_BOOT_MAGIC) {
@@ -836,12 +969,35 @@ ret_legacy:
 	return BOOTPATH_LEGACY;
 
 ret_ab_bl_recovery:
+	if (fixed) {
+		*slot = 0;
+		os_memset(eio, 0, sizeof(*eio));
+		eio->current = 0;
+		os_sprintf(eio->slot[0].suffix, "%s", BOOT_SLOT_0_SUFFIX);
+		os_sprintf(eio->slot[1].suffix, "%s", BOOT_SLOT_1_SUFFIX);
+		eio->magic = EIO_BOOT_MAGIC;
+		ret = bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+		if (ret != sizeof(struct eio_boot)) {
+			os_printf("Error reseeding %s. Can't write commander block: %d\n",
+				  flash_devname, ret);
+		}
+		DLOG("Skipping AB-System Bootloader.\n");
+	   goto ret_ab_system;
+	}
 	if (fd >= 0)
 		bolt_close(fd);
 	DLOG("Booting AB-System Bootloader.\n");
 	return BOOTPATH_AB_BOOTLOADER_RECOVERY;
 
 ret_ab_system:
+	if (fixed) {
+		if (*slot != 0) *slot = 0;
+		if (eio->current != *slot) {
+			eio->current = *slot;
+		}
+		eio->slot[eio->current].boot_fail = 1;
+		bolt_writeblk(fd, 0, (unsigned char *)eio, sizeof(struct eio_boot));
+	}
 	if (fd >= 0)
 		bolt_close(fd);
 	if (slot != NULL) {

@@ -1,5 +1,5 @@
 /***************************************************************************
- *     Copyright (c) 2012-2017, Broadcom
+ *     Copyright (c) 2012-2018, Broadcom
  *     All Rights Reserved
  *     Confidential Property of Broadcom
  *
@@ -22,7 +22,7 @@
 
 #include <bchp_clkgen.h>
 
-#define AVS_DOC_VER 2
+#define AVS_DOC_VER 4
 
 enum pmaps {
 	PMap_e0 = 0,
@@ -105,15 +105,19 @@ static const struct pmapReg pmapDividers[] = {
 	BCHP_CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_MASK,
 	BCHP_CLKGEN_PLL_NETWORK_PLL_CHANNEL_CTRL_CH_5_MDIV_CH5_SHIFT
 	},
+	{ BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3,
+	BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_MASK,
+	BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_SHIFT
+	},
 };
 
 #define PMAP_MAX_DIVIDERS \
 	(sizeof(pmapDividers)/sizeof(pmapDividers[0]))
 
 static const uint8_t pmapDividerValues[][PMAP_MAX_DIVIDERS] = {
-	{  8,  6,  7,  6,  6,  7,  3,},
-	{  8,  6,  7,  6,  6,  7,  3,},
-	{  8,  6,  7,  6,  6,  7,  3,},
+	{  8,  6,  7,  6,  6,  7,  3,  8,},
+	{  8,  6,  7,  6,  6,  7,  3,  8,},
+	{  8,  6,  7,  6,  6,  7,  3,  8,},
 };
 
 static const struct pmapReg pmapMultipliers[] = {

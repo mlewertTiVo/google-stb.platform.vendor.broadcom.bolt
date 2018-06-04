@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,6 +9,9 @@
 
 #ifndef __LIB_PHYSIO_H__
 #define __LIB_PHYSIO_H__
+
+#include <arm.h>
+#include <stdint.h>
 
 #define PHYSIO_CAST_U8	(volatile uint8_t *)
 #define PHYSIO_CAST_U16 (volatile uint16_t *)
@@ -26,13 +29,13 @@
 #define PHYSIO_REG_U64(r)	PHYSIO_MEM_U64(BPHYSADDR(r))
 
 #ifndef __ASSEMBLER__
- #define BPHYSADDR(x) ((uint32_t)(x) | BCHP_PHYSICAL_OFFSET)
- #define BPHYSADDR64(x) ((uint64_t)(x) | (uint64_t)BCHP_PHYSICAL_OFFSET)
+ #define BPHYSADDR(x) ((uint32_t)(x) + BCHP_PHYSICAL_OFFSET)
+ #define BPHYSADDR64(x) ((uint64_t)(x) + (uint64_t)BCHP_PHYSICAL_OFFSET)
  #define REG_CAST	PHYSIO_CAST_U32
  #define REG(reg)	PHYSIO_REG_U32(reg)
  typedef uint32_t	physaddr_t;
 #else
- #define BPHYSADDR(x) ((x) | BCHP_PHYSICAL_OFFSET)
+ #define BPHYSADDR(x) ((x) + BCHP_PHYSICAL_OFFSET)
  #define REG(reg)	BPHYSADDR(reg)
 #endif
 

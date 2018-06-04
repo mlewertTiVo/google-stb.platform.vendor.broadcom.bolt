@@ -594,15 +594,19 @@ static int usbhid_attach(usbdev_t *dev, usb_driver_t *drv)
 	if (softc->uhid_devtype > HID_DEVTYPE_MAX)
 		softc->uhid_devtype = HID_DEVTYPE_UNKNOWN;
 
-	console_log("USBHID: %s Configured.\n",
-		    usbhid_devtypes[softc->uhid_devtype]);
+	if (softc->uhid_devtype == HID_DEVTYPE_UNKNOWN)
+		console_log("USBHID: Unknown device...not configured\n");
+	else {
+		console_log("USBHID: %s Configured.\n",
+			    usbhid_devtypes[softc->uhid_devtype]);
 
-	/*
-	 * Queue a transfer on the interrupt endpoint to catch
-	 * our first characters.
-	 */
+		/*
+		 * Queue a transfer on the interrupt endpoint to catch
+		 * our first characters.
+		 */
 
-	usbhid_queue_intreq(dev, softc);
+		usbhid_queue_intreq(dev, softc);
+	}
 
 	return 0;
 }

@@ -72,12 +72,8 @@
 #define SPI_POLLING_INTERVAL		10	/* in usecs */
 #define SPI_CDRAM_CONT			0x80
 
-#define SPI_CDRAM_PCS_PCS0		0x01
-#define SPI_CDRAM_PCS_PCS1		0x02
-#define SPI_CDRAM_PCS_PCS2		0x04
-#define SPI_CDRAM_PCS_PCS3		0x08
 #define SPI_CDRAM_PCS_DSCK		0x10
-#define SPI_CDRAM_PCS_DISABLE_ALL	(SPI_CDRAM_PCS_PCS0 | SPI_CDRAM_PCS_PCS1 | SPI_CDRAM_PCS_PCS2 | SPI_CDRAM_PCS_PCS3)
+#define SPI_CDRAM_PCS			0xe0	/* unused for spi-nor devices */
 #define SPI_CDRAM_BITSE			0x40
 
 #define SPI_SYSTEM_CLK			27000000	/* 27 MHz */

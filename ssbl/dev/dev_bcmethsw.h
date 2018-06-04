@@ -16,21 +16,17 @@
 
 /* MII_PHYSID1 & MII_PHYSID2 */
 #define BCM53125_PHY_OUI				0x03625f20
-#define BCM53125_PHY_MASK				0x1ffffff0
 
 static inline unsigned int ethsw_is_bcm53125(uint32_t phy_id)
 {
-	return ((phy_id & BCM53125_PHY_MASK) ==
-		(BCM53125_PHY_OUI & BCM53125_PHY_MASK));
+	return ((phy_id & PHY_ID_MASK) == (BCM53125_PHY_OUI & PHY_ID_MASK));
 }
 
 #define BCM53101_PHY_OUI				0x03625ed0
-#define BCM53101_PHY_MASK				0x1ffffff0
 
 static inline unsigned int ethsw_is_bcm53101(uint32_t phy_id)
 {
-	return ((phy_id & BCM53101_PHY_MASK) ==
-		(BCM53101_PHY_OUI & BCM53101_PHY_MASK));
+	return ((phy_id & PHY_ID_MASK) == (BCM53101_PHY_OUI & PHY_ID_MASK));
 }
 
 #define PSEUDO_PHY_ADDR					0x1e

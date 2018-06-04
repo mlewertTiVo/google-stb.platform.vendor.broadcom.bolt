@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -7,6 +7,7 @@
  *
  ***************************************************************************/
 
+#include <aon_defs.h>
 #include "bchp_aon_ctrl.h"
 #include "bchp_bsp_glb_control.h"
 #include "bchp_common.h"
@@ -14,10 +15,10 @@
 #include "bchp_aon_ctrl.h"
 #include "bchp_cntcontrolbase.h"
 #include "bchp_hif_top_ctrl.h"
+#include "boardcfg.h"
 #include "fsbl.h"
 #include "fsbl-pm.h"
 #include "error.h"
-
 #include "boot_defines.h"
 
 #ifndef BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR
@@ -31,30 +32,9 @@
 
 static uint32_t sec_trace_val;
 
-uint32_t sec_get_aon_boot_status(int reg_idx_shift)
+void sec_handle_boot_status(uint32_t aon_fw_type, int success)
 {
-	uint32_t status;
-
-	status = (REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) >> reg_idx_shift);
-	return (status & BOOT_IMAGE_STATUS_MASK);
-}
-
-void sec_set_aon_boot_status(int reg_idx_shift, int success)
-{
-	uint32_t status;
-
-	status = REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
-	status &= ~(BOOT_STATUS_MASK << reg_idx_shift);
-	if (success)
-		status |= (BOOT_STATUS_SUCCESS << reg_idx_shift);
-	else
-		status |= (BOOT_STATUS_FAIL << reg_idx_shift);
-	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) = status;
-}
-
-void sec_handle_boot_status(int aon_reg_shift, int success)
-{
-	sec_set_aon_boot_status(aon_reg_shift, success);
+	sec_set_aon_boot_status(aon_fw_type, success);
 
 	if (!success)
 		handle_boot_err(ERR_BAD_IMAGE);
@@ -84,63 +64,70 @@ int select_image(image_info *info)
 {
 	uint32_t disaster;
 	uint32_t boot_status;
-	uint32_t __maybe_unused *image_ptr = 0;
-	uint32_t __maybe_unused *part_ptr = 0;
-	uint32_t __maybe_unused *ctrl_ptr = 0;
-	uint32_t image_offset = 0;
-	uint32_t part_offset = 0;
-	uint32_t ctrl_offset = 0;
-	uint32_t aon_value = 0;
+	uint32_t __maybe_unused image_offset = 0;
+	uint32_t __maybe_unused part_offset = 0;
+	uint32_t __maybe_unused ctrl_offset = 0;
+	uint32_t __maybe_unused image_size_offset = 0;
+	uint32_t aon_fw_type = 0;
 	uint32_t boot_status_shift = 0;
 	char     *image_name_ptr = NULL;
 
-	/* Use just one AON register to store the status.
-	 * First byte has the status of BFW.
-	 * Second byte has the status of AVS.
-	 * Third byte has the status of MEMSYS.
+	/* Use just one AON register to store the status
+ 	 * LSB:   BFW in lower 6bits
+	 * LSB+1: AVS in lower 6bits
+	 * LSB+2: MEMSYS in lower 6bits
+	 * MSB:   SSBL in lower 6bits, for Zeus 5.1 or later
+	 * MSb:   BSP reset flag
 	 */
 	switch (info->image_type) {
 	case IMAGE_TYPE_BFW:
-			image_name_ptr = "BFW:";
-			image_offset = PARAM_1ST_BFW_PART_OFFSET;
-			part_offset = PARAM_1ST_BFW_PART;
-			ctrl_offset = PARAM_1ST_BFW_CTRL;
-			aon_value = AON_FW_TYPE_BFW;
-			boot_status_shift = BOOT_BFW_STATUS_SHIFT;
-			break;
+		image_name_ptr = "BFW:";
+		image_offset = PARAM_1ST_BFW_PART_OFFSET;
+		part_offset = PARAM_1ST_BFW_PART;
+		ctrl_offset = PARAM_1ST_BFW_CTRL;
+		aon_fw_type = AON_FW_TYPE_BFW;
+		boot_status_shift = BOOT_BFW_STATUS_SHIFT;
+		break;
 	case IMAGE_TYPE_AVS:
-			image_name_ptr = "AVS:";
-			image_offset = PARAM_1ST_AVS_PART_OFFSET;
-			part_offset = PARAM_1ST_AVS_PART;
-			ctrl_offset = PARAM_1ST_AVS_CTRL;
-			aon_value = AON_FW_TYPE_AVS;
-			boot_status_shift = BOOT_AVS_STATUS_SHIFT;
-			break;
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
+		image_name_ptr = "AVS:";
+		image_offset = PARAM_1ST_AVS_PART_OFFSET;
+		part_offset = PARAM_1ST_AVS_PART;
+		ctrl_offset = PARAM_1ST_AVS_CTRL;
+		aon_fw_type = AON_FW_TYPE_AVS;
+		boot_status_shift = BOOT_AVS_STATUS_SHIFT;
+		break;
+	case IMAGE_TYPE_SSBL:
+		image_name_ptr = "SSBL:";
+#if (CFG_ZEUS_VERSION >= 0x510)
+		image_offset = PARAM_1ST_SSBL_PART_OFFSET;
+		part_offset = PARAM_1ST_SSBL_PART;
+		ctrl_offset = PARAM_1ST_SSBL_CTRL;
+		image_size_offset = PARAM_1ST_SSBL_SIZE;
+#else
+		image_offset = PARAM_SSBL_PART_OFFSET;
+		part_offset = PARAM_SSBL_PART;
+		ctrl_offset = PARAM_SSBL_CTRL;
+		image_size_offset =  PARAM_SSBL_SIZE;
+#endif
+		aon_fw_type = AON_FW_TYPE_SSBL;
+		boot_status_shift = BOOT_SSBL_STATUS_SHIFT;
+		break;
+#if (CFG_ZEUS_VERSION >= 0x420)
 	case IMAGE_TYPE_MEMSYS:
-			image_name_ptr = "MEMSYS:";
-			image_offset = PARAM_1ST_MEMSYS_PART_OFFSET;
-			part_offset = PARAM_1ST_MEMSYS_PART;
-			ctrl_offset = PARAM_1ST_MEMSYS_CTRL;
-			aon_value = AON_FW_TYPE_MEMSYS;
-			boot_status_shift = BOOT_MEMSYS_STATUS_SHIFT;
-			break;
+		image_name_ptr = "MEMSYS:";
+		image_offset = PARAM_1ST_MEMSYS_PART_OFFSET;
+		part_offset = PARAM_1ST_MEMSYS_PART;
+		ctrl_offset = PARAM_1ST_MEMSYS_CTRL;
+		image_size_offset =  PARAM_1ST_MEMSYSFW_SIZE;
+		aon_fw_type = AON_FW_TYPE_MEMSYS;
+		boot_status_shift = BOOT_MEMSYS_STATUS_SHIFT;
+		break;
 #endif
 	default:
-			sys_die(DIE_UNKNOWN_IMAGE_TYPE, "unknown image type");
-			break;
+		sys_die(DIE_UNKNOWN_IMAGE_TYPE, "unknown image type");
+		break;
 	}
-#if (CFG_ZEUS5_1)
-	image_ptr = (uint32_t *)(SEC_PARAM_START_SRAM+image_offset);
-	part_ptr = (uint32_t *)(SEC_PARAM_START_SRAM+part_offset);
-	ctrl_ptr = (uint32_t *)(SEC_PARAM_START_SRAM+ctrl_offset);
-#else
-	image_ptr = (uint32_t *)(SRAM_ADDR+image_offset);
-	part_ptr = (uint32_t *)(SRAM_ADDR+part_offset);
-	ctrl_ptr = (uint32_t *)(SRAM_ADDR+ctrl_offset);
-#endif
-	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &= ~AON_FW_TYPE_MASK;
-	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |= aon_value;
+	info->ctrl_word = *(uint32_t *)(SEC_PARAM_START_SRAM + ctrl_offset);
 
 #ifdef CFG_FULL_EMULATION
 	/* no sec in generic emulation */
@@ -153,9 +140,9 @@ int select_image(image_info *info)
 	if ((disaster &
 		BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR_DISASTER_RECOVER_MASK) ||
 		(boot_status & BOOT_BSP_RESET_MASK)) {
-		puts("*** BCHP_BSP_GLB_CONTROL_GLB_DWNLD_ERR is set.");
+		puts("*BSP DWNLD_ERR is set.");
 		/* reset by BSP, set error to failure causer */
-		boot_status = sec_get_aon_boot_status(boot_status_shift);
+		boot_status = sec_get_aon_boot_status(aon_fw_type);
 
 		/* set bsp reset flag if BSP bootrom clear it */
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |= BOOT_BSP_RESET_FLAG;
@@ -178,7 +165,7 @@ int select_image(image_info *info)
 		}
 	}
 
-	boot_status = sec_get_aon_boot_status(boot_status_shift);
+	boot_status = sec_get_aon_boot_status(aon_fw_type);
 	if  (boot_status == BOOT_STATUS_2_FAIL) {
 		report_hex(image_name_ptr, boot_status);
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &=
@@ -186,61 +173,39 @@ int select_image(image_info *info)
 		sys_die(DIE_BOOT_2ND_IMAGE_FAILED, "Boot 2nd image failed");
 	}
 
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION >= 0x410)
 	/* select 2nd image if boot 1st image failed or
 	 * 1st image does not exist
 	 */
 	if ((boot_status == BOOT_STATUS_2_SUCCESS) ||
 		(boot_status == BOOT_STATUS_1_FAIL) ||
-		(((*ctrl_ptr) & PARAM_CTRL_WORD_ENABLE_MASK) == 0)) {
+		((info->ctrl_word & PARAM_CTRL_WORD_ENABLE_MASK) == 0)) {
 		boot_status = (boot_status & ~BOOT_IMAGE_MASK) | BOOT_2ND_IMAGE;
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &=
 			~(BOOT_IMAGE_STATUS_MASK << boot_status_shift);
 		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |=
 			(boot_status << boot_status_shift);
-#if (CFG_ZEUS5_1)
 		if (info->image_type == IMAGE_TYPE_BFW) {
-			image_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
-				PARAM_2ND_BFW_PART_OFFSET);
-			part_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
-				PARAM_2ND_BFW_PART);
-			ctrl_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
-				PARAM_2ND_BFW_CTRL);
+			image_offset = PARAM_2ND_BFW_PART_OFFSET;
+			part_offset = PARAM_2ND_BFW_PART;
+			ctrl_offset = PARAM_2ND_BFW_CTRL;
 		} else if (info->image_type == IMAGE_TYPE_AVS) {
-			image_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
-				PARAM_2ND_AVS_PART_OFFSET);
-			part_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
-				PARAM_2ND_AVS_PART);
-			ctrl_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
-				PARAM_2ND_AVS_CTRL);
-		} else {
-			image_ptr = (uint32_t *)(SEC_PARAM_START_SRAM +
-				PARAM_2ND_MEMSYS_PART_OFFSET);
-			part_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
-				PARAM_2ND_MEMSYS_PART);
-			ctrl_ptr = (uint32_t *) (SEC_PARAM_START_SRAM +
-				PARAM_2ND_MEMSYS_CTRL);
+			image_offset = PARAM_2ND_AVS_PART_OFFSET;
+			part_offset = PARAM_2ND_AVS_PART;
+			ctrl_offset = PARAM_2ND_AVS_CTRL;
 		}
-#else /* (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0) */
-		if (info->image_type == IMAGE_TYPE_BFW) {
-			image_ptr = (uint32_t *) (SRAM_ADDR+
-				PARAM_2ND_BFW_PART_OFFSET);
-			part_ptr = (uint32_t *) (SRAM_ADDR+PARAM_2ND_BFW_PART);
-			ctrl_ptr = (uint32_t *) (SRAM_ADDR+PARAM_2ND_BFW_CTRL);
-		} else if (info->image_type == IMAGE_TYPE_AVS) {
-			image_ptr = (uint32_t *) (SRAM_ADDR+
-				PARAM_2ND_AVS_PART_OFFSET);
-			part_ptr = (uint32_t *) (SRAM_ADDR+PARAM_2ND_AVS_PART);
-			ctrl_ptr = (uint32_t *) (SRAM_ADDR+PARAM_2ND_AVS_CTRL);
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
-		} else {
-			image_ptr = (uint32_t *)(SRAM_ADDR +
-				PARAM_2ND_MEMSYS_PART_OFFSET);
-			part_ptr = (uint32_t *) (SRAM_ADDR +
-				PARAM_2ND_MEMSYS_PART);
-			ctrl_ptr = (uint32_t *) (SRAM_ADDR +
-				PARAM_2ND_MEMSYS_CTRL);
-#endif
+		else if (info->image_type == IMAGE_TYPE_SSBL){
+			image_offset = PARAM_SSBL_PART_OFFSET;
+			part_offset = PARAM_SSBL_PART;
+			ctrl_offset = PARAM_SSBL_CTRL;
+			image_size_offset = PARAM_SSBL_SIZE;
+		}
+#if (CFG_ZEUS_VERSION >= 0x420)
+		else if (info->image_type == IMAGE_TYPE_MEMSYS) {
+			image_offset = PARAM_2ND_MEMSYS_PART_OFFSET;
+			part_offset = PARAM_2ND_MEMSYS_PART;
+			ctrl_offset = PARAM_2ND_MEMSYS_CTRL;
+			image_size_offset = PARAM_2ND_MEMSYSFW_SIZE;
 		}
 #endif
 	}
@@ -252,14 +217,24 @@ int select_image(image_info *info)
 			(boot_status << boot_status_shift);
 	}
 
-	info->addr_offset = *image_ptr;
-	info->flash.part_offs = *part_ptr;
-	/* partition size is in 1k size. Change it to byte */
-	info->flash.part_size = ((*ctrl_ptr & PARAM_PART_SIZE_MASK)
-		>> PARAM_PART_SIZE_SHIFT)*1024;
-	info->flash.cs = (*ctrl_ptr & PARAM_IMAGE_CS_MASK)
-		>> PARAM_IMAGE_CS_SHIFT;
-	info->ctrl_word = *ctrl_ptr;
+	info->ctrl_word = *(uint32_t *)(SEC_PARAM_START_SRAM + ctrl_offset);
+	info->addr_offset = *(uint32_t *)(SEC_PARAM_START_SRAM + image_offset);
+	info->flash.part_offs =
+		*(uint32_t *)(SEC_PARAM_START_SRAM + part_offset);
+	info->flash.part_size = (info->ctrl_word & PARAM_PART_SIZE_MASK) >>
+		PARAM_PART_SIZE_SHIFT;
+	info->flash.part_size *= 1024; /* convert into bytes from Kbytes */
+	info->flash.cs = (info->ctrl_word & PARAM_IMAGE_CS_MASK) >>
+		PARAM_IMAGE_CS_SHIFT;
+	info->image_size =
+		*(uint32_t *)(SEC_PARAM_START_SRAM + image_size_offset);
+	if(info->image_type == IMAGE_TYPE_SSBL) {
+		info->image_size += SSBL_SEC_BLOCK_SIZE;
+#if CFG_SSBM
+		/* copy SSBM+SSBL to SSBM address */
+		info->image_size += SSBM_SIZE;
+#endif
+	}
 #else
 	if (info->image_type == IMAGE_TYPE_BFW)
 		info->addr_offset = BFW2_IMAGE_FLASH_OFFSET;
@@ -272,19 +247,25 @@ int select_image(image_info *info)
 	info->flash.part_offs = 0;
 	info->flash.cs = 0;
 #endif
-
-	/* set aon status to booting */
-	boot_status = (boot_status & ~BOOT_STATUS_MASK) | BOOT_STATUS_BOOTING;
-	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &=
-		~(BOOT_IMAGE_STATUS_MASK << boot_status_shift);
-	REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH)
-		|= (boot_status << boot_status_shift);
-
-	report_hex("@select_image: addr_offset: ",
-		(unsigned long) info->addr_offset);
-	report_hex("@ part_offset: ", (unsigned long) info->flash.part_offs);
-	report_hex(" bootStatus: ", REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH));
-
+	/* Only for Zeus 5.1 or later, there is a ping-pong scheme for SSBL
+	 * so we have a need to print out SSBL boot status
+	 */
+	if ((info->image_type != IMAGE_TYPE_SSBL) ||
+		(CFG_ZEUS_VERSION >= 0x510)) {
+		report_hex("@select_image: addr_offset: ",
+			(unsigned long) info->addr_offset);
+		report_hex("@ part_offset: ",
+			(unsigned long)info->flash.part_offs);
+		/* set aon status to booting */
+		boot_status = (boot_status & ~BOOT_STATUS_MASK) |
+			BOOT_STATUS_BOOTING;
+		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) &=
+			~(BOOT_IMAGE_STATUS_MASK << boot_status_shift);
+		REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH) |=
+			(boot_status << boot_status_shift);
+		report_hex(" bootStatus: ",
+			REG(BCHP_AON_CTRL_UNCLEARED_SCRATCH));
+	}
 	return 0;
 }
 
@@ -308,7 +289,7 @@ void sec_init(void)
 	uint32_t  *dst;
 	int __maybe_unused ret;
 
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_1) && !defined(CFG_FULL_EMULATION)
+#if (CFG_ZEUS_VERSION >= 0x420) && !defined(CFG_FULL_EMULATION)
 	if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS)
 		& 0x0f000000) == 0x07000000) {
 		if (sec_memsys_ready())
@@ -321,22 +302,17 @@ void sec_init(void)
 		sys_die(DIE_OTP_READ_FAILED, "OTP read failed");
 
 	dst = (uint32_t *) (BOOT_PARAMETER_OFFSET+SRAM_ADDR);
-#if (!CFG_ZEUS5_1)
 	/* if bseck is enabled, then get the boot params from BSP */
-	if ((CFG_ZEUS4_2 || CFG_ZEUS5_0) && otp_val) {
+	if ((CFG_ZEUS_VERSION >= 0x420 && CFG_ZEUS_VERSION < 0x510) && otp_val) {
 		if (sec_get_bootparam(dst)) /* get boot params from BSP */
 			sys_die(DIE_GET_BOOT_PARAM_FAILED,
 				"Get boot param failed");
 		return;
 	}
-#endif
 
-#if (CFG_ZEUS5_0 || CFG_ZEUS5_1)
-	#if (CFG_ZEUS5_1)
-		if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS) &
-			0x0f000000) == 0x0a000000)
-			dst = (uint32_t *) SEC_PARAM_START_SRAM;
-	#endif
+#if (CFG_ZEUS_VERSION >= 0x510)
+	if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS) & 0x0f000000) == 0x0a000000)
+		dst = (uint32_t *) SEC_PARAM_START_SRAM;
 
 	ret = load_from_flash(dst, SEC_PARAM_OFFSET_FLASH, BOOT_PARAMETER_SIZE);
 #else
@@ -346,7 +322,7 @@ void sec_init(void)
 		sys_die(DIE_BOOT_PARAMETER_READ_FAILURE,
 			"boot parameter read failure");
 
-#if CFG_ZEUS4_1
+#if (CFG_ZEUS_VERSION == 0x410)
 	dst = (uint32_t *) (PARAM_SSBL_SIZE+SRAM_ADDR);
 	ret = load_from_flash(dst, PARAM_SSBL_SIZE, 8);
 	if (ret < 0)
@@ -359,13 +335,10 @@ void sec_bfw_load(bool warm_boot)
 {
 #ifdef BFW_LOAD
 	uint32_t ret;
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION >= 0x410)
 	uint32_t *page_table = 0;
 	uint32_t bfw_buffer_addr;
 	int bypass_emmc_data_part = 1;
-#endif
-#if (BFW_USE_EMMC_DATA_PART == 1)
-	uint32_t aon_reg;
 #endif
 	g_info.image_type = IMAGE_TYPE_BFW;
 
@@ -375,23 +348,17 @@ void sec_bfw_load(bool warm_boot)
 	if (select_image(&g_info))
 		sys_die(DIE_NO_BFW_IMAGE, "no BFW image");
 
-	/* Did we get here because of booting failure from eMMC data partition?
-	 * If we got here because booting from data partition failed,
-	 * then do not use page table. When page table is not used,
-	 * BSP will try to boot BFW image from boot partition.
-	 * If we are booting from eMMC data partition for the first time
-	 * set the flags to indicate that eMMC data partition is being used.
+#if (CFG_ZEUS_VERSION >= 0x410)
+	/* if boot device is eMMC, the first image is alaway from the 
+	 * data partition. Otherwise eMMC data partition is not used.
 	 */
-#if (BFW_USE_EMMC_DATA_PART == 1)
-	aon_reg = BDEV_RD(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
-	if ((aon_reg & AON_EMMC_DATA_PART_BOOT_BFW) == 0) {
-		aon_reg |= AON_EMMC_DATA_PART_BOOT_BFW;
-		BDEV_WR(BCHP_AON_CTRL_UNCLEARED_SCRATCH, aon_reg);
-		bypass_emmc_data_part = 0;
+	if (boardcfg_bootmode() == BOOT_FROM_EMMC) {
+		uint32_t boot_status = sec_get_aon_boot_status(AON_FW_TYPE_BFW);
+		if ((boot_status & BOOT_IMAGE_MASK) == BOOT_1ST_IMAGE)
+			/* use eMMC data partition */
+			bypass_emmc_data_part = 0;
 	}
-#endif
 
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
 	if (g_info.flash.cs == 1 || bypass_emmc_data_part != 1) {
 		__puts("using page list, ");
 #if CFG_PM_S3
@@ -416,21 +383,7 @@ void sec_bfw_load(bool warm_boot)
 #else
 	ret = bseck_reload();
 #endif
-	sec_handle_boot_status(BOOT_BFW_STATUS_SHIFT, !ret);
-#endif
-
-	/*
-	 * if booting from eMMC data partition was good,
-	 * clear AON_EMMC_DATA_PART_BOOT_BFW flag
-	 * so that we continue to boot from eMMC data partition
-	 * when reboot command is used.
-	 */
-#if (BFW_USE_EMMC_DATA_PART == 1)
-	if (bypass_emmc_data_part == 0) {
-		aon_reg = BDEV_RD(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
-		aon_reg &= ~AON_EMMC_DATA_PART_BOOT_BFW;
-		BDEV_WR(BCHP_AON_CTRL_UNCLEARED_SCRATCH, aon_reg);
-	}
+	sec_handle_boot_status(AON_FW_TYPE_BFW, !ret);
 #endif
 
 	__puts("BFW v");
@@ -441,7 +394,7 @@ void sec_bfw_load(bool warm_boot)
 #ifdef SECURE_BOOT
 void sec_set_memc(struct fsbl_info *info)
 {
-#if !(CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION <= 0x410)
 	return;
 #else
 	uint32_t memsys_ctrl;
@@ -449,7 +402,7 @@ void sec_set_memc(struct fsbl_info *info)
 	struct ddr_info *ddr;
 	int i;
 
-	if ((sec_get_aon_boot_status(BOOT_MEMSYS_STATUS_SHIFT) &
+	if ((sec_get_aon_boot_status(AON_FW_TYPE_MEMSYS) &
 			    BOOT_IMAGE_MASK) == BOOT_1ST_IMAGE)
 		memsys_ctrl = DEV_RD(SRAM_ADDR + PARAM_1ST_MEMSYS_CTRL) >>
 			PARAM_CTRL_MEMSYS_DISABLE_SHIFT;
@@ -484,7 +437,7 @@ void sec_verify_memsys(void)
 	uint32_t flash_offs = MEMSYS_TEXT_OFFS;
 	size_t len = MEMSYS_SIZE;
 	struct board_type *b = get_tmp_board();
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION >= 0x420)
 	image_info info;
 
 	info.image_type = IMAGE_TYPE_MEMSYS;
@@ -534,14 +487,14 @@ uint32_t sec_avs_select_image(void)
 /* This function should be called after AVS started */
 void sec_avs_set_status(int success)
 {
-	sec_handle_boot_status(BOOT_AVS_STATUS_SHIFT, success);
+	sec_handle_boot_status(AON_FW_TYPE_AVS, success);
 }
 
 
 /* This function should be called after memsys_init */
 void sec_memsys_set_status(int success)
 {
-	sec_handle_boot_status(BOOT_MEMSYS_STATUS_SHIFT, success);
+	sec_handle_boot_status(AON_FW_TYPE_MEMSYS, success);
 }
 
 void sec_scramble_sdram(bool warm_boot)
@@ -550,27 +503,6 @@ void sec_scramble_sdram(bool warm_boot)
 	if (sec_scramble_sdram_impl(warm_boot))
 		puts("Sdram Scramble failed!");
 #endif
-}
-
-void sec_mitch_check(void)
-{
-#if !defined(S_UNITTEST)
-
-	__puts("MICH: ");
-	/* if blank chip, skip disable_MICH */
-	if ((REG(BCHP_BSP_GLB_CONTROL_FW_FLAGS) & 0x0f000000) != 0x0a000000) {
-#ifdef BFW_LOAD
-		__puts("disable ");
-		if (sec_disable_MICH())
-			puts("failed");
-		else
-			puts("success");
-#else
-		puts("!BFW_LOAD");
-#endif
-	} else
-		puts("security disable");
-#endif /* S_UNITTEST */
 }
 
 void sec_set_errcode(uint16_t die_code)

@@ -512,8 +512,8 @@ static struct bsu_api bsu_xapi = {
 	.xfn_usleep = bolt_usleep,
 	.xfn_board_params = bsu_board_params,
 
-#if CFG_TRUSTZONE_MON
-	.xfn_tz_smm_set_params = tz_smm_set_params,
+#if CFG_TRUSTZONE_CMD
+	.xfn_tz_smm_set_params = NULL,
 	.xfn_bolt_load_program = bolt_load_program,
 #endif
 #if CFG_SPLASH
@@ -565,10 +565,10 @@ void bolt_start_bsu(unsigned long ept, unsigned long param1,
 
 			/* do 2nd half of memc0?
 			*/
-			if ((ddr->base_mb + ddr->size_mb) > 256) {
+			if ((ddr->size_mb) > 256) {
 				ix++;
 				bsu_xapi.xfd_mem[ix].memc = ddr->which;
-				bsu_xapi.xfd_mem[ix].base = _MB(256);
+				bsu_xapi.xfd_mem[ix].base = (uint64_t)_MB(ddr->base_mb) + (uint64_t)_MB(256);
 				bsu_xapi.xfd_mem[ix].top =
 					_MB(ddr->base_mb + ddr->size_mb);
 			}
@@ -576,7 +576,7 @@ void bolt_start_bsu(unsigned long ept, unsigned long param1,
 			bsu_xapi.xfd_mem[ix].memc = ddr->which;
 			bsu_xapi.xfd_mem[ix].base = _MB(ddr->base_mb);
 			bsu_xapi.xfd_mem[ix].top =
-					_MB(ddr->base_mb + ddr->size_mb);
+					(uint64_t)_MB(ddr->base_mb) + (uint64_t)_MB(ddr->size_mb);
 		}
 		ix++;
 	}

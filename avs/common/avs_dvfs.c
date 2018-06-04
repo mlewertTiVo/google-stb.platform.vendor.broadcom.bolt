@@ -18,6 +18,7 @@
 #include "bchp_avs_cpu_data_mem.h"
 #include "bchp_avs_cpu_l2.h"
 #include "bchp_avs_host_l2.h"
+#include "bchp_avs_top_ctrl.h"
 #include "avs_fw_interface.h"
 #include "avs_dvfs.h"
 #include "board.h"
@@ -130,6 +131,11 @@ enum AVS_ERROR avs_get_pmap(enum avs_mode *mode, struct pmap_parameters *map)
 	}
 
 	return AVS_SUCCESS;
+}
+
+unsigned int avs_get_current_pmap(void)
+{
+	return BDEV_RD(BCHP_AVS_TOP_CTRL_SPARE_HIGH) & 0x1F;
 }
 
 /* Use this to change the state (0-4) */

@@ -28,7 +28,6 @@ ENTRY_PROC(stub_start)
 bootmode:
 	.word 0x00000000
 1:
-#ifndef SECURE_BOOT
 	/* see if we're running from SRAM (Boot 2.0)
 	 * or flash (Boot 1.0)
 	 */
@@ -64,7 +63,6 @@ bootmode:
 	ldr	x0, =3f
 	br	x0
 3:
-#endif /* SECURE_BOOT */
 
 	/* now that we are in sram go mark this as
 	 * an A64 boot so A32 FSBL has a clue.

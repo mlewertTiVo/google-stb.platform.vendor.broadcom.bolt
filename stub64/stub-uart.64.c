@@ -17,7 +17,7 @@
 #include <bchp_common.h>
 #include <bchp_cntcontrolbase.h>
 #include <bitops.h>
-#include <psci64.h>
+#include "stub.64.h"
 
 /* do *not* include fsbl.h or lib_physio.h! */
 

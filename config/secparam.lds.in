@@ -1,0 +1,20 @@
+/***************************************************************************
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ *
+ *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
+ *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
+ *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
+ * 
+ ***************************************************************************/
+
+SECTIONS {
+	/* Secure parameter area */
+	.fsbl.init.sec_params @SEC_PARAM_START@ :
+	{
+		/* KEEP() inhibits GC of the section when '--gc-sections' is
+		 * enabled, and the section is unreferenced.
+		 */
+		KEEP(* (.init.sec_params))
+	} =@FILLB@
+
+};

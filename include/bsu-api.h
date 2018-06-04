@@ -69,7 +69,7 @@ to the line "--- diagnostics sub-api ---"
 - BSU_DIAGS_VERSION is for everything after the line
 " --- diagnostics sub-api --- "
 */
-#define BSU_API_VERSION 9
+#define BSU_API_VERSION 10
 #define BSU_DIAGS_VERSION 3
 
 #define BSU_SIGNATURE 0x62737531
@@ -85,7 +85,7 @@ extern void bolt_launch_bsu(unsigned long ept, unsigned long param1,
 void bolt_start_bsu(unsigned long ept, unsigned long param1,
 			unsigned long param2);
 
-#if CFG_TRUSTZONE_MON
+#if CFG_TRUSTZONE_CMD
 extern void tz_smm_set_params(bolt_loadargs_t *la);
 #endif
 
@@ -93,8 +93,8 @@ extern void tz_smm_set_params(bolt_loadargs_t *la);
 
 struct bsu_meminfo {
 	uint32_t memc;
-	uint32_t base;
-	uint32_t top;
+	uint64_t base;
+	uint64_t top;
 };
 
 struct bsu_api {
@@ -307,7 +307,7 @@ struct bsu_api {
 	const void *(*xfn_board_params)(void);
 #endif
 
-#if CFG_TRUSTZONE_MON
+#if CFG_TRUSTZONE_CMD
 	void (*xfn_tz_smm_set_params)(bolt_loadargs_t *la);
 	int (*xfn_bolt_load_program)(const char *name, bolt_loadargs_t * la);
 #endif

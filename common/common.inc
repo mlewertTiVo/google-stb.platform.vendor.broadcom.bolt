@@ -14,7 +14,8 @@ COMMON_S += \
 	common/arch-mmu.c \
 	common/arch-ops.c \
 	common/arm-cache.c \
-	common/arm-ddr.c
+	common/arm-ddr.c \
+	common/boardcfg.c
 
 #S3, H/W SHA and forced on for secure boot.
 ifeq ($(SECURE_BOOT),y)

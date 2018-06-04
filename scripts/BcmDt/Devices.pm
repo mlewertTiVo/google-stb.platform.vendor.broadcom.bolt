@@ -14,6 +14,7 @@ use Data::Dumper;
 use File::Basename;
 use Math::BigInt;
 use BcmUtils;
+use BcmSdio;
 use Carp;
 use Math::BigInt;
 our $Debug = 0;
@@ -44,7 +45,7 @@ sub __find_l1_interrupt($$)
 
 	my $N = BcmUtils::get_num_l1_intr_regs($bchp_defines);
 
-	$fmt = 'BCHP_HIF_CPU_INTR1_INTR_W%d'
+	$fmt = $::g_intr1_info{prefix} . '_W%d'
 		. '_MASK_STATUS_%s_CPU_INTR_SHIFT';
 
 	for ($i=0; $i<$N; $i++) {
@@ -52,7 +53,7 @@ sub __find_l1_interrupt($$)
 		last if (exists $bchp_defines->{$key});
 	}
 	return undef if ($i >= $N);
-	return $i*32 + $bchp_defines->{$key}
+	return $::g_intr1_info{offset} + $i*32 + $bchp_defines->{$key};
 }
 
 # Finds the specified Level 1 interrupt name, and does produce
@@ -826,6 +827,7 @@ sub add_bsc($$$$)
 		        '#interrupt-cells' => [ "dec", 1 ],
 			"#address-cells" => [ "dec", 1 ],
 			"#size-cells" => [ "dec", 0 ],
+			"status" => [ "string", "disabled" ],
 		      );
 
 	my @clk_frequency = (390000) x $n;
@@ -904,7 +906,7 @@ sub add_usb_v2($$$$$)
 	my $bchp_defines = $rh->{rh_defines};
 	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
 
-	my %default = (compatible => "brcm,usb-phy",
+	my %default = (compatible => [ 'string', [ 'brcm,brcmstb-usb-phy', 'brcm,usb-phy' ] ],
 		       "#address-cells" => [ "dec", 1 ],
 		       "#size-cells" => [ "dec", 1 ],
 		       ipp => [ "dec", 1 ],
@@ -912,6 +914,8 @@ sub add_usb_v2($$$$$)
 		      );
 
 	override_default(\%default, $info);
+	$default{"brcm,ipp"} = $default{ipp};
+	$default{"brcm,ioc"} = $default{ioc};
 
 	my ($i, $j);
 
@@ -937,15 +941,26 @@ sub add_usb_v2($$$$$)
 		$t .= sprintf("%s;\n", 'ranges');
 		my ($xhci_start, $xhci_size) 
 			= get_reg_range($rh, "${pre}_XHCI");
-		if ($xhci_start) {
-		    my ($ehci_start, $ehci_size)
+		my ($ehci_start, $ehci_size)
 			= get_reg_range($rh, "${pre}_EHCI");
+
+		# Old style
+		if ($xhci_start) {
 		    if ($ehci_start) {
 			$t .= "has_xhci;\n";
 		    } else {
 			$t .= "has_xhci_only;\n";
 		    }
 		}
+
+		# New Style
+		if ($ehci_start) {
+		    $t .= "brcm,has-eohci;\n";
+		}
+		if ($xhci_start) {
+		    $t .= "brcm,has-xhci;\n";
+		}
+
 		$t .= "};\n";
 		if ($dt) {
 			$dt->add_node(DevTree::node->new($t));
@@ -954,7 +969,6 @@ sub add_usb_v2($$$$$)
 
 		my $usb_info = { top => sprintf('%x', $usb_start), xhci => [], ohci => [],
 				 ehci => [], bdc => [] };
-		my $has_ehci=0;
 		foreach my $type ('ehci', 'ohci', 'xhci', 'bdc') {
 			for ($j=0; 1; $j++) {
 				$t = '';
@@ -962,9 +976,6 @@ sub add_usb_v2($$$$$)
 				my ($start, $size) 
 					= get_reg_range($rh, "${pre}_${mid}");
 				last if (!defined $start);
-				if ($type eq 'ehci') {
-				    $has_ehci = 1;
-				}
 				my $intr_name;
 				if ($type eq 'bdc') {
 					$intr_name = sprintf("USB%d_USBD", $i);
@@ -998,7 +1009,7 @@ sub add_usb_v2($$$$$)
 
 				my $phy_arg = 0;
 				if (($type eq 'xhci') || (($type eq "bdc") &&
-					!$has_ehci)) {
+					!$ehci_start)) {
 				    $phy_arg = 1;
 				}
 				$t .= sprintf("phys = <&usbphy_%d 0x%d>;\n", $i, $phy_arg);
@@ -1406,14 +1417,21 @@ sub add_sdio($$$$)
 {
 	my ($dt, $rh, $n_sdio, $info) = @_;
 	my $bchp_defines = $rh->{rh_defines};
+	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
+	my @compats = 'brcm,sdhci-brcmstb';
+	if ($rh->{chip_arch} eq "MIPS") {
+	    unshift @compats, "brcm,bcm7425-sdhci"
+		if ($chipid ne 0x7425)
+	} else {
+	    unshift @compats, "brcm,bcm7445-sdhci"
+		if $chipid ne 0x7445;
+	}
+	unshift @compats, sprintf("brcm,bcm%x-sdhci", $chipid);
 
-	my ($i, $j);
-
-
-
-	my %default = (compatible => "brcm,bcm7425-sdhci\", \"brcm,sdhci-brcmstb");
+	my %default = ("compatible" => [ 'string', [ @compats ],]);
 	override_default(\%default, $info);
 
+	my ($i, $j);
 	for ($i=0; $i<$n_sdio; $i++) {
 		next if ($info->{'-choose'} && !$info->{'-choose'}->[$i]);
 		my ($host_start, $host_size) = get_reg_range($rh, "BCHP_SDIO_${i}_HOST");
@@ -1430,7 +1448,7 @@ sub add_sdio($$$$)
 		my $sdhci_unit = sprintf("sdhci\@%x", $cfg_start);
 		$t .= sprintf("%s: %s {\n", $sdhci_label, $sdhci_unit);
 		insert_label($sdhci_label, $sdhci_unit);
-		$t .= sprintf("compatible = \"%s\";\n", $default{compatible});
+		$t .= output_default(\%default);
 		$t .= sprintf("reg = <0x%x 0x%x 0x%x 0x%x>;\n", $host_start,
 			$host_size, $cfg_start, $cfg_size);
 		$t .= sprintf("reg-names = \"host\", \"cfg\";\n");
@@ -1481,9 +1499,10 @@ sub add_pcie($$$$$)
 	my ($dt, $rh, $n_pcie, $info, $chip) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
-
-	my %default = ("compatible" => [ 'string', [ sprintf("brcm,bcm%x-pcie", $chipid),
-					'brcm,pci-plat-dev' ] ],
+	my @compats = ('brcm,bcm7445-pcie', 'brcm,pci-plat-dev');
+	unshift @compats, sprintf("brcm,bcm%x-pcie", $chipid)
+		if $chipid ne 0x7445;
+	my %default = ("compatible" => [ 'string', [ @compats ],],
 			"#address-cells" => [ 'dec', 3 ],
 			"#size-cells"  => [ 'dec', 2 ],
 			"tot-num-pcie" => [ 'dec', $n_pcie ],
@@ -1656,9 +1675,11 @@ sub add_ext_moca($$$)
 	my $cpol = $info->{"-spi-clock-polarity"}[0];
 	my $cpha = $info->{"-spi-clock-phase"}[0];
 	my $band = $info->{"-moca_band"}[0];
+	my @gpios = grep { /^-gpio\d*$/ } keys %$info;
 
+	die("Missing moca_band parameter\n") if !defined($band);
 	die("Invalid moca_band parameter: $band\n")
-		if (defined($band) && $band !~
+		if ($band !~
 			/^(-|highrf|midrf|wanrf|ext_d|d_low|d_high|e|f|g|h)$/);
 
 	$max_frequency = 12000000 if (!defined($max_frequency));
@@ -1688,10 +1709,27 @@ sub add_ext_moca($$$)
 	}
 	$intr_prop .= ">;\n";
 
+	# Set up gpios if any exist.
+	my @gpio_phrefs;
+	my @gpio_names;
+	foreach my $gpio (@gpios) {
+		my ($arg) = @{$info->{$gpio}};
+		my ($type, $pin, $active, $name) = split(/,/, $arg);
+		push @gpio_names, "\"$name\"";
+		push @gpio_phrefs, sprintf('<&%s %d %d>', $type, $pin, $name eq 'hi' ? 1 : 0);
+	}
+	my $gpio_str = '';
+	if (@gpio_phrefs) {
+		my $gpio_str0 .= "gpios = " . join(", ", @gpio_phrefs) . ";";
+		my $gpio_str1 .= "gpio-names = " . join(", ", @gpio_names) . ";";
+		$gpio_str = "\t$gpio_str0\n\t$gpio_str1\n";
+	}
+
 	override_default(\%default, $info);
 	$t .= sprintf("%s: moca\@%x {\n", $node, $cs);
 	$t .= output_default(\%default);
 	$t .= $intr_prop;
+	$t .= $gpio_str;
 	$t .= "ethernet-ports {\n";
 	$t .= "rgmii0 {\n";
 	$t .= "};\n";
@@ -1979,21 +2017,26 @@ sub add_waketimer($$$$$)
 	$dt->add_node(DevTree::node->new($t));
 }
 
-sub gen_reg_node($$$$$$)
+sub gen_reg_node($$$$$$;$)  # The ';$' indicates 1 additional optional arg
 {
-	my ($dt, $rh, $name, $bchp_name, $intr, $size) = @_;
+	my ($dt, $rh, $name, $bchp_name, $intr, $size, $alias) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my $chipid = sprintf("%x", BcmUtils::get_chip_family_id($bchp_defines));
 	my %defaults = (compatible => [ 'string', [ "brcm,bcm$chipid-$name",
 						"brcm,$name" ] ]);
 	my ($reg, $rs) = get_reg_range($rh, $bchp_name);
 	$size = $rs if ($size == 0);
-	my $t = sprintf("$name\@%x {\n", $reg);
+	my $label = "";
+	if (defined($alias)) {
+		($label = $name) =~ s/-/_/g;
+		add_reference_alias($dt, $alias, $label);
+		$label .= ": ";
+	}
+	my $t = sprintf("$label$name\@%x {\n", $reg);
 	$t .= output_default(\%defaults);
 	$t .= sprintf("reg = <0x%x 0x%x>;\n", $reg, $size);
 	$t .= output_interrupt_prop($rh, $intr) if (defined($intr));
 	$t .= "};\n";
-
 	$dt->add_node(DevTree::node->new($t));
 }
 
@@ -2007,7 +2050,7 @@ sub add_avs_cpu($$)
 		'irq' => $intr,
 		'parent_intc' => 'avs_host_l2_intc');
 	gen_reg_node($dt, $rh, "avs-cpu-data-mem", "BCHP_AVS_CPU_DATA_MEM",
-		\%host_intr, 0x60);
+		\%host_intr, 0x60, 'cpufreqavs0');
 	gen_reg_node($dt, $rh, "avs-cpu-l2-intr", "BCHP_AVS_CPU_L2",
 		undef, 0x10);
 }
@@ -2769,11 +2812,16 @@ sub add_cpu_biu_ctrl($$$)
 
 	my ($reg, $size)
 		= get_reg_range($rh, "BCHP_HIF_CPUBIUCTRL");
+	my $chipid = sprintf("%x", BcmUtils::get_chip_family_id($bchp_defines));
+	my %defaults = (
+		"compatible" => [ 'string', [ "brcm,bcm$chipid-cpu-biu-ctrl",
+				"brcm,brcmstb-cpu-biu-ctrl", "syscon" ] ]
+	);
 
 	my $unit = sprintf("syscon@%x", $reg);
 	my $t = sprintf("cpu_biu_ctrl: %s {\n", $unit);
 	insert_label("cpu_biu_ctrl", $unit);
-	$t .= sprintf("compatible = \"brcm,brcmstb-cpu-biu-ctrl\", \"syscon\";\n");
+	$t .= output_default(\%defaults);
 	$t .= sprintf("reg = <0x%x 0x%x>;\n", $reg, $size);
 	if ($mcp_wr_pairing_allowed) {
 		$t .= sprintf("brcm,write-pairing;\n");
@@ -3831,6 +3879,26 @@ sub add_dpfe($$$)
 	}
 }
 
+sub add_sun_rng($$$)
+{
+	my ($dt, $rh, $num) = @_;
+	my $bchp_defines = $rh->{rh_defines};
+	my $chipid = BcmUtils::get_chip_family_id($bchp_defines);
+	my @regs = get_reg_range_from_regexp($rh, "^BCHP_SUN_RNG_");
+	my %default = (
+		"compatible" => [ 'string', [
+				sprintf("brcm,bcm%x-rng200", $chipid),
+				"brcm,iproc-rng200" ] ],
+		"reg" => [ 'hex', \@regs ],
+	);
+	my $t = "";
+
+	$t .= sprintf("rng: rng\@%x {\n", $regs[0]);
+	$t .= output_default(\%default);
+	$t .= "};\n";
+	$dt->add_node(DevTree::node->new($t));
+}
+
 ###############################################################
 # FUNCTION:
 #   gen_clocks_prop
@@ -4223,7 +4291,7 @@ STOP
 	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'grow',
 		qr/^SDIO$/, qr/^sdhci\@/);
 	print "$P: WARN: no clocks inserted for SDIO!\n"
-		if (!$ni && BcmUtils::get_num_sdio($bd));
+		if (!$ni && BcmSdio::get_num_sdio($bd));
 
 	# SPI
 	$ni = insert_clocks_prop_into_devs($rdb, $rh_funcs, 'none',

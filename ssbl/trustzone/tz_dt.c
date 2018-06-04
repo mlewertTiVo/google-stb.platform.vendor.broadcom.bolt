@@ -110,7 +110,7 @@ static int tz_populate_rdb(void *fdt)
 		addr = BCHP_PHYSICAL_OFFSET + reg_group->start;
 		size = reg_group->end - reg_group->start + 4;
 
-		xsprintf(pname, "syscon@%08x", addr);
+		xsprintf(pname, "syscon@%x", addr);
 
 		/* Add syscon node */
 		rc = bolt_devtree_addnode_at(fdt, pname, rdb_node, &node);
@@ -168,7 +168,7 @@ static int tz_populate_serial(void *fdt)
 	if (rdb_nwos < 0)
 		return BOLT_ERR;
 
-    /* Get rdb node */
+	/* Get rdb node */
 	rdb_node = fdt_subnode_offset(fdt, 0, "rdb");
 	if (rdb_node < 0)
 		return BOLT_ERR;
@@ -178,7 +178,7 @@ static int tz_populate_serial(void *fdt)
 		int serial_nwos;
 		char pname[128];
 
-		xsprintf(pname, "serial@%08x", t->uart_base);
+		xsprintf(pname, "serial@%x", t->uart_base);
 
 		/* Get NWOS serial node */
 		serial_nwos = fdt_subnode_offset(fdt_nwos, rdb_nwos, pname);
@@ -380,42 +380,6 @@ static int tz_populate_tzioc(void *fdt, bool tz_fdt)
 		if (rc)
 			return rc;
 	}
-
-	return 0;
-}
-
-static int tz_populate_optee(void *fdt)
-{
-	int rc;
-	struct tz_info *t;
-	int firmware_node;
-	int optee_node;
-
-	t = tz_info();
-	if (!t)
-		return BOLT_ERR;
-
-	/* Add firmware node */
-	rc = bolt_devtree_addnode_at(fdt, "firmware", 0, &firmware_node);
-	if (rc)
-		return rc;
-
-
-	/* Add optee node */
-	rc = bolt_devtree_addnode_at(fdt, "optee",
-					firmware_node, &optee_node);
-	if (rc)
-		return rc;
-
-	rc = bolt_dt_addprop_str(fdt, optee_node, "compatible",
-					"linaro,optee-tz");
-	if (rc)
-		return rc;
-
-	rc = bolt_dt_addprop_str(fdt, optee_node, "method",
-					"smc");
-	if (rc)
-		return rc;
 
 	return 0;
 }
@@ -709,7 +673,7 @@ static int tz_populate_chosen(void *fdt)
 	if (rc)
 		return rc;
 
-	xsprintf(serial, "/rdb/serial@%08x:115200", t->uart_base);
+	xsprintf(serial, "/rdb/serial@%x:115200", t->uart_base);
 
 	rc = bolt_dt_addprop_str(fdt, node, "astra,stdout-path", serial);
 	if (rc)
@@ -800,9 +764,9 @@ static int tz_patch_chosen_nwos(void *fdt)
 		}
 	}
 
-	xsprintf(serial, "/rdb/serial@%08x:115200", t->uart_nwos);
+	xsprintf(serial, "/rdb/serial@%x:115200", t->uart_nwos);
 
-	rc = bolt_dt_addprop_str(fdt, node, "linux,stdout-path", serial);
+	rc = bolt_dt_addprop_str(fdt, node, "stdout-path", serial);
 	if (rc)
 		return rc;
 
@@ -859,7 +823,7 @@ int tz_devtree_init(void)
 	if (rc)
 		goto out;
 
-	t->dt_addr = fdt;
+	t->dt_address = fdt;
 
 	return 0;
 
@@ -912,10 +876,6 @@ int tz_devtree_init_nwos(void)
 	if (rc)
 		goto out;
 
-	rc = tz_populate_optee(fdt);
-	if (rc)
-		goto out;
-
 	if (t->uart_nwos) {
 		rc = tz_patch_chosen_nwos(fdt);
 		if (rc)
@@ -940,7 +900,7 @@ int tz_devtree_set(void)
 		return BOLT_ERR;
 
 	/* Final update in case somethings have changed */
-	fdt = t->dt_addr;
+	fdt = t->dt_address;
 
 	if (t->uart_base) {
 		rc = tz_populate_chosen(fdt);

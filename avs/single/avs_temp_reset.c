@@ -28,16 +28,9 @@
 #include "bchp_avs_hw_mntr.h"
 #include "bchp_avs_ro_registers_0.h"
 #endif
+#include "aon_defs.h"
 #include "avs_temp_reset.h"
-
-/* Maximum supported temperature allowed */
-#define MAX_TEMPERATURE 130 /* degrees C */
-
-/* Allow this to be over-ridden with compile time define */
-#ifdef AVS_MAX_TEMPERATURE
-#undef MAX_TEMPERATURE
-#define MAX_TEMPERATURE AVS_MAX_TEMPERATURE
-#endif
+#include "overtemp.h"
 
 /* /\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\ */
 
@@ -55,17 +48,24 @@
 void avs_set_temp_threshold(unsigned int device, int en)
 {
 	uint32_t reg;
+	uint8_t temp_thresh;
+
+	if (BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY) &
+		BCHP_AON_CTRL_RESET_HISTORY_overtemp_reset_MASK)
+		temp_thresh = overtemp_get_threshold(AON_REG(AON_REG_OVERTEMP));
+	else
+		temp_thresh = OVERTEMP_MAX_TEMPERATURE;
 
 #ifdef BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD
 	/* original: o_ADC_data=(410.04-T)/0.48705 */
 	/* For T=130 reg=574.97176=>574=23Eh, 23Eh<<1=>47Ch */
-	reg = (4100400-(MAX_TEMPERATURE*10000))/4870;
+	reg = (4100400 - (temp_thresh * 10000)) / 4870;
 	/* The actual temperature is located in bits 10:1 (not 10:0) */
 	BDEV_WR(BCHP_AVS_TMON_TEMPERATURE_RESET_THRESHOLD, reg << 1);
 	BDEV_WR(BCHP_AVS_TMON_ENABLE_OVER_TEMPERATURE_RESET, en);
 #else
 	/* original: reg=854.8-2.069*T */
-	reg = (854800 - (2069 * MAX_TEMPERATURE)) / 1000;
+	reg = (854800 - (2069 * temp_thresh)) / 1000;
 	BDEV_WR(BCHP_AVS_HW_MNTR_TEMPERATURE_THRESHOLD, reg);
 	BDEV_WR(BCHP_AVS_HW_MNTR_TEMPERATURE_RESET_ENABLE, en);
 #endif

@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 # *
 # *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -96,7 +96,7 @@ $arg_keep = 1 if (defined $cmdflags{k});
 
 # cmdflags checks ----------------------------------------------------------
 
-failed("-z missing param value: 0 (zeus) 1 (zeus 4.2) 2 (zeus 4.1)")
+failed("-z missing zeus version")
 	if (!defined $arg_zeusver);
 failed("-l missing param list for BBLs")
 	if (!defined $arg_bbl);
@@ -757,7 +757,7 @@ sub do_secpatch($$$$)
 		if (! cfg_is("CFG_NOSHMOO"));
 
 	write_binfile($fname, $image)
-		if (! (cfg_is("CFG_ZEUS5_0") || cfg_is("CFG_ZEUS5_1")) );
+		if (! cfg_is("CFG_ZEUS5_1"));
 }
 
 
@@ -777,7 +777,6 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 	my $meta = "BOLT-META:";
 	my $file_bbl = "security/" . $arg_family . "/bbl-" . $list_bbls[$i] . ".bin";
 	my $file_bfw = "security/" . $arg_family . "/bfw-" . $list_bfws[$i] . ".bin";
-	my $file_key = "security/" . $arg_family . "/key0.bin";
 
 	# do as a matched/compatible set
 	if ( (! -f $file_bbl) || (! -f $file_bfw)) {
@@ -788,8 +787,12 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 		next;
 	}
 
-	my $bname = "bolt-" . $arg_ver . "-" . $arg_family;
-	$bname .=     "-" . $list_pfxs[$i];
+	my $bname = "bolt-" . $arg_ver . "-";
+	if (cfg_is("CFG_ZEUS5_1")) {
+		$bname .= substr($arg_family,0,4) . $list_pfxs[$i] . "-ba";
+	} else {
+		$bname .= $arg_family . "-" . $list_pfxs[$i];
+	}
 
 	$bname .= "-bbl-" . $list_bbls[$i]
 		if ($arg_bbl_ver);
@@ -801,7 +804,6 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 	my $cmd = "$arg_tool -z $arg_zeusver -i $bolt -o $arg_odir/$bname";
 	my $sub_bbl = "-t bbl -p $file_bbl -i $bolt";
 	my $sub_bfw = "-t bfw -p $file_bfw -i $arg_odir/$bname";
-	my $sub_key = "-t key -p $file_key -i $arg_odir/$bname";
 
 	$r = do_shell("$cmd $sub_bbl");
 	print "\n$r"
@@ -811,14 +813,8 @@ for (my $i = 0; $i < @list_pfxs; $i++) {
 	print "\n$r"
 		if ($arg_debug);
 
-	if (-f $file_key) {
-		$r = do_shell("$cmd $sub_key");
-		print "\n$r"
-			if ($arg_debug);
-	}
-
 	if (cfg_is("CFG_ZEUS5_1")) {
-		my $file_reserveddata = "security/" . $arg_family . "/reserveddata.bin";
+		my $file_reserveddata = "security/" . $arg_family . "/reserveddata-" . $list_pfxs[$i] . ".bin";
 		my $file_zeus51_mark = "security/" . "/zeus51-mark.bin";
 		my $sub_reserveddata = "-t reserveddata -p $file_reserveddata -i $arg_odir/$bname";
 		my $sub_zeus51_mark = "-t zeus51mark -p $file_zeus51_mark -i $arg_odir/$bname";

@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 # *
 # *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -907,8 +907,11 @@ sub grok_defines_from_c_incl_files
 				my ($key, $val) = ($1, $2);
 				warn "$P: wrn: redefining '$key'.\n"
 					if (exists $rh->{$key});
-				$val = hex($val)
-					if ($val =~ /^0x[0-9A-F]{1,8}$/i);
+				if ($val =~ /^0x[0-9A-F]{1,8}$/i) {
+					$val = hex($val);
+				} elsif ($val =~ /^0x[0-9A-F]+$/i) {
+					$val = Math::BigInt->new($val);
+				}
 				$rh->{$key} = $val;
 				push @{$ra}, [$key, $val];
 			}
@@ -1000,9 +1003,9 @@ sub init_bchp_info()
 	return
 		if (! keys %bchp_info);
 
-	$rdb_start = $rh->{phys_offset};
 	my $bchp_defines = $rh->{rh_defines};
-	$rdb_end = $rdb_start + $bchp_defines->{BCHP_REGISTER_END};
+	$rdb_start = $rh->{phys_offset} + $bchp_defines->{BCHP_REGISTER_START};
+	$rdb_end = $rh->{phys_offset} + $bchp_defines->{BCHP_REGISTER_END};
 }
 
 sub is_integer
@@ -1148,7 +1151,7 @@ for (my $i = 0; $i < (@lines); $i++) {
 			$armreg[scalar $reg] = $regval;
 
 			report_is_ssbl_instruction_address_sane($regval)
-				if ($reg ~~ [14, 15]);
+				if ($reg == 14 || $reg == 15);
 
 			is_stack_address_sane($regval)
 				if ($reg == 13);

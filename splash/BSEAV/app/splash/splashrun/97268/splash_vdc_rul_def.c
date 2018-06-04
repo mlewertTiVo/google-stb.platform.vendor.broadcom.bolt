@@ -3828,7 +3828,8 @@ static SplashData s_aSplashData = {
 	sizeof(s_aTriggerMap)/sizeof(s_aTriggerMap[0]),
 	&s_aTriggerMap[0],
 	sizeof(s_aulReg)/(2*sizeof(s_aulReg[0])),
-	s_aulReg
+	s_aulReg,
+	0
 };
 
 SplashData* GetSplashData(void)

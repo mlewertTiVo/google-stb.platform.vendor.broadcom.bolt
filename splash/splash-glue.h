@@ -21,6 +21,17 @@
 #include "splash_script_load.h"
 #include "timer.h"
 #include "bchp_rdc.h"
+#include "bchp_bsca.h"
+#include "aon_defs.h"
+
+/* These defines are derived from
+ * magnum/portinginterface/bhdm/include/bhdm_scdc.h, They denote the
+ * I2C address and the offset to reset the HDMI scrambling setting.
+ */
+#define BHDM_SCDC_I2C_ADDR         0x54
+#define BHDM_SCDC_TMDS_CONFIG      0x20
+
+#define HDMI_FLAG_RESET_SCDC       (1<<24)
 
 #include <stdbool.h>
 
@@ -93,5 +104,6 @@ struct bnode {
 };
 
 int splash_glue_init(void);
+void reset_HDMI_receiver_scrambling(unsigned int chn_num);
 
 #endif /* __SPLASH_GLUE_H__ */

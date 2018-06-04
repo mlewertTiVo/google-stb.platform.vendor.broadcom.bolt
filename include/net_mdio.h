@@ -17,6 +17,8 @@
 
 #define PHY_MAX_ADDR		32
 #define PHY_BCAST_ADDR		0
+#define PHY_ID_MASK		0xfffffff0
+#define PHY_ID_REV		0xf
 
 /* Marshalling structure for MDIO abstraction library */
 typedef struct mdio_xfer_s {

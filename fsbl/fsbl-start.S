@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -195,14 +195,15 @@ ENTRY_PROC(setup_mvbar)
 #endif
 END_PROC(setup_mvbar)
 
-ENTRY_PROC(psci)
-#ifdef STUB64_START
-	smc	#0 /* do the PSCI call */
-	isb
+#if CFG_MON64
+ENTRY_PROC(launch_mon64)
+	mov	r3, r0
+	mov	r0, #0
+	mov	r1, #0
+	mov	r2, #0
+	smc	#0
+END_PROC(launch_mon64)
 #endif
-	bx	lr
-END_PROC(psci)
-
 	.section .init.rodata
 	.align  4
 

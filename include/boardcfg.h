@@ -32,4 +32,6 @@
 /* On 7445d0+ */
 #define SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_SPI_4B_VALUE	0b11111
 
+unsigned int boardcfg_bootmode(void);
+
 #endif /* __BOARDCFG_H__ */

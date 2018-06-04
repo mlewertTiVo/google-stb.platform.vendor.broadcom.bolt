@@ -770,9 +770,9 @@ asciidoc.install(3);
 <h1>Build configuration script</h1>
 <span id="author">Broadcom Ltd</span><br />
 <span id="email"><code>&lt;<a href="mailto:support@broadcom.com">support@broadcom.com</a>&gt;</code></span><br />
-<span id="revnumber">version 1.37,</span>
-<span id="revdate">June 9th 2017</span>
-<br /><span id="revremark">Updated for 1.30 release.</span>
+<span id="revnumber">version 1.42,</span>
+<span id="revdate">April 13th 2018</span>
+<br /><span id="revremark">Updated for 1.42 release.</span>
 <div id="toc">
   <div id="toctitle">Table of Contents</div>
   <noscript><p><b>JavaScript must be enabled in your browser to display the table of contents.</b></p></noscript>
@@ -1016,6 +1016,7 @@ No other text apart from comments must appear after it.</p></div>
     dtsinclude
     gset
     i2cbus
+    intr1_info
     ldfile
     map
     mmap
@@ -1614,7 +1615,7 @@ fragments which can override the family's DTS file.
 </div></div>
 <div class="listingblock">
 <div class="content">
-<pre><code>dt autogen -node ext_moca -parent qspi -cs 0 -interrupt_parent upg_gio -interrupt 14 4</code></pre>
+<pre><code>dt autogen -node ext_moca -parent qspi -cs 0 -interrupt_parent upg_gio -interrupt 14 4 -moca_band highrf</code></pre>
 </div></div>
 <div class="admonitionblock">
 <table><tr>
@@ -2038,12 +2039,14 @@ hyper           2</p></div>
 <h4 id="_ext_moca">5.14.14. ext_moca</h4>
 <div class="paragraph"><p>Usage: dt autogen -node ext_moca -parent &lt;PARENT&gt; -cs &lt;CS_NUM&gt;
         -interupt_parent &lt;INTERRUPT_PARENT&gt; -interrupt &lt;INTERRUPT_SPECIFIER&gt;
-        -frequency &lt;FREQ&gt; -spi-clock-polarity &lt;0|1&gt; -spi-clock-phase &lt;0|1&gt;</p></div>
+        -frequency &lt;FREQ&gt; -spi-clock-polarity &lt;0|1&gt; -spi-clock-phase &lt;0|1&gt;
+        -moca_band &lt;BAND&gt;</p></div>
 <div class="paragraph"><p>External MoCA chips such as Broadcom&#8217;s BCM6802/3 are typically interfaced
 through SPI and require indicating which SPI controller the chip is attached to
 (PARENT, typically UPG_MSPI, aka qspi in Device Tree) and the chip select
 number (CS_NUM). It is also necessary to indicate the interrupt controller
 (INTERRUPT_PARENT) and interrupt specifier (INTERRUPT_SPECIFIER) that is used.</p></div>
+<div class="paragraph"><p>The <em>moca_band</em> parameter is necessary see the "moca" section for valid values.</p></div>
 <div class="paragraph"><p>The maximum supported frequency can be defined using FREQ and the SPI clock
 polarity and phase polarity can be defined as well.</p></div>
 </div>
@@ -2100,9 +2103,34 @@ database (RDB) file. In the above example that would
 be the file bolt/include/&lt;FAMILY&gt;/bchp_bscf.h</p></div>
 <div class="paragraph"><p>Note that this is a new feature to support Broadcom
 reference boards and may change in future releases.</p></div>
-</div>
-<div class="sect2">
-<h3 id="_include">5.16.  include</h3>
+<div class="literalblock">
+<div class="content">
+<pre><code>intr1_info</code></pre>
+</div></div>
+<div class="listingblock">
+<div class="content">
+<pre><code>Usage: intr1_info -prefix <string> -offset <int>
+
+Note: tell the Bolt build system some information about the
+host's L1 interrupts
+
+Example:
+----
+ intr1_info -prefix "BCHP_HIF_CPU_INTR1_INTR" -offset   0   /* default values */
+ intr1_info -prefix "BCHP_CPU_INTR1_INTR"     -offset 128   /* eg 7211/2711   */
+----
+
+Most STB chips have a commont L1 interrupt name prefix; for example,
+the 7278 register name is "BCHP_HIF_CPU_INTR1_INTR_W0_STATUS" and
+its prefix is "BCHP_HIF_CPU_INTR1_INTR".  Use this command if your
+chip has a different interrupt prefix.  In addition, some chips
+have a different offset and that must be specified as well if you
+elect to use this command.
+
+
+
+ include</code></pre>
+</div></div>
 <div class="paragraph"><p>Usage: include &lt;FILE&gt;</p></div>
 <div class="paragraph"><p>Note: include an external config file</p></div>
 <div class="paragraph"><p>See also: n/a</p></div>
@@ -2114,7 +2142,7 @@ reference boards and may change in future releases.</p></div>
 <div class="paragraph"><p>Include (inline) from another file.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_ldfile">5.17.  ldfile</h3>
+<h3 id="_ldfile">5.16.  ldfile</h3>
 <div class="paragraph"><p>Usage: ldfile -in file.in [-rename outfile]</p></div>
 <div class="paragraph"><p>Note: Copy and perform substitutions on a named file.</p></div>
 <div class="paragraph"><p>See also: cset gset</p></div>
@@ -2176,7 +2204,7 @@ due consideration.</span></em>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_comment">5.18.  comment</h3>
+<h3 id="_comment">5.17.  comment</h3>
 <div class="paragraph"><p>Usage: comment &lt;string&gt;</p></div>
 <div class="paragraph"><p>Note: Add a comment to the FSBL board selection menu</p></div>
 <div class="paragraph"><p>See also:  [board] [chip], the file <em>include/fsbl-common.h</em></p></div>
@@ -2199,7 +2227,7 @@ NAMELEN characters.</p></div>
 <div class="paragraph"><p>No comments will be shown in the FSBL board selection menu.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_enet">5.19.  enet</h3>
+<h3 id="_enet">5.18.  enet</h3>
 <div class="paragraph"><p>Usage: enet -genet &lt;NUMBER&gt; -phy_type &lt;PHY&gt; -mdio_mode &lt;MODE&gt; -phy_speed &lt;SPEED&gt; -phy_id &lt;ID&gt; -ethsw &lt;HEXSTR&gt;</p></div>
 <div class="paragraph"><p>Note: Set ethenet parameters.</p></div>
 <div class="paragraph"><p>See also: [board] [chip], BOLT <em>ephycfg</em> command.</p></div>
@@ -2226,7 +2254,7 @@ Device Tree.</p></div>
 but for the physical eth/genet/switch port device (if enabled in the build)
 that BOLT can use all values.</p></div>
 <div class="sect3">
-<h4 id="_parameters">5.19.1. Parameters</h4>
+<h4 id="_parameters">5.18.1. Parameters</h4>
 <div class="sect4">
 <h5 id="_genet">genet</h5>
 <div class="paragraph"><p>genet &lt;NUMBER&gt; - The physical GENET number as it
@@ -2395,7 +2423,7 @@ for the BOLT physical Ethernet device, only for Linux (Device Tree).</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_moca">5.20.  moca</h3>
+<h3 id="_moca">5.19.  moca</h3>
 <div class="paragraph"><p>Usage: moca -enet_node &lt;DT_NODE&gt; -moca_band &lt;BAND&gt;</p></div>
 <div class="paragraph"><p>Note: Set MoCA parameters.</p></div>
 <div class="paragraph"><p>See also: [board] [chip].</p></div>
@@ -2438,7 +2466,7 @@ string representing a band as follows:
 <div class="paragraph"><p>This is only used as a Device Tree configuration entry for Linux.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_ext_moca_2">5.21.  ext_moca</h3>
+<h3 id="_ext_moca_2">5.20.  ext_moca</h3>
 <div class="paragraph"><p>Usage: ext_moca -enet_node &lt;DT_NODE -moca_band &lt;BAND&gt;
         -rgmii &lt;RGMII 0|1&gt; -phy_type &lt;PHY_TYPE&gt; -phy_id &lt;PHY_ID&gt;
         -mdio_mode &lt;MDIO_MODE&gt;</p></div>
@@ -2448,8 +2476,8 @@ two RGMII interfaces.</p></div>
 <div class="paragraph"><p>Example:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code> ext_moca -enet_node eth1 -rgmii 0 -phy_type MOCA -mdio_mode 0 -phy_speed 1000
- -phy_id 257</code></pre>
+<pre><code> ext_moca -enet_node eth1 -rgmii 0 -phy_type MOCA -mdio_mode 0 \
+    -phy_speed 1000 -phy_id 257 [-gpio &lt;gpio-desc&gt;]</code></pre>
 </div></div>
 <div class="paragraph"><p>This sets up the external MoCA configuration for a board.</p></div>
 <div class="ulist"><ul>
@@ -2468,6 +2496,18 @@ string representing a band as described in [moca]
 </li>
 <li>
 <p>
+<em>-gpio</em> offers the ext_moca device gpios to control, such as for reset
+  before probing.  The argument, &lt;gpio-desc&gt;, is in the form
+          (upg_gio|upg_gio_aon,&lt;pin&gt;,(hi|lo),&lt;name&gt;
+  The <em>pin</em> is in decimal.  An example of &lt;gpio-desc&gt; would be
+          upg_gio,17,hi,reset
+  If there are multiple gpios, use a slightly different option for
+  each gpio:
+          -gpio0 upg_gio,17,hi,reset  -gpio1 upg_gio,18,lo,reset
+</p>
+</li>
+<li>
+<p>
 For all other properties see [enet]
 </p>
 </li>
@@ -2477,7 +2517,7 @@ For all other properties see [enet]
 <div class="paragraph"><p>See also: pmux</p></div>
 </div>
 <div class="sect2">
-<h3 id="_pad_rgmii">5.22.  pad_rgmii</h3>
+<h3 id="_pad_rgmii">5.21.  pad_rgmii</h3>
 <div class="paragraph"><p>Usage: pad_rgmii -id &lt;0|1&gt; -voltage &lt;none|high|low&gt;</p></div>
 <div class="paragraph"><p>The voltage level of RGMII (or MTSIF) pads needs be adjusted by software
 for 7271b0. By default, it is configured to HIGH voltage (2.5V or 3.3V)
@@ -2502,7 +2542,7 @@ interface #1 for the 1.5V or 1.8V board design of the interface.</p></div>
 <div class="paragraph"><p>See also: pmux</p></div>
 </div>
 <div class="sect2">
-<h3 id="_pmux">5.23.  pmux</h3>
+<h3 id="_pmux">5.22.  pmux</h3>
 <div class="paragraph"><p>Usage: pmux -pin &lt;pin&gt; -sel &lt;field&gt; [-pull &lt;none|up|down&gt;] [-n &lt;int&gt;]</p></div>
 <div class="paragraph"><p>See also: [family] [chip] [board]</p></div>
 <div class="paragraph"><p>Note: sets pinmuxing and pad control.  Also: supplants the pinmux command.</p></div>
@@ -2571,8 +2611,9 @@ If specified under [chip] (to be inherited by boards)
 </div>
 </div>
 <div class="sect2">
-<h3 id="_ddr">5.24.  ddr</h3>
-<div class="paragraph"><p>Usage: ddr -n &lt;WHICH&gt; -size_mb &lt;SIZE&gt; [-base_mb &lt;BASE&gt;] -clk &lt;SHMOO SPEED&gt; -size_bits &lt;SHMOO SIZE&gt; -width &lt;SHMOO WIDTH&gt; -phy &lt;PHY WIDTH&gt; -fixed - -custom &lt;TAG&gt;</p></div>
+<h3 id="_ddr">5.23.  ddr</h3>
+<div class="paragraph"><p>Usage:
+ddr -n &lt;WHICH&gt; -size_mb &lt;SIZE&gt; [-base_mb &lt;BASE&gt;] -clk &lt;ddr_speed&gt; -size_bits &lt;dev_size&gt; {-ranks &lt;#ranks&gt; | -width &lt;dev_width&gt;} -phy &lt;phy_width&gt; [-fixed -] [-custom &lt;TAG&gt;]</p></div>
 <div class="paragraph"><p>Note: Set ddr parameters</p></div>
 <div class="paragraph"><p>See also: [board] [chip] [mmap]</p></div>
 <div class="paragraph"><p>Example:</p></div>
@@ -2590,14 +2631,15 @@ ddr -n 1 -size_mb  -   -clk -      -size_bits -  -width -  -phy -</code></pre>
 </tr></table>
 </div>
 <div class="paragraph"><p>The value are inheritable from [chip] and can be overridden. The second
-example shows a ddr excluded from being shmoo&#8217;d &amp; will not appear in
-the cpu memory map.</p></div>
-<div class="paragraph"><p>These parameters select which <em>shmoo</em> table in FSBL to program
-the (optimal) settings for a physical ddr device. The values must match
+example excludes the second memory controller from being configured and
+will not appear in the CPU memory map.</p></div>
+<div class="paragraph"><p>These parameters select which entry in <em>shmoo</em> table of FSBL to program
+the (optimal) settings for a physical DDR device. The values must match
 one of those seen in shmoo/${MEMC_REV}/mcb/*.mcb for your chip family.
 MEMC_REV is specified in your chip family configuration file.</p></div>
-<div class="paragraph"><p>The values &lt;SHMOO SPEED&gt;, &lt;PHY WIDTH&gt;, &lt;SHMOO SIZE&gt; and &lt;SHMOO WIDTH&gt;
-appear in order, in the name of the source data files used in bolt, e.g.</p></div>
+<div class="paragraph"><p>The values &lt;ddr_speed&gt;, &lt;phy_width&gt;, &lt;dev_size&gt; and &lt;dev_width&gt; (or
+&lt;#ranks&gt;) appear in order, in the name of the source data files used in
+BOLT, e.g.</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code> bolt/shmoo/B120_E101/mcb/memsys_config_1067MHz_16b_dev4Gx16_le.mcb</code></pre>
@@ -2605,39 +2647,54 @@ appear in order, in the name of the source data files used in bolt, e.g.</p></di
 <div class="ulist"><ul>
 <li>
 <p>
-&lt;WHICH&gt; is an index to select which <em>memc</em> (ddr controller) to apply the
- <em>shmooing</em> to.
+&lt;WHICH&gt; is the index of a memory controller that the parameters are
+applied to.
 </p>
 </li>
 <li>
 <p>
-&lt;SIZE&gt; and &lt;BASE&gt; refer to the physical ddr size and base address in
-Mbytes that the cpu will see.
+&lt;SIZE&gt; and &lt;BASE&gt; refer to the amount of memory and base address in
+Mbytes that the CPU will see.
 </p>
 </li>
 <li>
 <p>
-&lt;SHMOO SPEED&gt; is the ddr speed required.
+&lt;ddr_speed&gt; is the DDR frequency required.
 </p>
 </li>
 <li>
 <p>
-&lt;SHMOO SIZE&gt; is the size of the ddr device, e.g. use 4 for a 4Gbit device.
+&lt;dev_size&gt; is the size of the DRAM device, e.g. use 4G for a 4Gbit device.
 </p>
 </li>
 <li>
 <p>
-&lt;SHMOO WIDTH&gt; is each individual ddr chips data bus width, e.g. 8, 16 or 32.
+&lt;dev_width&gt; is the data bus width of each DRAM device on the memory
+controller &lt;WHICH&gt;, e.g. 8, 16 or 32.
 </p>
 </li>
 <li>
 <p>
-&lt;PHY WIDTH&gt; is the memc (ddr controller) interface width, e.g. 16 or 32.
+&lt;#ranks&gt; is the number of ranks of the DRAM device, from 1 to 8.
+</p>
+</li>
+<li>
+<p>
+&lt;phy_width&gt; is the MEMC (memory controller) interface width, e.g. 16 or 32.
 </p>
 </li>
 </ul></div>
-<div class="paragraph"><p>If you cannot find a ddr type (aka <em>mcb</em> file) in the BOLT release
-package that matches your products actual ddr device, then please
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">The two options of -ranks and -width are mutually exclusive.
+Having the both at the same time will cause the build to fail.</td>
+</tr></table>
+</div>
+<div class="paragraph"><p>If you cannot find a DDR type (aka <em>MCB</em> file) in the BOLT release
+package that matches your products actual DDR device, then please
 contact your Broadcom FAE.</p></div>
 <div class="admonitionblock">
 <table><tr>
@@ -2645,7 +2702,7 @@ contact your Broadcom FAE.</p></div>
 <div class="title">Note</div>
 </td>
 <td class="content">A further build step may or may not be required to integrate new
- mcb data files, depending upon BOLT version. Please see the BOLT
+ MCB data files, depending upon BOLT version. Please see the BOLT
 documentation doc/howto_update_ddr_mcb_files.txt.</td>
 </tr></table>
 </div>
@@ -2674,7 +2731,7 @@ change it.</p></div>
 <div class="paragraph"><p>The number of these full sized MCB tables must be no more than the
 number of DDR client hardware (<em>MEMC</em>) the chip supports.</p></div>
 <div class="paragraph"><p>The optional flag <em>-custom</em> selects a customized MCB based on &lt;TAG&gt;
-on top of &lt;SHMOO SPEED&gt;, &lt;SHMOO SIZE&gt;, &lt;SHMOO WIDTH&gt; and &lt;PHY WIDTH&gt;.
+on top of &lt;SHMOO SPEED&gt;, &lt;dev_size&gt;, &lt;dev_width&gt; and &lt;phy_width&gt;.
 The "-custom" flag is specific to each chip family, and corresponding MCB
 can be found from shmoo/${MEMC_REV}/mcb/${FAMILY}/&lt;TAG&gt;*.mcb, e.g.</p></div>
 <div class="listingblock">
@@ -2726,7 +2783,7 @@ command (ddr) anywhere in your config.</td>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_bid">5.25.  bid</h3>
+<h3 id="_bid">5.24.  bid</h3>
 <div class="paragraph"><p>Usage: bid &lt;hex value&gt;</p></div>
 <div class="paragraph"><p>Note: Set the board ID</p></div>
 <div class="paragraph"><p>See also: i2cbus</p></div>
@@ -2741,7 +2798,7 @@ first stage bootloader (FSBL) menu. If no boards match
 an ID then the menu is presented.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_dt">5.26.  dt</h3>
+<h3 id="_dt">5.25.  dt</h3>
 <div class="paragraph"><p>Usage:</p></div>
 <div class="ulist"><ul>
 <li>
@@ -2818,7 +2875,7 @@ dt cull -root /rdb -node sata@f045a000 -prop status</code></pre>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_rtsdefault">5.27.  rtsdefault</h3>
+<h3 id="_rtsdefault">5.26.  rtsdefault</h3>
 <div class="paragraph"><p>Usage: rtsdefault -id &lt;BOX MODE&gt;</p></div>
 <div class="paragraph"><p>Note: Sets the default rts <em>box mode</em> for a chip or board</p></div>
 <div class="paragraph"><p>See also: rtsbase rtsconfig</p></div>
@@ -2838,7 +2895,7 @@ is not set.
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_avs">5.28.  avs</h3>
+<h3 id="_avs">5.27.  avs</h3>
 <div class="paragraph"><p>Usage: avs [enable | disable] -domains &lt;VOLTAGE DOMAINS&gt; -mode &lt;avs|dfs|dvfs&gt; -pmap &lt;MAP&gt; -pstate &lt;STATE&gt;</p></div>
 <div class="paragraph"><p>Note: Sets the default AVS state and number of voltage domains. Also sets
 the DVFS mode, pmap and pstate.</p></div>
@@ -2876,7 +2933,7 @@ in [family], [chip] and [board].</p></div>
 and <em>-pstate</em> are integers.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_nand_feature">5.29.  nand_feature</h3>
+<h3 id="_nand_feature">5.28.  nand_feature</h3>
 <div class="paragraph"><p>Usage: nand_feature -set &lt;0 | 1&gt; -addr &lt;ADDRESS&gt; [-data &lt;P1&gt;,&lt;P2&gt;,&lt;P3&gt;,&lt;P4&gt;]</p></div>
 <div class="paragraph"><p>Note: sends vendor specific  SET/GET_FEATURE lowlevel ops to nand part. data
       is provided only for SET Feature. Refer to nand datasheet for vendor
@@ -2929,7 +2986,7 @@ gets it again to verify.</code></pre>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_sdio">5.30.  sdio</h3>
+<h3 id="_sdio">5.29.  sdio</h3>
 <div class="paragraph"><p>Usage: sdio -controller &lt;N&gt; -type &lt;T&gt; [-uhs] [-host_driver_strength &lt;S&gt;] [-host_hs_driver_strength &lt;S&gt;] [-card_driver_strength &lt;S&gt;]</p></div>
 <div class="paragraph"><p>Note: Sets the default SIO hardware operating mode</p></div>
 <div class="paragraph"><p>See also: dt autogen -node sdio</p></div>
@@ -2990,7 +3047,7 @@ by adding the property "no-1-8-v".
 </ul></div>
 </div>
 <div class="sect2">
-<h3 id="_vreg">5.31.  vreg</h3>
+<h3 id="_vreg">5.30.  vreg</h3>
 <div class="paragraph"><p>Usage: vreg -name &lt;string&gt; -gpio &lt;gpio&gt; -pin &lt;int&gt; -active hi|lo \
                 [-udelay &lt;int&gt;]  [-uvolts &lt;int&gt;] [-on_at_boot &lt;int&gt;]</p></div>
 <div class="paragraph"><p>This per-board command was created to support the pcie/sata turning
@@ -3043,7 +3100,7 @@ pcie or sata command.</p></div>
 <div class="paragraph"><p>vreg -name wifi -gpio upg_gio -pin 14 -active lo</p></div>
 </div>
 <div class="sect2">
-<h3 id="_pcie">5.32.  pcie</h3>
+<h3 id="_pcie">5.31.  pcie</h3>
 <div class="paragraph"><p>Usage: pcie -controller &lt;N&gt; -type &lt;T&gt; [-ssc 1] [-gen &lt;G&gt;] [-pwr &lt;V&gt;]</p></div>
 <div class="paragraph"><p>Note: Sets the default PCIe hardware operating mode on a per board basis.</p></div>
 <div class="paragraph"><p>See also: dt autogen -node pcie</p></div>
@@ -3125,7 +3182,7 @@ Linux boot failure.</td>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_sata_2">5.33.  sata</h3>
+<h3 id="_sata_2">5.32.  sata</h3>
 <div class="paragraph"><p>Usage: sata -controller &lt;N&gt; [-pwr &lt;V&gt;]</p></div>
 <div class="paragraph"><p>Note: Sets the default SATA hardware operating mode on a per board basis.</p></div>
 <div class="paragraph"><p>See also: dt autogen -node sata</p></div>
@@ -3156,8 +3213,8 @@ command described here modifies or deletes individual SATA devices on
 a per board basis.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_usb">5.34.  usb</h3>
-<div class="paragraph"><p>Usage: usb -controller &lt;N&gt; -type &lt;T&gt; [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual|typec_pd]</p></div>
+<h3 id="_usb">5.33.  usb</h3>
+<div class="paragraph"><p>Usage: usb -controller &lt;N&gt; -type &lt;T&gt; [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual|typec-pd]</p></div>
 <div class="paragraph"><p>Note: Sets the default USB hardware operating mode on a per board basis.</p></div>
 <div class="paragraph"><p>See also: dt autogen -node usb</p></div>
 <div class="paragraph"><p>Examples:</p></div>
@@ -3195,7 +3252,7 @@ command described here modifies or deletes individual USB devices on
 a per board basis.</p></div>
 </div>
 <div class="sect2">
-<h3 id="_gpio_key">5.35.  gpio_key</h3>
+<h3 id="_gpio_key">5.34.  gpio_key</h3>
 <div class="paragraph"><p>Usage: gpio_key -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -code &lt;KEY_CODE&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the gpio button. You can create multiple gpio buttons.</p></div>
 <div class="paragraph"><p>If Nexus is build with NEXUS_HAS_GPIO=1, the Nexus will take ownership of all GPIO pins.
@@ -3241,7 +3298,7 @@ the gpio button.</p></div>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_gpio_led">5.36.  gpio_led</h3>
+<h3 id="_gpio_led">5.35.  gpio_led</h3>
 <div class="paragraph"><p>Usage: gpio_led -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -pol &lt;POLARITY&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the gpio led driver. You can create multiple gpio leds.</p></div>
 <div class="paragraph"><p>See also: dt autogen gpio</p></div>
@@ -3275,7 +3332,7 @@ the gpio button.</p></div>
 </div></div>
 </div>
 <div class="sect2">
-<h3 id="_bt_rfkill_gpio">5.37.  bt_rfkill_gpio</h3>
+<h3 id="_bt_rfkill_gpio">5.36.  bt_rfkill_gpio</h3>
 <div class="paragraph"><p>Usage: bt_rfkill_gpio -name &lt;NAME&gt; -gpio &lt;NAME_OF_GPIO_CONTROLLER&gt; -pin &lt;GPIO_PIN&gt; -pol &lt;POLARITY&gt;</p></div>
 <div class="paragraph"><p>Note: Creates device node for the Bluetooth rfkill gpio. You can have up to 2 GPIOs, one for vreg and another for reset.</p></div>
 <div class="paragraph"><p>Check the hardware schematics to ensure the correct &lt;NAME_OF_GPIO_CONTROLLER&gt; and &lt;GPIO_PIN&gt;
@@ -3320,7 +3377,7 @@ bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1 -pdelay 5
 <div class="sect1">
 <h2 id="_appendix_copyright_info">6. Appendix: Copyright Info</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>Copyright &#169; 2017, Broadcom Ltd.
+<div class="paragraph"><p>Copyright &#169; 2018, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.</p></div>
 </div>
@@ -3329,9 +3386,9 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footnotes"><hr /></div>
 <div id="footer">
 <div id="footer-text">
-Version 1.37<br />
+Version 1.42<br />
 Last updated
- 2017-12-07 23:39:45 PST
+ 2018-06-01 16:37:41 PDT
 </div>
 </div>
 </body>

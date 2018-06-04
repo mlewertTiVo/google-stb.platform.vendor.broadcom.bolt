@@ -138,6 +138,56 @@ struct at_runtime {
 #endif
 } at_runtime;
 
+typedef enum {
+	AVS_DEBUG_VAL_VOLT0	=  2,
+	AVS_DEBUG_VAL_TEMP0	=  3,
+	AVS_DEBUG_VAL_PV0	=  4,
+	AVS_DEBUG_VAL_MV0	=  5,
+	AVS_DEBUG_VAL_REVISION	= 10,
+	AVS_DEBUG_VAL_STATE	= 11,
+	AVS_DEBUG_VAL_HEARTBEAT	= 12,
+	AVS_DEBUG_VAL_MAGIC	= 13,
+	AVS_DEBUG_VAL_SIGMA	= 14,
+	AVS_DEBUG_VAL_VOLT1	= 16,
+	AVS_DEBUG_VAL_TEMP1	= 17,
+	AVS_DEBUG_VAL_PV1	= 18,
+	AVS_DEBUG_VAL_MV1	= 19,
+	AVS_DEBUG_VAL_FREQ	= 20,
+	AVS_DEBUG_VAL_SIZE
+} AvsDebugVal_t;
+
+struct at_runtime2 {
+	uint32_t command;
+	uint32_t status;
+
+	/* This is the data firmware supplies: */
+	uint32_t voltage0;	/* current voltage for STB (in milli-volts) */
+	int32_t temperature0;	/* current temperature for STB (in 1000th) */
+	uint32_t PV0;	/* initial predicted voltage value (in milli-volts) */
+	uint32_t MV0;	/* initial measured voltage value (in milli-volts) */
+
+	uint32_t command_p0;	/* used to pass parameters for commands */
+	uint32_t command_p1;	/* and receive resullts when applicable */
+	uint32_t command_p2;
+	uint32_t command_p3;
+	uint32_t command_p4;
+	uint32_t command_p5;
+	uint32_t command_p6;
+	uint32_t command_p7;
+	uint32_t command_p8;
+	uint32_t command_p9;
+
+
+#ifdef AVS_DUAL_DOMAINS
+	/* These next values are only used when two AVS voltage domains exist.
+	 * i.e. 7172, 7268.  Zeros will be returned for other platforms. */
+	uint32_t voltage1;	/* (see above for units) */
+	int32_t temperature1;
+	uint32_t PV1;
+	uint32_t MV1;
+#endif
+} at_runtime2;
+
 /* Commands: */
 #define CMD_DISABLE_AVS 0x10	/* Disable AVS Processing.
 				* This is used to tell the AVS CPU to
@@ -180,6 +230,18 @@ struct at_runtime {
 		 *  parameter in command_p0 is the current state. */
 #define CMD_SET_P_STATE  0x41	/* Set AVS P-state.
 		 *  parameter in command_p0 is the state to switch to. */
+
+#define CMD_READ_SENSOR  0x50   /* Return a sensor measurement
+                                **  parameter in command_p0 specifies the sensor(s) to read
+                                */
+
+#define CMD_READ_DEBUG   0x51   /* Return a debug variable
+                                **  parameter in command_p0 specifies the variable to read
+                                */
+
+#define CMD_CALC_FREQ    0x52   /* Return calculated cpu frequency
+                                **  parameter in command_p0 specifies the selected pstate
+                                */
 
 /* Command parameter values for 'CMD_SET_P_MAP' and 'CMD_GET_P_MAP' commands */
 /* 'command_p0' values specify the mode to be used or is being used. */

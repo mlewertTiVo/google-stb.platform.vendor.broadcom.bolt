@@ -229,7 +229,8 @@ uint64_t arch_get_scb_freq_hz(void)
 		BCHP_CLKGEN_PLL_SYS0_PLL_DIV_NDIV_INT_SHIFT;
 	mdiv = BDEV_RD_F(CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1, MDIV_CH1);
 #elif defined(CONFIG_BCM7250B0) || \
-	defined(CONFIG_BCM7260A0) || \
+	defined(CONFIG_BCM7255A0) || \
+	defined(CONFIG_BCM7260) || \
 	defined(CONFIG_BCM7268) || \
 	defined(CONFIG_BCM7271) || \
 	defined(CONFIG_BCM7364) || \

@@ -4,8 +4,8 @@
 Build configuration script
 ==========================
 Broadcom Ltd <support@broadcom.com>
-v1.37, June 9th 2017:
-Updated for 1.30 release.
+v1.42, April 13th 2018:
+Updated for 1.42 release.
 
 Introduction
 ------------
@@ -294,6 +294,7 @@ Commands that are enacted at build time.
     dtsinclude
     gset
     i2cbus
+    intr1_info
     ldfile
     map
     mmap
@@ -859,7 +860,7 @@ dt autogen -node clocks -cpu-div-table 0x00 1
 dt autogen -node sdio -undo 1
 ----
 ----
-dt autogen -node ext_moca -parent qspi -cs 0 -interrupt_parent upg_gio -interrupt 14 4
+dt autogen -node ext_moca -parent qspi -cs 0 -interrupt_parent upg_gio -interrupt 14 4 -moca_band highrf
 ----
 
 NOTE: If you use this command (dt autogen), it must be in the "[family]" 
@@ -1297,12 +1298,15 @@ ext_moca
 Usage: dt autogen -node ext_moca -parent <PARENT> -cs <CS_NUM>
 	-interupt_parent <INTERRUPT_PARENT> -interrupt <INTERRUPT_SPECIFIER>
 	-frequency <FREQ> -spi-clock-polarity <0|1> -spi-clock-phase <0|1>
+	-moca_band <BAND>
 
 External MoCA chips such as Broadcom's BCM6802/3 are typically interfaced
 through SPI and require indicating which SPI controller the chip is attached to
 (PARENT, typically UPG_MSPI, aka qspi in Device Tree) and the chip select
 number (CS_NUM). It is also necessary to indicate the interrupt controller
 (INTERRUPT_PARENT) and interrupt specifier (INTERRUPT_SPECIFIER) that is used.
+
+The 'moca_band' parameter is necessary see the "moca" section for valid values.
 
 The maximum supported frequency can be defined using FREQ and the SPI clock
 polarity and phase polarity can be defined as well.
@@ -1354,6 +1358,28 @@ be the file bolt/include/<FAMILY>/bchp_bscf.h
 
 Note that this is a new feature to support Broadcom
 reference boards and may change in future releases.
+
+
+ intr1_info
+~~~~~~~
+Usage: intr1_info -prefix <string> -offset <int>
+
+Note: tell the Bolt build system some information about the
+host's L1 interrupts
+
+Example:
+----
+ intr1_info -prefix "BCHP_HIF_CPU_INTR1_INTR" -offset   0   /* default values */
+ intr1_info -prefix "BCHP_CPU_INTR1_INTR"     -offset 128   /* eg 7211/2711   */
+----
+
+Most STB chips have a commont L1 interrupt name prefix; for example,
+the 7278 register name is "BCHP_HIF_CPU_INTR1_INTR_W0_STATUS" and
+its prefix is "BCHP_HIF_CPU_INTR1_INTR".  Use this command if your
+chip has a different interrupt prefix.  In addition, some chips
+have a different offset and that must be specified as well if you
+elect to use this command.
+
 
 
  include
@@ -1614,8 +1640,8 @@ See also: [moca] [enet]
 
 Example:
 ----
- ext_moca -enet_node eth1 -rgmii 0 -phy_type MOCA -mdio_mode 0 -phy_speed 1000
- -phy_id 257
+ ext_moca -enet_node eth1 -rgmii 0 -phy_type MOCA -mdio_mode 0 \
+    -phy_speed 1000 -phy_id 257 [-gpio <gpio-desc>]
 ----
 
 This sets up the external MoCA configuration for a board.
@@ -1626,6 +1652,15 @@ which provides the data-path for the MoCA hardware block.
 * '-moca_band' applies to MoCA devices
 in Device Tree, its ignored otherwise. It is a
 string representing a band as described in [moca]
+
+* '-gpio' offers the ext_moca device gpios to control, such as for reset
+  before probing.  The argument, <gpio-desc>, is in the form
+          (upg_gio|upg_gio_aon,<pin>,(hi|lo),<name>
+  The 'pin' is in decimal.  An example of <gpio-desc> would be
+          upg_gio,17,hi,reset
+  If there are multiple gpios, use a slightly different option for
+  each gpio:
+          -gpio0 upg_gio,17,hi,reset  -gpio1 upg_gio,18,lo,reset
 
 * For all other properties see [enet]
 
@@ -1714,7 +1749,8 @@ NOTE: there are some "dedicated" gpio pins that do not have an RDB
 
  ddr
 ~~~~
-Usage: ddr -n <WHICH> -size_mb <SIZE> [-base_mb <BASE>] -clk <SHMOO SPEED> -size_bits <SHMOO SIZE> -width <SHMOO WIDTH> -phy <PHY WIDTH> -fixed - -custom <TAG>
+Usage:
+ddr -n <WHICH> -size_mb <SIZE> [-base_mb <BASE>] -clk <ddr_speed> -size_bits <dev_size> {-ranks <#ranks> | -width <dev_width>} -phy <phy_width> [-fixed -] [-custom <TAG>]
 
 Note: Set ddr parameters
 
@@ -1729,41 +1765,48 @@ ddr -n 1 -size_mb  -   -clk -      -size_bits -  -width -  -phy -
 NOTE: The `-base_mb` option is deprecated.  Please see <<mmap>>.
 
 The value are inheritable from [chip] and can be overridden. The second
-example shows a ddr excluded from being shmoo'd & will not appear in
-the cpu memory map.
+example excludes the second memory controller from being configured and
+will not appear in the CPU memory map.
 
-These parameters select which 'shmoo' table in FSBL to program
-the (optimal) settings for a physical ddr device. The values must match
+These parameters select which entry in 'shmoo' table of FSBL to program
+the (optimal) settings for a physical DDR device. The values must match
 one of those seen in shmoo/$\{MEMC_REV}/mcb/*.mcb for your chip family.
 MEMC_REV is specified in your chip family configuration file.
 
-The values <SHMOO SPEED>, <PHY WIDTH>, <SHMOO SIZE> and <SHMOO WIDTH>
-appear in order, in the name of the source data files used in bolt, e.g.
+The values <ddr_speed>, <phy_width>, <dev_size> and <dev_width> (or
+<#ranks>) appear in order, in the name of the source data files used in
+BOLT, e.g.
 
 ----
  bolt/shmoo/B120_E101/mcb/memsys_config_1067MHz_16b_dev4Gx16_le.mcb
 ----
 
-* <WHICH> is an index to select which 'memc' (ddr controller) to apply the
- 'shmooing' to.
+* <WHICH> is the index of a memory controller that the parameters are
+applied to.
 
-* <SIZE> and <BASE> refer to the physical ddr size and base address in
-Mbytes that the cpu will see.
+* <SIZE> and <BASE> refer to the amount of memory and base address in
+Mbytes that the CPU will see.
 
-* <SHMOO SPEED> is the ddr speed required.
+* <ddr_speed> is the DDR frequency required.
 
-* <SHMOO SIZE> is the size of the ddr device, e.g. use 4 for a 4Gbit device.
+* <dev_size> is the size of the DRAM device, e.g. use 4G for a 4Gbit device.
 
-* <SHMOO WIDTH> is each individual ddr chips data bus width, e.g. 8, 16 or 32.
+* <dev_width> is the data bus width of each DRAM device on the memory
+controller <WHICH>, e.g. 8, 16 or 32.
 
-* <PHY WIDTH> is the memc (ddr controller) interface width, e.g. 16 or 32.
+* <#ranks> is the number of ranks of the DRAM device, from 1 to 8.
 
-If you cannot find a ddr type (aka 'mcb' file) in the BOLT release
-package that matches your products actual ddr device, then please
+* <phy_width> is the MEMC (memory controller) interface width, e.g. 16 or 32.
+
+NOTE: The two options of -ranks and -width are mutually exclusive.
+Having the both at the same time will cause the build to fail.
+
+If you cannot find a DDR type (aka 'MCB' file) in the BOLT release
+package that matches your products actual DDR device, then please
 contact your Broadcom FAE.
 
 NOTE: A further build step may or may not be required to integrate new
- mcb data files, depending upon BOLT version. Please see the BOLT
+ MCB data files, depending upon BOLT version. Please see the BOLT
 documentation doc/howto_update_ddr_mcb_files.txt.
 
 
@@ -1790,7 +1833,7 @@ The number of these full sized MCB tables must be no more than the
 number of DDR client hardware ('MEMC') the chip supports.
 
 The optional flag '-custom' selects a customized MCB based on <TAG>
-on top of <SHMOO SPEED>, <SHMOO SIZE>, <SHMOO WIDTH> and <PHY WIDTH>.
+on top of <SHMOO SPEED>, <dev_size>, <dev_width> and <phy_width>.
 The "-custom" flag is specific to each chip family, and corresponding MCB
 can be found from shmoo/$\{MEMC_REV}/mcb/$\{FAMILY}/<TAG>*.mcb, e.g.
 
@@ -2120,7 +2163,7 @@ a per board basis.
 
  usb
 ~~~~
-Usage: usb -controller <N> -type <T> [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual|typec_pd]
+Usage: usb -controller <N> -type <T> [-ipp 0|1|2] [-ioc 0|1] [-bdc on|off|dual|typec-pd]
 
 Note: Sets the default USB hardware operating mode on a per board basis.
 
@@ -2236,7 +2279,7 @@ bt_rfkill_gpio -name brcm,n-reset-gpio -gpio upg_gio_aon -pin 6 -pol 1 -pdelay 5
 Appendix: Copyright Info
 ------------------------
 
-Copyright (C) 2017, Broadcom Ltd.
+Copyright (C) 2018, Broadcom Ltd.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.
 

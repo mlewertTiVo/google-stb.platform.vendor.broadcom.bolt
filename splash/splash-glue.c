@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -312,7 +312,6 @@ static struct bnode *alloc_from_free_list(struct bnode **head, size_t bytes,
  * Returns:
  *  0 if successful or no memory deemed installed on memc
  *  1 if the board type is not detected
- *  BOLT_ERR if nothing can be reserved for a memory installed memc
  */
 static int splash_glue_init_bmem(uint32_t memc, struct board_type *b)
 {
@@ -345,9 +344,10 @@ static int splash_glue_init_bmem(uint32_t memc, struct board_type *b)
 	retval = bolt_reserve_memory(RESERVATION_AMOUNT, _KB(4),
 		(1 << memc) | BOLT_RESERVE_MEMORY_OPTION_DRYRUN, NULL);
 	if (retval < 0) {
-		err_msg("%s: failed to reserve memory on MEMC %d.",
-			__func__, memc);
-		return retval;
+		/* treat as if nothing is installed */
+		warn_msg("%s: failed to reserve %d MB on MEMC %d.",
+			__func__, RESERVATION_AMOUNT/_MB(1), memc);
+		return 0;
 	}
 	/* heap grows down */
 	/* subtract 1 byte to work around a boundary condition and avoid
@@ -560,3 +560,98 @@ int splash_glue_getmem(uint32_t memc, uint32_t *memtop, uint32_t *memlowest)
 	return 0;
 }
 
+static const uint32_t bsc_controllers[] = {
+#ifdef BCHP_BSCA_REG_START
+	BPHYSADDR(BCHP_BSCA_REG_START),
+#else
+	0,
+#endif
+#ifdef BCHP_BSCB_REG_START
+	BPHYSADDR(BCHP_BSCB_REG_START),
+#else
+	0,
+#endif
+#ifdef BCHP_BSCC_REG_START
+	BPHYSADDR(BCHP_BSCC_REG_START),
+#else
+	0,
+#endif
+#ifdef BCHP_BSCD_REG_START
+	BPHYSADDR(BCHP_BSCD_REG_START),
+#else
+	0,
+#endif
+#ifdef BCHP_BSCE_REG_START
+	BPHYSADDR(BCHP_BSCE_REG_START),
+#else
+	0,
+#endif
+#ifdef BCHP_BSCF_REG_START
+	BPHYSADDR(BCHP_BSCF_REG_START),
+#else
+	0,
+#endif
+};
+
+static void reset_scdc_tmds(volatile struct bsc_regs_s *i2c)
+{
+	volatile uint32_t val;
+	signed int count = 10; /* ~10msec */
+
+	static const uint32_t CTL_SCDC =
+		(0x1 << BCHP_BSCA_CTL_REG_SCL_SEL_SHIFT) |
+		BCHP_BSCA_CTL_REG_DIV_CLK_MASK |
+		BCHP_BSCA_CTL_REG_INT_EN_MASK;
+
+	if (i2c->chip_address != (BHDM_SCDC_I2C_ADDR << 1))
+		return;
+	if (i2c->ctl_reg != CTL_SCDC)
+		return;
+	if (i2c->iic_enable != 0) /* not triggered yet */
+		return;
+	if (i2c->cnt_reg != 2) /* two bytes to write, offset and value */
+		return;
+	if (i2c->data_in0 != BHDM_SCDC_TMDS_CONFIG)
+		return;
+	if (i2c->data_in1 != 0) /* value of 0 (zero) to clear scrambling */
+		return;
+
+	/* start the i2c state machine */
+	i2c->iic_enable = BCHP_BSCA_IIC_ENABLE_ENABLE_MASK;
+
+	do {
+		xprintf("$");
+		bolt_msleep(1);
+
+		val = i2c->iic_enable;
+
+	} while (!(val & BCHP_BSCA_IIC_ENABLE_INTRP_MASK) && count--);
+
+	/* turn it off */
+	i2c->iic_enable = 0;
+
+	if (0 > count)
+		xprintf("X\n"); /* timeout */
+}
+
+static void reset_scdc_scrambling(unsigned int chn_num)
+{
+	volatile struct bsc_regs_s *i2c;
+
+	if (sizeof(bsc_controllers) / sizeof(*bsc_controllers) <= chn_num)
+		return; /* invalid channel, out of bound */
+
+	if (bsc_controllers[chn_num] == 0)
+		return; /* not exist */
+
+	i2c = (volatile struct bsc_regs_s *) bsc_controllers[chn_num];
+	reset_scdc_tmds(i2c);
+}
+
+void reset_HDMI_receiver_scrambling(unsigned int chn_num)
+{
+	if (AON_REG(AON_REG_HDMI_TMDS_CONFIG) & HDMI_FLAG_RESET_SCDC) {
+		reset_scdc_scrambling(chn_num);
+		AON_REG(AON_REG_HDMI_TMDS_CONFIG) &= ~HDMI_FLAG_RESET_SCDC;
+	}
+}

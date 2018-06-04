@@ -1,11 +1,15 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
  *  EXPLOIT THIS MATERIAL EXCEPT SUBJECT TO THE TERMS OF SUCH AN AGREEMENT.
  *
  ***************************************************************************/
+
+#ifdef TZ_SECURE_BOOT
+#include "sec_boot.h"
+#endif
 
 #include "lib_types.h"
 #include "lib_string.h"
@@ -17,10 +21,14 @@
 #include "board.h"
 #include "bolt.h"
 #include "loader.h"
+#include "devtree.h"
 #include "net_ebuf.h"
 #include "net_ether.h"
 #include "net_api.h"
-
+#include "arch_ops.h"
+#if CFG_MON64
+#include "mon64.h"
+#endif
 #include "tz.h"
 #include "tz_priv.h"
 
@@ -34,7 +42,12 @@
 int tz_go(bolt_loadargs_t *la)
 {
 	struct tz_info *t;
+#if CFG_MON64
+	bolt_devtree_params_t p;
+	void *dt_address;
+#else
 	struct fsbl_info *info;
+#endif
 
 	if (la->la_entrypt == 0) {
 		xprintf("No program has been loaded.\n");
@@ -51,6 +64,23 @@ int tz_go(bolt_loadargs_t *la)
 	}
 #endif
 
+#if CFG_MON64
+	/* use mon64 to boot */
+	if (la->la_flags & LOADFLG_SECURE) {
+		t = tz_info();
+		if (!t)
+			return BOLT_ERR;
+		dt_address = t->dt_address;
+	} else {
+		bolt_devtree_getenvs(&p);
+		if (!p.dt_address)
+			return BOLT_ERR;
+		dt_address = p.dt_address;
+	}
+	return (arch_booted64()) ?
+		mon64_boot(la->la_flags, la->la_entrypt, dt_address) :
+		psci_boot(la->la_flags, la->la_entrypt, dt_address);
+#else
 	t = tz_info();
 	if (!t)
 		return BOLT_ERR;
@@ -59,23 +89,24 @@ int tz_go(bolt_loadargs_t *la)
 	if (!info)
 		return BOLT_ERR;
 
-
 #ifdef STUB64_START
-	if (la->la_flags&LOADFLG_EL3_EXEC) {
+	if (la->la_flags & LOADFLG_EL3_EXEC) {
 		xprintf("TZ: Starting 64 bit EL3 monitor at %#lx\n",
-				la->la_address);
+				la->la_entrypt);
 		bolt_start64_el3(la->la_entrypt, 0xffffffff,
-		(unsigned int)t->dt_addr, info->uart_base);
+		(unsigned int)t->dt_address, info->uart_base);
 	} else
 #endif
 	{
-		xprintf("TZ: Starting TZ program at %#lx (DTB @ %p)\n",
-			la->la_address, t->dt_addr);
+		/* boot without psci */
+		xprintf("TZ: Starting TZ program at %#lx (DTB @ %p, UART @ %#x)\n",
+			la->la_entrypt, t->dt_address, info->uart_base);
 		bolt_start(la->la_entrypt, 0xffffffff,
-			(unsigned int)t->dt_addr, info->uart_base);
+			(unsigned int)t->dt_address, info->uart_base);
 	}
 
-	return 0;
+	return BOLT_OK;
+#endif /* CFG_MON64 */
 }
 
 
@@ -87,7 +118,7 @@ int tz_go(bolt_loadargs_t *la)
  */
 int tz_boot(const char *ldrname, bolt_loadargs_t *la)
 {
-	int rc = 0;
+	int rc = BOLT_OK;
 	int noise = la->la_flags & LOADFLG_NOISY;
 
 	la->la_entrypt = 0;
@@ -116,8 +147,25 @@ int tz_boot(const char *ldrname, bolt_loadargs_t *la)
 		goto out;
 	}
 
-	if (noise)
-		xprintf("Entry address is %#lx\n", la->la_entrypt);
+#if CFG_MON64
+	/* Install TZ program */
+	if (la->la_flags & LOADFLG_SECURE) {
+		long load_address = la->la_address;
+		int  load_size = rc /* load size */;
+		long install_address;
+
+		rc = tz_install(load_address, load_size, &install_address);
+		if (rc)
+			goto out;
+
+		la->la_address = install_address;
+		la->la_entrypt = install_address;
+	}
+
+	/* In 64-bit, always call tz_go to update mon64 params */
+	if (la->la_entrypt != 0)
+		rc = tz_go(la);
+#else
 
 	/*
 	 * Banzai!  Run the program.
@@ -133,7 +181,51 @@ int tz_boot(const char *ldrname, bolt_loadargs_t *la)
 			tz_smm_set_params(la);
 #endif
 	}
-
+#endif /* CFG_MON64 */
 out:
 	return rc;
 }
+
+#if CFG_MON64
+int tz_install(long load_address, int load_size, long *install_address)
+{
+	struct tz_info *t;
+	struct tz_mem_layout *mem_layout;
+	long dest_address;
+	int __maybe_unused dest_size;
+	int __maybe_unused rc;
+
+	t = tz_info();
+	if (!t)
+		return BOLT_ERR;
+
+	mem_layout = t->mem_layout;
+	if (!mem_layout)
+		return BOLT_ERR;
+
+	dest_address = t->mem_addr + mem_layout->os_offset;
+	dest_size = mem_layout->os_size;
+
+	rc = sec_verify_tz((void *)load_address, load_size,
+			   (void *)dest_address, dest_size);
+	if (rc) {
+		err_msg("failed to decrypt TZ program %d\n", rc);
+		return BOLT_ERR;
+	}
+
+	if (install_address)
+		*install_address = dest_address;
+
+	return BOLT_OK;
+}
+
+#ifndef TZ_SECURE_BOOT
+int sec_verify_tz(void *load_address, int load_size,
+		  void *dest_address, int dest_size)
+{
+	/* Copy Astra from load address directly */
+	memcpy((void *)dest_address, (void *)load_address, load_size);
+	return BOLT_OK;
+}
+#endif
+#endif /* CFG_MON64 */

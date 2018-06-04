@@ -280,11 +280,9 @@ END_PROC(get_mpidr)
 ENTRY_PROC(le_sync64)
 	/*  sp & x4 now point to our per cpu stack */
 	save_per_cpu_stack
-#if CFG_TRUSTZONE_MON
 	ldr	x5, =OEM_SMM_SET_PARMS
 	cmp	x0, x5
 	b.eq	smm_set_loadparams
-#endif /* CFG_TRUSTZONE_MON */
 
 	/*  BRCM */
 	ldr	x5, =OEM_PSCI_INIT
@@ -420,7 +418,6 @@ END_PROC(exec64)
 /* x0: fdt
  * x1: linux_entry
  */
-#if CFG_TRUSTZONE_MON
 .global mon_params
 .global brcmstb_params
 .global uart_base
@@ -440,7 +437,7 @@ ENTRY_PROC(exec64_el3)
 	barrier
 	br	x7	/* go! */
 END_PROC(exec64_el3)
-#endif
+
 
 /* x0: fdt
  * x1: linux_entry

@@ -21,7 +21,7 @@ use BcmDt::PcieRanges;
 my $P = basename $0;
 
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 # *
 # *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -88,6 +88,7 @@ my @configs = (
 	       "MEMDMA_MCPB",
 	       "MHL",
 	       "MIN_CONSOLE",
+	       "MON64",
 	       "MONITOR_OVERTEMP",
 	       "NAND_FLASH",
 		"SPI_QUAD_MODE",
@@ -104,6 +105,7 @@ my @configs = (
 	       "SREC_LDR",
 	       "SRR_SIZE_MB",
 	       "SSBL_CONSOLE",
+	       "SSBM",
 	       "STACK_PROTECT_FSBL",
 	       "STACK_PROTECT_SSBL",
 	       "STACK_SIZE",
@@ -130,8 +132,8 @@ my @configs = (
 	       "ZEUS4_1",
 	       "ZEUS4_2",
 	       "ZEUS4_2_1",
-	       "ZEUS5_0",
 	       "ZEUS5_1",
+	       "ZEUS_VERSION",
 	       "ZIMG_LDR",
 	       "ZLIB",
 	);
@@ -897,7 +899,7 @@ my %dt_autogen = map {($_,'')}
 	pwm watchdog upg_main_irq upg_main_aon_irq upg_bsc_irq
 	upg_bsc_aon_irq upg_spi_aon_irq nexus_upg_main_irq
 	nexus_upg_main_aon_irq nexus_upg_bsc_irq nexus_upg_bsc_aon_irq
-	nexus_upg_spi_aon_irq wlan v3d_mmu ext_moca/;
+	nexus_upg_spi_aon_irq wlan v3d_mmu ext_moca sun_rng/;
 my $Current = Board->new("");
 my $Family = $Current;
 my $ProcessingState = eStateInNone;
@@ -935,7 +937,6 @@ sub get_bchp_info($) {
 		'bchp_common.h',
 		'bchp_aon_pin_ctrl.h',
 		'bchp_uart?.h',
-		'bchp_hif_cpu_intr1.h',
 		'bchp_cm_top_ctrl.h',
 		'bchp_sdio_?_{host,reg,cfg,boot}.h',
 		'bchp_aon_ctrl.h',
@@ -986,6 +987,10 @@ sub get_bchp_info($) {
 		);
 
 	@incs = map { "$arg_rdb_dir/$_" } @incs;
+
+	# Add the L1 HIF interrupt register include files (whose
+	# names seemm to change somewhat).
+	push @incs, glob("$arg_rdb_dir/bchp_*_intr1.h");
 
 	my ($rh_defines, $ra_defines)
 		= BcmUtils::grok_defines_from_c_incl_files( @incs );
@@ -1358,6 +1363,13 @@ sub cmd_dt($) {
 				cfg_error("missiong option '$_' for 'dt autogen'")
 					if (!defined $h{$_});
 			}
+
+			my @gpios = grep { /^-gpio\d*$/ } keys %h;
+			foreach my $gpio (@gpios) {
+				my ($arg) = @{$h{$gpio}};
+				cfg_error("bad -gpio syntax: '$arg'; good eg. 'upg_gio,14,hi,reset'")
+					if ($arg !~ /^upg_gio(_aon)?,\d+,(hi|lo),\w+$/);
+			}
 		}
 	}
 
@@ -1486,11 +1498,56 @@ sub cmd_comment($) {
 	map { $Current->{comment} .= "$_ " } @$f;
 }
 
+sub base_mb_from_mmap($) {
+	my ($memc) = @_;
+	my $mmap = $Family->{drammap};
+
+	# The map has been sorted in cmd_mmap().
+	for my $n (@{$mmap}) {
+		next if ($memc != $n->{memc});
+		return (Math::BigInt->new($n->{to_bytes}))->bdiv(1024*1024);
+	}
+	return 0;
+}
+
 sub cmd_ddr($) {
 	my ($f) = @_;
 	check_in_heading();
 	shift @$f; # drop 'ddr'.
-	my $o = check_opts($f, [qw/n size_mb base_mb clk size_bits width phy/], [qw/fixed custom/]);
+	my $o = check_opts($f, [qw/n size_mb clk size_bits phy/],
+			[qw/base_mb fixed custom ranks width/]);
+	cfg_error("bad value for '-n'")
+		if ($o->{n} && $o->{n} !~ /^\d+$/);
+	if ($o->{size_mb} ne '-') {
+		if (defined($o->{ranks}) && defined($o->{width})) {
+			cfg_error("ranks and width are mutually exclusive");
+		}
+		if (!defined($o->{ranks}) && !defined($o->{width})) {
+			cfg_error("either ranks or width must be defined");
+		}
+		if (defined($o->{ranks})) {
+			cfg_error("ranks must be between 1 and 8")
+				if ($o->{ranks} < 1 || $o->{ranks} > 8);
+			$o->{ranks} -= 1; # 0 single rank, 1 dual ranks
+		}
+		if (defined($o->{width})) {
+			cfg_error("width must not be smaller than 8")
+				if ($o->{width} < 8);
+			cfg_error("width must not bigger than phy")
+				if ($o->{width} > $o->{phy});
+			my $times = $o->{phy} / $o->{width};
+			cfg_error("phy must be integer multiple of width")
+				if ($times * $o->{width} != $o->{phy});
+		}
+		if (defined($o->{ranks})) {
+			$o->{width} = 0;
+		} else {
+			# if defined($o->{width});
+			$o->{ranks} = 0;
+		}
+		# override 'base_mb' with what is described in 'mmap'
+		$o->{base_mb} = base_mb_from_mmap($o->{n});
+	}
 	$Current->add('ddr', Ddr->new($o));
 }
 
@@ -1966,9 +2023,9 @@ sub cmd_usb_sub($$) {
 		if (defined($o->{ipp}) && $o->{ipp} !~ /^[012]$/i);
 	cfg_error('option for ioc must be 0 or 1')
 		if (defined($o->{ioc}) && $o->{ioc} !~ /^[01]$/i);
-	cfg_error('option for bdc must be off, on, dual or typec_pd')
+	cfg_error('option for bdc must be off, on, dual or typec-pd')
 		if (defined($o->{bdc}) && $o->{bdc} !~
-		    /^(off|on|dual|typec_pd)$/i);
+		    /^(off|on|dual|typec-pd)$/i);
 
 	$rh = $rh->{rh_defines};
 	my $node = sprintf('usb%s@%x', $new_style ? "-phy" : "", $usb_start);
@@ -1978,18 +2035,38 @@ sub cmd_usb_sub($$) {
 		subcmd_dt_ops('cull', ['-root' => '/rdb', '-node' => $node, ]);
 	} else {
 		# Turn this into 'dt prop' operation(s).
-		my $args = ['-root' => '/rdb', '-node' => $node,
-			'-prop' => 'ipp', '-int' => $o->{ipp}];
-		subcmd_dt_ops('prop', $args)
-			if (defined($o->{ipp}));
-		$args = ['-root' => '/rdb', '-node' => $node,
-			'-prop' => 'ioc', '-int' => $o->{ioc}];
-		subcmd_dt_ops('prop', $args)
-			if (defined($o->{ioc}));
-		$args = ['-root' => '/rdb', '-node' => $node,
-			'-prop' => 'device', '-string' => $o->{bdc}];
-		subcmd_dt_ops('prop', $args)
-			if ($o->{bdc});
+		my $args;
+		if (defined($o->{ipp})) {
+			$args = ['-root' => '/rdb', '-node' => $node,
+				 '-prop' => 'ipp', '-int' => $o->{ipp}];
+			subcmd_dt_ops('prop', $args);
+			$args = ['-root' => '/rdb', '-node' => $node,
+				 '-prop' => 'brcm,ipp', '-int' => $o->{ipp}];
+			subcmd_dt_ops('prop', $args);
+		}
+		if (defined($o->{ioc})) {
+		    $args = ['-root' => '/rdb', '-node' => $node,
+			     '-prop' => 'ioc', '-int' => $o->{ioc}];
+		    subcmd_dt_ops('prop', $args);
+		    $args = ['-root' => '/rdb', '-node' => $node,
+			     '-prop' => 'brcm,ioc', '-int' => $o->{ioc}];
+		    subcmd_dt_ops('prop', $args);
+		}
+		if ($o->{bdc}) {
+		    $args = ['-root' => '/rdb', '-node' => $node,
+			     '-prop' => 'device', '-string' => $o->{bdc}];
+		    subcmd_dt_ops('prop', $args);
+
+		    # New style
+		    my %propmap = ('off' => 'host',
+				   'on' => 'peripheral',
+				   'dual' => 'drd',
+				   'typec-pd' => 'typec-pd');
+		    $args = ['-root' => '/rdb', '-node' => $node,
+			     '-prop' => 'dr_mode',
+			     '-string' => $propmap{$o->{bdc}}];
+		    subcmd_dt_ops('prop', $args);
+		}
 
 		if ($o->{bdc} && !($o->{bdc} =~ /^off$/)) {
 			my $postfix = '';
@@ -2125,6 +2202,22 @@ sub cmd_memsys($) {
 	$Current->{memsys} = $f->[1];
 }
 
+our %g_intr1_info = (prefix => 'BCHP_HIF_CPU_INTR1_INTR', offset => 0);
+sub cmd_intr1_info($) {
+	my ($f) = @_;
+	shift @$f; # drop 'intr1_info'.
+	check_in_family();
+	my $o = check_opts($f, [qw/prefix offset/], []);
+	$o->{offset} = hex($o->{offset})
+		if ($o->{offset} =~ /^0x/i);
+	cfg_error("bad value '" . $o->{offset} . "' for offset: should be int")
+		if ($o->{offset} !~ /^\d+$/);
+	$o->{prefix} = uc $o->{prefix};
+	$o->{prefix} =~ s/^_//;
+	$o->{prefix} =~ s/_$//;
+	%g_intr1_info = (prefix => $o->{prefix}, offset => $o->{offset});
+}
+
 sub cmd_ldfile($) {
 	my ($f) = @_;
 	check_in_family();
@@ -2165,6 +2258,7 @@ my %commands = (
 		'gpio_key' =>	\&cmd_gpio_key,
 		'gset' =>	\&cmd_gset,
 		'i2cbus' =>	\&cmd_i2cbus,
+		'intr1_info' => \&cmd_intr1_info,
 		'ldfile' =>	\&cmd_ldfile,
 		'map' =>	\&cmd_map,
 		'mapselect' =>	\&cmd_map_select,
@@ -2248,16 +2342,22 @@ sub show_boards() {
 		print "  board: " . $b->{board} . "\n";
 		print "    dts: " . $b->{dts} . "\n";
 		print "  bogus: " . $b->{bogus} . "\n";
-		for my $r (@{$b->{rtsbase}}) {
-			print "    rts: #" . $r->{memc} . "\n";
-			print "$r->{filename}\n";
-		}
 		for my $d (@{$b->{ddr}}) {
-			print "    ddr: #" . $d->{n} . "\t";
+			print "    memc#" . $d->{n} . " ";
 			print $d->{size_mb} . "\t" . $d->{base_mb} . "\t";
-			print $d->{clk} . "\t" . $d->{width} . "\t"
-				. $d->{mbits_per_chip} . "\n\n";
+			print $d->{clk} . "\t" . $d->{size_bits} . "\t";
+			if (!defined($d->{ranks})) {
+				print $d->{width};
+			} else {
+				if ($d->{width} == 0) {
+					print $d->{ranks};
+				} else {
+					print $d->{width};
+				}
+			}
+			print "\n";
 		}
+		print "\n";
 	}
 }
 
@@ -2396,15 +2496,19 @@ sub is_mcb_available($$) {
 
 sub check_armv8_mon() {
 	my $arm_rev = find_cset("ARM_V8");
+	my $mon64 = get_config_val("MON64");
 	my $tzmon = get_config_val("TRUSTZONE_MON");
 	my $tzcmd = get_config_val("TRUSTZONE_CMD");
-	if (!defined $arm_rev and uc($tzmon) eq "ON") {
-		cfg_error("config TRUSTZONE_MON can only be used in " .
-		"64 bit mode");
-	}
-	if (defined $arm_rev and uc($tzmon) eq "OFF" and uc($tzcmd) eq "ON") {
-		cfg_error("config TRUSTZONE_MON must be set to use " .
-		"config TRUSTZONE_CMD in 64bit mode");
+	if (uc($mon64) eq "OFF") {
+		if (!defined $arm_rev and uc($tzmon) eq "ON") {
+			cfg_error("config TRUSTZONE_MON can only be used in " .
+			"64 bit mode");
+		}
+		if (defined $arm_rev and uc($tzmon) eq "OFF"
+			and uc($tzcmd) eq "ON") {
+			cfg_error("config TRUSTZONE_MON must be set to use " .
+			"config TRUSTZONE_CMD in 64bit mode");
+		}
 	}
 }
 
@@ -2431,7 +2535,8 @@ sub gen_ddr($) {
 		} else {
 			$text .= $d->{size_mb} . ",\t" . $d->{base_mb} . ",\t";
 			$text .= mhz_remove($d->{clk}) . ",\t";
-			$text .= size_in_mega($d->{size_bits}) . ",\t";
+			$text .= size_in_mega($d->{size_bits}) .
+				" | " . $d->{ranks} . ",\t";
 			$text .= $d->{width} . ",\t";
 			$text .= $d->{phy} . ",\t";
 			if (defined($d->{custom})) {
@@ -2452,7 +2557,15 @@ sub gen_ddr($) {
 				# e.g. 7445d0_933mhz_32b_dev4gx16
 			}
 			$ddr_name .= $d->{clk} . "_" . $d->{phy} . "b";
-			$ddr_name .= "_dev" . $d->{size_bits} . "x" . $d->{width};
+			$ddr_name .= "_dev" . $d->{size_bits} . "x";
+			# NOTE: Do NOT use (ranks == 0) to see the exclusiveness
+			#       between width and ranks as it means single rank.
+			if ($d->{width} == 0) {
+				# actual #ranks from 0 single, 1 dual,,,
+				$ddr_name .= $d->{ranks} + 1;
+			} else {
+				$ddr_name .= $d->{width};
+			}
 			$text .= "/* " .  $ddr_name . " */";
 
 			# SINGLE_BOARD
@@ -3059,7 +3172,7 @@ sub generate_vector_property_arrays() {
 # conditions and as values the bitwise offset.  The conditions
 # are evaluated in dtbolt.c.
 my %h_dt_ops_attr = 
-    (V7_64 => 0,  # V7_64 is a conditional for V7_64 memory map (eg 7278a0).
+    (V7_64 => 0,  # V7_64 is a conditional for V7_64 memory map (eg 7278b0).
     );
 
 # Generates the text for an include file whose contents contains
@@ -3799,20 +3912,53 @@ sub get_sram_range()
 	return (hex(find_cfgvar("SRAM_ADDR")), hex(find_cfgvar("SRAM_LEN")));
 }
 
-sub create_rdb_parent_node($)
 {
-	my ($rh) = @_;
-	my $ranges = '';
-	if ($rh->{chip_arch} eq "MIPS") {
-		$ranges = "ranges = <0x0 0x10000000 0x01000000>;\n";
-	} else {
-		$ranges = "ranges = <0x00000000 0x00 0x00000000 0xffffffff>;\n";
+	# Private vars (defaults for DT cell params).  Can be overridden by
+	# create_rdb_parent_node() only.
+	my $bus_addr_cells = 2;
+	my $bus_size_cells = 2;
+	my $rdb_addr_cells = 1;
+	my $rdb_size_cells = 1;
+
+	sub get_rdb_addr_cells { return $rdb_addr_cells; }
+	sub get_rdb_size_cells { return $rdb_size_cells; }
+
+	# Convenience function for create_rdb_parent_node() below.
+	# Takes three params: rdb_start, bus_start, rdb_size.
+	sub rdb_ranges_prop_str($$$) {
+		return BcmUtils::ranges_prop_str($rdb_addr_cells,
+			$bus_addr_cells, $rdb_size_cells, @_);
 	}
-	my $rdb_str = "rdb\n{\n#address-cells = <1>;\n#size-cells = <1>;\n";
-	$rdb_str .= "compatible = \"simple-bus\";\n";
-	$rdb_str .= $ranges;
-	$rdb_str .= "};\n";
-	return DevTree::node->new($rdb_str);
+
+	sub create_rdb_parent_node($$)
+	{
+		my ($familyname, $rh) = @_;
+		my $bchp_defines = $rh->{rh_defines};
+		my $ranges = '';
+
+		if ($rh->{chip_arch} eq "MIPS") {
+			$bus_addr_cells = 1;
+			$bus_size_cells = 1;
+			$ranges = rdb_ranges_prop_str(0, 0x10000000, 0x01000000);
+
+		} elsif ($familyname =~ /^3162/) {
+			$rdb_addr_cells = 2;
+			$rdb_size_cells = 2;
+			# All 3162 registers are over 4GB.  However, the registers sets 
+			# themselves span 0xc00000000 of space, and bchp_offset is currently 0.
+			$ranges = rdb_ranges_prop_str(0, 0, Math::BigInt->new('0xd00000000'));
+
+		} else {
+			$ranges = rdb_ranges_prop_str(0, 0, 0xffffffff);
+		}
+		my $rdb_str = "rdb\n{\n";
+		$rdb_str .= "#address-cells = <$rdb_addr_cells>;\n";
+		$rdb_str .= "#size-cells = <$rdb_size_cells>;\n";
+		$rdb_str .= "compatible = \"simple-bus\";\n";
+		$rdb_str .= $ranges;
+		$rdb_str .= "};\n";
+		return DevTree::node->new($rdb_str);
+	}
 }
 
 sub empty($) 
@@ -3831,7 +3977,7 @@ sub process_dev_tree($)
 	my $chip_cpupll_frequency = find_cpupll_frequency();
 
 	my $rh = get_bchp_info($familyname);
-	my $rdb = create_rdb_parent_node($rh);
+	my $rdb = create_rdb_parent_node($familyname, $rh);
 	BcmUtils::gen_irq0_int_mapping($rh->{rh_defines});
 	my $num_serial = $dt_autogen{serial} ? BcmUtils::get_num_serial($rh->{rh_defines}) : 0;
 	my $num_bsc = $dt_autogen{bsc} ? BcmUtils::get_num_bsc($rh->{rh_defines}) : 0;
@@ -3881,6 +4027,8 @@ sub process_dev_tree($)
 		BcmUtils::get_num_dtu_config($rh->{rh_defines}) : 0;
 	my $num_dpfe = $dt_autogen{dpfe} ?
 		BcmUtils::get_num_dpfe($rh->{rh_defines}) : 0;
+	my $num_sun_rng = $dt_autogen{sun_rng} ?
+		BcmUtils::get_num_sun_rng($rh->{rh_defines}) : 0;
 	my $clks_file = "./config/clks-" . $family->{familyname} . ".plx";
 
 	map { $dt_autogen{$_} ||= {} } keys %dt_autogen;
@@ -4071,6 +4219,9 @@ sub process_dev_tree($)
 
 	BcmDt::Devices::add_dpfe($rdb, $rh, $num_dpfe)
 		if (!empty($dt_autogen{dpfe}) && $num_dpfe);
+
+	BcmDt::Devices::add_sun_rng($rdb, $rh, $num_sun_rng)
+		if (!empty($dt_autogen{sun_rng}) && $num_sun_rng);
 
 	BcmDt::Devices::add_cpu_clock($dt, $dt_autogen{cpuclock})
 		if (!empty($dt_autogen{cpuclock}) && -f $clks_file);

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -12,16 +12,16 @@
 #define SHMOO_ARRAY_SIZE	0x00000260
 #define SHMOO_ARRAY_ELEMENTS	0x00000098
 
-/* 7268B_1600MHz_32b_dev8Gx16_LPDDR4-3200_le.mcb
+/* 7268B_1600MHz_32b_dev8Gx2_LPDDR4-3200_le.mcb
 */
 static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__ ((section(".mcbdata"))) = {
 	0x0132a6ef,	/* 0 */
 	0x00000000,	/* 1 */
 	0x00000000,	/* 2 */
-	0x4f2fa217,	/* 3 */
-	0x00030002,	/* 4 */
-	0x00002602,	/* 5 */
-	0x0020459a,	/* 6 */
+	0x4f5caa42,	/* 3 */
+	0x00040002,	/* 4 */
+	0x00002a02,	/* 5 */
+	0x00104989,	/* 6 */
 	0x007271b0,	/* 7 */
 	0x0000b220,	/* 8 */
 	0x00004800,	/* 9 */
@@ -155,7 +155,7 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x0000000a,	/* 137 */
 	0x00000003,	/* 138 */
 	0x0000005a,	/* 139 */
-	0x00000000,	/* 140 */
+	0x003c003c,	/* 140 */
 	0x00000000,	/* 141 */
 	0x00000000,	/* 142 */
 	0x00000000,	/* 143 */
@@ -169,17 +169,17 @@ static const uint32_t memsys_config_template[SHMOO_ARRAY_ELEMENTS] __attribute__
 	0x00000000,	/* 151 */
 };
 
-/* 7268B_1600MHz_32b_dev8Gx16_LPDDR4-3200_le.mcb
+/* 7268B_1600MHz_32b_dev8Gx2_LPDDR4-3200_le.mcb
 */
-static const uint32_t mcb_1600mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0xffffffff,  0x9f91eb1d,	/* -1 */
+static const uint32_t mcb_1600mhz_32b_dev8Gx2[] __attribute__ ((section(".mcbdata"))) = {
+	0xffffffff,  0x9febfb73,	/* -1 */
 }; /* 0 difference */
 
-/* 7268B_1867MHz_32b_dev8Gx16_LPDDR4-3733_le.mcb
+/* 7268B_1867MHz_32b_dev8Gx2_LPDDR4-3733_le.mcb
 */
-static const uint32_t mcb_1867mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbdata"))) = {
-	0x00000003,  0xabe46652,	/* 3 */
-	0x00000006,  0x0080459a,	/* 6 */
+static const uint32_t mcb_1867mhz_32b_dev8Gx2[] __attribute__ ((section(".mcbdata"))) = {
+	0x00000003,  0xabc16e7d,	/* 3 */
+	0x00000006,  0x00204989,	/* 6 */
 	0x0000000f,  0x0000074b,	/* 15 */
 	0x00000010,  0x001c513f,	/* 16 */
 	0x00000018,  0x00001e20,	/* 24 */
@@ -217,13 +217,13 @@ static const uint32_t mcb_1867mhz_32b_dev8Gx16[] __attribute__ ((section(".mcbda
 	0x00000086,  0x179d2dce,	/* 134 */
 	0x00000087,  0x03590438,	/* 135 */
 	0x00000088,  0x00001c78,	/* 136 */
-	0xffffffff,  0x58fb7393,	/* -1 */
+	0xffffffff,  0x58b583e9,	/* -1 */
 }; /* 39 differences */
 
 const struct memsys_info __maybe_unused shmoo_data[] __attribute__ ((section(".mcbtable"))) = {
 	{ NULL, MCB_MAGIC1, MCB_MAGIC2, MCB_MAGIC3, -1, NULL },
 	{ memsys_config_template,	MCB_MAGIC1,	SHMOO_ARRAY_SIZE,	SHMOO_ARRAY_ELEMENTS, -1, NULL },
-	{ mcb_1600mhz_32b_dev8Gx16,	1600,	8192,	16, 32, NULL },
-	{ mcb_1867mhz_32b_dev8Gx16,	1867,	8192,	16, 32, NULL },
+	{ mcb_1600mhz_32b_dev8Gx2,	1600,	8192 | 1,	0, 32, NULL },
+	{ mcb_1867mhz_32b_dev8Gx2,	1867,	8192 | 1,	0, 32, NULL },
 	{ NULL, 0, 0, 0, 0, NULL },
 };

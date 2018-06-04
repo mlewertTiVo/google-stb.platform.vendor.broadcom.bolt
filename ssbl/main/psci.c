@@ -34,7 +34,7 @@ void bolt_psci_init(void)
 		(arch_get_num_processors() << OEM_PSCI_INIT_NR_CPU_SHIFT);
 
 	r1 |= OEM_PSCI_INIT_DEBUG_MASK | OEM_PSCI_INIT_LOCK_MASK;
- 
+
 	xprintf("PSCI: Init...\n");
 	b0 = psci(r0, r1, 0, 0);
 	if (PSCI_SUCCESS != b0) {
@@ -69,7 +69,7 @@ int psci_boot(unsigned int la_flags, long la_entrypt, void *dt_address)
 		}
 	} else {
 		if (la_flags & LOADFLG_EL3_EXEC) {
-			err_msg("EL3 boot unsupported in 32 bit bootmode");
+			err_msg("EL3 boot unsupported for 32 bit app");
 			return BOLT_ERR_INV_PARAM;
 		}
 
@@ -81,4 +81,3 @@ int psci_boot(unsigned int la_flags, long la_entrypt, void *dt_address)
 #endif
 	return BOLT_OK;
 }
-

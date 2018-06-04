@@ -80,6 +80,8 @@ struct flash_write_s {
 
 #define DEFAULT_FLASH_SPI_MAX_PAGE_SIZE		(256)
 #define DEFAULT_OPCODE_TABLE			spansion_opcodes
+#define SPI_CS_MAX			7
+#define EBI_CS_CONFIG_OFFSET		(BCHP_EBI_CS_BASE_1 - BCHP_EBI_CS_BASE_0)
 
 /*  *********************************************************************
     *  Forward declarations
@@ -662,6 +664,47 @@ static int spi_sfdp_probe(struct spidev *softc)
 	return 0;
 }
 
+/*  *********************************************************************
+    *  spidev_cs_decode_enable(softc, enable)
+    *
+    *  Called to configure cs decode enable for memory mapped reads
+    *
+    *  Input parameters:
+    *	   softc - spi device
+    *	   enable - enable if true, disable if false
+    ********************************************************************* */
+static void spidev_cs_decode_enable(struct spidev *softc, bool enable)
+{
+	uint32_t val, offset;
+
+	/* enable/disable  chip select decode for memory mapped reads */
+	offset = softc->flash.cs * EBI_CS_CONFIG_OFFSET;
+	if (enable)
+		val = BDEV_RD(BCHP_EBI_CS_CONFIG_0 + offset) | 1;
+	else
+		val = BDEV_RD(BCHP_EBI_CS_CONFIG_0 + offset) & ~1;
+
+	BDEV_WR(BCHP_EBI_CS_CONFIG_0 + offset, val);
+}
+
+/*  *********************************************************************
+    *  spidev_chip_select(softc)
+    *
+    *  Called to configure spi chip select
+    *
+    *  Input parameters:
+    *	   softc - spi device
+    ********************************************************************* */
+static void spidev_chip_select(struct spidev *softc)
+{
+	uint32_t val;
+
+	/* set the spi chip select */
+	val = BDEV_RD(BCHP_EBI_CS_SPI_SELECT) & ~0xff;
+	val |= 1 << softc->flash.cs;
+	BDEV_WR(BCHP_EBI_CS_SPI_SELECT, val);
+}
+
 static int spi_cfi_probe(struct spidev *softc)
 {
 	uint8_t cmd;
@@ -745,6 +788,9 @@ static int spi_probe_device(struct spidev *softc)
 	uint8_t cmd;
 	uint8_t id[SPI_MAX_RDID_LEN];
 	const char *ident_string;
+	int i;
+	uint32_t  val = 0;
+	uint32_t offset = 0;
 #if CFG_SPI_QUAD_MODE
 	const bool whether_enable_quad = true;
 #else
@@ -813,7 +859,8 @@ static int spi_probe_device(struct spidev *softc)
 		break;
 	}
 
-	printf("CS0:%s SPI, %dMB, %dkB blocks, %dkB erase block, %uB pages\n",
+	printf("CS%d:%s SPI, %dMB, %dkB blocks, %dkB erase block, %uB pages\n",
+	       (int)softc->flash.cs,
 	       ident_string,
 	       (int)softc->flash.size / (1024 * 1024),
 	       softc->fd_probe.flash_max_blocksize / 1024,
@@ -822,14 +869,22 @@ static int spi_probe_device(struct spidev *softc)
 
 	softc->fd_probe.flash_nsectors = 1;
 	softc->flash.type = FLASH_TYPE_SPI;
-	softc->fd_probe.flash_phys = BDEV_RD(BCHP_EBI_CS_BASE_0) &
-				     BCHP_EBI_CS_BASE_0_base_addr_MASK;
-#if CFG_ARCH_ARM
-	softc->fd_probe.flash_phys = BOLT_TEXT_ADDR;
-#else
-	softc->fd_probe.flash_phys = 0x20000000 - softc->flash.size;
-#endif
 
+	softc->fd_probe.flash_phys = BOLT_TEXT_ADDR;
+
+	/* map 8KB to 256MB to 0x0 - 0xf */
+	for (i = 0; i <= 0xf; i++) {
+		if (softc->flash.size == (uint64_t)(_KB(8) << i)) {
+			val = softc->fd_probe.flash_phys + i;
+			break;
+		}
+	}
+
+	offset = softc->flash.cs * EBI_CS_CONFIG_OFFSET;
+	BDEV_WR(BCHP_EBI_CS_BASE_0 + offset, val);
+
+	/* reset cs0 decode, will be enabled on  mapped access as needed */
+	BDEV_UNSET(BCHP_EBI_CS_CONFIG_0, BCHP_EBI_CS_CONFIG_0_enable_MASK);
 	softc->fd_ttlsect = softc->flash.size / softc->flash.blocksize;
 
 	return 0;
@@ -843,7 +898,7 @@ static int spi_probe_device(struct spidev *softc)
     *
     *  Input parameters:
     *	   drv - driver descriptor
-    *	   probe_a - physical address of flash
+    *	   probe_a - cs
     *	   probe_b - size of flash (bytes)
     *	   probe_ptr - unused
     *
@@ -855,6 +910,12 @@ static void spidrv_probe(bolt_driver_t *drv, unsigned long probe_a,
 {
 	struct spidev *softc;
 	static int flashidx;
+	unsigned int spi_cs = probe_a;
+
+	if (spi_cs >= SPI_CS_MAX) {
+		printf("SPI: invalid chip select %d\n", spi_cs);
+		return;
+	}
 
 	softc = KMALLOC(sizeof(*softc), 0);
 	if (!softc) {
@@ -864,7 +925,7 @@ static void spidrv_probe(bolt_driver_t *drv, unsigned long probe_a,
 
 	memset(softc, 0, sizeof(*softc));
 
-	softc->flash.cs = flashidx; /* Only support CS 0? */
+	softc->flash.cs = spi_cs;
 	softc->flash.type = FLASH_TYPE_SPI;
 	softc->flash.writesize = 1;
 
@@ -879,6 +940,9 @@ static void spidrv_probe(bolt_driver_t *drv, unsigned long probe_a,
 		BCHP_HIF_MSPI_SPCR0_MSB_MSTR_MASK |
 #endif
 		(0x8 << BCHP_HIF_MSPI_SPCR0_MSB_data_reg_32_BITS_SHIFT));
+
+	/* set chip select */
+	spidev_chip_select(softc);
 
 	if (spi_probe_device(softc)) {
 		KFREE(softc);
@@ -926,6 +990,9 @@ static int spidrv_open(bolt_devctx_t *ctx)
 	softc->fd_inst = KMALLOC(num_instr * sizeof(spiinstr_t), 0);
 	if (!softc->fd_inst)
 		return BOLT_ERR_NOMEM;
+
+	/* set chip select */
+	spidev_chip_select(softc);
 
 	return 0;
 }
@@ -1303,16 +1370,13 @@ static void bspi_read(struct spidev *softc, void *buf, uint32_t addr,
 
 	mspi_enable_bspi();
 
+	spidev_cs_decode_enable(softc, true);
+
 	upper_addr = addr & 0xff000000;
 	BDEV_WR(BCHP_BSPI_BSPI_FLASH_UPPER_ADDR_BYTE, upper_addr);
 
 	bspi_flush_prefetch_buffers();
-
-#if CFG_ARCH_ARM /* for ARM, this is not needed */
-	reg_base = BOLT_TEXT_ADDR;
-#else
-#error MIPS support not implemented
-#endif
+	reg_base = softc->fd_probe.flash_phys;
 
 	if (IS_ALIGNED(len, align_sz) &&
 	    IS_ALIGNED((uintptr_t)buf, align_sz)
@@ -1339,6 +1403,8 @@ static void bspi_read(struct spidev *softc, void *buf, uint32_t addr,
 			i++;
 		}
 	}
+
+	spidev_cs_decode_enable(softc, false);
 }
 
 static int spi_execute_one(struct spidev *softc, spiinstr_t *instr)
@@ -1471,15 +1537,13 @@ static int __mspi_writeread(const void *w_buf, unsigned int wlen,
 		if (i < wlen)
 			BDEV_WR(BCHP_HIF_MSPI_TXRAM00 + (i * 8), tx[i]);
 		lval =
-			SPI_CDRAM_CONT | SPI_CDRAM_PCS_DISABLE_ALL |
+			SPI_CDRAM_CONT | SPI_CDRAM_PCS |
 			SPI_CDRAM_PCS_DSCK;
-		lval &= ~SPI_CDRAM_PCS_PCS0;
 		BDEV_WR((BCHP_HIF_MSPI_CDRAM00 + (i * 4)), lval);
 	}
 
 	if (!cont) {
-		lval = SPI_CDRAM_PCS_DISABLE_ALL | SPI_CDRAM_PCS_DSCK;
-		lval &= ~SPI_CDRAM_PCS_PCS0;
+		lval = SPI_CDRAM_PCS | SPI_CDRAM_PCS_DSCK;
 		BDEV_WR((BCHP_HIF_MSPI_CDRAM00 + ((len - 1) * 4)), lval);
 	}
 
@@ -1547,9 +1611,8 @@ static int mspi_write32_continue(const void *w_buf, unsigned int len)
 		BDEV_WR((BCHP_HIF_MSPI_TXRAM00 + (i * 4)), tx[i]);
 		BDEV_WR((BCHP_HIF_MSPI_TXRAM00 + (i * 4) + 4), tx[i + 1]);
 		lval =
-			SPI_CDRAM_CONT | SPI_CDRAM_PCS_DISABLE_ALL |
+			SPI_CDRAM_CONT | SPI_CDRAM_PCS |
 			SPI_CDRAM_PCS_DSCK | SPI_CDRAM_BITSE;
-		lval &= ~SPI_CDRAM_PCS_PCS0;
 		BDEV_WR((BCHP_HIF_MSPI_CDRAM00 + ((i / 2) * 4)), lval);
 	}
 

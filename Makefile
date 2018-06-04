@@ -1,5 +1,5 @@
 ################################################################################
-# Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 #
 #  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 #  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -129,7 +129,8 @@ CFG_GEN_FILES_DEPS := \
 	$(SCRIPT_MODULES) \
 	$(FLASH_TEMPLATE) \
 	$(LDS_IN_FILES) \
-	$(wildcard config/clks-$(FAMILY).plx)
+	$(wildcard config/clks-$(FAMILY).plx) \
+	$(wildcard shmoo/*/mcb-$(FAMILY).c)
 
 $(CFG_GEN_FILES) $(GEN)/.family: $(CFG_GEN_FILES_DEPS) include/$(FAMILY)/*.*
 	$(Q)echo "  ================================ "
@@ -172,7 +173,7 @@ bolts: env
 	$(Q)perl scripts/make_all.pl -j4
 	$(Q)mkdir -p bolts
 	$(Q)rm -f bolts/*
-	$(foreach f,$(FAMILIES), cp objs/$f/bolt-v*.bin  bolts/;)
+	$(foreach f,$(FAMILIES), cp objs/$f/bolt-$(BUILDTAG)-*.bin  bolts/;)
 	$(Q)ls -l bolts
 
 #  --- setting up the environment ---

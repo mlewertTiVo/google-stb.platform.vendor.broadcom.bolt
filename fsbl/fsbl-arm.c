@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -60,7 +60,7 @@ void late_cpu_init(void)
 	uint32_t regval;
 #endif
 
-	/* SCB of 216 MHz for 7268b0, 7271b0 and 7278a0
+	/* SCB of 216 MHz for 7268b0 and 7271b0
 	 * The POR value of SCB is 38.88 MHz for reducing power spike
 	 * when getting out of reset, but too slow. For now, boost it to
 	 * 216 MHz. It needs be boosted even higher before Shmoo.
@@ -74,16 +74,6 @@ void late_cpu_init(void)
 		(18 << BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_2_MDIV_CH2_SHIFT) |
 		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_2_CLOCK_DIS_CH2_DEFAULT <<
 			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_2_CLOCK_DIS_CH2_SHIFT));
-	dsb();
-#elif defined(CONFIG_BCM7278A0)
-	BDEV_WR(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1,
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_POST_DIVIDER_HOLD_CH1_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_POST_DIVIDER_HOLD_CH1_SHIFT ) |
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_PHASE_OFFSET_CH1_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_PHASE_OFFSET_CH1_SHIFT) |
-		(18 << BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_MDIV_CH1_SHIFT) |
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_CLOCK_DIS_CH1_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_CLOCK_DIS_CH1_SHIFT));
 	dsb();
 #endif
 
@@ -205,7 +195,7 @@ void mmu_initialize_pagetable(void)
 		SECT_DEVICE | XN);
 
 	/* registers */
-	set_pte_range(tbl, BCHP_PHYSICAL_OFFSET,
+	set_pte_range(tbl, BCHP_PHYSICAL_OFFSET + BCHP_REGISTER_START,
 		BCHP_PHYSICAL_OFFSET + BCHP_REGISTER_END, SECT_DEVICE | XN);
 
 	/* sram */

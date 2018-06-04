@@ -1,0 +1,71 @@
+/ {
+	brcmstb-bogus-clks {
+		status = "disabled";
+		brcm_bogus_clk: brcm_bogus_clk {
+			#clock-cells = <1>;
+			compatible = "brcm,bogus-clk";
+		};
+	};
+
+	reserved-memory {
+		/* This is a placeholder */
+		NWMBOX: NWMBOX {
+		};
+	};
+
+	brcm_scmi_mailbox: brcm_scmi_mailbox@0 {
+		#mbox-cells = <1>;
+		compatible = "brcm,brcmstb-mbox";
+		status = "disabled";
+	};
+
+	brcm_scmi: brcm_scmi@0 {
+		compatible = "arm,scmi";
+		mboxes = <&brcm_scmi_mailbox 0>;
+		mbox-names = "tx";
+		shmem = <&NWMBOX>;
+		status = "disabled";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		scmi_dvfs: protocol@13 {
+			reg = <0x13>;
+			#clock-cells = <1>;
+		};
+
+		scmi_sensor: protocol@15 {
+			reg = <0x15>;
+			#clock-cells = <1>;
+		};
+
+		scmi_brcm: protocol@80 {
+			reg = <0x80>;
+			#clock-cells = <1>;
+		};
+
+	};
+
+	cpus {
+
+		cpu@0 {
+			clocks = <&brcm_bogus_clk 0>;
+			clock-names = "cpu";
+		};
+
+		cpu@1 {
+			clocks = <&brcm_bogus_clk 0>;
+			clock-names = "cpu";
+		};
+
+		cpu@2 {
+			clocks = <&brcm_bogus_clk 0>;
+			clock-names = "cpu";
+		};
+
+		cpu@3 {
+			clocks = <&brcm_bogus_clk 0>;
+			clock-names = "cpu";
+		};
+	};
+};

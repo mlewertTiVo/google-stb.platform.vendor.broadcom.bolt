@@ -1,5 +1,7 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ *     Copyright (c) 2012-2013, Broadcom Corporation
+ *     All Rights Reserved
+ *     Confidential Property of Broadcom Corporation
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -16,7 +18,6 @@
 #include "error.h"
 #include "fileops.h"
 #include "iocb.h"
-#include "ioctl.h"
 #include "devfuncs.h"
 #include "console.h"
 #include "timer.h"
@@ -181,8 +182,6 @@ static int raw_fileop_read(void *ref, uint8_t *buf, int len)
 	int res;
 	int totalamt;
 	unsigned char *curr_write_ptr;
-	int transfer_unit = MAX_TRANSFER_SIZE;
-	struct flash_info flash_info;
 
 	/*
 	 * Bound the length based on our "file length" if one
@@ -198,28 +197,16 @@ static int raw_fileop_read(void *ref, uint8_t *buf, int len)
 		return 0;
 
 	/*
-	 * the page size of NAND dictates the max transfer size
-	 */
-	memset(&flash_info, 0, sizeof(flash_info));
-	res = bolt_ioctl(file->raw_fsctx->raw_dev, IOCTL_FLASH_GETINFO,
-		&flash_info, sizeof(flash_info), NULL, 0);
-	if (res == 0) {
-		if (flash_info.type == FLASH_TYPE_NAND) {
-			transfer_unit = flash_info.page_size;
-		}
-	}
-
-	/*
 	 * Read the data, adding in the base address.
 	 */
 	curr_write_ptr = buf;
 	totalamt = 0;
-	while (len >= transfer_unit)
+	while (len >= MAX_TRANSFER_SIZE)
 	{
 		res = bolt_readblk(file->raw_fsctx->raw_dev,
 			  file->raw_baseoffset + file->raw_fileoffset,
-			  curr_write_ptr, transfer_unit);
-		if (res != transfer_unit) {
+			  curr_write_ptr, MAX_TRANSFER_SIZE);
+		if (res != MAX_TRANSFER_SIZE) {
 			xprintf("I/O error. remaining bytes:%d\n", len);
 			res = BOLT_ERR_IOERR;
 			goto exit;

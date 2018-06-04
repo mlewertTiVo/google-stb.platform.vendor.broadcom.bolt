@@ -777,75 +777,89 @@ asciidoc.install(4);
 </div>
 <div id="content">
 <div class="sect1">
-<h2 id="_bolt_sqa_release_v1_34_16th_november_2017">1.  Bolt SQA Release v1.34, 16th November 2017</h2>
+<h2 id="_bolt_sqa_release_v1_42_23rd_may_2018">1.  Bolt SQA Release v1.42, 23rd May 2018</h2>
 <div class="sectionbody">
 <div class="literalblock">
 <div class="content">
-<pre><code>        o Supported chip families: 7250b0 7260a0 7268b0 7271b0 7278a0 7278b0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
-        o Toolchain: stbgcc-4.8-1.1
+<pre><code>        o Supported chip families: 7250b0 7255a0 7260a0 7260b0 7268b0 7271b0 7278b0 7364b0 7364c0 7366c0 74371a0 7439b0 7445d0 7445e0
+        o Toolchain: stbgcc-6.3-1.2
         o AVS versions:
-                o v0.3.2
-                        o 7250b0
-                        o 7364b0
-                        o 7366c0
-                        o 7445d0
-                        o 7445e0
-                o v0.3.3
-                        o 74371a0
-                        o 7364c0
-                o v0.3.4
-                        o 7439b0
-                o v1.1.0
-                        o 7271b0
-                        o 7268b0
-                        o 7260a0
-                        o 7278a0
-                        o 7278b0
+                o 7250b0    v0.3.2
+                o 7255a0    v2.1.0
+                o 7260a0    v2.1.0
+                o 7260b0    v2.1.0
+                o 7268b0    v2.1.0
+                o 7271b0    v2.1.0
+                o 7278b0    v2.1.0
+                o 7364b0    v0.3.2
+                o 7364c0    v0.3.3
+                o 7366c0    v0.3.2
+                o 74371a0   v0.3.3
+                o 7439b0    v0.3.4
+                o 7445d0    v0.3.2
+                o 7445e0    v0.3.2
         o AVS Pending PVT testing:
         o SHMOO versions:
                 o DDR3 upto 2133 unless otherwise noted
-                        o 7250b0:  3.4.1.0 (M1)
-                        o 7260a0:  3.4.0.0 (M2)
-                        o 7364b0:  3.4.1.0 (M1)
-                        o 7364c0:  3.4.1.0 (M1)
-                        o 7366c0:  3.4.1.0 (M1)
-                        o 7439b0:  3.4.1.0 (M1)
-                        o 7445d0:  3.4.1.0 (M1)
-                        o 7445e0:  3.4.1.0 (M1)
-                        o 74371a0: 1.0.0.6 (M1)
+                        o 7250b0:  3.4.1.0 (M1) See Note 3
+                        o 7255a0:  3.7.0.0 (M8) See Note 4
+                        o 7260a0:  3.6.2.0 (M2) See Note 4
+                        o 7260b0:  3.6.2.0 (M2) See Note 4
+                        o 7364b0:  3.4.1.0 (M1) See Note 3
+                        o 7364c0:  3.4.1.0 (M1) See Note 3
+                        o 7366c0:  3.4.1.0 (M1) See Note 3
+                        o 7439b0:  3.4.1.0 (M1) See Note 3
+                        o 7445d0:  3.4.1.0 (M1) See Note 3
+                        o 7445e0:  3.4.1.0 (M1) See Note 3
+                        o 74371a0: 1.0.0.6 (M1) See Note 3
                 o DDR4 upto 2400 unless otherwise noted
-                        o 7250b0:  3.4.1.0 (M1)
-                        o 7260a0:  3.6.0.0 (M1**)
-                        o 7364b0:  3.4.1.0 (M1)
-                        o 7364c0:  3.4.1.0 (M1)
-                        o 7366c0:  3.4.1.0 (M1)
-                        o 7439b0:  3.4.1.0 (M1)
-                        o 7445d0:  3.4.1.0 (M1)
-                        o 7445e0:  3.4.1.0 (M1)
+                        o 7250b0:  3.4.1.0 (M1) See Note 3
+                        o 7255a0:  3.7.1.0 (M8) See Note 4
+                        o 7260a0:  3.6.0.0 (M1) See Note 2
+                        o 7260b0:  3.6.0.0 (M1) See Note 2
+                        o 7364b0:  3.4.1.0 (M1) See Note 3
+                        o 7364c0:  3.4.1.0 (M1) See Note 3
+                        o 7366c0:  3.4.1.0 (M1) See Note 3
+                        o 7439b0:  3.4.1.0 (M1) See Note 3
+                        o 7445d0:  3.4.1.0 (M1) See Note 3
+                        o 7445e0:  3.4.1.0 (M1) See Note 3
                 o LPDDR4 upto 3733 unless otherwise noted
-                        o 7268b0:  5.4.2.0 (M1*)
-                        o 7271b0:  5.4.2.0 (M1*)
-                        o 7278a0:  5.1.0.4 (M4*)
-                        o 7278b0:  5.5.0.4 (M8)
+                        o 7268b0:  5.6.1.0 (M1) See Notes 1 &amp; 4
+                        o 7271b0:  5.6.1.0 (M1) See Notes 1 &amp; 4
+                        o 7278a0:  5.1.0.4 (M4) See Note 3
+                        o 7278b0:  5.7.1.0 (M5) See Notes 1 &amp; 4
 
-* Denotes:
+DDR SHMOO versions designated M1 are qualified for production. Any other M# designations are for development only.
+
+Notes:
+
+1)
                 o Samsung, SK-Hynix, and Micron LPDDR4-3200 supported on 4 or more PCB layers
-                o Only SK-Hynix and Micron LPDDR4-3733 supported on 6 or more PCB layers
-
-** Denotes:
-                o DDR4-2667 is supported with external VTT regulator</code></pre>
+                o SK-Hynix and Micron LPDDR4-3733 supported on 6 or more PCB layers
+                o Samsung's new 1Xnm process LPDDR4-3733 devices are now supported on 6 or more PCB layers
+2)
+                o DDR4-2667 is supported with external VTT regulator
+3)
+                o Built with 4.8 toolchain
+4)
+                o Built with 6.3 toolchain</code></pre>
 </div></div>
 <div class="sect2">
 <h3 id="_known_issues">1.1.  Known Issues</h3>
 <div class="ulist"><ul>
 <li>
 <p>
-S3 not currently supported in 7278b0
+There are two separate binaries for the 7278b0 chip family.  One for b0 and one for b1.
 </p>
 </li>
 <li>
 <p>
-Splash screen not currently supported in 7278b0
+HDCP 1.4 HW core currently disabled in 7278B0.
+</p>
+</li>
+<li>
+<p>
+7255 does not support S3 power management and Secure Audio on Astra.
 </p>
 </li>
 </ul></div>
@@ -853,6 +867,16 @@ Splash screen not currently supported in 7278b0
 <div class="sect2">
 <h3 id="_compatibility">1.2.  Compatibility</h3>
 <div class="ulist"><ul>
+<li>
+<p>
+For chips with ARM B53 (e.g. 7271, 7268, 7260, 7278, 7255 families), BOLT v1.41 and later requires Linux 4.1-1.18, 4.9-1.5 or later.
+</p>
+</li>
+<li>
+<p>
+Since BOLT v1.38, reading the temperature from the DRAM chips requires Linux versions 4.1-1.17, 4.9-1.4 or later.
+</p>
+</li>
 <li>
 <p>
 Fixed issue with the BFW that could reset the chip when SAGE requests a region to be authenticated.
@@ -989,10 +1013,18 @@ version your chip requires.</td>
 <li>
 <p>
 &lt;BBL&gt; is either <em>xx</em> or b[a-z]
- *&lt;X.Y.Z&gt; is the BFW version, of the form [0-9]?[0-9].[0-9].[0-9]
+</p>
+</li>
+<li>
+<p>
+&lt;X.Y.Z&gt; is the BFW version, of the form [0-9]?[0-9].[0-9].[0-9]
 </p>
 </li>
 </ul></div>
+<div class="literalblock">
+<div class="content">
+<pre><code>  Note that for the 7278b0 chip family, &lt;FAMILY&gt; is "7278b0" for 7278b0 or "7278b1" for 7278b1.</code></pre>
+</div></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1027,7 +1059,7 @@ binary with <em>ba</em> in the BBL position:
 BCM7366ZBKFSBA99G-P20
              ^
 bolt-&lt;VERSION&gt;-&lt;FAMILY&gt;-ba-bfw-&lt;X.Y.Z&gt;.bin
-                       ^^</code></pre>
+                        ^^</code></pre>
 </div></div>
 <div class="ulist"><ul>
 <li>
@@ -1142,35 +1174,44 @@ to the version your BOLT release wants (in bolt/config/toolchain):
 </li>
 </ul></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>arm-linux-ld<span style="color: #990000">:</span> error<span style="color: #990000">:</span> no memory region specified <span style="font-weight: bold"><span style="color: #0000FF">for</span></span> loadable section `<span style="color: #990000">.</span>bss<span style="color: #FF0000">'</span></tt></pre></div></div>
 <hr />
 </div>
 <div class="sect2">
-<h3 id="_upgrade_to_v1_34_criteria">1.4.  Upgrade to v1.34 criteria</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2350">SWBOLT-2350</a> Added interface specification version to AVS API.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2436">SWBOLT-2436</a> Added support for the 7278B0. <sup><span class="yellow silver-background">major</span></sup></p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2473">SWBOLT-2473</a> Added the ability to select the RX equalizer mode with a specific value.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2453">SWBOLT-2453</a> Board profile BCM97268USFFA4L should set rts mode to 5 by default.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2491">SWBOLT-2491</a> Buffer allocation in USB BDC has been corrected so that the heap of un-cached memory does not get corrupted.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2444">SWBOLT-2444</a> Enable splash by changing family specific config file.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2472">SWBOLT-2472</a> Enabled second SYSTEMPORT Lite instance.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2484">SWBOLT-2484</a> Fixed STB boot-up problem after a warm-reboot (emmc and nonsecure boot).</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2459">SWBOLT-2459</a> Fixed build error with "config COAP off".</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2477">SWBOLT-2477</a> Fixed build failure when setting enet phy_id to probe.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2498">SWBOLT-2498</a> Fixed build problem where everything always compiles.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2478">SWBOLT-2478</a> Fixed compile problem with bolt v1.27 for BCM72604 DTS generated file.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2432">SWBOLT-2432</a> If the overtemp is a reset cause, it gets enabled by SSBL after cooling down the chip via performing temperature parking.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2229">SWBOLT-2229</a> On 7271b0, MTSIF/RGMII pads of ON/OFF domain are configured to 2.5V/3.3V by default if MTSIF/RGMII is/are pinmux&#8217;ed. <em>pad_rgmii</em> configuration command can be used to override the default and configure the pads to 1.5V/1.8V.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2492">SWBOLT-2492</a> On chips that PCIe and SATA are mutually exclusive, a feature that is deselected by an associated strap setting will be disabled in BOLT. Such deselection will propagate to Linux.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2468">SWBOLT-2468</a> Provide api for setting and getting features to NAND flash.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2448">SWBOLT-2448</a> SDIO pin selection is now properly handled for 7260a0.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2457">SWBOLT-2457</a> Set timeout_txdma for MoCA ethernet.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2487">SWBOLT-2487</a> USB BDC driver has been added to 7278a0.</p></div>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2500">SWBOLT-2500</a> Updated DVFS firmware: Save/restore state information after an over-temp reset. Removed printable ascii limit to revision number. Initial pmap tables for 7278b0.</p></div>
+<h3 id="_upgrade_to_v1_42_criteria">1.4.  Upgrade to v1.42 criteria</h3>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2733">SWBOLT-2733</a> Added support for 64 bit addressing for BSU applications. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2697">SWBOLT-2697</a> Allowed Mon64 to be backward compatible with older versions of Linux. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2677">SWBOLT-2677</a> Allowed SPI-NOR flash access on EBI_CS1/2.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2659">SWBOLT-2659</a> BDEV_* macro functions cannot take physical address anymore.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2495">SWBOLT-2495</a> Corrected SDHCI compatible string.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2645">SWBOLT-2645</a> Default to v7-64 memory map, unless secure boot disabled, and OTP and strap indicates v7-32.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2686">SWBOLT-2686</a> During FLASH DMA, the cache mode is enabled only for chips with NAND v7.1. They are 7364b0, 7364c0, 7366c0, 7439b0, 7445d0 and 7445e0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2700">SWBOLT-2700</a> Enabled 72604B0 PMAP7 to support CPU speeds up to 1.8GHz but with higher power consumption.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2710">SWBOLT-2710</a> Limited Mon64 to 7255 and 7211 platforms. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2689">SWBOLT-2689</a> Please use the <em>-ranks</em> option of the <em>ddr</em> configuration command for LPDDR4, and drop the <em>-width</em> option.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2703">SWBOLT-2703</a> Prevented the population of SCMI nodes in Device Tree unless booted in AArch64.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2694">SWBOLT-2694</a> Remove hard coded clocks for 7278b0.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2693">SWBOLT-2693</a> Shmoo for BCM7255 DDR4 has been updated to v3.7.1.0. MCB&#8217;s have to be re-generated.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2704">SWBOLT-2704</a> Shmoo for BCM7260 DDR3 has been updated to v3.6.2.0. MCB&#8217;s should be regenerated. <sup><span class="yellow silver-background">major</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2662">SWBOLT-2662</a> Support for 72518b0 and 72528a0 has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2691">SWBOLT-2691</a> Support for BCM972554DR3_6L has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2690">SWBOLT-2690</a> Support for BCM972604DR3_6L has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2667">SWBOLT-2667</a> Support for BCM97271SDB V10 has been added.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2669">SWBOLT-2669</a> Support for the built-in Ethernet has been added to BCM97278HB V10. An updated board revision that populates J861 and BCM9ENET_DC are required to use the Ethernet port.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2670">SWBOLT-2670</a> The SDIO pin selection has been corrected for a build with multiple board configurations.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2711">SWBOLT-2711</a> The network configuration of BCM97271SDB has been adjusted.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2702">SWBOLT-2702</a> Updated 7278b0 clock information.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2730">SWBOLT-2730</a> Updated BFW for 7278Bx to 2.1.3 to fix random chip resets when SAGE is enabled. <sup><span class="red silver-background">blocker</span></sup></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2701">SWBOLT-2701</a> Updated DVFS firmware to v2.1.0. Enable 72604B PMAP7 for high-performance Android boxes. Add 7255A0 PMAP6/7 for HVD P-STATES.</p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/browse/SWBOLT-2743">SWBOLT-2743</a> Used default overtemp, parking high and low values, if upon taking a temperature reset, the AON scratch area contains zeros.</p></div>
 </div>
 <div class="sect2">
 <h3 id="_broadcom_fae_access">1.5.  Broadcom FAE access</h3>
-<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.34%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
+<div class="paragraph"><p><a href="http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.42%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22">Here</a></p></div>
 </div>
 </div>
 </div>
@@ -1206,7 +1247,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-12-07 23:39:45 PST
+ 2018-06-01 16:37:41 PDT
 </div>
 </div>
 </body>

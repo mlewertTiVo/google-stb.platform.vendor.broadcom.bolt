@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -33,6 +33,9 @@
 #include <net_ether.h>
 #include <timer.h>
 #include <ui_command.h>
+#if CFG_MON64
+#include <mon64.h>
+#endif
 
 #if CFG_UI
 extern int bolt_docommands(const char *buf);
@@ -202,7 +205,13 @@ int bolt_go(bolt_loadargs_t *la)
 	 */
 #ifdef STUB64_START
 	if (!(la->la_flags & LOADFLG_DIRECT_CALL))
+#if CFG_MON64
+		return (arch_booted64()) ?
+			mon64_boot(la->la_flags, la->la_entrypt, p.dt_address) :
+			psci_boot(la->la_flags, la->la_entrypt, p.dt_address);
+#else
 		return psci_boot(la->la_flags, la->la_entrypt, p.dt_address);
+#endif
 #endif
 	/* Used for S3 to say how we first booted. */
 	bolt_set_aon_bootmode(0);

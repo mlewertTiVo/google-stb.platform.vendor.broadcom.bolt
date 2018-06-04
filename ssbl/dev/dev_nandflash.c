@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -1213,13 +1213,13 @@ static int nand_handle_partition_read_disturb(bolt_devctx_t * ctx)
 	/* correctable error occured */
 	if (rval == NAND_ERR_CORR) {
 		/* check bolt partition */
-		read_buffer = KMALLOC(flash->writesize, 4);
+		read_buffer = KMALLOC(flash->blocksize, 4);
 		if (read_buffer) {
-			buffer.buf_length = flash->writesize;
+			buffer.buf_length = flash->blocksize;
 			buffer.buf_offset = 0;
 			buffer.buf_ptr = (bolt_ptr_t) read_buffer;
 
-			for (offs = 0; offs < part->size; offs += flash->writesize)
+			for (offs = 0; offs < part->size; offs += flash->blocksize)
 				nanddrv_read(ctx, &buffer);
 			KFREE(read_buffer);
 		} else {
@@ -2015,8 +2015,10 @@ static int nand_do_probe(struct nand_dev *softc)
 		if (onfi_get_required_ecc(info, &params, &min_ecc_bits, &ecc_codeword))
 			return -1;;
 
+#if NAND_CONTROLLER_REVISION == 0x701
 		info->supports_cache_read = le16_to_cpu(params.opt_cmds &
 						ONFI_OPT_CMD_CACHE_READ);
+#endif
 	} else {
 		const struct nand_chip *chip = &known_nand_chips[info->chip_idx];
 		flash->writesize = chip->page_size;

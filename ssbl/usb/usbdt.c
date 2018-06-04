@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -53,7 +53,7 @@ struct prop_to_def {
 	{"off", USB_CTLR_DEVICE_OFF},
 	{"on", USB_CTLR_DEVICE_ON},
 	{"dual", USB_CTLR_DEVICE_DUAL},
-	{"typec_pd", USB_CTLR_DEVICE_TYPEC_PD},
+	{"typec-pd", USB_CTLR_DEVICE_TYPEC_PD},
 };
 
 struct usb_controller_list usb_clist;
@@ -167,7 +167,7 @@ static int is_in_caps(uint32_t reg, uint32_t caps_regs)
 	uint32_t *cregs = (unsigned int *)caps_regs;
 
 	for (x = 0; x < CAP_MAX_REGISTERS; x++, cregs++) {
-		cap = BDEV_RD((uint32_t)cregs);
+		cap = DEV_RD((uint32_t)cregs);
 		if ((cap & CAP_ACTIVE) && ((cap & CAP_ADDR) == reg))
 			return 1;
 	}
@@ -329,13 +329,17 @@ static int disable_xhci_phy(uint32_t ctrl_addr)
 {
 	char node_name[80];
 	int node;
+	int rc;
 
 	xsprintf(node_name, "%s/usb-phy@%8x", dt_rdb_root,
 		ctrl_addr);
 	node = bolt_devtree_node_from_path(current_dtb, node_name);
 	if (node < 0)
 		return node;
-	return bolt_devtree_at_node_delprop(current_dtb, node, "has_xhci");
+	rc = bolt_devtree_at_node_delprop(current_dtb, node, "has_xhci");
+	if (rc)
+		return rc;
+	return bolt_devtree_at_node_delprop(current_dtb, node, "brcm,has-xhci");
 }
 
 /*
@@ -381,10 +385,11 @@ void usb_remove_disabled_from_dt(struct usb_controller_list *clist)
 static void set_single_or_override(void *fdt, int offset, const char *strnode,
 				uint32_t *target, char *envar, char *strprop)
 {
-	const struct fdt_property *prop;
 	int p, node, plen = 0;
 	char *s;
 	uint32_t data;
+	int rc;
+	char value[4];
 
 	p = bolt_devtree_node_from_path(fdt, dt_rdb_root);
 	if (p < 0) {
@@ -403,18 +408,19 @@ static void set_single_or_override(void *fdt, int offset, const char *strnode,
 		}
 		if (bolt_devtree_at_node_addprop(fdt, node, strprop, &data,
 					sizeof(data)))
-			xprintf("USB init: devicetree write error %s for %s:%s\n",
-					fdt_strerror(plen), strnode, strprop);
+			xprintf("USB init: devicetree write error for %s:%s\n",
+					strnode, strprop);
 		else /* make some cluebat noise */
 			xprintf("USB init: envar %s override %s: %s = %d\n",
 					envar, strnode, strprop, *target);
 	} else {
-		prop = fdt_get_property(fdt, offset, strprop, &plen);
-		if (prop && (plen >= (int)(sizeof(uint32_t))))
-			*target = DT_PROP_DATA_TO_U32(prop->data, 0);
+		rc = bolt_devtree_getprop_at(fdt, strnode, strprop, value,
+					sizeof(value), &plen, p);
+		if (!rc && (plen >= (int)(sizeof(uint32_t))))
+			*target = DT_PROP_DATA_TO_U32(value, 0);
 		else
-			xprintf("USB init: devicetree read error %s for %s:%s\n",
-					fdt_strerror(plen), strnode, strprop);
+			xprintf("USB init: devicetree read error for %s:%s\n",
+				strnode, strprop);
 	}
 }
 
@@ -486,7 +492,11 @@ int usb_find_ports(struct usb_controller_list *clist)
 			set_single_or_override(current_dtb, offset, name_v2,
 				&(clist->ctrls[x].ipp), "USBIPP", "ipp");
 			set_single_or_override(current_dtb, offset, name_v2,
+				&(clist->ctrls[x].ipp), "USBIPP", "brcm,ipp");
+			set_single_or_override(current_dtb, offset, name_v2,
 				&(clist->ctrls[x].ioc), "USBIOC", "ioc");
+			set_single_or_override(current_dtb, 0, name_v2,
+				&(clist->ctrls[x].ioc), "USBIOC", "brcm,ioc");
 
 			prop = fdt_get_property(current_dtb, offset,
 						"device", &proplen);

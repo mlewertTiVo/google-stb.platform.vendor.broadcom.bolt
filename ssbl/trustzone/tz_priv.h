@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -13,8 +13,6 @@
 #include <loader.h>
 #include <stdint.h>
 
-typedef enum { e_tz_spd_image, e_tz_tz_image, e_tz_nw_image } tz_payload_type;
-
 struct tz_reg_group {
 	const char	*compatible;
 	uint32_t	start;
@@ -23,11 +21,14 @@ struct tz_reg_group {
 
 struct tz_mem_layout {
 	/* offset from mem_addr */
+	uint64_t	tzioc_offset;
+	uint64_t	tzioc_size;
+
 	uint64_t	os_offset;
 	uint64_t	os_size;
 
-	uint64_t	tzioc_offset;
-	uint64_t	tzioc_size;
+	uint64_t	load_offset;
+	uint64_t	load_size;
 
 	/* offset from tzioc_offset */
 	uint32_t	t2n_offset;
@@ -49,27 +50,31 @@ struct tz_info {
 	uint64_t	mem_addr;
 	uint64_t	mem_size;
 
-	uint64_t	bl31_addr;
-	uint64_t	bl31_size;
+#if CFG_TRUSTZONE_MON
+	uint64_t	mon_addr;
+	uint64_t	mon_size;
+#endif
 
 	struct tz_mem_layout	*mem_layout;
 	struct tz_reg_group	*reg_groups;
 
 	uint8_t		tzioc_irq;
 
-	void		*dt_addr;
+	void		*dt_address;
 };
 
 struct tz_info *tz_info(void);
 
 /* tz_config */
 extern struct tz_reg_group s_tz_reg_groups[];
-extern struct tz_mem_layout s_tz_mem_layout_16MB;
 extern struct tz_mem_layout s_tz_mem_layout_32MB;
+extern struct tz_mem_layout s_tz_mem_layout_64MB;
 
 int tz_config_init(void);
 int tz_config_uart(int uart);
 
+#if !CFG_MON64
 void tz_smm_set_params(bolt_loadargs_t *la);
+#endif
 
 #endif /* _TZ_PRIV_H_ */

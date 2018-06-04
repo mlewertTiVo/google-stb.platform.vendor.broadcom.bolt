@@ -195,14 +195,23 @@ static uint64_t profile_min_size(struct flash_dev *flash,
 static int flash_must_match_profile(struct flash_dev *flash,
 		struct partition_profile *profile)
 {
-	/* All partitions must go on the only flash */
+	struct flash_dev *bootflash;
+
+	/* All partitions must go on the flash */
 	if (get_num_flash() == 1)
 		return 1;
 
-	/* Assign to the boot flash */
-	if ((profile->flags & PARTITION_BOOT_DEVICE)
-			&& flash == get_boot_flash())
-		return 1;
+	bootflash = get_boot_flash();
+	if (flash == bootflash) {
+		/*
+		 * if boot flash is nand or if the profile flags
+		 * indicate boot device partition map, create
+		 * all partitions on this flash
+		 */
+		if ((flash->type == FLASH_TYPE_NAND) ||
+		    (profile->flags & PARTITION_BOOT_DEVICE))
+			return 1;
+	}
 
 	/* If we only have a single secondary */
 	if (get_num_flash() == 2 && (profile->flags & PARTITION_SECONDARY) &&

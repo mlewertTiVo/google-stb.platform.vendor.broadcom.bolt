@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include <avs_bsu.h>
+#include <avs_dvfs.h>
 #include <board.h>
 #include <lib_printf.h>
 
@@ -18,9 +19,6 @@ void board_init_avs(void)
 #else
 	const struct dvfs_params *dvfs;
 	unsigned int pmap_id;
-#ifndef SECURE_BOOT
-	struct fsbl_info *inf;
-#endif
 
 	dvfs = board_dvfs();
 	if (dvfs == NULL) {
@@ -31,31 +29,15 @@ void board_init_avs(void)
 		return;
 	}
 
-#ifdef SECURE_BOOT
-	pmap_id = dvfs->pmap;
-#else
-	inf = board_info();
-	if (inf == NULL) {
-		xprintf("AVS: cannot get board info!\n");
-		return;
-	}
-
-	pmap_id = FSBL_HARDFLAG_PMAP_ID(inf->saved_board.hardflags);
-	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD) {
-		/* respect the board default PMap configuration */
-		pmap_id = dvfs->pmap;
-	} else {
-		if (pmap_id != dvfs->pmap) {
-			xprintf("AVS: PMap# %d (board default %d)\n",
+	/* AVS could have overridden the requested PMAP based on
+	 * the product ID. Notify the user if the current PMAP set
+	 * is different than the board PMAP.
+	 */
+	pmap_id = avs_get_current_pmap();
+	if (pmap_id != dvfs->pmap) {
+		xprintf("AVS: PMap# %d (board default %d)\n",
 				pmap_id, dvfs->pmap);
-			/* The user selected PMap has already been applied in
-			 * FSBL. It is just the pstate of the PMap that is
-			 * being applied at this moment, which should not
-			 * cause any crash or instability.
-			 */
-		}
 	}
-#endif
 
 	avs_ssbl_init(pmap_id);
 #endif /* DVFS_SUPPORT */

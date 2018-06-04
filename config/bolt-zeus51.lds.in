@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -32,8 +32,6 @@ SECTIONS {
 		* (.fsbl.rodata);
 		* (.fsbl.data);
 		* (.fsbl.bss);
-		. = @SEC_PARAM_OFFSET_FLASH@;
-		* (.fsbl.init.sec_params);
 	} >fsbl
 
 	.bbl : AT(@BBL_TEXT_ADDR@) {

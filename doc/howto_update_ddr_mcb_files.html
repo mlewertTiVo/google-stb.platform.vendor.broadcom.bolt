@@ -847,7 +847,13 @@ Rebuild BOLT to pick up the changes.
 </ul></div>
 <div class="paragraph"><p>e.g.</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make distclean
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make ddr_update <span style="color: #009900">FAMILY</span><span style="color: #990000">=</span>7364c0 <span style="color: #009900">MEMC_REV</span><span style="color: #990000">=</span>B150_F002
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make 7364c0</tt></pre></div></div>
 </div>
 </div>
 <div class="sect1">
@@ -866,7 +872,13 @@ Rebuild BOLT to pick up the changes.
 B130 = memc revision, F001 = phy revision.</p></div>
 <div class="paragraph"><p>Re-create the mcb-7445d0.c file so BOLT knows about it, then rebuild BOLT:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make clean
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make ddr_update <span style="color: #009900">FAMILY</span><span style="color: #990000">=</span>7445d0 <span style="color: #009900">MEMC_REV</span><span style="color: #990000">=</span>B130_F001
+     <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make 7445d0</tt></pre></div></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -945,7 +957,20 @@ i.e. remove the <em>gset MEMC_ALT &#8230;</em> line.
 <div class="sect2">
 <h3 id="_an_example_of_moving_memc_alt_into_memc_rev">3.2.  An example of moving MEMC_ALT into MEMC_REV</h3>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> mv shmoo/B130_F001_DDR4/lib/memsysinitlib<span style="color: #990000">.</span>a shmoo/B130_F001/lib/memsysinitlib<span style="color: #990000">.</span>a
+
+ <span style="font-style: italic"><span style="color: #9A1900"># Get rid of DDR3 MCBs</span></span>
+ rm shmoo/B130_F001/mcb<span style="color: #990000">/*.</span>mcb
+
+ <span style="font-style: italic"><span style="color: #9A1900"># Move and rename the DDR4 MCBs so we can get rid of the '-custom' flag</span></span>
+ <span style="font-style: italic"><span style="color: #9A1900"># Note that use of the '-custom' flag for secure boot is prohibited.</span></span>
+ mv shmoo/B130_F001/mcb<span style="color: #990000">/</span>7445d0<span style="color: #990000">/*.</span>mcb shmoo/B130_F001/mcb
+ mv shmoo/B130_F001/mcb/ddr4_1067MHz_32b_dev4Gx16_DDR4-2133R_le<span style="color: #990000">.</span>mcb shmoo/B130_F001/mcb<span style="color: #990000">/</span>7445D0_1067MHz_32b_dev4Gx16_DDR4-2133R_le<span style="color: #990000">.</span>mcb
+ mv shmoo/B130_F001/mcb/ddr4_1200MHz_32b_dev4Gx16_DDR4-2400R_le<span style="color: #990000">.</span>mcb shmoo/B130_F001/mcb<span style="color: #990000">/</span>7445D0_1200MHz_32b_dev4Gx16_DDR4-2400R_le<span style="color: #990000">.</span>mcb</tt></pre></div></div>
 <div class="paragraph"><p>Edit the chip family config file to use <em>-fixed</em> instead of <em>-custom</em>:</p></div>
 <div class="listingblock">
 <div class="content">
@@ -985,7 +1010,12 @@ we only have two <em>ddr</em> commands in that file.</td>
 </div></div>
 <div class="paragraph"><p>Now rebuild:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make ddr_update <span style="color: #009900">FAMILY</span><span style="color: #990000">=</span>7445d0 <span style="color: #009900">MEMC_REV</span><span style="color: #990000">=</span>B130_F001
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make 7445d0</tt></pre></div></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1012,7 +1042,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-12-07 23:39:45 PST
+ 2018-06-01 16:37:41 PDT
 </div>
 </div>
 </body>

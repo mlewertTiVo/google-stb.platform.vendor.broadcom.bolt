@@ -41,22 +41,35 @@ brcmstb_params_t brcmstb_params = {
 		.version = BRCMSTB_PARAMS_VERSION
 	},
 	.bootsram_secure = {
-		.base = BCHP_BOOTSRAM_SECURE_REG_START,
+#if defined(BCHP_BOOTSRAM_SECURE_REG_START)
+		.base = BCHP_PHYSICAL_OFFSET
+		      + BCHP_BOOTSRAM_SECURE_REG_START,
 		.size = BCHP_BOOTSRAM_SECURE_REG_END
 		      - BCHP_BOOTSRAM_SECURE_REG_START + 4
+#elif defined(BCHP_HIF_BOOTSRAM_SECURE_REG_START)
+		.base = BCHP_PHYSICAL_OFFSET
+		      + BCHP_HIF_BOOTSRAM_SECURE_REG_START,
+		.size = BCHP_HIF_BOOTSRAM_SECURE_REG_END
+		      - BCHP_HIF_BOOTSRAM_SECURE_REG_START + 4
+#else
+#error "Secure boot SRAM is not define for this chip"
+#endif
 	},
 	.sun_top_ctrl = {
-		.base = BCHP_SUN_TOP_CTRL_REG_START,
+		.base = BCHP_PHYSICAL_OFFSET
+		      + BCHP_SUN_TOP_CTRL_REG_START,
 		.size = BCHP_SUN_TOP_CTRL_REG_END
 		      - BCHP_SUN_TOP_CTRL_REG_START + 4
 	},
 	.hif_cpubiuctrl = {
-		.base = BCHP_HIF_CPUBIUCTRL_REG_START,
+		.base = BCHP_PHYSICAL_OFFSET
+		      + BCHP_HIF_CPUBIUCTRL_REG_START,
 		.size = BCHP_HIF_CPUBIUCTRL_REG_END
 		      - BCHP_HIF_CPUBIUCTRL_REG_START + 4
 	},
 	.hif_continuation = {
-		.base = BCHP_HIF_CONTINUATION_REG_START,
+		.base = BCHP_PHYSICAL_OFFSET
+		      + BCHP_HIF_CONTINUATION_REG_START,
 		.size = BCHP_HIF_CONTINUATION_REG_END
 		      - BCHP_HIF_CONTINUATION_REG_START + 4
 	}

@@ -76,6 +76,12 @@ ENTRY_PROC(__setstack)
 END_PROC(__setstack)
 
 
+ENTRY_PROC(__getstack)
+	mov		r0, sp
+	bx 		lr
+END_PROC(__getstack)
+
+
 ENTRY_PROC(arch_call_bfw_main)
 	bl	__setstack
 	mov	r0, #0
@@ -85,9 +91,12 @@ ENTRY_PROC(arch_call_bfw_main)
 END_PROC(arch_call_bfw_main)
 
 
-ENTRY_PROC(__getstack)
-	mov		r0, sp
-	bx 		lr
-END_PROC(__getstack)
+ENTRY_PROC(arch_launch_mon64)
+	mov	r3, r0
+	mov	r0, #0
+	mov	r1, #0
+	mov	r2, #0
+	smc	#0
+END_PROC(arch_launch_mon64)
 
 .end

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -171,8 +171,8 @@ static int dev_sata_uninit_phy(sata_softc *ctx)
 		/* clear PHY_DEFAULT_POWER_STATE */
 		p = top_ctrl + port_to_phy_ctrl_ofs[port] +
 			SATA_TOP_CTRL_PHY_CTRL_1;
-		reg = BDEV_RD(p) | SATA_TOP_CTRL_1_PHY_DEFAULT_POWER_STATE;
-		BDEV_WR(p, reg);
+		reg = DEV_RD(p) | SATA_TOP_CTRL_1_PHY_DEFAULT_POWER_STATE;
+		DEV_WR(p, reg);
 	}
 
 	return 0;
@@ -205,16 +205,16 @@ static int dev_sata_init_phy(sata_softc *ctx)
 		/* clear PHY_DEFAULT_POWER_STATE */
 		p = top_ctrl + port_to_phy_ctrl_ofs[port] +
 			SATA_TOP_CTRL_PHY_CTRL_1;
-		reg = BDEV_RD(p) & ~SATA_TOP_CTRL_1_PHY_DEFAULT_POWER_STATE;
-		BDEV_WR(p, reg);
+		reg = DEV_RD(p) & ~SATA_TOP_CTRL_1_PHY_DEFAULT_POWER_STATE;
+		DEV_WR(p, reg);
 
 		/* toggle PHY_GLOBAL_RST */
 		p = top_ctrl + port_to_phy_ctrl_ofs[port] +
 			SATA_TOP_CTRL_PHY_CTRL_2;
-		reg = BDEV_RD(p) | SATA_TOP_CTRL_2_PHY_GLOBAL_RESET;
-		BDEV_WR(p, reg);
+		reg = DEV_RD(p) | SATA_TOP_CTRL_2_PHY_GLOBAL_RESET;
+		DEV_WR(p, reg);
 		reg &= ~SATA_TOP_CTRL_2_PHY_GLOBAL_RESET;
-		BDEV_WR(p, reg);
+		DEV_WR(p, reg);
 	}
 
 	return 0;

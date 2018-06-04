@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -32,9 +32,9 @@
 
 #define CRLF "\r\n"
 
-#if (CFG_ZEUS5_0) || (CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION >= 0x510)
 /* MEMSYS and then MCB/BOARD in the upper 36KiB out of 96KiB */
-#define SHMOO_SRAM_ADDR (SRAM_ADDR + MEMSYS_MCB_OFFSET)
+#define SHMOO_SRAM_ADDR (SRAM_ADDR + FSBL_SIZE)
 #else
 #ifdef STUB64_START
 /* Zeus 4.2.1, ARMv8. Currently, no MEMSYS in lower 64KiB
@@ -49,7 +49,7 @@
 #define SHMOO_SRAM_ADDR (MEMSYS_SRAM_ADDR + MEMSYS_SIZE)
 #endif
 #endif /* STUB64_START */
-#endif /* CFG_ZEUS5_0 */
+#endif /* CFG_ZEUS_VERSION >= 0x510 */
 #define AVS_SRAM_ADDR   (MEMSYS_SRAM_ADDR)
 
 /* architecture specific
@@ -202,11 +202,9 @@ void sec_memsys_region_disable(void);
 void sec_memsys_set_status(int success);
 void sec_set_memc(struct fsbl_info *pinfo);
 int sec_set_arch(uint64_t offset, unsigned int size);
-void sec_mitch_check(void);
 void sec_print_version(void);
 void __noreturn fsbl_end(struct fsbl_info *info);
 void sec_set_errcode(uint16_t die_code);
-
 /* glitch
 */
 void anti_glitch_a(void);

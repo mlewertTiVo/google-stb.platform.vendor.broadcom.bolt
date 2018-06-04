@@ -878,7 +878,11 @@ Loading: .
 *** command status = 0</code></pre>
 </div></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span><span style="color: #009900">$echo</span> <span style="color: #FF0000">"d 0x100 0x10"</span> <span style="color: #990000">&gt;</span> /tftpboot/test<span style="color: #990000">.</span>bat</tt></pre></div></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; batch -loader=raw -tftp 192.168.0.42:test.bat
@@ -1099,7 +1103,17 @@ Starting program at 0x00008000 (DTB @ 0x00001000)</code></pre>
 <div class="sect3">
 <h4 id="_booting_an_srec_image">3.7.1. Booting an SREC image</h4>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user<span style="color: #990000">]</span><span style="color: #009900">$arm</span>-linux-objcopy -I binary -O srec --adjust-vma<span style="color: #990000">=</span><span style="color: #993399">0x8000</span> vmlinuz-initrd-7366c0 /tftpboot/vmlinuz-initrd-7366c0<span style="color: #990000">.</span>srec
+
+<span style="color: #990000">[</span>user<span style="color: #990000">]</span>$ srec_info /tftpboot/vmlinuz-initrd-7366c0<span style="color: #990000">.</span>srec
+Format<span style="color: #990000">:</span> Motorola S-Record
+Header<span style="color: #990000">:</span> <span style="color: #FF0000">"vmlinuz-initrd-7366c0.srec"</span>
+Execution Start Address<span style="color: #990000">:</span> <span style="color: #993399">00008000</span>
+Data<span style="color: #990000">:</span>   <span style="color: #993399">008000</span> - 65F9BF</tt></pre></div></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; ifconfig eth0 -auto; boot -srec 192.168.0.42:vmlinuz-initrd-7366c0.srec
@@ -1226,7 +1240,15 @@ e.g. sudo apt-get install libarchive-zip-perl</p></div>
 <div class="sect2">
 <h3 id="_example_4">4.5. EXAMPLE</h3>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@localhost<span style="color: #990000">]</span>$ ls -l /tftpboot/vmlinuz-initrd-7445d0
+-rwxrwxr-x <span style="color: #993399">1</span> user user <span style="color: #993399">6882136</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">00</span><span style="color: #990000">:</span><span style="color: #993399">00</span> /tftpboot/vmlinuz-initrd-7445d0
+
+<span style="color: #990000">[</span>user@localhost<span style="color: #990000">]</span>$ /usr/bin/crc<span style="color: #993399">32</span> /tftpboot/vmlinuz-initrd-7445d0
+7685f4dc</tt></pre></div></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; load 192.168.0.42:vmlinuz-initrd-7445d0
@@ -4006,7 +4028,12 @@ board was k, now k (flags:0xffe00000)
 <div class="sect2">
 <h3 id="_example_43">47.4. EXAMPLE</h3>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span><span style="color: #009900">$touch</span> /tftpboot/chunk
+<span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span><span style="color: #009900">$sudo</span> chmod a<span style="color: #990000">+</span>wrx /tftpboot/chunk</tt></pre></div></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>BOLT&gt; save 192.168.0.42:chunk E0000000 40000
@@ -4700,7 +4727,13 @@ Device eth0:  hwaddr 00-10-18-E0-03-B5, ipaddr 192.168.0.3, mask 255.255.255.0
 Listening...</code></pre>
 </div></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt><span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ ifconfig eth0 <span style="color: #990000">|</span> fgrep <span style="color: #FF0000">"inet addr"</span>
+          inet addr<span style="color: #990000">:</span><span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.42</span>  Bcast<span style="color: #990000">:</span><span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.255</span>  Mask<span style="color: #990000">:</span><span style="color: #993399">255.255</span><span style="color: #990000">.</span><span style="color: #993399">255.0</span>
+<span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ firefox <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.3</span></tt></pre></div></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>Listening...Connection from port 36030 on 192.168.0.42
@@ -4985,7 +5018,18 @@ Waiting for connection on port 5001: done.
 *** command status = 0</code></pre>
 </div></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span><span style="color: #009900">$iperf</span> -c <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.8</span>
+ ------------------------------------------------------------
+ Client connecting to <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.8</span><span style="color: #990000">,</span> TCP port <span style="color: #993399">5001</span>
+ TCP window size<span style="color: #990000">:</span> <span style="color: #993399">16.0</span> KByte <span style="color: #990000">(</span>default<span style="color: #990000">)</span>
+ ------------------------------------------------------------
+ <span style="color: #990000">[</span>  <span style="color: #993399">3</span><span style="color: #990000">]</span> <span style="font-weight: bold"><span style="color: #0000FF">local</span></span> <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.42</span> port <span style="color: #993399">59043</span> connected with <span style="color: #993399">192.168</span><span style="color: #990000">.</span><span style="color: #993399">0.8</span> port <span style="color: #993399">5001</span>
+ <span style="color: #990000">[</span> ID<span style="color: #990000">]</span> Interval       Transfer     Bandwidth
+ <span style="color: #990000">[</span>  <span style="color: #993399">3</span><span style="color: #990000">]</span>  <span style="color: #993399">0.0</span>-<span style="color: #993399">10.0</span> sec   <span style="color: #993399">113</span> MBytes  <span style="color: #993399">94.6</span> Mbits/sec</tt></pre></div></div>
 <div class="paragraph"><p></p></div>
 </div>
 </div>
@@ -5342,7 +5386,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-12-07 23:39:45 PST
+ 2018-06-01 16:37:41 PDT
 </div>
 </div>
 </body>

@@ -955,9 +955,9 @@ BroadBandStudio to flash the BOLT image
 environments PATH variable. There is no special
 TOOLCHAIN variable or anything else to set up.</p></div>
 <div class="paragraph"><p>In this example the Broadcom supplied GCC toolchain
-package is called <em>stbgcc-4.8-1.1.tar.bz2</em>
+package is called <em>stbgcc-6.3-1.2.tar.bz2</em>
 and the BOLT source code package is called
-<em>bolt-v1.34.tgz</em> The exact names depend upon
+<em>bolt-v1.42.tgz</em> The exact names depend upon
 the release you get from us.</p></div>
 <div class="paragraph"><p>First unpack and install the toolchain in
 a convenient place. We use <em>/media/cdrom/</em>
@@ -969,19 +969,19 @@ as an example location only.</p></div>
 <div class="paragraph"><p>Now copy over the toolchain from the install media:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code> [user@machine]$cp /media/cdrom/broadcom/stbgcc-4.8-1.1.tar.bz2 /projects/stbtc/</code></pre>
+<pre><code> [user@machine]$cp /media/cdrom/broadcom/stbgcc-6.3-1.2.tar.bz2 /projects/stbtc/</code></pre>
 </div></div>
 <div class="paragraph"><p>Unpack it:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code> [user@machine]$cd /projects/stbtc/
- [user@machine]$bunzip2  stbgcc-4.8-1.1.tar.bz2
- [user@machine]$tar -xf stbgcc-4.8-1.1.tar</code></pre>
+ [user@machine]$bunzip2  stbgcc-6.3-1.2.tar.bz2
+ [user@machine]$tar -xf stbgcc-6.3-1.2.tar</code></pre>
 </div></div>
 <div class="paragraph"><p>Set PATH:</p></div>
 <div class="listingblock">
 <div class="content">
-<pre><code> [user@machine]$export PATH=/projects/stbtc/stbgcc-4.8-1.1/bin:$PATH</code></pre>
+<pre><code> [user@machine]$export PATH=/projects/stbtc/stbgcc-6.3-1.2/bin:$PATH</code></pre>
 </div></div>
 <div class="paragraph"><p>That&#8217;s all there is to it!</p></div>
 <div class="paragraph"><p>You can test if everything went well by trying to run the
@@ -989,8 +989,8 @@ toolchain&#8217;s gcc compiler:</p></div>
 <div class="listingblock">
 <div class="content">
 <pre><code>[user@machine]$ arm-linux-gcc --version
-arm-linux-gcc (Broadcom stbgcc-4.8-1.1) 4.8.4 20141110 (prerelease)
-Copyright (C) 2013 Free Software Foundation, Inc.
+arm-linux-gcc (crosstool-NG ) 6.3.0
+Copyright (C) 2016 Free Software Foundation, Inc.
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</code></pre>
 </div></div>
@@ -1003,8 +1003,8 @@ your development location. In this case we use the
 <div class="listingblock">
 <div class="content">
 <pre><code> [user@machine]$mkdir ~/bolt
- [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.34.tgz
- [user@machine]$tar -xzf bolt-v1.34.tgz</code></pre>
+ [user@machine]$cp /media/cdrom/broadcom/ ~/bolt/bolt-v1.42.tgz
+ [user@machine]$tar -xzf bolt-v1.42.tgz</code></pre>
 </div></div>
 <div class="paragraph"><p>You should now have a subdirectory named after the bolt release package name:</p></div>
 <div class="admonitionblock">
@@ -1019,7 +1019,7 @@ build if this happens.</td>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre><code> [user@machine]$cd ~/bolt/bolt-v1.34</code></pre>
+<pre><code> [user@machine]$cd ~/bolt/bolt-v1.42</code></pre>
 </div></div>
 </div>
 <div class="sect2">
@@ -1060,7 +1060,15 @@ following format:</p></div>
 <pre><code>bolt-$(VERSION)-$(FAMILY)-[ba|bb|xx]-bfw-$(BFW_VER).bin</code></pre>
 </div></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>ls -l objs<span style="color: #990000">/</span>7445d0/bolt-<span style="color: #990000">*.</span>bin
+lrwxrwxrwx <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-ba<span style="color: #990000">.</span>bin -<span style="color: #990000">&gt;</span> bolt-v<span style="color: #993399">1.42</span>-7445d0-ba-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+lrwxrwxrwx <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-bb<span style="color: #990000">.</span>bin -<span style="color: #990000">&gt;</span> bolt-v<span style="color: #993399">1.42</span>-7445d0-bb-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+-rw-rw-r-- <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">1.42</span>-7445d0-ba-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin
+-rw-rw-r-- <span style="color: #993399">1</span> user group <span style="color: #993399">371060</span> Jan <span style="color: #993399">1</span> <span style="color: #993399">12.59</span> objs<span style="color: #990000">/</span>7445d0/bolt-v<span style="color: #993399">1.42</span>-7445d0-bb-bfw-<span style="color: #993399">4.1</span><span style="color: #990000">.</span><span style="color: #993399">5</span><span style="color: #990000">.</span>bin</tt></pre></div></div>
 <div class="paragraph"><p>For brevity we also symlink the longer BOLT binary names
 as you can see above. This may change if we have to support
 more than one BFW per <em>ba</em> or <em>bb</em> type in the future.</p></div>
@@ -1260,7 +1268,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-12-07 23:39:45 PST
+ 2018-06-01 16:37:41 PDT
 </div>
 </div>
 </body>

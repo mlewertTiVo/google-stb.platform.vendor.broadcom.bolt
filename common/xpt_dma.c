@@ -403,7 +403,7 @@ static int __mcpb_init_desc(struct mcpb_dma_desc *desc, dma_addr_t next,
 int mcpb_init_desc(struct mcpb_dma_desc *mcpb, struct dma_region *region)
 {
 	return __mcpb_init_desc(mcpb, 0, region->addr, region->len, true, true,
-				PID_CHANNEL_B, false);
+				XPT_PID_CHANNEL_B, false);
 }
 
 /* Setup single WDMA descriptor */
@@ -434,7 +434,7 @@ int memdma_prepare_descs(struct mcpb_dma_desc *descs, dma_addr_t descs_pa,
 		struct dma_region *regions, int numregions, bool channel_A)
 {
 	int i;
-	int pid = channel_A ? PID_CHANNEL_A : PID_CHANNEL_B;
+	int pid = channel_A ? XPT_PID_CHANNEL_A : XPT_PID_CHANNEL_B;
 	dma_addr_t next_pa = descs_pa;
 	int ret;
 
@@ -528,12 +528,12 @@ int memdma_run(dma_addr_t desc1, dma_addr_t desc2, bool dual_channel)
 	if (ret)
 		goto out;
 
-	memdma_init_hw(0, PID_CHANNEL_A, mode, false);
+	memdma_init_hw(0, XPT_PID_CHANNEL_A, mode, false);
 	BARRIER();
 	memdma_start(desc1, XPT_CHANNEL_A);
 
 	if (dual_channel) {
-		memdma_init_hw(1, PID_CHANNEL_B, mode, false);
+		memdma_init_hw(1, XPT_PID_CHANNEL_B, mode, false);
 		BARRIER();
 		memdma_start(desc2, XPT_CHANNEL_B);
 	}
@@ -775,7 +775,7 @@ static int memdma_sha(dma_addr_t desc1, int sha_num)
 	if (ret == 0) {
 		set_up_sha_control(sha_num);
 
-		memdma_init_hw(0, PID_CHANNEL_A, XPT_DMA_SHA, false);
+		memdma_init_hw(0, XPT_PID_CHANNEL_A, XPT_DMA_SHA, false);
 		BARRIER();
 		memdma_start(desc1, XPT_CHANNEL_A);
 

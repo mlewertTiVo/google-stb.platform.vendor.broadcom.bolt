@@ -21,7 +21,7 @@ SECTIONS {
 		_etext = .;
 	}  > ssbm =@FILLB@
 
-	.ssbm.data BLOCK(4096*15) : AT(@SSBM_RAM_ADDR@ + @SSBM_SIZE@ - 0x1000)
+	.ssbm.data (@SSBM_RAM_ADDR@ + @SSBM_SIZE@ - 0x1000) :
 	{
 		_fdata = .;
 		* (.rodata*);

@@ -56,6 +56,7 @@ my $add = 0;
 my $path = $ENV{'PATH'};
 my $gcc_version = "";
 my $toolchain = '';
+my $no_annoy;
 
 
 sub find_othertools {
@@ -79,7 +80,8 @@ sub write_toolpath {
 # begin -----------------------------------
 
 GetOptions('cross=s' => \$TOOLNAME, 'a' => \$add,
-            'tool:s' => \$ALT_TOOL_PATH, 'cc:s' => \$CC);
+            'tool:s' => \$ALT_TOOL_PATH, 'cc:s' => \$CC,
+            'no-annoy' => \$no_annoy);
 
 # shortcut to just do as the developer wants
 # and put in the toolchain as-is.
@@ -143,7 +145,7 @@ foreach my $x (split(/:/, $path)) {
 			print "$toolchain\n";
 			print "\n";
 
-			for(my $i=0; $i < $annoytime; $i++) {
+			for(my $i=0; $i < $annoytime && !$no_annoy; $i++) {
 				print $annoytime - $i . "..."; 
 				sleep(1);
 			}

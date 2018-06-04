@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -22,7 +22,8 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x01] = 0x00000000,
 	[0x02] = 0x00000000,
 	[0x03] = SSBL_SIZE,
-	/* 0x04 -> 0x0b */
+	[0x04] = 0x00000001,
+	/* 0x05 -> 0x0b */
 	[0x0c] = BFW_TEXT_OFFS, /* 0xd030 */
 	[0x0d] = 0x00000800,
 	[0x0e] = 0x00000000,
@@ -32,11 +33,15 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x12] = 0x00000800,
 	[0x13] = 0x00000000,
 	[0x14] = MEMSYS_TEXT_OFFS, /* 0xd050 */
-	[0x15] = MEMSYS_SIZE,
+	[0x15] = ((MEMSYS_SIZE - MEMSYS_MCB_OFFSET) << 20) | MEMSYS_MCB_OFFSET,
 	[0x16] = 0x00000800,
 	[0x17] = 0x00000000,
 	/* 0x18 -> 0x2d */
+#if CFG_SSBM
+	[0x24] = SSBM_TEXT_OFFS, /* 0xd090 */
+#else
 	[0x24] = SSBL_TEXT_OFFS, /* 0xd090 */
+#endif
 	[0x25] = 0x00000000,
 	[0x26] = 0x00000000,
 	[0x27] = 0x80000000,
@@ -44,32 +49,6 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x29] = 0x00008080 | (2 << 8) | 2, /* 0xd0a4 */
 	[0x36] = 0x00000000, /* 0xd0d8 */
 
-#elif CFG_ZEUS5_0
-	[0x00] = 0x00008b00,
-	[0x01] = 0x00000000,
-	[0x02] = 0x00000000,
-	[0x03] = SSBL_SIZE,
-	/* 0x04 -> 0x13 */
-	[0x14] = BFW_TEXT_OFFS, /* 0xEA50 */
-	[0x15] = 0x00000800,
-	[0x16] = 0x00000000,
-	[0x17] = AVS_TEXT_OFFS, /* 0xEA5C */
-	[0x18] = AVS_CODE_SIZE,
-	[0x19] = AVS_DATA_SIZE,
-	[0x1a] = 0x00000800,
-	[0x1b] = 0x00000000,
-	[0x1c] = MEMSYS_TEXT_OFFS, /* 0xEA70 */
-	[0x1d] = MEMSYS_SIZE,
-	[0x1e] = 0x00000800,
-	[0x1f] = 0x00000000,
-	/* 0x20 -> 0x2d */
-	[0x2c] = SSBL_TEXT_OFFS, /* 0xEAB0 */
-	[0x2d] = 0x00000000,
-	[0x2e] = 0x00000000,
-	[0x2f] = 0x00000000,
-	[0x30] = 0x00000800, /* 0xEAC0 */
-	/* 0x31 -> 0x56 */
-	[0x57] = 0x00000000, /* 0xEB5C */
 #elif CFG_ZEUS4_2
 #if (USE_FIRST_IMAGES == 0)
 	/* Zeus 4.2 BSECK-SHMOO integration document v1.12, sec 2.3, page 9 */
@@ -107,7 +86,11 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x21] = 0x00000000,
 	[0x22] = 0x00000000,
 	[0x23] = 0x00000000,
+#if CFG_SSBM
+	[0x24] = SSBM_TEXT_OFFS, /* D0 */
+#else
 	[0x24] = SSBL_TEXT_OFFS, /* D0 */
+#endif
 	[0x25] = 0x00000000,
 	[0x26] = 0x00000000,
 #if CFG_ZEUS4_2_1
@@ -131,7 +114,7 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x35] = 0x00000000,
 	[0x36] = 0x00000000,
 	[0x37] = 0x00000000,
-	[0x38] = 0x00000020, /* SRR size in MB */
+	[0x38] = CFG_SRR_SIZE_MB, /* SRR size in MB */
 	[0x39] = 0x00000000,
 	[0x3a] = 0x00000000,
 	[0x3b] = 0x00000000,
@@ -195,7 +178,7 @@ uint32_t zeus_params[SEC_PARAM_LEN / sizeof(uint32_t)] = {
 	[0x35] = 0x00000000,
 	[0x36] = 0x00000000,
 	[0x37] = 0x00000000,
-	[0x38] = 0x00000020, /* SRR size in MB */
+	[0x38] = CFG_SRR_SIZE_MB, /* SRR size in MB */
 	[0x39] = 0x00000000,
 	[0x3a] = 0x00000000,
 	[0x3b] = 0x00000000,

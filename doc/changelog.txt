@@ -6,6 +6,302 @@
 Release changelog
 =================
 
+ v1.42
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2733[SWBOLT-2733] Added support for 64 bit addressing for BSU applications. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2697[SWBOLT-2697] Allowed Mon64 to be backward compatible with older versions of Linux. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2677[SWBOLT-2677] Allowed SPI-NOR flash access on EBI_CS1/2.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2659[SWBOLT-2659] BDEV_* macro functions cannot take physical address anymore.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2495[SWBOLT-2495] Corrected SDHCI compatible string.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2645[SWBOLT-2645] Default to v7-64 memory map, unless secure boot disabled, and OTP and strap indicates v7-32.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2700[SWBOLT-2700] Enabled 72604B0 PMAP7 to support CPU speeds up to 1.8GHz but with higher power consumption.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2710[SWBOLT-2710] Limited Mon64 to 7255 and 7211 platforms. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2689[SWBOLT-2689] Please use the '-ranks' option of the 'ddr' configuration command for LPDDR4, and drop the '-width' option.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2703[SWBOLT-2703] Prevented the population of SCMI nodes in Device Tree unless booted in AArch64.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2694[SWBOLT-2694] Remove hard coded clocks for 7278b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2693[SWBOLT-2693] Shmoo for BCM7255 DDR4 has been updated to v3.7.1.0. MCB's have to be re-generated.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2704[SWBOLT-2704] Shmoo for BCM7260 DDR3 has been updated to v3.6.2.0. MCB's should be regenerated. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2662[SWBOLT-2662] Support for 72518b0 and 72528a0 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2691[SWBOLT-2691] Support for BCM972554DR3_6L has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2690[SWBOLT-2690] Support for BCM972604DR3_6L has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2667[SWBOLT-2667] Support for BCM97271SDB V10 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2669[SWBOLT-2669] Support for the built-in Ethernet has been added to BCM97278HB V10. An updated board revision that populates J861 and BCM9ENET_DC are required to use the Ethernet port.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2670[SWBOLT-2670] The SDIO pin selection has been corrected for a build with multiple board configurations.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2711[SWBOLT-2711] The network configuration of BCM97271SDB has been adjusted.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2702[SWBOLT-2702] Updated 7278b0 clock information.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2730[SWBOLT-2730] Updated BFW for 7278Bx to 2.1.3 to fix random chip resets when SAGE is enabled. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2701[SWBOLT-2701] Updated DVFS firmware to v2.1.0. Enable 72604B PMAP7 for high-performance Android boxes. Add 7255A0 PMAP6/7 for HVD P-STATES.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.42%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.41
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2679[SWBOLT-2679] Added SSBM support to 7255a0, 7260a0 and 7260b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2616[SWBOLT-2616] Fixed issue with splash screen not showing on some TV's, following a reboot, after nexus boot.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2591[SWBOLT-2591] Implemented TrustZone boot with EL3 monitor integration.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2663[SWBOLT-2663] Implemented new PMAPs containing P-States for additional cores in the STB domain.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2391[SWBOLT-2391] Supported DVFS and thermal monitoring with TrustZone enabled systems.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2676[SWBOLT-2676] Updated AVS firmware to v2.0.0. Added STB P-STATE support.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.41%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.40
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2589[SWBOLT-2589] Added AVS changelog documentation.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2600[SWBOLT-2600] Added Splash support for 7255a0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2639[SWBOLT-2639] Added support for PMAP filtering, which is a feature that allows the AVS to detect an invalid PMAP index and force an appropriate PMAP index.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2595[SWBOLT-2595] Allowed BOLT to boot older Zeus 4.2.1 BFW's that don't have DTU support. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2567[SWBOLT-2567] Allowed ability to override default temperature threshold reset, parking high and low values.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2286[SWBOLT-2286] Built BOLT with stbgcc 6.3.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2430[SWBOLT-2430] Built security libraries with stbgcc-6.3.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2479[SWBOLT-2479] Changed PCIe device compatible string to work with upstream Linux.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2654[SWBOLT-2654] Cleared FSBL out of SRAM while the boot parameters in SRAM should be preserved, for Zeus 5.1. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2636[SWBOLT-2636] Enabled TrustZone support for 7439b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2602[SWBOLT-2602] Fixed USB node "brcm,ipp" property override.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2653[SWBOLT-2653] Fixed secure parameters access from flash in SSBL for Zeus 5.1.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2615[SWBOLT-2615] For Android, moved USB device mode start from probe to open.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2591[SWBOLT-2591] Implemented TrustZone boot with EL3 monitor integration.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2630[SWBOLT-2630] In Zeus 5.1, the ping-pong scheme will now use the first BFW image, before attempting the second BFW image.  Previously, it was only the second BFW image.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2635[SWBOLT-2635] Linux is now able to report the temperature of DRAM on 7278b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2596[SWBOLT-2596] Made SRR (SAGE Restricted Region) size a build option.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2471[SWBOLT-2471] Only known HID devices will be allowed to be USB configured.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2644[SWBOLT-2644] Shmoo for BCM7260 DDR3 has been updated to v3.6.0.0. Previously generated MCB's are compatible.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2611[SWBOLT-2611] Splash can now be played on BCM7278 regardless v7-64 or v7-32. Splash headers should still be generated using only the memory installed on the first memory controller.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2594[SWBOLT-2594] Support for 7267b0 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2577[SWBOLT-2577] Support for 7278a0 has been dropped. Please move to 7278b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2607[SWBOLT-2607] Support for BCM972554PCK V10 has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2558[SWBOLT-2558] Support for BCM972604BSFF_HB has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2562[SWBOLT-2562] Support for BCM972604BUSFF has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2608[SWBOLT-2608] Support for BCM97271SDB has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2561[SWBOLT-2561] The power sequencer for LPDDR4 regulator can be implemented using the on-chip voltage sensor on 7268b0 and 7271b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2638[SWBOLT-2638] Update PMAP table for 7255a0, version 4.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2629[SWBOLT-2629] Updated DVFS firmware to v1.4.0. Updated PMAP tables. Fixed AVS after overtemp reset. Fixed boot-up when AVS disabled with setboard command.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.40%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.39
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2618[SWBOLT-2618] Added support for the 7278B1. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2640[SWBOLT-2640] The build target 7278b0 generates both bolt-b0.bin and bolt-b1.bin for b0 and b1 respectively.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.39%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.38
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2632[SWBOLT-2632] Shmoo for 7268b0 and 7271b0 has been updated to v5.6.1.0. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2633[SWBOLT-2633] Shmoo for 7278b0 has been updated to v5.7.1.0. ^[red silver-background]#blocker#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.38%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.37
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2470[SWBOLT-2470] Added RPMB (Replay Protected Memory Block) access control.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2603[SWBOLT-2603] Shmoo for 7268b0 and 7271b0 has been updated to v5.6.0.0. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2605[SWBOLT-2605] Shmoo for 7278b0 has been updated to v5.7.0.0. ^[red silver-background]#blocker#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2575[SWBOLT-2575] The burst size of EHCI DMA has doubled to 512 bytes for 7255a0. ^[yellow silver-background]#major#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.37%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.36
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2510[SWBOLT-2510] Added S3 support for 7278b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2502[SWBOLT-2502] Added SSBM support for 7268b0 and 7271b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2547[SWBOLT-2547] Added ping-pong SSBL support for Zeus 5.1.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2508[SWBOLT-2508] Added support for SUN_RNG block on 7278B0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2546[SWBOLT-2546] BFW has been updated to version 2.0.2 for 7278b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2538[SWBOLT-2538] DTU configured based on its setting.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2545[SWBOLT-2545] Enable TrustZone support for 7260a0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2418[SWBOLT-2418] Enabled TrustZone support for 7278b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2223[SWBOLT-2223] Enhanced USB Phy DT node for mainline compatibility.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2554[SWBOLT-2554] FUFS has been disabled by default for 7278b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2532[SWBOLT-2532] Fixed issue with changing boot partition enable.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2530[SWBOLT-2530] Indicated chip ID in BIUCTRL node.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2521[SWBOLT-2521] Initial AVS support for 7255a0 added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2516[SWBOLT-2516] Initial AVS support for 7260b0 added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2260[SWBOLT-2260] Initial support for 7255a0 added. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2512[SWBOLT-2512] Initial support for 7260b0 added. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2531[SWBOLT-2531] Reserve 64MB for TrustZone by default on all boards.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2541[SWBOLT-2541] Shmoo for 7268b0 and 7271b0 has been updated to v5.4.9.0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2542[SWBOLT-2542] Shmoo for 7278b0 has been updated to v5.5.9.0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2524[SWBOLT-2524] Support for BCM972554PCK has been added.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2511[SWBOLT-2511] Support for splash has been verified on 7278b0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2544[SWBOLT-2544] The Shmoo folder name for 7278b0 has changed to B310_H00. And, the supplement for 7278b0 memsys has been removed as not needed anymore.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2506[SWBOLT-2506] The default flash maps for 7268 and 7271 have changed. Re-programming affected partitions is likely required. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2534[SWBOLT-2534] The number of AON registers for LPDDR4 Shmoo has increased.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2485[SWBOLT-2485] Updated flash layout of FUFS for Zeus 5.1.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.36%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.35
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2537[SWBOLT-2537] Disabled HDCP 1.4 HW core on 7278B0. ^[red silver-background]#blocker#^
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.35%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
+ v1.34
+------
+
+link:http://jira.broadcom.com/browse/SWBOLT-2350[SWBOLT-2350] Added interface specification version to AVS API.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2436[SWBOLT-2436] Added support for the 7278B0. ^[yellow silver-background]#major#^
+
+link:http://jira.broadcom.com/browse/SWBOLT-2473[SWBOLT-2473] Added the ability to select the RX equalizer mode with a specific value.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2453[SWBOLT-2453] Board profile BCM97268USFFA4L should set rts mode to 5 by default.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2491[SWBOLT-2491] Buffer allocation in USB BDC has been corrected so that the heap of un-cached memory does not get corrupted.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2444[SWBOLT-2444] Enable splash by changing family specific config file.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2472[SWBOLT-2472] Enabled second SYSTEMPORT Lite instance.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2484[SWBOLT-2484] Fixed STB boot-up problem after a warm-reboot (emmc and nonsecure boot).
+
+link:http://jira.broadcom.com/browse/SWBOLT-2459[SWBOLT-2459] Fixed build error with "config COAP off".
+
+link:http://jira.broadcom.com/browse/SWBOLT-2477[SWBOLT-2477] Fixed build failure when setting enet phy_id to probe.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2498[SWBOLT-2498] Fixed build problem where everything always compiles.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2478[SWBOLT-2478] Fixed compile problem with bolt v1.27 for BCM72604 DTS generated file.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2432[SWBOLT-2432] If the overtemp is a reset cause, it gets enabled by SSBL after cooling down the chip via performing temperature parking.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2229[SWBOLT-2229] On 7271b0, MTSIF/RGMII pads of ON/OFF domain are configured to 2.5V/3.3V by default if MTSIF/RGMII is/are pinmux'ed. 'pad_rgmii' configuration command can be used to override the default and configure the pads to 1.5V/1.8V.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2492[SWBOLT-2492] On chips that PCIe and SATA are mutually exclusive, a feature that is deselected by an associated strap setting will be disabled in BOLT. Such deselection will propagate to Linux.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2468[SWBOLT-2468] Provide api for setting and getting features to NAND flash.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2448[SWBOLT-2448] SDIO pin selection is now properly handled for 7260a0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2457[SWBOLT-2457] Set timeout_txdma for MoCA ethernet.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2487[SWBOLT-2487] USB BDC driver has been added to 7278a0.
+
+link:http://jira.broadcom.com/browse/SWBOLT-2500[SWBOLT-2500] Updated DVFS firmware: Save/restore state information after an over-temp reset. Removed printable ascii limit to revision number. Initial pmap tables for 7278b0.
+
+ Broadcom FAE access
+~~~~~~~~~~~~~~~~~~~~
+http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%20%3D%20%22v1.34%22%20ORDER%20BY%20%22IMS%20Comments%20for%20Customer%22[Here]
+
+
  v1.33
 ------
 
@@ -300,13 +596,9 @@ link:http://jira.broadcom.com/browse/SWBOLT-1822[SWBOLT-1822] Enabled DTU in 727
 
 link:http://jira.broadcom.com/browse/SWBOLT-2132[SWBOLT-2132] For DT node "sw_scb", fixed spelling of property "#clock-cells".
 
-link:http://jira.broadcom.com/browse/SWBOLT-2088[SWBOLT-2088] Implemented pmaps for 7268B0 / 7271B0.
-
 link:http://jira.broadcom.com/browse/SWBOLT-2157[SWBOLT-2157] Reconfigured TrustZone memory layout for 16MB footprint. ^[yellow silver-background]#major#^
 
 link:http://jira.broadcom.com/browse/SWBOLT-2144[SWBOLT-2144] S3 is now supported for 7268b0/7271b0. ^[yellow silver-background]#major#^
-
-link:http://jira.broadcom.com/browse/SWBOLT-2172[SWBOLT-2172] SAFE_CLK_MODE is updated when requesting AVS to change CPU speed.
 
 link:http://jira.broadcom.com/browse/SWBOLT-2168[SWBOLT-2168] Support new style Devicetree binding for Ethernet switches using the DSA subsystem. Ref: https://git.kernel.org/cgit/linux/kernel/git/davem/net-next.git/commit/?id=8c5ad1d6179df31eea1b736c88296db6e3ffd25d.
 
@@ -986,6 +1278,6 @@ http://jira.broadcom.com/issues/?jql=project%20%3D%20SWBOLT%20and%20fixVersion%2
 
  Appendix: Copyright Info
 -------------------------
-Copyright (C) 2017, Broadcom.
+Copyright (C) 2018, Broadcom.
 All Rights Reserved.
 Confidential Property of Broadcom Ltd.

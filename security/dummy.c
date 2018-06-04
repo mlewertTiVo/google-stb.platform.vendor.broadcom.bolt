@@ -46,7 +46,7 @@ uint32_t sec_disable_MICH(void)
 	return 0;
 }
 
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION >= 0x410)
 uint32_t sec_bfw_load_impl(image_info *info, uint32_t pagelist)
 #else
 uint32_t bseck_reload(void)

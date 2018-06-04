@@ -11,6 +11,7 @@
 #define __XPT_DMA_H__
 
 #include <bchp_common.h>
+#include <bchp_xpt_fe.h>
 #if CFG_MEMDMA_MCPB
 #include <bchp_xpt_memdma_mcpb_ch0.h>
 #include <bchp_xpt_memdma_mcpb.h>
@@ -35,13 +36,8 @@
 #endif
 #endif
 
-#if CFG_MEMDMA_MCPB
-#define PID_CHANNEL_A	1022
-#define PID_CHANNEL_B	1023
-#else
-#define PID_CHANNEL_A	510
-#define PID_CHANNEL_B	511
-#endif
+#define XPT_PID_CHANNEL_B BCHP_XPT_FE_MAX_PID_CHANNEL_MAX_PID_CHANNEL_DEFAULT
+#define XPT_PID_CHANNEL_A (XPT_PID_CHANNEL_B - 1)
 
 /* always assume 64 bit physical address */
 typedef uint64_t dma_addr_t;
@@ -74,10 +70,21 @@ struct mcpb_dma_desc {
 };
 
 struct wdma_desc {
+#ifdef XPT_DMA_DESC_IS_64BIT
+	uint32_t buf_hi;
+	uint32_t buf_lo;
+	uint32_t size;
+	uint32_t reserved1;
+	uint32_t reserved2;
+	uint32_t reserved3;
+	uint32_t next_hi;
+	uint32_t next_offs; /* options are in bits[3:0] (?) */
+#else
 	uint32_t buf_hi;
 	uint32_t buf_lo;
 	uint32_t size;
 	uint32_t next_offs; /* options are in bits[3:0] (?) */
+#endif
 };
 
 struct memdma_initparams {

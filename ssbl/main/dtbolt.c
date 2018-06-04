@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -35,6 +35,7 @@
 #include <lib_types.h>
 #include <macutils.h>
 #include <mmap-dram.h>
+#include <mon64.h>
 #include <net_api.h>
 #include <net_ebuf.h>
 #include <net_ether.h>
@@ -658,6 +659,61 @@ out:
 	return rc;
 }
 
+
+/**
+ * Populates (enables and disables) nodes so that SCMI is chosen.
+ *
+ * @fdt The FDT blob
+ *
+ * @returns BOLT_OK on success, otherwise BOLT error code
+ */
+static int bolt_populate_scmi(void *fdt)
+{
+	int rc, scmi_node, mbox_node;
+	uint32_t intr[3];
+	const unsigned n = sizeof(intr)/sizeof(intr[0]);
+
+	/* Add interrupt SGI prop to mbox */
+	mbox_node = bolt_devtree_node_from_path(fdt, "/brcm_scmi_mailbox@0");
+	if (mbox_node < 0) {
+		xprintf("Failed to get SCMI mbox node\n");
+		return mbox_node;
+	}
+	intr[0] = cpu_to_fdt32(2);
+	intr[1] = cpu_to_fdt32(MON64_NW_MBOX_SGI);
+	intr[2] = cpu_to_fdt32(4);
+	rc = bolt_devtree_at_node_addprop(fdt, mbox_node, "interrupts", intr,
+					  n * sizeof(uint32_t));
+	if (rc) {
+		xprintf("Failed to add intr prop to scmi mbox\n");
+		return rc;
+	}
+
+	/* Enable the mailbox (by default it is disabled) */
+	rc = bolt_devtree_at_node_addprop(fdt, mbox_node, "status",
+					  "okay", sizeof("okay"));
+	if (rc) {
+		xprintf("Failed to enable brcm_scmi_mailbox\n");
+		return rc;
+	}
+
+	/* Enable the brcm_scmi DT node (by default it is disabled) */
+	scmi_node = bolt_devtree_node_from_path(fdt, "/brcm_scmi@0");
+	if (scmi_node < 0) {
+		xprintf("Failed to get SCMI node\n");
+		return scmi_node;
+	}
+	rc = bolt_devtree_at_node_addprop(fdt, scmi_node, "status",
+					  "okay", sizeof("okay"));
+	if (rc) {
+		xprintf("Failed to enable scmi node\n");
+		return rc;
+	}
+
+	return 0;
+}
+
+
 /**
  * Populates a child node of /reserved-memory for a reserved memory area
  *
@@ -678,46 +734,62 @@ static int bolt_populate_reserved_memory_subnode(void *fdt, int node,
 	 * m->options & BOLT_RESERVE_MEMORY_OPTION_DT_NEW
 	 */
 
-	if (m->tag[0] == '\0')
-		sprintf(subnode_name, "noname@%llx", m->offset);
-	else
-		sprintf(subnode_name, "%s@%llx", m->tag, m->offset);
+	/* First see if a node with the tagname exists.  If it does,
+	 * use it as the memory subnode.
+	 */
+	subnode = bolt_devtree_subnode(fdt, m->tag, node);
+	if (subnode >= 0) {
+		/* Do nothing; use the existing subnode and its tagname.
+		 * But, if the tagname is NWMBOX, this is a special case: MON64
+		 * wants to created a sandbox for Linux for the purposes
+		 * of using SCMI.  So we turn on the switch for SCMI.
+		 *
+		 * Mon64 is only loaded when booted in AArch64, in AArch32 we
+		 * load a PSCI stub instead, see ssbl/main/boot.c
+		 */
+		if (strcmp(m->tag, "NWMBOX") == 0 && arch_booted64()) {
+			rc = bolt_populate_scmi(fdt);
+			if (rc)
+				return rc;
+		}
 
-	/* re-create after removing if already exists */
-	bolt_devtree_delnode_at(fdt, subnode_name, node);
+	} else {
+		if (m->tag[0] == '\0')
+			sprintf(subnode_name, "noname@%llx", m->offset);
+		else
+			sprintf(subnode_name, "%s@%llx", m->tag, m->offset);
 
-	rc = bolt_devtree_addnode_at(fdt, subnode_name, node, &subnode);
-	if (rc)
-		goto out;
+		rc = bolt_devtree_addnode_at(fdt, subnode_name, node, &subnode);
+		if (rc)
+			return rc;
+	}
 
 	regs[0] = cpu_to_fdt64(m->offset);
 	regs[1] = cpu_to_fdt64(m->size);
 	rc = bolt_devtree_at_node_addprop(fdt, subnode, "reg",
 		regs, sizeof(regs));
 	if (rc)
-		goto out;
+		return rc;
 
 	if (m->options & BOLT_RESERVE_MEMORY_OPTION_DT_NOMAP) {
 		rc = bolt_dt_addprop_bool(fdt, subnode, "no-map");
 		if (rc)
-			goto out;
+			return rc;
 	}
 
 	if (m->options & BOLT_RESERVE_MEMORY_OPTION_DT_REUSABLE) {
 		rc = bolt_dt_addprop_bool(fdt, subnode, "reusable");
 		if (rc)
-			goto out;
+			return rc;
 	}
 
 	if (m->tag[0] != '\0') {
 		rc = bolt_dt_addprop_str(fdt, subnode,
 			"reserved-names", m->tag);
 		if (rc)
-			goto out;
+			return rc;
 	}
 
-out:
-	KFREE(subnode_name);
 	return rc;
 }
 
@@ -1378,10 +1450,8 @@ static void bolt_devtree_add_phy(void *fdt, int phandle,
 	l2 = strlen(default_phystr) + 1;
 
 	compat = KMALLOC(l1 + l2, 0);
-	if (!compat) {
-		rc = BOLT_ERR_NOMEM;
-		goto out;
-	}
+	if (!compat)
+		return;
 
 	if (l1)
 		memcpy(compat, phystr, l1);
@@ -2786,6 +2856,30 @@ static int bolt_populate_bsp(void *fdt)
 	return rc;
 }
 
+#if defined(PMAP_CORES)
+static int bolt_populate_cores(void *fdt, int pmap_node,
+	unsigned int num_cores,	const uint8_t cores[])
+{
+	int rc;
+	unsigned int i, prev_data = 0;
+
+	for (i = 0; i < num_cores; i++) {
+		unsigned int data = cores[i];
+		if (prev_data != data) {
+			prev_data = data;
+			data = cpu_to_fdt32(data);
+			rc = bolt_devtree_at_node_appendprop(fdt,
+				pmap_node, "brcm,core-id",
+				&data, sizeof(data));
+			if (rc)
+				return rc;
+		}
+	}
+
+	return BOLT_OK;
+}
+#endif
+
 /* ------------------------------------------------------------------------- */
 
 
@@ -2809,7 +2903,10 @@ static int bolt_populate_pmap(void *fdt)
 	int rc = BOLT_OK;
 	char node[80];
 	unsigned int data, i;
-	unsigned int pmap_number = board_pmap();
+#if defined(PMAP_CORES)
+	unsigned int j;
+#endif
+	unsigned int pmap_number = avs_get_current_pmap();
 	unsigned int pmap_index = board_pmap_index(pmap_number);
 	int brcmstb_clk_node = 0, offset = 0, pmap_node;
 
@@ -2864,6 +2961,13 @@ static int bolt_populate_pmap(void *fdt)
 			pmapMuxValues[pmap_index][i]);
 		if (rc)
 			goto out;
+
+#if defined(PMAP_MAX_MUX_CORES)
+		rc = bolt_populate_cores(fdt, pmap_node,
+			PMAP_MAX_MUX_CORES, pmapMuxCores[i]);
+		if (rc)
+			return rc;
+#endif
 	}
 
 	for (i = 0; i < PMAP_MAX_DIVIDERS; i++) {
@@ -2910,6 +3014,13 @@ static int bolt_populate_pmap(void *fdt)
 			pmapDividerValues[pmap_index][i]);
 		if (rc)
 			goto out;
+
+#if defined(PMAP_MAX_DIVIDER_CORES)
+		rc = bolt_populate_cores(fdt, pmap_node,
+			PMAP_MAX_DIVIDER_CORES, pmapDividerCores[i]);
+		if (rc)
+			return rc;
+#endif
 	}
 
 #ifdef PMAP_MAX_MULTIPLIERS
@@ -2953,10 +3064,28 @@ static int bolt_populate_pmap(void *fdt)
 		if (rc)
 			goto out;
 
+#if defined(PMAP_MAX_STB_PSTATES)
+		for (j = 0; j < PMAP_MAX_STB_PSTATES; j++) {
+			data = cpu_to_fdt32(
+					pmapMultiplierValues[pmap_index][i][j]);
+			rc = bolt_devtree_at_node_appendprop(fdt, pmap_node,
+				"brcm,value", &data, sizeof(data));
+			if (rc)
+				goto out;
+		}
+#else
 		rc = bolt_dt_addprop_u32(fdt, pmap_node, "brcm,value",
 			pmapMultiplierValues[pmap_index][i]);
 		if (rc)
 			goto out;
+#endif
+
+#if defined(PMAP_MAX_MULTIPLIER_CORES)
+		rc = bolt_populate_cores(fdt, pmap_node,
+			PMAP_MAX_MULTIPLIER_CORES, pmapMultiplierCores[i]);
+		if (rc)
+			return rc;
+#endif
 	}
 #endif /* PMAP_MAX_MULTIPLIERS */
 
@@ -3109,7 +3238,7 @@ int bolt_devtree_boltset(void *fdt)
 		goto out;
 
 #ifdef DVFS_SUPPORT
-	rc = bolt_dt_addprop_u32(fdt, bolt, "pmap", board_pmap());
+	rc = bolt_dt_addprop_u32(fdt, bolt, "pmap", avs_get_current_pmap());
 	if (rc)
 		goto out;
 #endif

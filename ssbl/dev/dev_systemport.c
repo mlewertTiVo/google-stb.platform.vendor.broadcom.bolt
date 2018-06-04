@@ -279,7 +279,7 @@ static int init_buffers(sysport_softc *softc)
 
 	for (i = 0; i < NUM_RX_BUFFERS; i++) {
 		addr = PHYSADDR((uint32_t)(softc->rx_buffers + i * RX_BUF_LENGTH));
-		BDEV_WR(softc->rx_bds + (i * DESC_SIZE) + DESC_ADDR_LO,
+		DEV_WR(softc->rx_bds + (i * DESC_SIZE) + DESC_ADDR_LO,
 				addr);
 	}
 
@@ -470,9 +470,9 @@ static int sysport_ether_read(bolt_devctx_t *ctx, iocb_buffer_t *buffer)
 		p_index = reg & RDMA_PROD_INDEX_MASK;
 	}
 
-	addr = BDEV_RD(softc->rx_bds +
+	addr = DEV_RD(softc->rx_bds +
 			(softc->rx_read_ptr * DESC_SIZE) + DESC_ADDR_LO);
-	dma_flags_len = BDEV_RD(softc->rx_bds +
+	dma_flags_len = DEV_RD(softc->rx_bds +
 			(softc->rx_read_ptr * DESC_SIZE) +
 			DESC_ADDR_HI_STATUS_LEN);
 

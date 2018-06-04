@@ -1005,21 +1005,51 @@ Toolchain(s) for the above code.
 <div class="sect2">
 <h3 id="_first_make_a_standard_initramfs">8.1. First make a standard initramfs</h3>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cd stblinux38/uclinux-rootfs
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make vmlinuz-initrd-7445d0</tt></pre></div></div>
 </div>
 <div class="sect2">
 <h3 id="_make_a_128mib_initrd_image">8.2. Make a 128MiB initrd image</h3>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ mkdir initrd
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ fakeroot
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cd initrd
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ cpio -id <span style="color: #990000">&lt;</span> <span style="color: #990000">../..</span>/linux/usr/initramfs_data<span style="color: #990000">.</span>cpio
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ mkdir bloat
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ touch bloat/bigfile
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ dd <span style="font-weight: bold"><span style="color: #0000FF">if</span></span><span style="color: #990000">=</span>/dev/urandom <span style="color: #009900">of</span><span style="color: #990000">=</span>bloat/bigfile <span style="color: #009900">bs</span><span style="color: #990000">=</span><span style="color: #993399">1024</span> <span style="color: #009900">count</span><span style="color: #990000">=</span><span style="color: #993399">120000</span>
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ cd <span style="color: #990000">..</span>
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ genext2fs --block-size <span style="color: #993399">1024</span> -d initrd -b <span style="color: #993399">131072</span> initrd<span style="color: #990000">.</span>ext2
+ <span style="color: #990000">[</span>root@machine<span style="color: #990000">]</span>$ <span style="font-weight: bold"><span style="color: #0000FF">exit</span></span>
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cp initrd<span style="color: #990000">.</span>ext2 /tftpboot</tt></pre></div></div>
 <div class="paragraph"><p>On our newer Linux distributions you will have to uncompress
 the initramfs_data.cpio file first:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ <span style="font-weight: bold"><span style="color: #0000FF">pushd</span></span> <span style="color: #990000">..</span>/linux/usr<span style="color: #990000">/</span>
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ gunzip initramfs_data<span style="color: #990000">.</span>cpio<span style="color: #990000">.</span>gz
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ <span style="font-weight: bold"><span style="color: #0000FF">popd</span></span></tt></pre></div></div>
 </div>
 <div class="sect2">
 <h3 id="_configure_for_an_initrd_aware_linux_zimage">8.3. Configure for an initrd aware Linux zImage</h3>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cd <span style="color: #990000">..</span>/linux<span style="color: #990000">/</span>
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make xconfig</tt></pre></div></div>
 <div class="paragraph"><p>Now find the "General setup" section and delete the string
 associated with the "Initramfs source file(s)" entry:</p></div>
 <div class="listingblock">
@@ -1040,7 +1070,12 @@ associated with the "Initramfs source file(s)" entry:</p></div>
 <div class="sect2">
 <h3 id="_make_an_initrd_aware_linux_zimage">8.4. Make an initrd aware Linux zImage</h3>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make zImage
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ cp arch/arm/boot/zImage /tftpboot</tt></pre></div></div>
 <div class="admonitionblock">
 <table><tr>
 <td class="icon">
@@ -1054,7 +1089,13 @@ vmlinuz-initrd-7445d0 file.</td>
 <div class="sect2">
 <h3 id="_where_does_everything_go">8.5. Where does everything go?</h3>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ make Image
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span>$ ls -l arch/arm/boot/Image
+-rwxrwxr-x <span style="color: #993399">1</span> user user <span style="color: #993399">6540016</span> Jan  <span style="color: #993399">1</span> <span style="color: #993399">00</span><span style="color: #990000">:</span><span style="color: #993399">00</span> arch/arm/boot/Image</tt></pre></div></div>
 <div class="ulist"><ul>
 <li>
 <p>
@@ -1091,7 +1132,12 @@ relocate its start to a ~624MiB (0x26ffc000) offset. This
 also takes care of the Device Tree as its in the BOLT heap
 and beyond the new starting address.</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span> cd /home/user/bolt
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span> vi config/layout-zeus<span style="color: #993399">42</span><span style="color: #990000">.</span>cfg</tt></pre></div></div>
 <div class="paragraph"><p>Now edit this config file to change the base addresses
  of the BOLT <em>SSBL</em>:</p></div>
 <div class="listingblock">
@@ -1149,7 +1195,12 @@ index 634e1e4..e1e60bb 100644
 </div></div>
 <div class="paragraph"><p>Now remake BOLT:</p></div>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt> <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span> make clean
+ <span style="color: #990000">[</span>user@machine<span style="color: #990000">]</span> make <span style="color: #993399">74450</span></tt></pre></div></div>
 <div class="paragraph"><p><span class="big">&#8658; Now re-flash the new BOLT before progressing! &#8656;</span></p></div>
 </div>
 <div class="sect2">
@@ -1286,7 +1337,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer-text">
 Version 2.1<br />
 Last updated
- 2017-12-07 23:39:45 PST
+ 2018-06-01 16:37:41 PDT
 </div>
 </div>
 </body>

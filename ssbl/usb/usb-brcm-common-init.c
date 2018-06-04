@@ -206,7 +206,8 @@ static void usb3_pll_54Mhz(uintptr_t ctrl_base)
 {
 
 	/* Only needed for newer B53 based SoC's */
-#if defined(CONFIG_BCM7260A0) ||	\
+#if defined(CONFIG_BCM7255A0) || \
+	defined(CONFIG_BCM7260) || \
 	defined(CONFIG_BCM7366C0) ||	\
 	defined(CONFIG_BCM7445D0) ||	\
 	defined(CONFIG_BCM7364B0) ||	\
@@ -523,5 +524,13 @@ void brcm_usb_common_init(struct brcm_usb_common_init_params *params)
 		USB_CTRL_UNSET(ctrl, SETUP, cc_drd_mode_enable);
 
 #endif
+#endif
+
+#if defined(CONFIG_BCM7255A0)
+	/* Work-around for a bug. See HW7255-24 */
+	reg = DEV_RD(USB_CTRL_REG(ctrl, EBRIDGE));
+	reg &= ~BCHP_USB_CTRL_EBRIDGE_EBR_SCB_SIZE_MASK;
+	reg |= 0x10 << BCHP_USB_CTRL_EBRIDGE_EBR_SCB_SIZE_SHIFT;
+	DEV_WR(USB_CTRL_REG(ctrl, EBRIDGE), reg);
 #endif
 }

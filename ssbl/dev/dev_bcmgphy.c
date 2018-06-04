@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -14,27 +14,40 @@
 #include "net_mdio.h"
 #include "compiler.h"
 
+/* Non standard control register */
+#define MII_BCM_EXP_DATA			0x15
+#define MII_BCM_EXP_SEL				0x17
+#define MII_BCM_AUX_CTL				0x18
+
+/* Miscellaneous control register (0b111) */
+#define MII_BCM_AUX_CTL_SHDWSEL_MISC_CTL	0x7
+#define MII_BCM_AUX_CTL_ACTL_SMDSP_ENA		0x0800
+
+#define MII_BCM_CHANNEL_WIDTH			0x2000
+#define MII_BCM_EXP_SEL_MASK			0xf00
+
 static void __maybe_unused mii_write_misc(mdio_info_t *mdio,
 	int phy_id, uint16_t reg, uint16_t chl, uint16_t value)
 {
 	int tmp;
 
-	mdio_write(mdio, phy_id, 0x18, 0x7);
-	tmp = mdio_read(mdio, phy_id, 0x18);
-	tmp = tmp | 0x800;
-	mdio_write(mdio, phy_id, 0x18, tmp);
+	mdio_write(mdio, phy_id, MII_BCM_AUX_CTL,
+		   MII_BCM_AUX_CTL_SHDWSEL_MISC_CTL);
+	tmp = mdio_read(mdio, phy_id, MII_BCM_AUX_CTL);
+	tmp = tmp | MII_BCM_AUX_CTL_ACTL_SMDSP_ENA;
+	mdio_write(mdio, phy_id, MII_BCM_AUX_CTL, tmp);
 
-	tmp = (chl * 0x2000) | reg;
-	mdio_write(mdio, phy_id, 0x17, tmp);
+	tmp = (chl * MII_BCM_CHANNEL_WIDTH) | reg;
+	mdio_write(mdio, phy_id, MII_BCM_EXP_SEL, tmp);
 
-	mdio_write(mdio, phy_id, 0x15, value);
+	mdio_write(mdio, phy_id, MII_BCM_EXP_DATA, value);
 }
 
 static void __maybe_unused mii_write_exp(mdio_info_t *mdio,
 	int phy_id, uint16_t reg, uint16_t value)
 {
-	mdio_write(mdio, phy_id, 0x17, 0xf00 | reg);
-	mdio_write(mdio, phy_id, 0x15, value);
+	mdio_write(mdio, phy_id, MII_BCM_EXP_SEL, MII_BCM_EXP_SEL_MASK | reg);
+	mdio_write(mdio, phy_id, MII_BCM_EXP_DATA, value);
 }
 
 static void __maybe_unused r_rc_cal_reset(mdio_info_t *mdio, int phy_id)
@@ -133,7 +146,8 @@ void bcm_gphy_workaround(mdio_info_t *mdio, int *phy, uint8_t cnt)
 		r_rc_cal_reset(mdio, phy[i]);
 	}
 }
-#elif defined(CONFIG_BCM7260A0) || \
+#elif defined(CONFIG_BCM7255A0) || \
+	defined(CONFIG_BCM7260) || \
 	defined(CONFIG_BCM7268) || \
 	defined(CONFIG_BCM7271)
 /* Workaround based on HWBCM7268-85 and HW7271-242 */

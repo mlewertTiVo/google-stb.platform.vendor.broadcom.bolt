@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -9,7 +9,7 @@
 
 static const char *COPYRIGHT_HEADER =
 "/***************************************************************************\n"
-" * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.\n"
+" * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.\n"
 " *\n"
 " *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE\n"
 " *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR\n"
@@ -35,6 +35,8 @@ static const char *COPYRIGHT_HEADER =
 
 /* 7445Dx_933MHz_32b_dev4Gx8_DDR3-1866M_le.mcb
  *  => "7445dx", "933mhz", "32b", "dev4gx8", "ddr3-1866m", "le"
+ * 7271B_1867MHz_32b_dev16Gx2_LPDDR4-3733_le.mcb
+ *  => "7271b", "1867mhz", "32b", "dev16gx2", "lpddr4-3733", "le"
  */
 static const int NUM_PARAMS_FROM_MCB_FILENAME = 6; /* 6 parameters */
 
@@ -57,6 +59,7 @@ struct mcb_properties {
 	uint32_t ddr_clock; /* in MHz */
 	uint32_t ddr_size; /* in Mbits */
 	uint32_t ddr_width;
+	uint32_t num_ranks; /* #ranks in LPDDR4 */
 	uint32_t phy_width;
 	char tag[PATH_MAX];
 };
@@ -743,6 +746,8 @@ static int normalize_fname(char *sname, char *fname)
 	int nfields;
 	struct mcb_properties mcb_prop;
 	char buf[4];
+	int n;
+	char *p, common_fname[64];
 
 	if (sname == NULL)
 		return -1;
@@ -754,14 +759,27 @@ static int normalize_fname(char *sname, char *fname)
 		return -1;;
 	}
 
-	if (isdigit(fname[0]) || !strcmp(FAMILY_CHIP_ID_COMMON, mcb_prop.tag))
-		sprintf(sname, "mcb_%dmhz_%db_dev%sx%d", 
-			mcb_prop.ddr_clock, mcb_prop.phy_width,
-			cute_size(buf, mcb_prop.ddr_size), mcb_prop.ddr_width);
+	n = sprintf(common_fname, "_%dmhz_%db_dev%sx",
+		mcb_prop.ddr_clock,
+		mcb_prop.phy_width,
+		cute_size(buf, mcb_prop.ddr_size));
+	if (n < 0)
+		return n;
+	p = common_fname + n;
+	/* num_ranks == 0 DDR3/DDR4
+	 * num_ranks != 0 LPDDR4
+	 */
+	if (mcb_prop.num_ranks == 0)
+		sprintf(p, "%d", mcb_prop.ddr_width);
 	else
-		sprintf(sname, "%s_%dmhz_%db_dev%sx%d", 
-			mcb_prop.tag, mcb_prop.ddr_clock, mcb_prop.phy_width,
-			cute_size(buf, mcb_prop.ddr_size), mcb_prop.ddr_width);
+		sprintf(p, "%d", mcb_prop.num_ranks);
+
+	if (isdigit(fname[0]) || !strcmp(FAMILY_CHIP_ID_COMMON, mcb_prop.tag))
+		strcpy(sname, "mcb");
+	else
+		strcpy(sname, mcb_prop.tag);
+	p = sname + strlen(sname);
+	strcpy(p, common_fname);
 
 	return 0;
 }
@@ -1065,17 +1083,23 @@ static int count_fields(const char *list_fields)
  *   [dev]{size}Gx{width}
  *     "dev" is optional
  *     "size" is decimal
- *     "width" is decimal
+ *     "width" is decimal, or it could be the numner of ranks in LPDDR4
  *
  * Parameters:
  *  p        [in]  file name to be decomposed
  *  mcb_prop [out] filled with DDR size and width
+ *  ddr_tech [in]  DDR3/DDR4 or LPDDR4
  * Returns:
  *  0 on success, -1 otherwise
  */
-static int parse_dramparts(char *p, struct mcb_properties *mcb_prop)
+static int parse_dramparts(char *p, struct mcb_properties *mcb_prop,
+	char *ddr_tech)
 {
 	char buf[PATH_MAX];
+
+	/* NOTE: By the time this is called,
+	 *       mcb_prop->phy_width should have been populated.
+	 */
 
 	/* p should be pointing to "dev4gx8" */
 	if (p == NULL || mcb_prop == NULL) return -1;
@@ -1090,23 +1114,66 @@ static int parse_dramparts(char *p, struct mcb_properties *mcb_prop)
 	sprintf(buf, "%d", mcb_prop->ddr_size);
 	p += strlen(buf);
 
-	/* tera (tx), giga (gx) or mega (mx) bits */
-	if (!strncmp(p, "tx", 2))
+	/* tera (t), giga (g) or mega (m) bits */
+	switch (*p) {
+	case 't':
 		mcb_prop->ddr_size *= 1024*1024; /* from Tbits to Mbits */
-	else if (!strncmp(p, "gx", 2)) {
+		break;
+	case 'g':
 		if (mcb_prop->ddr_size >= 1024)
-			return -1; /* use "tx", not "gx" */
+			return -1; /* use 't', not 'g' */
 		mcb_prop->ddr_size *= 1024; /* from Gbits to Mbits */
-	} else if (!strncmp(p, "mx", 2)) {
+		break;
+	case 'm':
 		if (mcb_prop->ddr_size >= 1024)
-			return -1; /* use "gx", not "mx" */
-	} else
+			return -1; /* use 'g', not 'm' */
+		break;
+	default:
 		return -1;
-	p += 2; /* skip "tx", "gx" or "mx" */
+	}
+	p += 1; /* skip 't', 'g' or 'm' */
 
-	mcb_prop->ddr_width = atoi(p);
-	if (mcb_prop->ddr_width == 0)
-		return -1;
+	if (strncmp(ddr_tech, "lpddr", strlen("lpddr"))) {
+		/* DDR3 or DDR4 */
+		if (*p != 'x') /* 'x' is a must, "tx", "gx" or "mx". */
+			return -1;
+		p += 1;
+		mcb_prop->ddr_width = atoi(p);
+		if (mcb_prop->ddr_width == 0)
+			return -1;
+		mcb_prop->num_ranks = 0;
+	} else {
+		/* LPDDR4 */
+		int num_ranks;
+
+		/* 'x' is optional, "tx", "gx" or "mx". */
+		if (*p == 'x') {
+			/* If exists, a number after 'x' should also exists. */
+			p += 1;
+			num_ranks = atoi(p);
+		} else {
+			/* If doesn't exist, it should the end of the string. */
+			if (*p != 0)
+				return -1;
+			num_ranks = 1; /* equivalent to one rank */
+		}
+
+		if (num_ranks <= 0) /* does not make any sense */
+			return -1;
+
+		/* Let's treat a number equal to or bigger than 16
+		 * (sixteen) as the width of the DRAM device because
+		 * 16 for * 32b PHY has been used as a workaround.
+		 */
+		if (num_ranks >= 16)
+			mcb_prop->num_ranks = mcb_prop->phy_width / num_ranks;
+		else
+			mcb_prop->num_ranks = num_ranks;
+		mcb_prop->ddr_width = 0;
+	}
+	/* num_ranks == 0 (zero) : DDR3/DDR4
+	 * num_ranks != 0 (zero) : LPDDR4
+	 */
 
 	return 0;
 }
@@ -1152,6 +1219,8 @@ static bool is_mcb_duplicate(struct mcb_properties *mcb_prop,
 			continue;
 		if (mcb_prop->ddr_width != mcbtable[i].ddr_width)
 			continue;
+		if (mcb_prop->num_ranks != mcbtable[i].num_ranks)
+			continue;
 		if (mcb_prop->phy_width != mcbtable[i].phy_width)
 			continue;
 		return true;
@@ -1166,12 +1235,16 @@ static bool is_mcb_duplicate(struct mcb_properties *mcb_prop,
  *  An MCB file name contains the identification of the MCB, DDR speed,
  * PHY width, device size, device width, endianness and tag name.
  * A file name gets tokenized mainly by '_' (underscore) before they get
- * further parsed. For example, "7445Dx_933MHz_32b_dev4Gx8_DDR3-1866M_le.mcb"
- * gets parsed into:
- *   "7445dx", 933MHz, 32bit PHY, 4Gbit device with 8bit, DDR3-1866M and
- *   Little Endian
- * DDR3-1866M and Little Endian are ignored, and "7445dx" (position-wise)
- * is used as a tag when a custom MCB is specified.
+ * further parsed. For example:
+ *   7445Dx_933MHz_32b_dev4Gx8_DDR3-1866M_le.mcb gets parsed into:
+ *     "7445dx", 933MHz, 32bit PHY, 4Gbit device with 8bit,
+ *     DDR3-1866M and Little Endian
+ *   7271B_1867MHz_32b_dev16Gx2_LPDDR4-3733_le.mcb gets parsed into:
+ *     "7271b", 1867MHz, 32bit PHY, 32Gbit device from dual ranks,
+ *     LPDDR4-3733 and Little Endian
+ * DDR3- and LPDDR4- are used to determine the validity of the device
+ * width and #ranks. Little Endian is ignored. "7445dx" and "7271b"
+ * (position-wise) are used as a tag when a custom MCB is specified.
  *
  * Parameters:
  *  fname    [in]  file name to be parsed
@@ -1182,6 +1255,7 @@ static bool is_mcb_duplicate(struct mcb_properties *mcb_prop,
 static int parse_mcbfname(char *fname, struct mcb_properties *mcb_prop)
 {
 	char *p, *tmp;
+	char *dev;
 	int nfields;
 	int nparams;
 
@@ -1192,20 +1266,21 @@ static int parse_mcbfname(char *fname, struct mcb_properties *mcb_prop)
 	if (tmp == NULL)
 		return 0;
 	/* "7445dx", "933mhz", "32b", "dev4gx8", "ddr3-1866m", "le", "" */
+	/* "7271b", "1867mhz", "32b", "dev16gx2", "lpddr4-3733", "le", "" */
 
 	nfields = count_fields(tmp);
 	if (nfields != NUM_PARAMS_FROM_MCB_FILENAME)
 		goto error_return;
- 
+
 	nparams = 0; /* let the game begin */
 	p = tmp;
 
-	/* copy the chip ID (7445dx) or tag */
+	/* copy the chip ID (7445dx or 7271b) or tag */
 	strncpy(mcb_prop->tag, p, sizeof(mcb_prop->tag));
 	++nparams;
 	p += strlen(p) + 1;
 
-	/* p is pointing to "933mhz" */
+	/* p is pointing to "933mhz" or "1867mhz" */
 	mcb_prop->ddr_clock = atoi(p);
 	if (mcb_prop->ddr_clock == 0)
 		goto error_return;
@@ -1221,13 +1296,15 @@ static int parse_mcbfname(char *fname, struct mcb_properties *mcb_prop)
 	++nparams;
 	p += strlen(p) + 1;
 
-	/* p is pointing to "dev4gx8" */
-	if (0 != parse_dramparts(p, mcb_prop))
-		goto error_return;
-	nparams += 2; /* 2 == DRAM size and DRAM width */
-	p += strlen(p) + 1;
+	dev = p; /* dev and p are pointing to "dev4gx8" or "dev16gx2" */
+	p += strlen(p) + 1; /* p is pointing to "ddr3-1866m" or "lpddr4-3733" */
 
-	/* p is pointing to "ddr3-1866m" */
+	if (0 != parse_dramparts(dev, mcb_prop, p))
+		goto error_return;
+	nparams += 2; /* 2 == dev size and width or rank size and count */
+	/* num_ranks == 0 DDR3/DDR4
+	 * num_ranks != 0 LPDDR4
+	 */
 
 	free(tmp);
 	return NUM_PARAMS_FROM_MCB_FILENAME;
@@ -1310,10 +1387,21 @@ static int print_mcbtable(FILE *fp, int nfiles, char **mcbfiles)
 			g_fixed_main_table_top++;
 		}
 
-		fprintf(fp, ",\t%d,\t%d,\t%d, %d, NULL },\n",
-			mcb_prop.ddr_clock,
-			mcb_prop.ddr_size, mcb_prop.ddr_width,
-			mcb_prop.phy_width);
+		/*                   ddr_width == 0      ddr_width != 0
+		 * num_ranks == 0 :       ERROR             DDR3/DDR4
+		 * num_ranks != 0 : new format LPDDR4   old format LPDDR4
+		 */
+		if (mcb_prop.ddr_width == 0)
+			fprintf(fp, ",\t%d,\t%d | %d,\t0, %d, NULL },\n",
+				mcb_prop.ddr_clock,
+				mcb_prop.ddr_size,
+				mcb_prop.num_ranks - 1, /* 0 == single */
+				mcb_prop.phy_width);
+		else
+			fprintf(fp, ",\t%d,\t%d,\t%d, %d, NULL },\n",
+				mcb_prop.ddr_clock,
+				mcb_prop.ddr_size, mcb_prop.ddr_width,
+				mcb_prop.phy_width);
 
 	}
 	fprintf(fp, "\t{ NULL, 0, 0, 0, 0, NULL },\n");
@@ -1410,10 +1498,21 @@ static int print_mcbsubtable(FILE *fp, int nfiles, char **mcbfiles)
 		if (!g_compress)
 			fprintf(fp, "_%d", f);
 
-		fprintf(fp, ",\t%d,\t%d,\t%d, %d,\ttag_%s",
-			mcb_prop.ddr_clock, mcb_prop.ddr_size,
-			mcb_prop.ddr_width, mcb_prop.phy_width,
-			fname_base);
+		/*                   ddr_width == 0      ddr_width != 0
+		 * num_ranks == 0 :       ERROR             DDR3/DDR4
+		 * num_ranks != 0 : new format LPDDR4   old format LPDDR4
+		 */
+		if (mcb_prop.ddr_width == 0)
+			fprintf(fp, ",\t%d,\t%d | %d,\t0, %d, NULL },\n",
+				mcb_prop.ddr_clock,
+				mcb_prop.ddr_size,
+				mcb_prop.num_ranks - 1, /* 0 == single */
+				mcb_prop.phy_width);
+		else
+			fprintf(fp, ",\t%d,\t%d,\t%d, %d,\ttag_%s",
+				mcb_prop.ddr_clock, mcb_prop.ddr_size,
+				mcb_prop.ddr_width, mcb_prop.phy_width,
+				fname_base);
 
 		if (!g_compress) {
 			fprintf(fp, "_%d", f);

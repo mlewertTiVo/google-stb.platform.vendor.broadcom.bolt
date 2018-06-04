@@ -5268,7 +5268,7 @@ static uint32_t s_aulReg[] =
 	0x21103014, 0x02000000,
 
 	0x20404380, 0x00000010, /* SUN_TOP_CTRL ... */
-	0x20404108, 0x65550404,
+	0x20404108, 0x66660404,
 
 	0x20419ba8, 0x000000d0, /* AON UPG... */
 	0x20419bd0, 0x00000040,
@@ -5924,7 +5924,8 @@ static SplashData s_aSplashData = {
 	sizeof(s_aTriggerMap)/sizeof(s_aTriggerMap[0]),
 	&s_aTriggerMap[0],
 	sizeof(s_aulReg)/(2*sizeof(s_aulReg[0])),
-	s_aulReg
+	s_aulReg,
+	0
 };
 
 SplashData* GetSplashData(void)

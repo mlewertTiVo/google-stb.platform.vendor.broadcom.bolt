@@ -39,6 +39,7 @@
 #define DBG_EVENT4		0x00080000
 #define DBG_INIT1		0x00100000
 #define DBG_INIT2		0x00200000
+#define DBG_INIT3		0x00400000
 #define DBG_GEN1		0x01000000
 #define DBG_GEN2		0x02000000
 #define DBG_GEN3		0x04000000
@@ -93,6 +94,7 @@
 #define MAX_STR_DESC_SIZE	256		/* max possible */
 #define BDC_CMD_TIMEOUT		50		/* mS...change as needed */
 #define BDC_COMM_TIMEOUT	100		/* mS...change as needed */
+#define BDC_ENUM_TIMEOUT	5000		/* mS...change as needed */
 #define MAX_BULKOUT_LEN		65536		/* BD size */
 #define MAX_LPBK_LEN		MAX_BULKOUT_LEN
 
@@ -410,6 +412,11 @@ typedef struct bdc_lpbk_s {
     *  BDC softc
     ********************************************************************* */
 
+enum bdc_connect_state {
+	BDC_DISCONNECTED = 0,
+	BDC_EARLY_CONNECT,
+	BDC_DELAYED_CONNECT
+};
 typedef struct bdc_softc {
 	physaddr_t		regs;
 	bdc_sr_t		*srr0;
@@ -440,6 +447,7 @@ typedef struct bdc_softc {
 	usb_descriptors_t	*desc;
 	uint8_t			str_desc[MAX_STR_DESC_SIZE];
 
+	enum bdc_connect_state	connect;	/* enable for host attach */
 	int			debug;
 	bdc_lpbk_t		lpbk;
 

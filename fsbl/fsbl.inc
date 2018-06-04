@@ -18,7 +18,6 @@ FSBL_S += \
  fsbl/fsbl-minilib.c \
  fsbl/fsbl-pm.c \
  fsbl/fsbl-sec.c \
- fsbl/fsbl-secparams.c \
  fsbl/fsbl-shmoo.c \
  fsbl/fsbl-start.S \
  fsbl/fsbl-timer.c \
@@ -29,6 +28,11 @@ FSBL_S += \
  fsbl/fsbl-dtu.c \
  $(GEN)/$(FAMILY)/fsbl-pinmux.c
 
+
+ifeq ($(CFG_ZEUS5_1),0)
+FSBL_S += \
+ fsbl/fsbl-secparams.c
+endif
 
 ifeq ($(CFG_BOARD_ID),1)
 FSBL_S += \

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  * THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  * AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -63,9 +63,8 @@ void do_shmoo(const struct memsys_interface *gmemsys,
 		params.options |= MEMSYS_OPTION_CONSOLE_OUTPUT_DISABLED;
 	if (options & SHMOO_OPTION_WARMBOOT)
 		params.options |= MEMSYS_OPTION_WARM_BOOT;
-	/* dual rank? */
-	if (ddr->ddr_width * 2 == ddr->phy_width)
-		params.options |= 1 << MEMSYS_OPTION_RANKS_SHIFT;
+	params.options |= (ddr->ddr_size & DDRINFO_NUM_RANKS_MASK) <<
+		MEMSYS_OPTION_RANKS_SHIFT;
 
 	ret = gmemsys->init(&params);
 	if (ret != 0) {

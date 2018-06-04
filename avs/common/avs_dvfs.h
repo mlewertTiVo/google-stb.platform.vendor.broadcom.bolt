@@ -77,6 +77,7 @@ enum AVS_ERROR avs_set_state(uint32_t state);
 enum AVS_ERROR avs_get_state(uint32_t *state);
 
 void dvfs_init_board_pmap(int pmap_id);
+unsigned int avs_get_current_pmap(void);
 
 #ifdef __cplusplus
 }

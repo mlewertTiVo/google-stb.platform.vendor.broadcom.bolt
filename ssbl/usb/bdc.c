@@ -1036,6 +1036,9 @@ static void bdc_handle_events(void *arg)
 	bdc_sr_t *evp;
 	bdc_softc *softc = (bdc_softc *) arg;
 
+	if (softc->connect == BDC_DISCONNECTED)
+		return;		/* delayed connect during open */
+
 	/* BDC is clock-gated while in host mode during DRD operation.
 	   So, access regsiters only when in device mode */
 	if (softc->drd_status) {
@@ -1112,6 +1115,7 @@ static void bdc_probe(bolt_driver_t *drv, unsigned long probe_a,
 	bdc_check_debug(softc);
 	if (softc->debug & DBG_LPBK_MODE) {
 		softc->lpbk.on = 1;
+		softc->connect = BDC_EARLY_CONNECT;
 		printf("BDC: LOOPBACK mode\n");
 	}
 
@@ -1154,14 +1158,27 @@ int usb_init_bdc(physaddr_t base, physaddr_t ctrl)
 static int bdc_open(bolt_devctx_t *ctx)
 {
 	bdc_softc *softc = (bdc_softc *) ctx->dev_softc;
+	int status = 0;
+	int to = BDC_ENUM_TIMEOUT/10;	/* mS -> 10mS units */
 
 	bdc_check_debug(softc);
-	if (softc->dev_speed != PSP_HS)
-		return BOLT_ERR_UNSUPPORTED;
-	if (softc->dev_state != CONFIGURED)
-		return BOLT_ERR_DEVNOTFOUND;
 
-	return 0;
+	/* If enumerate during open then block till done or timeout */
+	if (softc->connect == BDC_DISCONNECTED) {
+		softc->connect = BDC_DELAYED_CONNECT;
+		while (to-- && (softc->dev_state != CONFIGURED))
+			bolt_msleep(10); /* bdc_handle_events is polled task */
+	}
+	if (softc->debug & DBG_INIT3)
+		printf("BDC: t_enum %d = mS\n", (BDC_ENUM_TIMEOUT - (to*10)));
+	if (softc->dev_speed != PSP_HS)
+		status = BOLT_ERR_UNSUPPORTED;
+	else if (softc->dev_state != CONFIGURED)
+		status = BOLT_ERR_DEVNOTFOUND;
+	if (status && (softc->connect == BDC_DELAYED_CONNECT))
+		softc->connect = BDC_DISCONNECTED;
+
+	return status;
 }
 
 static int bdc_read(bolt_devctx_t *ctx, iocb_buffer_t *buffer)

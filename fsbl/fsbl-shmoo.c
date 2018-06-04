@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -77,28 +77,73 @@ static void print_shmoo_version(memsys_version_t *shmoo_ver)
 uint32_t *find_shmoo(const struct ddr_info *ddr,
 		struct memsys_info *mi, uint32_t *sram_offset)
 {
-	while (mi->values) {
-		if ((ddr->ddr_clock == mi->ddr_clock) &&
-			(ddr->ddr_size  == mi->ddr_size) &&
-			(ddr->phy_width == mi->phy_width) &&
-			(ddr->ddr_width == mi->ddr_width)) {
-			if (ddr->tag == NULL)
-				return (uint32_t *)mi->values;
-			if (mi->tag != NULL) {
-				/* ddr->tag and mi-tag are not NULL */
-				char *p = ddr->tag;
-				char *q = (char *)ADDROF(sram_offset, mi->tag);
+	for ( ; mi->values != 0; mi++) {
+		if (ddr->ddr_clock != mi->ddr_clock)
+			continue;
+		if (ddr->phy_width != mi->phy_width)
+			continue;
 
-				while (*p == *q) {
-					if (*p == '\0')
-						return (uint32_t *)mi->values;
-					++p;
-					++q;
-				}
-			}
+		if (mi->ddr_width == 0) {
+			/* newly processed MCB of LPDDR4 with same size rank:
+			 * The -width option must have been replaced with
+			 * the new -ranks option. Otherwise, the build would
+			 * have been broken at the scripting engine.
+			 */
+			if (ddr->ddr_width != 0)
+				/* TODO: NOT supported yet
+				 *       heterogeneous rank sizes in DDR cfg
+				 */
+				continue;
+			if (ddr->ddr_size != mi->ddr_size)
+				continue;
+
+			break;
 		}
-		mi++;
+
+		/* only when mi->ddr_width != 0
+		 * The previous 'if' statement only either breaks
+		 * out of the whole 'for' loop or continues to
+		 * the next iteration of the loop.
+		 */
+		if (mi->ddr_width <= mi->phy_width) {
+			/* DDR3/DDR4 or legacy LPDDR4 */
+			if (ddr->ddr_size != mi->ddr_size)
+				continue;
+			if (ddr->ddr_width != mi->ddr_width)
+				continue;
+
+			/* TODO: HACK for legacy LPDDR4
+			 *       After this point, 'ddr_size' is used by
+			 *       only LPDDR4. DDR3/DDR4 does not at all.
+			 *       Once all of MCB's are newly processed,
+			 *       forcefully injecting #ranks into
+			 *       'ddr_size' should be removed.
+			 */
+			((struct ddr_info *) ddr)->ddr_size +=
+				ddr->phy_width / ddr->ddr_width - 1;
+			break;
+		} else {
+			/* TODO: NOT supported yet
+			 *       heterogeneous rank sizes in MCB
+			 */
+		}
 	}
+
+	if (ddr->tag == NULL)
+		return (uint32_t *)mi->values;
+	if (mi->tag != NULL) {
+		/* ddr->tag and mi-tag are not NULL */
+		char *p = ddr->tag;
+		char *q = (char *)ADDROF(sram_offset, mi->tag);
+
+		while (*p == *q) {
+			if (*p == '\0')
+				return (uint32_t *)mi->values;
+			++p;
+			++q;
+		}
+	}
+
 	return NULL;
 }
 
@@ -140,7 +185,7 @@ void print_shmoo_error(memsys_error_t *e)
 {
 	unsigned int idx;
 
-	puts("eMEMC: ");
+	puts("eMEMC:");
 	for (idx = 0; idx < MEMSYS_ERROR_MEMC_MAX_WORDS; idx++) {
 		report_hex(" ", e->memc[idx]);
 	}
@@ -150,7 +195,7 @@ void print_shmoo_error(memsys_error_t *e)
 		report_hex(" ", e->phy[idx]);
 	}
 
-	puts("eSHMOO: ");
+	puts("eSHMOO:");
 	for (idx = 0; idx < MEMSYS_ERROR_SHMOO_MAX_WORDS; idx++) {
 		report_hex(" ", e->shmoo[idx]);
 	}
@@ -248,20 +293,20 @@ static void warm_restart_channel(physaddr_t stdby_cntl)
 	 */
 
 	/* CKE = 0, RST_N = 1 */
-	tmp = BDEV_RD(stdby_cntl);
+	tmp = DEV_RD(stdby_cntl);
 	tmp &= ~BCHP_DDR34_PHY_CONTROL_REGS_A_0_STANDBY_CONTROL_CKE_MASK;
 	tmp |= BCHP_DDR34_PHY_CONTROL_REGS_A_0_STANDBY_CONTROL_RST_N_MASK;
-	BDEV_WR(stdby_cntl, tmp);
+	DEV_WR(stdby_cntl, tmp);
 
 	/* step 3: wait 10 us */
 	udelay(10);
 	BARRIER();
 
 	/* step 4: FORCE RST_N / CKE levels. */
-	tmp = BDEV_RD(stdby_cntl);
+	tmp = DEV_RD(stdby_cntl);
 	tmp |=
 	BCHP_DDR34_PHY_CONTROL_REGS_A_0_STANDBY_CONTROL_FORCE_CKE_RST_N_MASK;
-	BDEV_WR(stdby_cntl, tmp);
+	DEV_WR(stdby_cntl, tmp);
 	BARRIER();
 }
 
@@ -294,23 +339,23 @@ static void warm_restart_memc(int memc)
 
 	stdby_cntl = p->phy_reg_base + DDR_PHY_STANDBY_CONTROL_OFFS;
 
-	tmp = BDEV_RD(stdby_cntl);
+	tmp = DEV_RD(stdby_cntl);
 	/* Keep CKE pin low */
 	tmp &= ~BCHP_DDR34_PHY_CONTROL_REGS_0_STANDBY_CONTROL_CKE_MASK;
 	/* Keep RST_N high */
 	tmp |= BCHP_DDR34_PHY_CONTROL_REGS_0_STANDBY_CONTROL_RST_N_MASK;
-	BDEV_WR(stdby_cntl, tmp);
+	DEV_WR(stdby_cntl, tmp);
 
 	/* Delay 1000 us */
 	sleep_ms(1);
 
 	/* Force the RST_N / CKE levels */
-	tmp = BDEV_RD(stdby_cntl);
+	tmp = DEV_RD(stdby_cntl);
 
 	tmp |=
 	BCHP_DDR34_PHY_CONTROL_REGS_0_STANDBY_CONTROL_FORCE_CKE_RST_N_MASK;
 
-	BDEV_WR(stdby_cntl, tmp);
+	DEV_WR(stdby_cntl, tmp);
 }
 
 #endif
@@ -464,22 +509,27 @@ void shmoo_menu(struct board_nvm_info *nvm)
 	crlf();
 	mi += 2; /* bypass header and template entries */
 	while (mi->values != NULL) {
+		/* lower nibble of ddr_size is #ranks in LPDDR4 */
+		unsigned int ddr_size = mi->ddr_size & ~DDRINFO_NUM_RANKS_MASK;
+		unsigned int num_ranks = mi->ddr_size & DDRINFO_NUM_RANKS_MASK;
+
 		putchar(max);
 		__puts(")\t");
 		writeint(mi->ddr_clock);
 		__puts("MHz\t");
-		if (mi->ddr_size < 1024) {
+		if (ddr_size < 1024) {
 			/* smaller than 1 Gbit */
-			writeint(mi->ddr_size);
+			writeint(ddr_size);
 			__puts("Mx");
 		} else {
-			uint32_t ddr_size = mi->ddr_size / 1024;
-
-			writeint(ddr_size);
+			writeint(ddr_size / 1024);
 			__puts("Gx");
 			/* TODO: consider tera bits */
 		}
-		writeint(mi->ddr_width);
+		if (num_ranks == 0)
+			writeint(mi->ddr_width);
+		else
+			writeint(num_ranks);
 		putchar(' ');
 		writeint(mi->phy_width);
 		puts("b");

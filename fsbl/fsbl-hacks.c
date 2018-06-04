@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -15,6 +15,13 @@
 #include <bchp_sun_gisb_arb.h>
 #include <bchp_sun_top_ctrl.h>
 #include <bchp_timer.h>
+#include <boot_defines.h>
+
+#ifdef BCHP_CCL_REG_START
+#include <bchp_aon_ctrl.h>
+#include <bchp_aon_pin_ctrl.h>
+#include <bchp_ccl.h>
+#endif
 
 #if defined(CONFIG_BCM7260A0)
 #include <bchp_ccl.h>
@@ -24,7 +31,7 @@
 
 #if defined(CONFIG_BCM7278)
 #include <bchp_aon_ctrl.h>
-#include <bchp_clkgen.h>
+#include <chipid.h>
 #endif
 
 #if defined(CONFIG_BCM7255)
@@ -146,7 +153,7 @@ void bcm7260b0_bp3_apply_otp(void)
 			BCHP_SUN_GISB_ARB_BP_ENABLE_14_access_MASK);
 	} else {
 		data = REG(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0);
-		data &= ~(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_hdcp22_disable_MASK
+		data &= ~(BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_hdcp22_disable_MASK |
 			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_dv_hdr_disable_MASK |
 			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_vmxwatermarking_disable_MASK |
 			BCHP_SUN_TOP_CTRL_GENERAL_CTRL_0_hdcp_disable_MASK |
@@ -159,7 +166,18 @@ void bcm7260b0_bp3_apply_otp(void)
 }
 #endif
 
-#if defined(CONFIG_BCM7260) || \
+#if defined(CONFIG_BCM7278B0)
+void bcm7278_disable_hdcp(void)
+{
+	const uint32_t family_id = BDEV_RD(BCHP_SUN_TOP_CTRL_CHIP_FAMILY_ID);
+
+	if ((family_id & CHIPID_REV_MASK) == 0x10)
+		BDEV_WR_F(SUN_TOP_CTRL_IP_DISABLE_0, hdcp_disable, 1);
+}
+#endif
+
+#if defined(CONFIG_BCM7255) || \
+	defined(CONFIG_BCM7260) || \
 	defined(CONFIG_BCM7268) || \
 	defined(CONFIG_BCM7271) || \
 	defined(CONFIG_BCM7278)
@@ -273,30 +291,6 @@ static void fixup_v7_64(void)
 
 void orion_hack_early_bus_cfg(void)
 {
-#if defined(CONFIG_BCM7278)
-	/* Hard code SCB to 486 MHz until PMap's are defined,
-	 * then AVS will take care of it.
-	 */
-	BDEV_WR(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1,
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_POST_DIVIDER_HOLD_CH1_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_POST_DIVIDER_HOLD_CH1_SHIFT ) |
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_PHASE_OFFSET_CH1_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_PHASE_OFFSET_CH1_SHIFT) |
-		(8 << BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_MDIV_CH1_SHIFT) |
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_CLOCK_DIS_CH1_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_1_CLOCK_DIS_CH1_SHIFT));
-
-	/* TODO: 432 MHz of VICE, should not hard code as not always used */
-	BDEV_WR(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3,
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_POST_DIVIDER_HOLD_CH3_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_POST_DIVIDER_HOLD_CH3_SHIFT ) |
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_PHASE_OFFSET_CH3_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_PHASE_OFFSET_CH3_SHIFT) |
-		(9 << BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_MDIV_CH3_SHIFT) |
-		(BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_CLOCK_DIS_CH3_DEFAULT <<
-			BCHP_CLKGEN_PLL_SYS0_PLL_CHANNEL_CTRL_CH_3_CLOCK_DIS_CH3_SHIFT));
-#endif
-
 #if defined(CONFIG_BCM7260A0)
 	/* limit0: RBUS 0x0_FFD0_0000..0x0_FFFF_FFFF */
 	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT0,
@@ -304,7 +298,15 @@ void orion_hack_early_bus_cfg(void)
 		(0 << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_LLIMT0_UBUSCDBIT_SHIFT));
 #endif
 
-#if defined(CONFIG_BCM7260) || \
+#if defined(CONFIG_BCM7255A0)
+	/* limit1: RBUS 0x0_C000_0000..0x0_F23F_FFFF */
+	BDEV_WR(BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT1,
+		(0xF23FF << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT1_ULIMIT_SHIFT) |
+		(2 << BCHP_HIF_CPUBIUCTRL_CPU_BUS_RANGE_ULIMT1_BUSNUM_SHIFT));
+#endif
+
+#if defined(CONFIG_BCM7255) || \
+	defined(CONFIG_BCM7260) || \
 	defined(CONFIG_BCM7268) || \
 	defined(CONFIG_BCM7271)
 	/* limit4: MCP0 0x1_0000_0000..0x2_3FFF_FFFF */
@@ -414,3 +416,39 @@ void hack_power_down_cpus(void) /* Ref:  HW7445-1743 */
 	puts("");
 }
 
+/* hack_lpddr_reg -- uses the on-chip voltage sensor
+ *
+ *  Instead of using a dedicated power management component for sensing
+ *  loss of power and perform power down sequencing, chips with USB-C
+ *  may be able to detect power fail as well as brown out conditions
+ *  through on-chip 5V voltage comparators without extra BOM's.
+ */
+void hack_lpddr_reg(void)
+{
+#ifdef CFG_EMULATION
+	return; /* does not make sense in emulation */
+#endif
+
+	/* The existence of CCL does not guarantee LPDDR4_REG_EN. But,
+	 * the existence of LPDDR4_REG_EN guarantees the existence of
+	 * CCL, and its location is
+	 * AON_PIN_CTRL_PIN_MUX_CTRL_3[aon_gpio_25].
+	 */
+#ifdef BCHP_AON_PIN_CTRL_PIN_MUX_CTRL_3_aon_gpio_25_LPDDR4_REG_EN
+	/* enable sensor */
+	BDEV_WR(BCHP_CCL_VBUS_SENSE_CFG_0, 0xA000);
+	/* choose brownout signal, and force output to 1 */
+	BDEV_WR(BCHP_AON_CTRL_GENERAL_CTRL_0, 7);
+	/* internal pullup for aon_gpio_25 */
+	BDEV_WR_F(AON_PIN_CTRL_PIN_MUX_PAD_CTRL_2, aon_gpio_25_pad_ctrl, 2);
+	/* LPDDR4_REG_EN */
+	BDEV_WR_F(AON_PIN_CTRL_PIN_MUX_CTRL_3, aon_gpio_25, 3);
+	BARRIER();
+
+	sleep_ms(4); /* 4 milliseconds for the above sequence to stabilize */
+
+	/* allow brownout signal to propagate */
+	BDEV_WR(BCHP_AON_CTRL_GENERAL_CTRL_0, 5);
+	BARRIER();
+#endif
+}

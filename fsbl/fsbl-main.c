@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -7,29 +7,28 @@
  *
  ***************************************************************************/
 
-#include <arch-mmu.h>
-#include <common.h>
-#include <lib_types.h>
-#include <stdbool.h>
-
-#include "fsbl.h"
-#include "avs.h"
-#include "avs_temp_reset.h"
-#include "fsbl-clock.h"
-#include "fsbl-hacks.h"
-#include "fsbl-pm.h"
-#include "fsbl-dtu.h"
-#include "boot_defines.h"
-
-#include <bchp_common.h>
-#include <bchp_sun_top_ctrl.h>
-#include <bchp_sun_gisb_arb.h>
-#include <bchp_timer.h>
-#include <bchp_aon_ctrl.h>
 #include <aon_defs.h>
+#include <arch-mmu.h>
+#include <avs.h>
+#include <avs_temp_reset.h>
+#include <bchp_aon_ctrl.h>
+#include <bchp_common.h>
+#include <bchp_sun_gisb_arb.h>
+#include <bchp_sun_top_ctrl.h>
+#include <bchp_timer.h>
+#include <boot_defines.h>
 #include <chipid.h>
+#include <common.h>
 #include <ddr.h>
+#include <fsbl.h>
+#include <fsbl-clock.h>
+#include <fsbl-dtu.h>
+#include <fsbl-hacks.h>
+#include <fsbl-pm.h>
+#include <lib_types.h>
+#include <mmap-dram.h>
 
+#include <stdbool.h>
 
 #ifdef CFG_EMULATION
 extern void jumpto(uint32_t address);
@@ -91,8 +90,8 @@ static void fsbl_setup_mmu(struct board_type *b)
 	mmu_initialize_pagetable();
 
 	/* add PTE's from the base of MEMC#0 to the end of to-be-coped SSBL */
-	size = SSBL_RAM_ADDR - _MB(b->ddr[0].base_mb) + SSBL_SIZE;
-	mmu_add_pages(_MB(b->ddr[0].base_mb), size);
+	size = SSBL_RAM_ADDR - _MB(dram_mapping_table[0].to_mb) + SSBL_SIZE;
+	mmu_add_pages(_MB(dram_mapping_table[0].to_mb), size);
 	/* TODO: What if 'size' is smaller than the installed memory on MEMC#0?
 	 * The following code might be added for checking such a condition:
 	 *      if (size > _MB(b->ddr[0].size_mb))
@@ -134,13 +133,17 @@ bool fsbl_set_srr(struct board_type *b, struct fsbl_info *info)
 {
 	static const uint32_t MAX_SRR_SIZE_MB = 255;
 	uint32_t size_mb;
-	uint32_t offset_mb;
+	uint32_t offset_mb = 0;
 
 	if (b == NULL || info == NULL)
 		return false;
 
+	if (USER_SRR_SIZE_MB < 0)
 	/* retrieve the required size of SRR */
-	size_mb = *((uint32_t *)(SRAM_ADDR + PARAM_SRR_SIZE_MB));
+		size_mb = *((uint32_t *)(SRAM_ADDR + PARAM_SRR_SIZE_MB));
+	else
+		size_mb = USER_SRR_SIZE_MB;
+
 	if (size_mb > MAX_SRR_SIZE_MB) {
 		size_mb = 0;
 		offset_mb = 0;
@@ -196,9 +199,11 @@ static void bp3_apply_otp(void)
 	/* adjust IP_DISABLE_xxx based on read OTP bit */
 	if (bp3_enable) {
 		bcm7255_enable_qam();
+		bcm7278_disable_hdcp();
 		BDEV_WR(BCHP_SUN_TOP_CTRL_IP_DISABLE_UNLOCK, 0);
 	} else {
 		BDEV_WR(BCHP_SUN_TOP_CTRL_IP_DISABLE_0, 0);
+		bcm7278_disable_hdcp();
 	}
 #endif
 	bcm7260b0_bp3_apply_otp();
@@ -249,6 +254,7 @@ void fsbl_main(void)
 		bcm7260a0_patch_mpm();
 	}
 
+	hack_lpddr_reg();
 	orion_hack_early_bus_cfg();
 
 #ifndef CFG_EMULATION
@@ -263,7 +269,7 @@ void fsbl_main(void)
 
 	sec_init(); /* send out memsys_ready_for_init and get boot parameter */
 
-#if !(CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION <= 0x410)
 	sec_bfw_load(warm_boot);
 #endif
 
@@ -282,28 +288,6 @@ void fsbl_main(void)
 	*/
 	memcpy4((uint32_t *)&(info.saved_board),
 		(uint32_t *)pnvm, sizeof(*pnvm));
-
-	__puts("AVS: overtemp mon ");
-	if (BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY) &
-		BCHP_AON_CTRL_RESET_HISTORY_overtemp_reset_MASK) {
-		/* if one of reset causes is overtemp, do not re-enable
-		 * at this point so that the overtemp condition does not
-		 * reset the chip over and over again.
-		 *
-		 * As long as OVERTEMP is enabled, it gets re-enabled
-		 * in SSBL after SSBL performs temperature parking and
-		 * the chip cools down.
-		 */
-		en_avs_thresh = 0;
-	} else {
-		en_avs_thresh = (info.saved_board.hardflags &
-					FSBL_HARDFLAG_OTPARK_MASK)? 0 : 1;
-	}
-	avs_set_temp_threshold(STB_DEVICE, en_avs_thresh);
-	if (en_avs_thresh)
-		puts("ON");
-	else
-		puts("OFF");
 
 	/* This has to happen before board_select() and
 	 * read_mhl_power_config() in case those set
@@ -341,10 +325,7 @@ void fsbl_main(void)
 		/* board default PMap ID as it is overridden */
 		pmap_id = AVS_PMAP_ID(info.board_types[info.board_idx].avs);
 #else /* SECURE BOOT */
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0)
-	pmap_id =  DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1) &
-			PARAM_AVS_PARAM_1_PMAP_MASK;
-#elif  CFG_ZEUS5_1
+#if (CFG_ZEUS_VERSION >= 0x420)
 	pmap_id = DEV_RD(SEC_PARAM_START_SRAM + PARAM_AVS_PARAM_1) &
 			PARAM_AVS_PARAM_1_PMAP_MASK;
 #endif
@@ -360,6 +341,29 @@ void fsbl_main(void)
 	sec_set_memc(&info);
 #endif
 	b = get_tmp_board();
+
+	__puts("AVS: overtemp mon ");
+	if (BDEV_RD(BCHP_AON_CTRL_RESET_HISTORY) &
+		BCHP_AON_CTRL_RESET_HISTORY_overtemp_reset_MASK) {
+		/* if one of reset causes is overtemp, do not re-enable
+		 * at this point so that the overtemp condition does not
+		 * reset the chip over and over again.
+		 *
+		 * As long as OVERTEMP is enabled, it gets re-enabled
+		 * in SSBL after SSBL performs temperature parking and
+		 * the chip cools down.
+		 */
+		en_avs_thresh = 0;
+	}
+	else {
+		en_avs_thresh = (info.saved_board.hardflags &
+			FSBL_HARDFLAG_OTPARK_MASK) ? 0 : 1;
+	}
+	avs_set_temp_threshold(STB_DEVICE, en_avs_thresh);
+	if (en_avs_thresh)
+		puts("ON");
+	else
+		puts("OFF");
 
 	if (do_shmoo_menu)
 		shmoo_menu(&(info.saved_board));
@@ -400,7 +404,6 @@ void fsbl_main(void)
 			puts("-");
 		}
 	}
-	dtu_preparation(b->nddr);
 
 	sec_memsys_region_disable();
 
@@ -410,7 +413,9 @@ void fsbl_main(void)
 
 	sec_scramble_sdram(warm_boot);
 
-#if (CFG_ZEUS5_0 || CFG_ZEUS5_1)
+	dtu_init(b);
+
+#if (CFG_ZEUS_VERSION >= 0x510)
 	dtu_load(b, warm_boot);
 #endif
 
@@ -421,22 +426,22 @@ void fsbl_main(void)
 	 */
 	restore_val = AON_REG(AON_REG_MAGIC_FLAGS);
 
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_0 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION >= 0x420)
 	if (warm_boot)
 		AON_REG(AON_REG_MAGIC_FLAGS) = BRCMSTB_S3_MAGIC;
 
-#if !CFG_ZEUS5_1
+#if (CFG_ZEUS_VERSION < 0x510)
 	sec_bfw_load(warm_boot);
 #endif
 #endif
 	if (warm_boot) {
 		fsbl_init_warm_boot(restore_val);
-#if (CFG_ZEUS5_0 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION >= 0x510)
 		dtu_verify(b->nddr);
 #endif
 	}
 
-#if (CFG_ZEUS4_2 || CFG_ZEUS5_1)
+#if (CFG_ZEUS_VERSION >= 0x420)
 	dtu_load(b, warm_boot);
 #endif
 
@@ -451,6 +456,10 @@ void fsbl_main(void)
 		if (ddr)
 			sec_lock_memc(i);
 	}
+
+#if (CFG_ZEUS4_2 || CFG_ZEUS5_1)
+	sec_check_rpmb_access();
+#endif
 
 	if (warm_boot)
 		fsbl_finish_warm_boot(restore_val);
@@ -516,7 +525,7 @@ void fsbl_main(void)
 #ifndef CFG_EMULATION
 void *copy_code(void)
 {
-#if (CFG_ZEUS5_1)
+#if CFG_SSBM
 	void *dst = (void *)SSBM_RAM_ADDR;
 #else
 	void *dst = (void *)SSBL_RAM_ADDR;
@@ -529,42 +538,30 @@ void *copy_code(void)
 	getchar();
 	getchar();
 #else
-#if (CFG_ZEUS4_1 || CFG_ZEUS4_2 || CFG_ZEUS5_0  || CFG_ZEUS5_1)
-	struct fsbl_flash_partition flash;
-	uint32_t ctrl_word, flash_offs, ssbl_size;
+#if (CFG_ZEUS_VERSION >= 0x410)
+	image_info  info;
 
-#if (CFG_ZEUS5_1)
-	flash_offs = DEV_RD(PARAM_SSBL_PART_OFFSET);
-	ssbl_size =  DEV_RD(PARAM_SSBL_SIZE);
-	ctrl_word = DEV_RD(PARAM_SSBL_CTRL);
-	flash.part_offs = DEV_RD(PARAM_SSBL_PART);
-#else
-	flash_offs = DEV_RD(SRAM_ADDR + PARAM_SSBL_PART_OFFSET);
-	ssbl_size =  DEV_RD(SRAM_ADDR + PARAM_SSBL_SIZE);
-	ctrl_word = DEV_RD(SRAM_ADDR + PARAM_SSBL_CTRL);
-	flash.part_offs = DEV_RD(SRAM_ADDR + PARAM_SSBL_PART);
-#endif
-	ssbl_size += 512;
-
-	/* partition size is in 1k size. Change it to byte */
-	flash.part_size = ((ctrl_word & PARAM_PART_SIZE_MASK) >>
-		PARAM_PART_SIZE_SHIFT) * 1024;
-	flash.cs = (ctrl_word & PARAM_IMAGE_CS_MASK) >> PARAM_IMAGE_CS_SHIFT;
+	info.image_type = IMAGE_TYPE_SSBL;
+	select_image(&info);
 
 	__puts("COPY CODE... ");
-#if (CFG_ZEUS5_1)
-	/* copy SSBM+SSBL to SSBM address */
-	flash_offs = flash_offs - SSBM_SIZE;
-	ssbl_size = ssbl_size + SSBM_SIZE;
-#endif
-	if (load_from_flash_ext(dst, flash_offs, ssbl_size, &flash) < 0)
+	if (load_from_flash_ext(dst, info.addr_offset, info.image_size, &(info.flash)) < 0)
 		sys_die(DIE_FLASH_READ_FAILURE, "flash read failure");
 #else
-	uint32_t flash_offs = SSBL_TEXT_OFFS;
-
 	__puts("COPY CODE... ");
-	if (load_from_flash(dst, flash_offs, SSBL_SIZE) < 0)
+	if (load_from_flash(dst, SSBL_TEXT_OFFS, SSBL_SIZE) < 0)
 		sys_die(DIE_FLASH_READ_FAILURE, "flash read failure");
+#endif
+#ifdef M64BIN_RAM_ADDR
+	if (a53_bootmode()) {
+		puts("DONE");
+
+		/* load M64BIN separately in case alternative copy is used */
+		__puts("COPY M64BIN... ");
+		if (load_from_flash((void *)M64BIN_RAM_ADDR,
+			M64BIN_TEXT_OFFS, M64BIN_SIZE) < 0)
+			sys_die(DIE_FLASH_READ_FAILURE, "flash read failure");
+	}
 #endif
 #endif
 	puts("DONE");

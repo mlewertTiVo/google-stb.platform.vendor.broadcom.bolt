@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -8,6 +8,7 @@
  ***************************************************************************/
 
 #include <board.h>
+#include <boardcfg.h>
 #include <board_init.h>
 #include <board_params.h>
 #include <bchp_sun_top_ctrl.h>
@@ -61,6 +62,31 @@ static struct fsbl_info *get_inf(void)
 	return inf;
 }
 
+static void print_cute_size(unsigned int mega)
+{
+	if (mega < 1024) {
+		xprintf("%dM", mega);
+		return;
+	}
+
+	mega /= 1024; /* Giga */
+	if (mega < 1024) {
+		xprintf("%dG", mega);
+		return;
+	}
+	/* no more possibility if the original precision of 'mega' is 16 bit */
+
+	mega /= 1024; /* Tera */
+	if (mega < 1024) {
+		xprintf("%dT", mega);
+		return;
+	}
+
+	mega /= 1024; /* Peta */
+	/* no more possibility if the original precision of 'mega' is 32 bit */
+	xprintf("%dP", mega);
+	return;
+}
 
 /*  *********************************************************************
     *  board_config_info()
@@ -94,19 +120,30 @@ void board_printinfo(void)
 
 			xprintf("DDR%d Frequency: %dMHz, ",
 				ddr->which, ddr->ddr_clock);
-			if (ddr->ddr_size < 1024)
-				xprintf("%dM", ddr->ddr_size);
-			else {
-				uint32_t ddr_size = ddr->ddr_size / 1024;
-
-				if (ddr_size < 1024)
-					xprintf("%dG", ddr_size);
-				else {
-					ddr_size /= 1024;
-					xprintf("%dT", ddr_size);
-				}
+			/* if ddr_width == 0 (LPDDR4)
+			 *     ddr_size contains rank size and #ranks
+			 * else if ddr_width > phy_width (LPDDR4)
+			 *     ddr_size is the size of 1st rank
+			 *     ddr_width is the size of 2nd rank
+			 * else (DDR3/4 or older LPDDR4 cfg)
+			 */
+			print_cute_size(
+				ddr->ddr_size & ~DDRINFO_NUM_RANKS_MASK);
+			if (ddr->ddr_width == 0) {
+				/* LPDDR4 */
+				unsigned int num_ranks =
+					ddr->ddr_size & DDRINFO_NUM_RANKS_MASK;
+				/* 0 == single rank, 1 == dual rank,,, */
+				num_ranks++; /* human friendly */
+				xprintf("x%d", num_ranks);
+			} else if (ddr->ddr_width > ddr->phy_width) {
+				/* LPDDR4 dual rank with different sizes */
+				xprintf("+");
+				print_cute_size(ddr->ddr_width);
+			} else {
+				xprintf("x%d", ddr->ddr_width);
 			}
-			xprintf("x%d phy:%d\t", ddr->ddr_width, ddr->phy_width);
+			xprintf(" phy:%d\t", ddr->phy_width);
 			xprintf("%08x @ %08x\n",
 				_MB(ddr->size_mb), _MB(ddr->base_mb));
 
@@ -201,32 +238,7 @@ void board_print_ddrspeed(void)
 
 unsigned int board_bootmode(void)
 {
-	uint32_t boot_strap_val;
-
-	boot_strap_val = REG(BCHP_SUN_TOP_CTRL_STRAP_VALUE_0);
-
-	boot_strap_val =
-	    (boot_strap_val &
-	     BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_MASK) >>
-	    BCHP_SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_SHIFT;
-
-	if (boot_strap_val <=
-	    SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_NAND_VALUE)
-		return BOOT_FROM_NAND;
-	else if (boot_strap_val <=
-		 SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_SPI_VALUE)
-		return BOOT_FROM_SPI;
-	else if (boot_strap_val <=
-		 SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_PNOR_VALUE)
-		return BOOT_FROM_NOR;
-	else if (boot_strap_val ==
-		 SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_eMMC_VALUE)
-		return BOOT_FROM_EMMC;
-	else if (boot_strap_val ==
-		 SUN_TOP_CTRL_STRAP_VALUE_0_strap_boot_shape_SPI_4B_VALUE)
-		return BOOT_FROM_SPI;
-	else
-		return BOOT_DEV_ERROR;
+	return boardcfg_bootmode();
 }
 
 bool board_does_strap_disable_pcie(void)
@@ -319,22 +331,6 @@ int is_pmap_valid(unsigned int pmap)
 	return BOLT_OK;
 }
 
-unsigned int board_pmap(void)
-{
-	struct fsbl_info *inf = board_info();
-	unsigned int pmap_id;
-
-	if (!inf || (inf->board_idx >= inf->n_boards))
-		return PMAP_MAX;
-
-	pmap_id = FSBL_HARDFLAG_PMAP_ID(inf->saved_board.hardflags);
-	if (pmap_id == FSBL_HARDFLAG_PMAP_BOARD) {
-		/* has not been overridden */
-		pmap_id = AVS_PMAP_ID(inf->board_types[inf->board_idx].avs);
-	}
-
-	return pmap_id;
-}
 #endif
 
 const char *board_name(void)

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -31,7 +31,8 @@ void bcm7260b0_bp3_apply_otp(void);
 static inline void bcm7260b0_bp3_apply_otp(void) { }
 #endif
 
-#if defined(CONFIG_BCM7260) || \
+#if defined(CONFIG_BCM7255) || \
+	defined(CONFIG_BCM7260) || \
 	defined(CONFIG_BCM7268) || \
 	defined(CONFIG_BCM7271) || \
 	defined(CONFIG_BCM7278)
@@ -40,12 +41,13 @@ void orion_hack_early_bus_cfg(void);
 static inline void orion_hack_early_bus_cfg(void) { }
 #endif
 
-#if defined(CONFIG_BCM7278)
-void dtu_preparation(unsigned int num_memc);
+#if defined(CONFIG_BCM7278B0)
+void bcm7278_disable_hdcp(void);
 #else
-static inline void dtu_preparation(unsigned int num_memc) { }
+static inline void bcm7278_disable_hdcp(void) { }
 #endif
 
+void hack_lpddr_reg(void);
 void hack_power_down_cpus(void);
 
 #endif /* _FSBL_HACKS_H */

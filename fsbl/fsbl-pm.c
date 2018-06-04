@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -19,6 +19,10 @@
 #include "psci.h"
 
 #define MCPB_DW2_LAST_DESC		(1 << 0)
+
+#if CFG_MON64
+void launch_mon64(uint32_t uart_base);
+#endif
 
 /* we're assuming the PA:VA mapping is a 1:1 identity function in FSBL */
 static inline dma_addr_t va_to_pa(void *p)
@@ -361,6 +365,10 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 		handle_boot_err(ERR_S3_DDR_HASH_FAILED);
 	}
 
+	/* For non-ZEUS 5.1, MICH is always disabled in FSBL.
+	 *  For ZEUS 5.1, MICH is disabled in SSBM if cold boot;
+	 *  MICH is disabled in FSBL if warm boot
+	 */
 	sec_mitch_check();
 
 	AON_REG(AON_REG_MAGIC_FLAGS) = restore_val;
@@ -370,7 +378,7 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 	__puts("OS reentry @ ");
 #ifndef SECURE_BOOT
 	if (!fsbl_pm_mem_verify(flags)) {
-#if (CFG_ZEUS5_1)
+#if CFG_SSBM
 		void (*reentry)(int);
 #else
 		void (*reentry)();
@@ -381,22 +389,26 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 		 * checks and jump (or jump via a psci call) straight to
 		 * the OS re-entry point.
 		 */
+#if CFG_SSBM
+		reentry = (void (*)())(uintptr_t)SSBM_RAM_ADDR;
+#else
 #ifdef STUB64_START
 		if (flags & S3_FLAG_PSCI_BOOT)
-#if (CFG_ZEUS5_1)
-			reentry = (void (*)())(uintptr_t)SSBM_RAM_ADDR;
-#else
 			reentry = (void (*)())(uintptr_t)psci_base;
-#endif
 		else
 #endif
 			reentry = (void (*)())(uintptr_t)params->reentry;
-
+#endif
 		writehex((uint32_t)reentry);
-		puts(" !verif");
+		puts(" !verify");
 
-#if (CFG_ZEUS5_1)
+#if CFG_SSBM
 		(*reentry)(0);
+#elif CFG_MON64
+		if (flags & S3_FLAG_BOOTED64)
+			launch_mon64(get_uart_base());
+		else
+			(*reentry)();
 #else
 		(*reentry)();
 #endif
@@ -404,14 +416,18 @@ void fsbl_finish_warm_boot(uint32_t restore_val)
 		sys_die(DIE_PM_RET_FROM_S3, "RET!"); /* Unexpected return. */
 	}
 #endif
+
 	if ((uintptr_t)anti_glitch_e > (uintptr_t)anti_glitch_d) {
+#if CFG_SSBM
+		glitch_addr = SSBM_RAM_ADDR / 2;
+#else
 #ifdef STUB64_START
 		if (flags & S3_FLAG_PSCI_BOOT)
 			glitch_addr = psci_base / 2;
 		else
 #endif
 			glitch_addr = (uint32_t)params->reentry / 2;
-
+#endif
 		writehex(glitch_addr * 2);
 		puts("");
 

@@ -315,7 +315,7 @@ static int __noreturn per_cpu_common_init(uint64_t per_cpu_stacktop, int is_64)
 				config->cpu[me].context_id,
 				&(config->cpu[me].lock));
 	}
-	
+
 	backstop("EXEC_RTN!", me);
 }
 
@@ -366,7 +366,7 @@ static uint32_t do_cpu_on(int me, uint64_t target_id,
 		config->cpu[other].state = CPU_FAIL_ON;
 		return PSCI_ERR_INTERNAL_FAILURE;
 	}
-	
+
 	if (config->debug)
 		__puts("BOOT");
 
@@ -662,11 +662,9 @@ static int boot_linux(uint64_t fn, uint64_t fdt,
 	/* https://www.kernel.org/doc/Documentation/arm64/booting.txt
 	 * We can keep i-cache and SMP coherency on.
 	 */
-	if (fn == OEM_FUNC_EXEC64_EL3) {
-#if CFG_TRUSTZONE_MON
+	if (fn == OEM_FUNC_EXEC64_EL3)
 		exec64_el3(fdt, linux_entry);
-#endif
-	} else if (fn == OEM_FUNC_EXEC64)
+	else if (fn == OEM_FUNC_EXEC64)
 		exec64(fdt, linux_entry);
 	else
 		exec32(fdt, linux_entry);

@@ -969,7 +969,20 @@ Boot an initrd kernel across the network. Example:
 Run <em>sgdisk</em> to create the software partitions:
 </p>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>      sgdisk -o /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">1</span><span style="color: #990000">:</span><span style="color: #993399">34</span><span style="color: #990000">:</span><span style="color: #993399">35</span> -c <span style="color: #993399">1</span><span style="color: #990000">:</span><span style="color: #FF0000">"macadr"</span> /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">2</span><span style="color: #990000">:</span><span style="color: #993399">36</span><span style="color: #990000">:</span><span style="color: #993399">163</span> -c <span style="color: #993399">2</span><span style="color: #990000">:</span><span style="color: #FF0000">"nvram"</span> /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">3</span><span style="color: #990000">:</span><span style="color: #993399">164</span><span style="color: #990000">:</span><span style="color: #993399">291</span> -c <span style="color: #993399">3</span><span style="color: #990000">:</span><span style="color: #FF0000">"wlan"</span> /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">4</span><span style="color: #990000">:</span><span style="color: #993399">292</span><span style="color: #990000">:</span><span style="color: #993399">16675</span> -c <span style="color: #993399">4</span><span style="color: #990000">:</span><span style="color: #FF0000">"kernel"</span> /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">5</span><span style="color: #990000">:</span><span style="color: #993399">16676</span><span style="color: #990000">:</span><span style="color: #993399">17699</span> -c <span style="color: #993399">5</span><span style="color: #990000">:</span><span style="color: #FF0000">"splash"</span> /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">6</span><span style="color: #990000">:</span><span style="color: #993399">17700</span><span style="color: #990000">:</span><span style="color: #993399">17827</span> -c <span style="color: #993399">6</span><span style="color: #990000">:</span><span style="color: #FF0000">"devtree"</span> /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">7</span><span style="color: #990000">:</span><span style="color: #993399">17828</span><span style="color: #990000">:</span><span style="color: #993399">17955</span> -c <span style="color: #993399">7</span><span style="color: #990000">:</span><span style="color: #FF0000">"bp30"</span> /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -a <span style="color: #993399">1</span> -n <span style="color: #993399">8</span><span style="color: #990000">:</span><span style="color: #993399">17956</span><span style="color: #990000">:</span><span style="color: #993399">18083</span> -c <span style="color: #993399">8</span><span style="color: #990000">:</span><span style="color: #FF0000">"bp31"</span> /dev/mmcblk<span style="color: #993399">0</span>
+      sgdisk -n <span style="color: #993399">9</span><span style="color: #990000">:</span><span style="color: #993399">18084</span><span style="color: #990000">:</span>`sgdisk -E /dev/mmcblk<span style="color: #993399">0</span>` -c <span style="color: #993399">9</span><span style="color: #990000">:</span><span style="color: #FF0000">"rootfs"</span> /dev/mmcblk<span style="color: #993399">0</span></tt></pre></div></div>
 </li>
 <li>
 <p>
@@ -977,7 +990,21 @@ Copy a kernel and rootfs to eMMC. The following example will copy a
       kernel and rootfs to the correct eMMC flash partitions for a 7278b0 system:
 </p>
 <div class="listingblock">
-<div class="content"></div></div>
+<div class="content"><!-- Generator: GNU source-highlight 3.1.8
+by Lorenzo Bettini
+http://www.lorenzobettini.it
+http://www.gnu.org/software/src-highlite -->
+<pre><tt>      mkfs<span style="color: #990000">.</span>ext4 /dev/mmcblk0p9
+      mount /dev/mmcblk0p9 /mnt/hd
+      cd /mnt/hd
+      tftp <span style="color: #990000">&lt;</span>TFTP IP ADDR<span style="color: #990000">&gt;</span> -g -r vmlinuz-arm
+      dd <span style="font-weight: bold"><span style="color: #0000FF">if</span></span><span style="color: #990000">=</span>vmlinuz-arm <span style="color: #009900">of</span><span style="color: #990000">=</span>/dev/mmcblk0p4
+      rm vmlinuz-arm
+      tftp <span style="color: #990000">&lt;</span>TFTP IP ADDR<span style="color: #990000">&gt;</span> -g -r nfsroot-arm<span style="color: #990000">.</span>tar<span style="color: #990000">.</span>bz2
+      tar -xjf nfsroot-arm<span style="color: #990000">.</span>tar<span style="color: #990000">.</span>bz2
+      mv romfs<span style="color: #990000">/*</span> <span style="color: #990000">.</span>
+      rmdir romfs
+      rm nfsroot-arm<span style="color: #990000">.</span>tar<span style="color: #990000">.</span>bz2</tt></pre></div></div>
 </li>
 <li>
 <p>
@@ -1068,7 +1095,7 @@ Confidential Property of Broadcom Ltd.</p></div>
 <div id="footer">
 <div id="footer-text">
 Last updated
- 2017-12-07 23:39:45 PST
+ 2018-06-01 16:37:41 PDT
 </div>
 </div>
 </body>

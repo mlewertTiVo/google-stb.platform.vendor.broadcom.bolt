@@ -32,6 +32,7 @@
 #include "avs_temp_reset.h"
 
 #include <aon_defs.h>
+#include <boardcfg.h>
 #include "boot_defines.h"
 
 /* These are build options -- enable define to enable the option */
@@ -396,9 +397,6 @@ static int load_code(void)
 		sizeof(uint32_t) - AVS_RESERVED_SPACE; /* in bytes */
 	image_info info;
 	int bypass_emmc_data_part = 1;
-#if (AVS_USE_EMMC_DATA_PART == 1)
-	uint32_t aon_reg;
-#endif
 
 #define round_up(x) (((x)+3)/4*4)
 
@@ -414,22 +412,15 @@ static int load_code(void)
 	if (AVS_DEBUG_STARTUP)
 		avs_print_string("Loading code...\n");
 
-	/* Check if we got here due to booting error from eMMC data partition.
-	 * If we got here because booting from data partition failed,
-	 * then clear the flag and bypass booting from eMMC data partition.
-	 * If we are booting from eMMC data partition for the first time
-	 * just set the eMMC data partition flag and use eMMC data partition.
+	/* if boot device is eMMC, the first image is alaway from the 
+	 * data partition. Otherwise eMMC data partition is not used.
 	 */
-#if (AVS_USE_EMMC_DATA_PART == 1)
-	aon_reg = BDEV_RD(BCHP_AON_CTRL_UNCLEARED_SCRATCH);
-	aon_reg |= AON_EMMC_DATA_PART_BOOT_AVS_BYPASS;
-	if (!(aon_reg & AON_EMMC_DATA_PART_BOOT_AVS)) {
-		bypass_emmc_data_part = 0;
-		aon_reg &= ~AON_EMMC_DATA_PART_BOOT_AVS_BYPASS;
-		aon_reg |= AON_EMMC_DATA_PART_BOOT_AVS;
+	if (boardcfg_bootmode() == BOOT_FROM_EMMC) {
+		uint32_t boot_status = sec_get_aon_boot_status(AON_FW_TYPE_AVS);
+		if ((boot_status & BOOT_IMAGE_MASK) == BOOT_1ST_IMAGE)
+			/* use eMMC data partition */
+			bypass_emmc_data_part = 0;
 	}
-	BDEV_WR(BCHP_AON_CTRL_UNCLEARED_SCRATCH, aon_reg);
-#endif
 
 	if (bypass_emmc_data_part != 1) {
 		/* read the code, data and security params to the buffer */
@@ -711,13 +702,8 @@ static void setup_avs_params(int en, int pmap_id)
 #ifdef PARAM_AVS_PARAM_0
 	/* read run time AVS params from secure */
 	/* parameter section, if they exist.    */
-#if CFG_ZEUS5_1
 	param0 = DEV_RD(SEC_PARAM_START_SRAM + PARAM_AVS_PARAM_0);
 	param1 = DEV_RD(SEC_PARAM_START_SRAM + PARAM_AVS_PARAM_1);
-#else
-	param0 = DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_0);
-	param1 = DEV_RD(SRAM_ADDR + PARAM_AVS_PARAM_1);
-#endif
 #endif
 
 #define DEFAULT_PSTATE 4 /* 0 starts up at fastest state, 4 at slowest */

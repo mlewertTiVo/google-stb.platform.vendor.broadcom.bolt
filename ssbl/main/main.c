@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -40,6 +40,10 @@
 #include <supplement-fsbl.h>
 #include <overtemp.h>
 #include <net_api.h>
+#include <arch_ops.h>
+#if CFG_MON64
+#include <mon64.h>
+#endif
 
 #include <bchp_sun_top_ctrl.h>
 
@@ -377,6 +381,14 @@ void bolt_start32(unsigned long ept, unsigned long param1,
 {
 	bolt_launch32(ept, param1, param2, param3);
 }
+
+#if CFG_MON64
+void bolt_start_mon64(unsigned long param1,
+				unsigned long param2, unsigned long param3)
+{
+	bolt_launch_mon64(0, param1, param2, param3);
+}
+#endif
 #endif
 
 /*  *********************************************************************
@@ -767,16 +779,18 @@ void bolt_main(int a, int b)
 	bolt_aegis_cr_unblock();
 #endif
 
-#ifdef SSBM_RAM_ADDR
-	/* With SSBM, SSBL, SSBM and PSCI are in the same 1MB page.
+#if CFG_SSBM
+	/* With SSBM, SSBL and SSBM are in the same 1MB page.
 	 * When SSBL page is set up, all 4KB pages are set up as XN
-	 * except SBSL text. Se up page used by SSBM and PSCI.
-	 * SSBM_SIZE includes SSBM and PSCI.
+	 * except SSBL text. Set up page used by SSBM.
 	 */
 	arch_mark_executable(SSBM_RAM_ADDR, SSBM_SIZE, true);
 	arch_mark_uncached(SSBM_RAM_ADDR, SSBM_SIZE);
 #endif
+
+#if !CFG_MON64
 	bolt_psci_init();
+#endif
 
 	/* Printout BOLT identification info */
 	say_hello(0);
@@ -791,6 +805,12 @@ void bolt_main(int a, int b)
 	bolt_startflags = sflags;
 
 	board_device_init();
+
+#if CFG_ZEUS5_1
+	/* flash has been initialized */
+	bfw_main();
+#endif
+
 #if (CFG_CMD_LEVEL >= 5)
 	bolt_config_info(1);
 #endif
@@ -834,8 +854,18 @@ void bolt_main(int a, int b)
 
 	board_check(0);
 
-#if (CFG_ZEUS5_1)
-	bfw_main();
+#if CFG_MON64
+#ifdef STUB64_START
+	if (arch_booted64()) {
+#ifdef SECURE_BOOT
+		/* Delayed mon64 decryption */
+		mon64_install(MBIN_RAM_ADDR, MBIN_SIZE, NULL);
+#endif
+		mon64_init();
+	}
+	else
+#endif
+	bolt_psci_init();
 #endif
 
 	/* Custom setup that is done just
@@ -1053,18 +1083,64 @@ static void reserve_memory_areas(void)
 	}
 
 #if CFG_TRUSTZONE_MON
-	/* TZ_MON ("BL31") follows right after SRR. */
+	/* TZ MON ("MON") follows right after SRR. */
 	retval = bolt_reserve_memory(_MB(CFG_TRUSTZONE_MON_SIZE_MB), _KB(4),
-		BOLT_RESERVE_MEMORY_OPTION_DT_NEW, "BL31");
+		BOLT_RESERVE_MEMORY_OPTION_DT_NEW, "MON");
 	if (retval < 0) {
-		err_msg("failed to reserve %d MB for BL31 %lld\n",
+		err_msg("failed to reserve %d MB for MON %lld\n",
 			CFG_TRUSTZONE_MON_SIZE_MB, retval);
 	}
 #endif
 
 #ifdef STUB64_START
-#ifdef SSBM_RAM_ADDR
-	/* With SSBM, SSBM_SIZE is SSBM+PSCI. */
+#ifdef BFW_RAM_BASE
+	/* Reserve BFW address. */
+	retval = bolt_reserve_memory(BFW_SIZE, BFW_RAM_BASE,
+		BOLT_RESERVE_MEMORY_OPTION_ABS |
+		BOLT_RESERVE_MEMORY_OPTION_DT_NEW,
+		"BFW");
+#endif
+
+#if CFG_MON64
+#if (CFG_SSBM)
+	/* Reserve SSBM memory */
+	retval = bolt_reserve_memory(SSBM_SIZE, SSBM_RAM_ADDR,
+		BOLT_RESERVE_MEMORY_OPTION_ABS |
+		BOLT_RESERVE_MEMORY_OPTION_DT_NEW,
+		"SSBM");
+#endif
+
+	if (arch_booted64()) {
+		/* Reserve MON64 memory */
+		retval = bolt_reserve_memory(MON64_SIZE, MON64_BASE,
+			BOLT_RESERVE_MEMORY_OPTION_ABS |
+			BOLT_RESERVE_MEMORY_OPTION_DT_NEW,
+			"MON64");
+		if (retval < 0) {
+			err_msg("failed to reserve %d bytes for MON64 %lld\n",
+				MON64_SIZE, retval);
+		}
+	} else {
+		/* Reserve PSCI32 memory */
+		retval = bolt_reserve_memory(PSCI_SIZE, PSCI_BASE,
+			BOLT_RESERVE_MEMORY_OPTION_ABS |
+			BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY,
+			"PSCI");
+		if (retval < 0) {
+			err_msg("failed to reserve %d bytes for PSCI %lld\n",
+				PSCI_SIZE, retval);
+		}
+	}
+#else /* CFG_MON64 */
+#if (CFG_SSBM && !CFG_ZEUS5_1)
+	retval = bolt_reserve_memory(SSBM_SIZE, SSBM_RAM_ADDR,
+		BOLT_RESERVE_MEMORY_OPTION_ABS |
+		BOLT_RESERVE_MEMORY_OPTION_DT_NEW,
+		"SSBM");
+#endif
+
+#if (CFG_SSBM && CFG_ZEUS5_1)
+	/* For ZEUS5_1, SSBM_SIZE is SSBM+PSCI. */
 	retval = bolt_reserve_memory(SSBM_SIZE, SSBM_RAM_ADDR,
 #else
 	retval = bolt_reserve_memory(PSCI_SIZE, PSCI_BASE,
@@ -1076,7 +1152,8 @@ static void reserve_memory_areas(void)
 		err_msg("failed to reserve %d bytes for PSCI %lld\n",
 			PSCI_SIZE, retval);
 	}
-#endif
+#endif /* CFG_MON64 */
+#endif /* STUB64_START */
 }
 
 static void reserve_memory_splash(void)
@@ -1103,6 +1180,7 @@ static void reserve_memory_splash(void)
 
 		bottom = ALIGN_TO(memlow, _KB(4));
 		amount = memtop - bottom;
+		amount = ALIGN_UP_TO(amount, _KB(4));
 		options = 1 << memc;
 		options |= BOLT_RESERVE_MEMORY_OPTION_ABS;
 		options |= BOLT_RESERVE_MEMORY_OPTION_DT_LEGACY;

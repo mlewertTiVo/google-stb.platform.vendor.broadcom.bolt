@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2017 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -20,7 +20,7 @@
 #define NAND_CHIP_NONE	-1
 #define NAND_CHIP_ONFI	-2
 
-
+/* from 'ddr' cfg command in a family build configuration */
 struct ddr_info {
 	uint32_t	which;
 	uint32_t	size_mb;
@@ -30,17 +30,33 @@ struct ddr_info {
 	*/
 	uint16_t	ddr_clock;
 	uint16_t	ddr_size; /* in Mbits, outside header and template */
+		/* [15..6] density in Mbits, max 16Gb, min 192Mb
+		 * [ 5..4] not used
+		 * [ 3..0] #ranks for LPDDR4, 0 == single, 1 == dual
+		 */
 	uint16_t	ddr_width;
+		/* if 0 (zero)
+		 *    DDR3/DDR4: INVALID
+		 *    LPDDR4: single rank or uniform sized ranks
+		 * if <= phy_width
+		 *    DDR3/DDR4: ddr_width is data bus width of DRAM device
+		 *    LPDDR4: #ranks is induced from phy_width / ddr_width
+		 * if > phy_width
+		 *    DDR3/DDR4: INVALID
+		 *    LPDDR4: ddr_width represents 2nd rank
+		 */
 	uint16_t	phy_width;
 
 	char		*tag; /* identifier for custom MCB, < DDR_TAGLEN */
 };
 
+#define DDRINFO_NUM_RANKS_MASK 0xF /* lower nibble of ddr_size/ddr_width */
 
 #define MCB_MAGIC1 0x4d33 /* 'M' '3' */
 #define MCB_MAGIC2 ((BOLT_VER_MAJOR<<8)|BOLT_VER_MINOR) /* BOLT_VERSION */
 #define MCB_MAGIC3 0xA152
 
+/* from mcb-${FAMILY}.c, which is the processed output of MCB's */
 struct memsys_info {
 	const uint32_t	*values;	/* Header      Template */
 
@@ -284,6 +300,32 @@ struct fsbl_info {
 	uint32_t shmoo_ver; /* VERSION 2 */
 	uint16_t srr_size_mb; /* VERSION 3 */
 	uint16_t srr_offset_mb; /* VERSION 3 */
+};
+
+/* Keep this in sync with existing hardware */
+struct bsc_regs_s {
+	uint32_t chip_address; /* BSC Chip Address And Read/Write Control */
+	uint32_t data_in0;     /* BSC Write Data Register 0 */
+	uint32_t data_in1;     /* BSC Write Data Register 1 */
+	uint32_t data_in2;     /* BSC Write Data Register 2 */
+	uint32_t data_in3;     /* BSC Write Data Register 3 */
+	uint32_t data_in4;     /* BSC Write Data Register 4 */
+	uint32_t data_in5;     /* BSC Write Data Register 5 */
+	uint32_t data_in6;     /* BSC Write Data Register 6 */
+	uint32_t data_in7;     /* BSC Write Data Register 7 */
+	uint32_t cnt_reg;      /* BSC Transfer Count Register */
+	uint32_t ctl_reg;      /* BSC Control Register */
+	uint32_t iic_enable;   /* BSC Read/Write Enable And Interrupt */
+	uint32_t data_out0;    /* BSC Read Data Register 0 */
+	uint32_t data_out1;    /* BSC Read Data Register 1 */
+	uint32_t data_out2;    /* BSC Read Data Register 2 */
+	uint32_t data_out3;    /* BSC Read Data Register 3 */
+	uint32_t data_out4;    /* BSC Read Data Register 4 */
+	uint32_t data_out5;    /* BSC Read Data Register 5 */
+	uint32_t data_out6;    /* BSC Read Data Register 6 */
+	uint32_t data_out7;    /* BSC Read Data Register 7 */
+	uint32_t ctlhi_reg;    /* BSC Control Register */
+	uint32_t scl_param;    /* BSC SCL Parameter Register */
 };
 
 #endif /* __FSBL_COMMON_H__ */

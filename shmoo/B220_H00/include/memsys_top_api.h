@@ -89,8 +89,8 @@ extern "C" {
 #define MEMSYS_FW_VERSION_ENG_SHIFT         0
     
 #define MEMSYS_FW_VERSION_MAJOR             5
-#define MEMSYS_FW_VERSION_MINOR             4
-#define MEMSYS_FW_VERSION_PATCH             2
+#define MEMSYS_FW_VERSION_MINOR             6
+#define MEMSYS_FW_VERSION_PATCH             1
 #define MEMSYS_FW_VERSION_ENG               0
     
 #define MEMSYS_FW_VERSION                                         \
@@ -376,6 +376,19 @@ typedef enum memsys_error_shmoo
     MEMSYS_ERROR_SHMOO_WR_SHMOO_WIDE_NO_WINDOW,             // word 4: 0x00000010
     MEMSYS_ERROR_OVERALL_INVALID_RANK_COUNT,                // word 4: 0x00000020
     MEMSYS_ERROR_SHMOO_LP4_WR_DMI_SHMOO_BAD_WINDOW,         // word 4: 0x00000040
+    MEMSYS_ERROR_SHMOO_ALERT_FAILED_TO_CLEAR,               // word 4: 0x00000080
+    MEMSYS_ERROR_OVERALL_UNSUPPORTED_DIMM_TYPE,             // word 4: 0x00000100
+    MEMSYS_ERROR_SHMOO_ZERO_OUT_MEMORY_FAILED,              // word 4: 0x00000200
+    MEMSYS_ERROR_SHMOO_DB_RD_EN_PHASE_TRAINING_FAILED,      // word 4: 0x00000400
+    MEMSYS_ERROR_SHMOO_DB_RD_CYC_TRAINING_FAILED,           // word 4: 0x00000800
+    MEMSYS_ERROR_SHMOO_DCPU_IMEM_MISMATCH,                  // word 4: 0x00001000
+    MEMSYS_ERROR_SHMOO_DCPU_DMEM_MISMATCH,                  // word 4: 0x00002000
+    MEMSYS_ERROR_SHMOO_DCPU_TIMEOUT,                        // word 4: 0x00004000
+    MEMSYS_ERROR_SHMOO_LP4_DQS_OSC_INVALID,                 // word 4: 0x00008000
+    MEMSYS_ERROR_SHMOO_LP4_DT_TIMEOUT,                      // word 4: 0x00100000
+    MEMSYS_ERROR_SHMOO_LP4_DT_OSC_START_FAIL,               // word 4: 0x00200000
+    MEMSYS_ERROR_SHMOO_LP4_DT_READ_OSC_FAIL,                // word 4: 0x00400000
+
     MEMSYS_ERROR_SHMOO_MAX
 } memsys_error_shmoo_e;
 

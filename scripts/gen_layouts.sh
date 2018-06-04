@@ -1,6 +1,6 @@
 #!/bin/bash
 # ***************************************************************************
-# Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+# Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
 #
 # THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
 # AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -73,7 +73,6 @@ do
  fi
  find_section $f "RESERVEDDATA" $Z
  find_section $f "ZEUS51MARK" $Z
- find_section $f "KEY" $Z
  find_section $f "BBL" $Z
  find_section $f "BFW" $Z
  find_section $f "FSBL" $Z

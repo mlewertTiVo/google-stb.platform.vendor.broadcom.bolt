@@ -1,5 +1,5 @@
 /***************************************************************************
- * Broadcom Proprietary and Confidential. (c)2016 Broadcom. All rights reserved.
+ * Broadcom Proprietary and Confidential. (c)2018 Broadcom. All rights reserved.
  *
  *  THIS SOFTWARE MAY ONLY BE USED SUBJECT TO AN EXECUTED SOFTWARE LICENSE
  *  AGREEMENT  BETWEEN THE USER AND BROADCOM.  YOU HAVE NO RIGHT TO USE OR
@@ -505,12 +505,12 @@ static int sf2_mdio_op(sf2_softc *softc, uint32_t opcode,
 	cmd_data = MDIO_START_BUSY | opcode |
 			(phy << MDIO_PMD_SHIFT) |
 			(reg << MDIO_REG_SHIFT) | *data;
-	BDEV_WR(softc->base + MDIO_CMD, cmd_data);
+	DEV_WR(softc->base + MDIO_CMD, cmd_data);
 
 	bolt_msleep(5);
 
 	do {
-		cmd_data = BDEV_RD(softc->base + MDIO_CMD);
+		cmd_data = DEV_RD(softc->base + MDIO_CMD);
 		/* Broadcom BCM53125 external switches have a hardware bug that
 		 * make them fail to release the MDIO lines during turn-around
 		 * time, which gets flagged by the MDIO controller as a read
