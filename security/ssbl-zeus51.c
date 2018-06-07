@@ -12,6 +12,7 @@
 #include <bchp_aon_ctrl.h>
 #include <bchp_bsp_cmdbuf.h>
 #include <bchp_bsp_glb_control.h>
+#include "bchp_bsp_control_intr2.h"
 #include <bchp_common.h>
 #include <board.h>
 #include <boardcfg.h>
@@ -35,61 +36,63 @@
 	BCHP_BSP_GLB_CONTROL_GLB_DWNLD_STATUS_DISASTER_RECOVER_MASK
 #endif
 
-#define TEMP_BUF_SIZE 256
+#define BSP_DELAY_MS    10
+#define CMD_INBUFFER2   (2 * 384)       /* 0x300 */
+#define CMD_OUTBUFFER2  (3 * 384)       /* 0x480 */
+#define CMD_BUFFER_SIZE 384
 
-static int __maybe_unused sec_check_for_IRDY2(void)
+#define IRDY_REGISTER   BCHP_BSP_GLB_CONTROL_GLB_IRDY2
+#define IRDY_MASK       BCHP_BSP_GLB_CONTROL_GLB_IRDY2_CMD_IRDY2_MASK
+static void sec_check_for_IRDY2(void)
 {
-	return BOLT_OK;
+	while (!(IRDY_MASK & REG(IRDY_REGISTER) ));
 }
 
-static int __maybe_unused sec_check_for_OLOAD2(void)
+#define OLOAD2_REGISTER BCHP_BSP_CONTROL_INTR2_CPU_STATUS
+#define OLOAD2_MASK     BCHP_BSP_CONTROL_INTR2_CPU_STATUS_OLOAD2_INTR_MASK
+static void sec_check_for_OLOAD2(void)
 {
-	return BOLT_OK;
+	do {
+		sleep_ms(BSP_DELAY_MS);
+	} while (!(OLOAD2_MASK & REG(OLOAD2_REGISTER) ));
 }
 
-
-static int __maybe_unused sec_do_bsp_cmd_prologue(void)
+static void sec_do_bsp_cmd_prologue()
 {
-	return BOLT_OK;
+	int i;
+	sec_check_for_IRDY2();
+	for(i = 0; i < (CMD_BUFFER_SIZE/4); i += 4)
+		REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE + CMD_INBUFFER2 + i) = 0;
 }
 
-static int __maybe_unused sec_do_bsp_cmd_epilogue(void)
+static void sec_do_bsp_cmd_epilogue()
 {
-	return BOLT_OK;
+	REG(BCHP_BSP_GLB_CONTROL_GLB_ILOAD2) = 0x1;
+	sec_check_for_OLOAD2();
+	BDEV_WR_F(BSP_CONTROL_INTR2_CPU_CLEAR, OLOAD2_INTR, 1);
 }
 
-#define CMD_INBUFFER2		(2 * 384) /* 0x300 */
-#define CMD_OUTBUFFER2		(3 * 384) /* 0x480 */
 int sec_get_random_num(uint32_t *dest, int num)
 {
 	uint32_t status, *param = (uint32_t *)(BCHP_PHYSICAL_OFFSET +
 		BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE + CMD_OUTBUFFER2 + 24);
+   uint32_t field = (uint16_t)num;
 
 	if (!dest || (num > SEC_MAX_NUM_RANDOM_NUMBERS))
 		return BOLT_ERR;
 
-	if (sec_check_for_IRDY2())
-		return BOLT_ERR;
+	sec_do_bsp_cmd_prologue();
 
 	memset(dest, 0, sizeof(uint32_t) * num);
 
-	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2) = 0x10;
-	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2 +  4) = 0x22;
-	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2 +  8) = 0xABCDEF00;
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2+20) = 0xFF001100;
+	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2+24) = field;
 
-	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2 + 12) = 0xF255AA0D;
-	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2 + 16) = 0x789A000C;
-	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2 + 20) = 0;
-	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2 + 24) = 0;
-	REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_INBUFFER2 + 28) =
-		sizeof(uint32_t) * num;
-
-	if (sec_do_bsp_cmd_epilogue())
-		return BOLT_ERR;
+	sec_do_bsp_cmd_epilogue();
 
 	BARRIER(); /* complete */
 
-	status = REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE + CMD_OUTBUFFER2 + 20);
+	status = REG(BCHP_BSP_CMDBUF_DMEMi_ARRAY_BASE+CMD_OUTBUFFER2+20);
 	if (status)
 		return BOLT_ERR;
 
