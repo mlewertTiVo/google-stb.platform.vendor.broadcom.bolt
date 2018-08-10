@@ -1,0 +1,9 @@
+/* TI INA219 on BSCD (aka BSC_M3) for some boards */
+&bscd {
+	ina219@40 {
+		compatible = "ti,ina219";
+		reg = <0x40>;
+		/* in micro omhms */
+		shunt-resistor = <20300>;
+	};
+};
