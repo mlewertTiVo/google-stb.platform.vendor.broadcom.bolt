@@ -1,0 +1,87 @@
+#Client Name	7445			Comments	Instance Name	Client Base Port Name
+#	DDR0 Client#	"DDR1
+#Client#"	"DDR2
+#Client#"
+XPT_WR_RS	0			 "Transport: RSBUFF write"	core_xpt_inst	wr_rs
+XPT_WR_XC	1			 "Transport: XCBUFF write"	core_xpt_inst	wr_cdb
+XPT_WR_CDB	2			 "Transport: RAVE CDB write"	core_xpt_inst	wr_xc
+XPT_WR_ITB_MSG	3			 "Transport: RAVE ITB & Msg write"	core_xpt_inst	wr_itb_msg
+XPT_RD_RS	4			 "Transport: RSBUFF read"	core_xpt_inst	rd_rs
+XPT_RD_XC_RMX_MSG	5			 "Transport: XCBUFF Remux & Msg read"	core_xpt_inst	rd_xc_rave
+XPT_RD_XC_RAVE	6			 "Transport: XCBUFF RAVE read"	core_xpt_inst	rd_xc_rmx_msg
+XPT_RD_PB	7			 "Transport: Playback read"	core_xpt_inst	rd_pb
+XPT_WR_MEMDMA	8			 "DMA Write"	core_xpt_inst	wr_memdma
+XPT_RD_MEMDMA	9			 "DMA Read"	core_xpt_inst	rd_memdma
+GENET0_WR	10			 "Ethernet Wr"	onoff_genet_top_inst	genet0_wr
+GENET0_RD	11			 "Ethernet Rd"	onoff_genet_top_inst	genet0_rd
+GENET1_WR	12			 "Ethernet Wr"	onoff_genet_top_inst	genet1_wr
+GENET1_RD	13			 "Ethernet Rd"	onoff_genet_top_inst	genet1_rd
+MOCA_MIPS	16			 "MoCA MIPS port "	mocamac_top_inst	moca
+BSP	22			 "BSP Security"	sectop_inst	bsp
+SCPU	23			 "Sage Security"	sectop_inst	scpu
+FLASH_DMA	24			 "FLASH DMA"	hif_inst	sdio_card
+SDIO_EMMC	26			 "SDIO for NAND flash"	hif_inst	sdio_emmc
+SDIO_CARD	27			 "SDIO card"	hif_inst	flash_dma
+TPCAP	28			 "Test Port Capture"	sys_ctrl_inst	tpcap
+MCIF_RD	29			 "UPG MCIF read"	sys_ctrl_inst	mcif0_rd
+MCIF_WR	30			 "UPG MCIF write"	sys_ctrl_inst	mcif0_wr
+UART_DMA_RD	31			 "UART DMA Read"	sys_ctrl_inst	uart_dma_rd
+UART_DMA_WR	32			 "UART DMA Write"	sys_ctrl_inst	uart_dma_wr
+USB_HI_0	33			 "USB 2.0"	usb0_top_inst	usb0_ehci
+USB_LO_0	34			 "USB 1.1"	usb0_top_inst	usb0_ohci
+USB_X_WRITE_0	35			 "USB 3.0 Write"	usb0_top_inst	usb0_xhci_write
+USB_X_READ_0	36			 "USB 3.0 Read"	usb0_top_inst	usb0_xhci_read
+USB_X_CTRL_0	37			 "USB 3.0 Control"	usb0_top_inst	usb0_xhci_ctrl
+RAAGA	40			 "Audio DSP0 Decode"	raaga_dsp_top_wrap_inst	raaga0_cl0
+RAAGA_1	41			 "Audio DSP0 Decode + video"	raaga_dsp_top_wrap_inst	raaga0_cl1
+AUD_AIO	44			 "Audio FlexMux and Mix - AIO"	vec_aio_gfx_top_inst	aio
+VICE_VIP0_INST0	55			 "VICE VIP0 Inst0"	vice2_0_inst	vip0_inst0
+VICE_VIP1_INST0	56			 "VICE VIP1 Inst0"	vice2_0_inst	vip1_inst0
+HVD0_DBLK	73			 "HVD1 Deblock Unit"	hvd_sid1_top_inst	db
+HVD0_DBLK1	74			 "HVD1 Deblock Unit 1"	hvd_sid1_top_inst	db2
+HVD0_ILCPU	75			 "HVD1 ARC CPU Inner loop"	hvd_sid1_top_inst	il
+HVD0_OLCPU	76			 "HVD1 ARC CPU Outer loop"	hvd_sid1_top_inst	ol
+HVD0_CAB	77			 "HVD1 CABAC Bit/Bin processing"	hvd_sid1_top_inst	cab
+HVD0_ILSI	78			 "HVD1 Symbol Interpreter"	hvd_sid1_top_inst	si
+SID	87			 "Still Image Decoder"	hvd_sid1_top_inst	sid
+BVN_MAD_PIX_FD	94			 "Mad_R pixel feed"	bvn_top	mvp0_pix_rd
+BVN_MAD_QUANT	95			 "Mad_R QM"	bvn_top	mvp0_quant
+BVN_MAD_PIX_CAP	96			 "Mad_R pixel cap"	bvn_top	mvp0_pix_wr
+BVN_MFD0	106			 "MPEG Feeder 0: Setting 0"	bvn_top	mfd0_0
+BVN_MFD0_1	107			 "MPEG Feeder 0: Setting 1"	bvn_top	mfd0_1
+BVN_MFD1	108			 "MPEG Feeder 1: Setting 0"	bvn_top	mfd1_0
+BVN_MFD1_1	109			 "MPEG Feeder 1: Setting 1"	bvn_top	mfd1_1
+BVN_VFD0	118			 "Video Feeder 0"	bvn_top	vfd0
+BVN_VFD1	119			 "Video Feeder 1"	bvn_top	vfd1
+BVN_CAP0	126			 "Video Capture 0"	bvn_top	cap0
+BVN_CAP1	127			 "Video Capture 1"	bvn_top	cap1
+BVN_GFD0	134			 "Graphics Feeder 0"	bvn_top	gfd0
+BVN_GFD1	135			 "Graphics Feeder 1"	bvn_top	gfd1
+BVN_RDC	144			 "Register DMA"	bvn_top	rdc
+VEC_VBI_ENC0	145			 "VBI Encode 0"	vec_aio_gfx_top	vec0
+M2MC_0	147			 "2D Graphics Compositor"	vec_aio_gfx_top	m2mc0
+M2MC_1	148			 "2D Graphics Compositor- inst 2"	vec_aio_gfx_top	m2mc01
+M2MC_2	149			 "2D Graphics Compositor- inst 2"	vec_aio_gfx_top	m2mc02
+LEAP	176			 "Lean Acquistion Processosr"	leap_top	scb_req
+ISDBT_TDI	177			 "THD - ISDB-T Client"	t2_bicm_top	t2r_isdbt
+DVBT2_DFRM0_WR	178			 "DVBT - Write Client"	t2_bicm_top	t2r_dfrm0
+DVBT2_DFRM1_RD	179			 "DVBT Read Client"	t2_bicm_top	t2r_dfrm1
+HOST_CPU_MCP_R_HI	200			 "MCP Read High Priority"	eaglet_top
+HOST_CPU_MCP_R_LO	201			 "MCP Read Low Priority"	eaglet_top
+HOST_CPU_MCP_W_HI	202			 "MCP Write High Priority"	eaglet_top
+HOST_CPU_MCP_W_LO	203			 "MCP Write Low Priority"	eaglet_top
+V3D_MCP_R_HI	204			 "V3D_0"	v3d_top
+V3D_MCP_R_LO	205			 "V3D_0"	v3d_top
+V3D_MCP_W_HI	206			 "V3D_1"	v3d_top
+V3D_MCP_W_LO	207			 "V3D_1"	v3d_top
+HVD0_MOCOMP	216			 "HVD Motion Comp and DBlk Reads"	hvd_sid1_top_inst	
+				Unused PFRI		
+				Unused LMB		
+TRACELOG	248			TraceLog		
+MEMC_RESERVED_0	249			Reserved for MEMC use		
+ZCQS_ENGINE	250			DRAM ZQ Calibration Short client		
+MSA	251			MSA (Memory Soft Access)		
+DIS0	252			DIS (DRAM Interface Stress) #0		
+DIS1	253			DIS (DRAM Interface Stress) #1		
+DRAM_INIT_ZQCS	254			DRAM Init (Being updated to ZQCS)		
+REFRESH	255			Refresh
