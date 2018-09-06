@@ -171,7 +171,7 @@ static int fastboot_flash_write_sparse_image(const char *devname,
 {
 	int res = BOLT_OK;
 	int chunk_hdr_offset;
-	unsigned int byte_cnt, amtcopy, limit, offset;
+	unsigned int byte_cnt, amtcopy, limit, offset, fill_cnt, fill_this_cnt;
 	unsigned long long curr_write_offset;
 	unsigned long long curr_write_offset_org;
 	unsigned char *curr_read_ptr;
@@ -276,9 +276,16 @@ static int fastboot_flash_write_sparse_image(const char *devname,
 			curr_write_offset_org = curr_write_offset;
 			curr_read_ptr = ((unsigned char *)c_header) + s_header->chunk_hdr_sz;
 
-			limit = FILL_MAX_SIZE;
-			if (byte_cnt > DATA_MAX_SIZE) {
-				limit = DATA_MAX_SIZE;
+			fill_cnt = byte_cnt;
+			while (fill_cnt > 0)
+			{
+				limit = fill_cnt;
+				fill_this_cnt = fill_cnt;
+				if (fill_cnt > DATA_MAX_SIZE) {
+					fill_this_cnt = DATA_MAX_SIZE;
+					limit = DATA_MAX_SIZE;
+				}
+				byte_cnt = fill_this_cnt;
 				os_memset(fill_staging_buffer, 0, DATA_MAX_SIZE);
 				offset = 0;
 				while (limit != 0) {
@@ -288,27 +295,29 @@ static int fastboot_flash_write_sparse_image(const char *devname,
 				}
 				limit = DATA_MAX_SIZE;
 				curr_read_ptr = fill_staging_buffer;
-			}
 
-			while (byte_cnt >= limit)
-			{
-				amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, limit);
-				if (amtcopy != limit) {
-					os_printf("Failed to fill image. Remaining chunk: %d\n", remaining_chunks);
-					res = BOLT_ERR_IOERR;
-					goto exit;
+				while (byte_cnt >= limit)
+				{
+					amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, limit);
+					if (amtcopy != limit) {
+						os_printf("Failed to fill image. Remaining chunk: %d\n", remaining_chunks);
+						res = BOLT_ERR_IOERR;
+						goto exit;
+					}
+					curr_write_offset += amtcopy;
+					byte_cnt -= amtcopy;
+					poll_task();
 				}
-				curr_write_offset += amtcopy;
-				byte_cnt -= amtcopy;
-				poll_task();
-			}
-			if (byte_cnt) {
-				amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, byte_cnt);
-				if (amtcopy != byte_cnt) {
-					os_printf("Failed to write image. Remaining chunk: %d\n", remaining_chunks);
-					res = BOLT_ERR_IOERR;
-					goto exit;
+				if (byte_cnt) {
+					amtcopy = bolt_writeblk(fd, (bolt_offset_t) curr_write_offset, curr_read_ptr, byte_cnt);
+					if (amtcopy != byte_cnt) {
+						os_printf("Failed to write image. Remaining chunk: %d\n", remaining_chunks);
+						res = BOLT_ERR_IOERR;
+						goto exit;
+					}
 				}
+				if (fill_cnt > fill_this_cnt) fill_cnt -= fill_this_cnt;
+				else fill_cnt = 0;
 			}
 			/* restore curr_write_offset for writing next chunk */
 			curr_write_offset = curr_write_offset_org;
