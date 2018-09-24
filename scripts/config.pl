@@ -899,7 +899,8 @@ my %dt_autogen = map {($_,'')}
 	pwm watchdog upg_main_irq upg_main_aon_irq upg_bsc_irq
 	upg_bsc_aon_irq upg_spi_aon_irq nexus_upg_main_irq
 	nexus_upg_main_aon_irq nexus_upg_bsc_irq nexus_upg_bsc_aon_irq
-	nexus_upg_spi_aon_irq wlan v3d_mmu ext_moca sun_rng/;
+	nexus_upg_spi_aon_irq wlan v3d_mmu ext_moca sun_rng upg_aux_aon_l2
+	nexus_upg_aux_aon_irq/;
 my $Current = Board->new("");
 my $Family = $Current;
 my $ProcessingState = eStateInNone;
@@ -984,6 +985,7 @@ sub get_bchp_info($) {
 		'bchp_webhif_timer.h',
 		'bchp_watchdog.h',
 		'bchp_v3d_hub_ctl.h',
+		'bchp_upg_aux_aon_intr2.h',
 		);
 
 	@incs = map { "$arg_rdb_dir/$_" } @incs;
@@ -4031,6 +4033,9 @@ sub process_dev_tree($)
 		BcmUtils::get_num_sun_rng($rh->{rh_defines}) : 0;
 	my $clks_file = "./config/clks-" . $family->{familyname} . ".plx";
 
+	my $num_upg_aux_aon_l2 = $dt_autogen{upg_aux_aon_l2} ?
+		BcmUtils::get_num_upg_aux_aon_l2($rh->{rh_defines}) : 0;
+
 	map { $dt_autogen{$_} ||= {} } keys %dt_autogen;
 
 	# These device nodes belong at the root of the DT
@@ -4110,10 +4115,16 @@ sub process_dev_tree($)
 	} else {
 		die "$P: GISB ARB needs a L2 interrupt controller\n";
 	}
+	BcmDt::Devices::add_l2_interrupt($rdb, $rh, $dt_autogen{upg_aux_aon_l2},
+					 "upg_aux_aon_intr2")
+		if ($num_upg_aux_aon_l2 && !empty($dt_autogen{upg_aux_aon_l2}));
+	BcmDt::Devices::add_nexus_upg_aux_aon_irq($dt, $rh, $dt_autogen{nexus_upg_aux_aon_irq})
+		if !empty($dt_autogen{upg_aux_aon_l2}) &&
+		    !empty($dt_autogen{nexus_upg_aux_aon_irq}) && $num_upg_aux_aon_l2;
 	BcmDt::Devices::add_avs_cpu($rdb, $rh)
 		if ($num_avs_cpu && !empty($dt_autogen{avs_cpu}));
 	BcmDt::Devices::add_waketimer($rdb, $rh, $dt_autogen{waketimer},
-		"aon_pm_l2", -f $clks_file)
+		"aon_pm_l2", "upg_aux_aon_intr2", -f $clks_file)
 		if ($num_waketimer && !empty($dt_autogen{waketimer}));
 	BcmDt::Devices::add_avs_tmon($rdb, $rh, $dt_autogen{avs_tmon},
 		"avs_host_l2")

@@ -1989,21 +1989,22 @@ sub add_gisb_arb($$$$)
 	$dt->add_node(DevTree::node->new($t));
 }
 
-sub add_waketimer($$$$$)
+sub add_waketimer($$$$$$)
 {
-	my ($dt, $rh, $info, $l2_intr, $clks_file_exists) = @_;
+	my ($dt, $rh, $info, $l2_intr, $l2_aux_intr, $clks_file_exists) = @_;
 	my $bchp_defines = $rh->{rh_defines};
 	my %defaults = (compatible => 'brcm,brcmstb-waketimer');
 	override_default(\%defaults, $info);
 	my ($reg, $size) = get_reg_range($rh, "BCHP_WKTMR");
-	my $intr = find_l2_interrupt($bchp_defines, "AON_PM_L2", "TIMER");
+	my @intr;
+	$intr[0] = find_l2_interrupt($bchp_defines, "AON_PM_L2", "TIMER");
+	$intr[1] = find_l2_interrupt($bchp_defines, "UPG_AUX_AON_INTR2", "WKTMR_ALARM");
+	my @intr_prop = (
+		{"name" => "TIMER", "irq" => $intr[0], "parent_intc" => $l2_intr . "_intc"},
+		{"name" => "WKTMR_ALARM", "irq" => $intr[1], "parent_intc" => $l2_aux_intr . "_intc"},
+	);
 
 	my $t = sprintf("waketimer\@%x {\n", $reg);
-	my %intr_prop = (
-		"name" => "timer",
-		"parent_intc" => $l2_intr . "_intc",
-		"irq" => $intr,
-	);
 	if ($clks_file_exists) {
 		$defaults{"clocks"} = [ 'phandle', 'upg_fixed'];
 	} else {
@@ -2011,7 +2012,7 @@ sub add_waketimer($$$$$)
 	}
 	$t .= output_default(\%defaults);
 	$t .= sprintf("reg = <0x%x 0x%x>;\n", $reg, $size);
-	$t .= output_interrupt_prop($rh, \%intr_prop);
+	$t .= output_interrupt_prop($rh, \@intr_prop);
 	$t .= "};\n";
 
 	$dt->add_node(DevTree::node->new($t));
@@ -3420,6 +3421,13 @@ sub add_nexus_upg_spi_aon_irq($$$)
 	my ($dt, $rh, $info) = @_;
 
 	__add_nexus_irq($dt, $rh, "upg_spi_aon_irq");
+}
+
+sub add_nexus_upg_aux_aon_irq($$$)
+{
+	my ($dt, $rh, $info) = @_;
+
+	__add_nexus_irq($dt, $rh, "upg_aux_aon_intr2");
 }
 
 sub add_rf4ce($$$$$$)

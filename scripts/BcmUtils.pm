@@ -779,6 +779,12 @@ sub get_num_avs_host_l2($)
 	return defined($bchp_defines->{BCHP_AVS_HOST_L2_REG_START}) ? 1 : 0;
 }
 
+sub get_num_upg_aux_aon_l2($)
+{
+	my $bchp_defines = shift;
+	return defined($bchp_defines->{BCHP_UPG_AUX_AON_INTR2_REG_START}) ? 1 : 0;
+}
+
 sub get_num_avs_cpu($)
 {
 	my $bchp_defines = shift;
@@ -808,6 +814,7 @@ sub get_l2_intc_mapping($)
 		"upg_bsc_irq" => "UPG_BSC",
 		"upg_bsc_aon_irq" => "UPG_BSC_AON",
 		"upg_spi_aon_irq" => "UPG_SPI",
+		"upg_aux_aon_intr2" => "UPG_AUX_AON",
 	);
 
 	return $l2_irq_subst{$l2_intc};
@@ -889,6 +896,7 @@ sub l2_intc_can_wake($)
 		"upg_main_aon_irq" => 1,
 		"upg_bsc_aon_irq" => 1,
 		"upg_spi_aon_irq" => 1,
+		"upg_aux_aon_intr2" => 1,
 	);
 
 	return exists($wake_intcs{$l2_intc});

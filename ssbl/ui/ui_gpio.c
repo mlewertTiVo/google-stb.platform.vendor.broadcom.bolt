@@ -43,7 +43,9 @@ static struct gio_regset_s gio_regset[] = {
 	defined(CONFIG_BCM7250B0) || \
 	defined(CONFIG_BCM7268B0) || \
 	defined(CONFIG_BCM7271B0) || \
-	defined(CONFIG_BCM7260A0)
+	defined(CONFIG_BCM7260A0) || \
+	defined(CONFIG_BCM7260B0) || \
+	defined(CONFIG_BCM7278B0)
 	{
 		.oden = BCHP_GIO_ODEN_LO,	/* GPIO[31:0] */
 		.data = BCHP_GIO_DATA_LO,
@@ -74,9 +76,12 @@ static struct gio_regset_s gio_regset[] = {
 		.level = BCHP_GIO_LEVEL_EXT_HI,
 		.stat = BCHP_GIO_STAT_EXT_HI,
 	},
-#if defined(CONFIG_BCM7439B0) || defined(CONFIG_BCM7250B0)
+#if defined(CONFIG_BCM7439B0) || \
+	defined(CONFIG_BCM7250B0) || \
+	defined(CONFIG_BCM7278B0)
+
 	{
-		.oden = BCHP_GIO_ODEN_EXT2,	/* GPIO[111:96] */
+		.oden = BCHP_GIO_ODEN_EXT2,	/* GPIO[111:96] || GPIO[108:96] */
 		.data = BCHP_GIO_DATA_EXT2,
 		.iodir = BCHP_GIO_IODIR_EXT2,
 		.ec = BCHP_GIO_EC_EXT2,
@@ -93,7 +98,9 @@ static struct gio_regset_s gio_regset[] = {
 	defined(CONFIG_BCM7250B0) || \
 	defined(CONFIG_BCM7268B0) || \
 	defined(CONFIG_BCM7271B0) || \
-	defined(CONFIG_BCM7260A0)
+	defined(CONFIG_BCM7260A0) || \
+	defined(CONFIG_BCM7260B0) || \
+	defined(CONFIG_BCM7278B0)
 static struct gio_regset_s gio_aon_regset[] = {
 	{
 		/* AON_GPIO[17:0] for CONFIG_BCM7439B0 */
@@ -101,6 +108,8 @@ static struct gio_regset_s gio_aon_regset[] = {
 		/* AON_GPIO[27:0] for CONFIG_BCM7268B0 */
 		/* AON_GPIO[27:0] for CONFIG_BCM7271B0 */
 		/* AON_GPIO[27:0] for CONFIG_BCM7260A0 */
+		/* AON_GPIO[27:0] for CONFIG_BCM7260B0 */
+		/* AON_GPIO[16:0] for CONFIG_BCM7278B0 */
 		.oden = BCHP_GIO_AON_ODEN_LO,
 		.data = BCHP_GIO_AON_DATA_LO,
 		.iodir = BCHP_GIO_AON_IODIR_LO,
@@ -147,20 +156,31 @@ struct gio_regset_s *gio_offset_to_regset(int boffs, uint32_t *mask)
 		return &(gio_regset[1]);
 	}
 
-#if defined(CONFIG_BCM7439B0) || defined(CONFIG_BCM7250B0)
+#if defined(CONFIG_BCM7260A0) || \
+	defined(CONFIG_BCM7260B0) || \
+	defined(CONFIG_BCM7268B0) || \
+	defined(CONFIG_BCM7271B0)
+	if ((boffs >= 64) && (boffs <= 82)) {
+		*mask = (1 << (boffs - 64));
+		return &(gio_regset[2]);
+	}
+#elif defined(CONFIG_BCM7439B0) || \
+	defined(CONFIG_BCM7250B0) || \
+	defined(CONFIG_BCM7278B0)
 	if ((boffs >= 64) && (boffs <= 95)) {
 		*mask = (1 << (boffs - 64));
 		return &(gio_regset[2]);
 	}
-
-	if ((boffs >= 96) && (boffs <= 111)) {
+#elif defined(CONFIG_BCM7278B0)
+	if ((boffs >= 96) && (boffs <= 108)) {
 		*mask = (1 << (boffs - 96));
 		return &(gio_regset[3]);
 	}
-#elif defined(CONFIG_BCM7260A0) || defined(CONFIG_BCM7268B0) || defined(CONFIG_BCM7271B0)
-	if ((boffs >= 64) && (boffs <= 82)) {
-		*mask = (1 << (boffs - 64));
-		return &(gio_regset[2]);
+#elif defined(CONFIG_BCM7439B0) || \
+	defined(CONFIG_BCM7250B0)
+	if ((boffs >= 96) && (boffs <= 111)) {
+		*mask = (1 << (boffs - 96));
+		return &(gio_regset[3]);
 	}
 #endif
 
@@ -169,7 +189,12 @@ struct gio_regset_s *gio_offset_to_regset(int boffs, uint32_t *mask)
 
 struct gio_regset_s *gio_aon_offset_to_regset(int boffs, uint32_t *mask)
 {
-#if defined(CONFIG_BCM7439B0)
+#if defined(CONFIG_BCM7278B0)
+	if ((boffs >= 0) && (boffs <= 16)) {
+		*mask = (1 << boffs);
+		return &(gio_aon_regset[0]);
+	}
+#elif defined(CONFIG_BCM7439B0)
 	if ((boffs >= 0) && (boffs <= 17)) {
 		*mask = (1 << boffs);
 		return &(gio_aon_regset[0]);
@@ -179,7 +204,10 @@ struct gio_regset_s *gio_aon_offset_to_regset(int boffs, uint32_t *mask)
 		*mask = (1 << boffs);
 		return &(gio_aon_regset[0]);
 	}
-#elif defined(CONFIG_BCM7260A0) || defined(CONFIG_BCM7268B0) || defined(CONFIG_BCM7271B0)
+#elif defined(CONFIG_BCM7260A0) || \
+	defined(CONFIG_BCM7260B0) || \
+	defined(CONFIG_BCM7268B0) || \
+	defined(CONFIG_BCM7271B0)
 	if ((boffs >= 0) && (boffs <= 27)) {
 		*mask = (1 << boffs);
 		return &(gio_aon_regset[0]);
