@@ -29,7 +29,7 @@ endif
 ifeq ($(CFG_ZEUS5_1),1)
  SEC_PFX := b0,b1
  SEC_BBL := 2.0.0,2.1.1
- SEC_BFW := 2.0.2,2.1.3
+ SEC_BFW := 2.0.2,2.1.5
 endif
 
 #default
