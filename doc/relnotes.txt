@@ -17,8 +17,8 @@ Broadcom Ltd <support@broadcom.com>
 	o AVS versions:
 		o 7250b0    v0.3.2
 		o 7255a0    v2.1.0
-		o 7260a0    v2.1.0
-		o 7260b0    v2.1.0
+		o 7260a0    v2.4.2
+		o 7260b0    v2.4.2
 		o 7268b0    v2.1.0
 		o 7271b0    v2.1.0
 		o 7278b0    v2.1.0
