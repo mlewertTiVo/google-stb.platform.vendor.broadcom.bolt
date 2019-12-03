@@ -742,21 +742,6 @@ sub get_num_l1_intr_regs($)
 	return ($get_num_l1_intr_regs = $i);
 }
 
-sub get_num_sw_init_regs($)
-{
-	my $bchp_defines = shift;
-	my $fmt = "BCHP_SUN_TOP_CTRL_SW_INIT_%d_SET";
-	my $i = 0;
-	my $r;
-
-	do {
-		$r = sprintf($fmt, $i);
-		$i++ if (defined($bchp_defines->{$r}));
-	} while (defined($bchp_defines->{$r}));
-
-	return $i;
-}
-
 sub get_num_sun_l2($)
 {
 	my $bchp_defines = shift;

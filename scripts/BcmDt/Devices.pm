@@ -119,32 +119,6 @@ sub find_l2_irq0_interrupt($$$)
 	return $intr;
 }
 
-sub __find_reset_line($$)
-{
-	my ($bchp_defines, $name) = @_;
-	my ($i, $key, $fmt);
-	my $N = BcmUtils::get_num_sw_init_regs($bchp_defines);
-
-	$fmt = 'BCHP_SUN_TOP_CTRL_SW_INIT_%d_SET_%s_sw_init_SHIFT';
-
-	for ($i = 0; $i < $N; $i++) {
-		$key = sprintf($fmt, $i, $name);
-		last if (exists $bchp_defines->{$key});
-	}
-
-	return undef if ($i >= $N);
-	return $bchp_defines->{$key} + $i * 32;
-}
-
-sub find_reset_line($$)
-{
-	my ($bchp_defines, $name) = @_;
-	my $reset = __find_reset_line($bchp_defines, $name);
-
-	die "could not find $name" if !defined($reset);
-	return $reset;
-}
-
 sub bphysaddr($$)
 {
 	my ($rh, $offset) = @_;
@@ -287,17 +261,6 @@ sub output_default($)
 		$t .= ";\n";
 	}
 
-	return $t;
-}
-
-sub output_reset_line($$$)
-{
-	my ($bchp_defines, $rcdev, $name) = @_;
-	my $line = find_reset_line($bchp_defines, $name);
-	my $t = "";
-
-	$t .= "resets = <&" . $rcdev . " " . $line . ">;";
-	$t .= "reset-names = \"$name\";\n";
 	return $t;
 }
 
@@ -3209,7 +3172,6 @@ sub add_sf2($$$)
 		$reg_names .= "\"" . lc($regs[$i]) . "\"";
 		$reg_names .= $i ne scalar(@regs) - 1 ? ", " : "";
 	}
-	$t .= output_reset_line($bchp_defines, "reset", "switch");
 	$t .= sprintf("reg = <%s>;\n", $reg);
 	$t .= sprintf("reg-names = %s;\n", $reg_names);
 
@@ -3940,26 +3902,6 @@ sub add_sun_rng($$$)
 	my $t = "";
 
 	$t .= sprintf("rng: rng\@%x {\n", $regs[0]);
-	$t .= output_default(\%default);
-	$t .= "};\n";
-	$dt->add_node(DevTree::node->new($t));
-}
-
-sub add_sw_init_reset($$$)
-{
-	my ($dt, $rh, $info) = @_;
-	my @regs = get_reg_range_from_regexp($rh, "^BCHP_SUN_TOP_CTRL_(SW_INIT_[0-9]|FINAL_SW_INIT_[0-9]_MONITOR)");
-	my $chipid = BcmUtils::get_chip_family_id($rh->{rh_defines});
-	my %default = (
-		"compatible" => [ 'string', [
-				sprintf("brcm,bcm%x-reset", $chipid),
-				"brcm,brcmstb-reset" ]] ,
-		"reg" => [ 'hex', \@regs ],
-		"#reset-cells" => [ 'dec', 1 ],
-	);
-	my $t = "";
-
-	$t .= sprintf("reset: reset-controller\@%x {\n", $regs[0]);
 	$t .= output_default(\%default);
 	$t .= "};\n";
 	$dt->add_node(DevTree::node->new($t));
