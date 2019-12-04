@@ -900,7 +900,9 @@ my %dt_autogen = map {($_,'')}
 	upg_bsc_aon_irq upg_spi_aon_irq nexus_upg_main_irq
 	nexus_upg_main_aon_irq nexus_upg_bsc_irq nexus_upg_bsc_aon_irq
 	nexus_upg_spi_aon_irq wlan v3d_mmu ext_moca sun_rng upg_aux_aon_l2
-	nexus_upg_aux_aon_irq/;
+	nexus_upg_aux_aon_irq
+	vcx_intr2_hi virtual_waketimer sw_init_reset/;
+
 my $Current = Board->new("");
 my $Family = $Current;
 my $ProcessingState = eStateInNone;
@@ -4036,6 +4038,9 @@ sub process_dev_tree($)
 	my $num_upg_aux_aon_l2 = $dt_autogen{upg_aux_aon_l2} ?
 		BcmUtils::get_num_upg_aux_aon_l2($rh->{rh_defines}) : 0;
 
+	my $num_sw_init_reset = $dt_autogen{sw_init_reset} ?
+		BcmUtils::get_num_sw_init_regs($rh->{rh_defines}) : 0;
+
 	map { $dt_autogen{$_} ||= {} } keys %dt_autogen;
 
 	# These device nodes belong at the root of the DT
@@ -4233,6 +4238,9 @@ sub process_dev_tree($)
 
 	BcmDt::Devices::add_sun_rng($rdb, $rh, $num_sun_rng)
 		if (!empty($dt_autogen{sun_rng}) && $num_sun_rng);
+
+	BcmDt::Devices::add_sw_init_reset($rdb, $rh, $dt_autogen{sw_init_reset})
+		if (!empty($dt_autogen{sw_init_reset}) && $num_sw_init_reset);
 
 	BcmDt::Devices::add_cpu_clock($dt, $dt_autogen{cpuclock})
 		if (!empty($dt_autogen{cpuclock}) && -f $clks_file);
